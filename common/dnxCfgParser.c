@@ -169,7 +169,8 @@ static DnxCfgDict * copyDictionary(DnxCfgDict * dict, unsigned * dictszp)
       cpy[cnt].varname = sptr;
       cpy[cnt].type = dict[cnt].type;
       cpy[cnt].valptr = dict[cnt].valptr;
-      if (cpy[cnt].type != DNX_CFG_INT && cpy[cnt].type != DNX_CFG_UNSIGNED)
+      if (cpy[cnt].type != DNX_CFG_INT && cpy[cnt].type != DNX_CFG_UNSIGNED 
+            && cpy[cnt].type != DNX_CFG_BOOL)
          *(void **)cpy[cnt].valptr = 0;
       sptr += strsz;
    }
@@ -859,7 +860,8 @@ int dnxCfgParserParse(DnxCfgParser * cp, void * passthru)
 
       // swap new for old values in vptrs
       for (i = 0; i < icp->dictsz; i++)
-         if (icp->dict[i].type == DNX_CFG_INT || icp->dict[i].type == DNX_CFG_UNSIGNED)
+         if (icp->dict[i].type == DNX_CFG_INT 
+               || icp->dict[i].type == DNX_CFG_UNSIGNED)
             INTSWAP(*(int *)icp->dict[i].valptr, vptrs[i]);
          else
             PTRSWAP(*(void **)icp->dict[i].valptr, vptrs[i]);
