@@ -36,14 +36,16 @@ TESTS =\
  dnxQueueTest\
  dnxTimerTest\
  dnxCollectorTest\
- dnxDispatcherTest
+ dnxDispatcherTest\
+ dnxRegistrarTest
 
 check_PROGRAMS =\
  dnxJobListTest\
  dnxQueueTest\
  dnxTimerTest\
  dnxCollectorTest\
- dnxDispatcherTest
+ dnxDispatcherTest\
+ dnxRegistrarTest
 
 dnxJobListTest_SOURCES = dnxJobList.c @top_srcdir@/common/dnxError.c
 dnxJobListTest_CPPFLAGS = -DDNX_JOBLIST_TEST -I$(top_srcdir)/common
@@ -64,5 +66,10 @@ dnxCollectorTest_CPPFLAGS = -DDNX_COLLECTOR_TEST -I$(top_srcdir)/common\
 dnxDispatcherTest_SOURCES = dnxDispatcher.c @top_srcdir@/common/dnxError.c\
  @top_srcdir@/common/dnxSleep.c
 dnxDispatcherTest_CPPFLAGS = -DDNX_DISPATCHER_TEST -I$(top_srcdir)/common\
+ -I$(top_srcdir)/nagios/nagios-2.7/include
+
+dnxRegistrarTest_SOURCES = dnxRegistrar.c @top_srcdir@/common/dnxError.c\
+ @top_srcdir@/common/dnxSleep.c
+dnxRegistrarTest_CPPFLAGS = -DDNX_REGISTRAR_TEST -I$(top_srcdir)/common\
  -I$(top_srcdir)/nagios/nagios-2.7/include
 

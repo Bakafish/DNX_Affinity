@@ -424,65 +424,49 @@ static int ehSvcCheck(int event_type, void * data)
    static unsigned long serial = 0; // the number of service checks processed
 
    nebstruct_service_check_data * svcdata = (nebstruct_service_check_data *)data;
-   DnxNodeRequest *pNode;
+   DnxNodeRequest * pNode;
    int ret;
 
-   // Validate our event type
    if (event_type != NEBCALLBACK_SERVICE_CHECK_DATA)
-      return OK;  // Ignore all non-service-check events
+      return OK;
 
-   // Sanity-check our data structure
    if (svcdata == 0)
    {
-      dnxSyslog(LOG_ERR, "dnxServer: ehSvcCheck: Received NULL service data structure");
-      return ERROR;  // Should not happen - internal Nagios error
+      dnxSyslog(LOG_ERR, "dnxServer: Received NULL service data structure");
+      return ERROR;  // shouldn't happen - internal Nagios error
    }
 
-   // Only need to look at pre-run service checks
    if (svcdata->type != NEBTYPE_SERVICECHECK_INITIATE)
-      return OK;  // Ignore non-initialization events
+      return OK;  // ignore non-pre-run service checks
 
-   dnxDebug(5, "ehSvcCheck: Received Service Check Init event");
-
-   // See if this job should be executed locally.
-   //
-   // We do this by seeing if the check-command string (svcdata->command_line)
-   // matches the regular-expression specified in the localCheckPattern
-   // directive in the Server configuration file.
-   //
+   // check for local execution pattern on command line
    if (cfg.localCheckPattern && regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
    {
-      dnxDebug(1, "dnxServer: ehSvcCheck: Job will execute locally: %s", 
+      dnxDebug(1, "ehSvcCheck: Job will execute locally: %s", 
             svcdata->command_line);
-      return OK;  // Ignore check that should be executed locally
+      return OK;     // tell nagios execute locally
    }
 
-   // Make sure we have at least one valid worker node request.
-   // If not, execute check locally.
+   dnxDebug(1, "ehSvcCheck: Received Job %lu at %lu (%lu)",
+         serial, (unsigned long)time(0), 
+         (unsigned long)svcdata->start_time.tv_sec);
 
-   dnxDebug(1, "dnxServer: ehSvcCheck: Received Job %lu at %lu (%lu)",
-         serial, (unsigned long)time(0), (unsigned long)(svcdata->start_time.tv_sec));
-
-   // Locate the next available worker node from the Request Queue
    if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
    {
-      dnxDebug(1, "dnxServer: ehSvcCheck: No worker nodes requests available: %d", ret);
-      return OK;  // Unable to handle this request - Have Nagios handle it
+      dnxDebug(1, "ehSvcCheck: No worker nodes requests available: %s", 
+            dnxErrorString(ret));
+      return OK;     // tell nagios execute locally
    }
 
-   // Post this service check to the Job Queue
-   if ((ret = dnxPostNewJob(joblist, serial, svcdata, pNode)) != 0)
+   if ((ret = dnxPostNewJob(joblist, serial, svcdata, pNode)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, 
-            "dnxServer: ehSvcCheck: Failed to post new job with %d: %s", 
-            ret, dnxErrorString(ret));
-      return OK;  // Unable to handle this request - Have Nagios handle it
+      dnxSyslog(LOG_ERR, "dnxServer: Unable to post job: %s", dnxErrorString(ret));
+      return OK;     // tell nagios execute locally
    }
 
-   serial++;
+   serial++;                           // bump serial number
 
-   // tell Nagios that we are overriding the handling of this event
-   return NEBERROR_CALLBACKOVERRIDE;
+   return NEBERROR_CALLBACKOVERRIDE;   // tell nagios we want it
 }
 
 //----------------------------------------------------------------------------
