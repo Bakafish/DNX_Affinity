@@ -6,21 +6,22 @@ for popular Linux distros, so the required header files were not available
 except by downloading the Nagios source code and copying the include directory
 into this project. To alleviate this issue, we've provided the Nagios event
 broker interface header files necessary to build dnx against Nagios 2.x
-releases (2.7, 2.9 and 2.10). These files are found in 
+releases (2.7, 2.8, 2.9 and 2.10). These files are found in 
 dnx/nagios/nagios-2.x/include.
 
 In addition to event broker interface header files, the nagios-2.x directory
 also contains patches for 2.x versions of Nagios which allows dnx to build 
 and execute correctly under Nagios 2.x releases. nagios-2.7-dnx.patch is 
-especially for Nagios 2.7. nagios-2.9_10-dnx.patch can be used against 
-Nagios versions 2.9 and 2.10.
+especially for Nagios 2.7. nagios-2.8plus-dnx.patch can be used against 
+Nagios versions 2.8, 2.9 and 2.10.
 
-In 3.x releases and beyond, most of the changes provided by this patch have
-been incorporated into the mainline Nagios source code. As of Nagios 3.0 
-RC1, however, there are still a few minor quirks that need to be addressed.
+In 3.0, most of the changes provided by these patches have been directly
+incorporated into the mainline Nagios source code. As of Nagios 3.0 RC1 
+however, there are still a few minor quirks that need to be addressed.
 We're hoping to get the Nagios folks to agree with us on the contents of a 
-single change found in the file nagiod-3.0rc1-dnx.patch. Until this time
-3.0 RC1 code may be used with DNX after the application of this patch.
+single change presented by the patch file nagios-3.0rc1-dnx.patch. Until
+this time 3.0 RC1 code may be used with DNX after the application of this 
+patch.
 
 Additionally, until the nagios-devel package is completed, nagios 3.x 
 header files can be found in dnx/nagios/nagios-3.x/include. These files are
@@ -30,10 +31,11 @@ APPLYING THE NAGIOS DNX PATCHES
 -------------------------------
 The following instructions use Nagios 2.7 as an example target distribution, 
 and assume that nagios-2.7-dnx.patch is sitting next to nagios-2.7.tar.gz in 
-a directory in your file system. 
+a directory of your choice in your file system. 
 
 To apply the patch files, unpack the source distribution (nagios-2.7.tar.gz), 
-change into the root of the unpack directory and run the following command:
+change into the root of the unpack directory (nagios-2.7/) and run the 
+following command:
 
 $ patch -p1 <../nagios-2.7-dnx.patch
 
