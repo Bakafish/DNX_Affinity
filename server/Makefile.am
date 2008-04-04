@@ -4,25 +4,25 @@ pkglib_LTLIBRARIES = dnxServer.la
 
 noinst_HEADERS =\
  dsaudit.h\
- dnxCollector.h\
- dnxDispatcher.h\
- dnxJobList.h\
- dnxNebMain.h\
- dnxQueue.h\
- dnxRegistrar.h\
- dnxTimer.h
+ dscollector.h\
+ dsdispatcher.h\
+ dsjoblist.h\
+ dsnebmain.h\
+ dsqueue.h\
+ dsregistrar.h\
+ dstimer.h
 
 dnxServer_la_SOURCES =\
  dsaudit.c\
- dnxCollector.c\
- dnxConfig.c\
- dnxDispatcher.c\
- dnxJobList.c\
- dnxLogging.c\
- dnxNebMain.c\
- dnxQueue.c\
- dnxRegistrar.c\
- dnxTimer.c
+ dscollector.c\
+ dsconfig.c\
+ dsdispatcher.c\
+ dsjoblist.c\
+ dslogging.c\
+ dsnebmain.c\
+ dsqueue.c\
+ dsregistrar.c\
+ dstimer.c
 
 INCLUDES =\
  -I$(top_srcdir)/common\
