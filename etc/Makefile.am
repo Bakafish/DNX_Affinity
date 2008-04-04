@@ -63,5 +63,5 @@ dnxcld.init: $(srcdir)/dnxcld.init.in
 dnxClient.cfg: $(srcdir)/dnxClient.cfg.in
 dnxServer.cfg: $(srcdir)/dnxServer.cfg.in
 
-CLEANFILES = dnxClient.cfg dnxServer.cfg dnxcld.init
+CLEANFILES = dnxClient.cfg dnxServer.cfg dnxcld.init dnxcld.generic-init
 
