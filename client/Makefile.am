@@ -13,6 +13,7 @@ dnxClient_SOURCES =\
 
 dnxClient_CPPFLAGS =\
  -DSYSCONFDIR=\"$(sysconfdir)\"\
+ -DLOCALSTATEDIR=\"$(localstatedir)\"\
  -I$(top_srcdir)/common
 
 dnxClient_LDADD = ../common/libcmn.la

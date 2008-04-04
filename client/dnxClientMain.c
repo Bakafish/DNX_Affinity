@@ -62,6 +62,10 @@
 # define SYSCONFDIR "/etc"
 #endif
 
+#ifndef LOCALSTATEDIR
+# define LOCALSTATEDIR "/var"
+#endif
+
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
 #define DNX_DEFAULT_NODE_CONFIG_FILE   SYSCONFDIR "/dnxClient.cfg"
@@ -213,6 +217,8 @@ static void getOptions(int argc, char ** argv)
          usage();
       }
    }
+   if (!s_cfgfile)
+      s_cfgfile = DNX_DEFAULT_NODE_CONFIG_FILE;
 }
 
 //----------------------------------------------------------------------------
@@ -298,9 +304,6 @@ static int validateCfg(DnxCfgData * pcfg, int * plogfac)
 static int initConfig(void)
 {
    int ret;
-
-   if (!s_cfgfile)
-      s_cfgfile = DNX_DEFAULT_NODE_CONFIG_FILE;
 
    // parse config file; pass default values
    if ((ret = dnxParseCfgFile(s_cfgfile, s_cfgdefs, s_dict, s_ppvals)) == 0
@@ -400,7 +403,7 @@ static int createPidFile(char * base)
    char szPid[32];
 
    // create lock-file name
-   sprintf(lockFile, "/var/run/%s.pid", base);
+   sprintf(lockFile, LOCALSTATEDIR "/run/%s.pid", base);
 
    // open the lock file
    if ((s_lockfd = open(lockFile, O_RDWR | O_CREAT, 0644)) < 0)
@@ -444,7 +447,7 @@ static void removePidFile(char * base)
    char lockFile[1024];
 
    // create lock-file name
-   sprintf(lockFile, "/var/run/%s.pid", base);
+   sprintf(lockFile, LOCALSTATEDIR "/run/%s.pid", base);
 
    // remove the lock file - we do this before closing it in order to prevent
    //    race conditions between the closing and removing operations.
@@ -614,7 +617,8 @@ int main(int argc, char ** argv)
 
    // initialize the logging subsystem with configured settings
    openlog(s_progname, LOG_PID, LOG_LOCAL7);
-   dnxSyslog(LOG_INFO, "***** DNX Client (Version %s) Startup *****", VERSION);
+   dnxSyslog(LOG_INFO, "----- DNX Client (Version %s) Startup -----", VERSION);
+   dnxSyslog(LOG_INFO, "Using configuration file: %s", s_cfgfile);
 
    // parse configuration file into global configuration data structure
    if ((ret = initConfig()) != DNX_OK)
@@ -625,6 +629,12 @@ int main(int argc, char ** argv)
 
    // set configured debug level and syslog log facility code
    initLogging(&s_cfg.debugLevel, &s_logFacility);
+
+   dnxSyslog(LOG_INFO, "Agent: %s", s_cfg.channelAgent);
+   dnxSyslog(LOG_INFO, "Dispatcher: %s", s_cfg.wlm.dispatcher);
+   dnxSyslog(LOG_INFO, "Collector: %s", s_cfg.wlm.collector);
+   if (s_cfg.debugLevel)
+      dnxSyslog(LOG_INFO, "Debug Level: %s", s_cfg.debugLevel);
 
    // load dynamic plugin modules (e.g., nrpe, snmp, etc.)
    if ((ret = dnxPluginInit(s_cfg.pluginPath)) != DNX_OK)

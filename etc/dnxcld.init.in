@@ -37,6 +37,7 @@
 # Check for missing binaries (stale symlinks should not happen)
 # Note: Special treatment of stop for LSB conformance
 DNXCLIENT_BIN=@prefix@/sbin/dnxClient
+DNXCLIENT_PARAMS="-c @prefix@/etc/dnxClient.cfg"
 test -x $DNXCLIENT_BIN || { echo "$DNXCLIENT_BIN not installed"; 
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }
@@ -53,7 +54,7 @@ case "$1" in
 	## Start daemon with startproc(8). If this fails
 	## the return value is set appropriately by startproc.
 
-	/sbin/startproc $DNXCLIENT_BIN
+	/sbin/startproc $DNXCLIENT_BIN $DNXCLIENT_PARAMS
 
 	# Remember status and be verbose
 	rc_status -v
@@ -102,7 +103,7 @@ case "$1" in
 	echo -n "Reload service dnxClient "
 	## if it supports it:
 	/sbin/killproc -HUP $DNXCLIENT_BIN
-	#touch /var/run/dnxClient.pid
+	#touch @prefix@/var/run/dnxClient.pid
 	rc_status -v
 
 	## Otherwise:
@@ -116,7 +117,7 @@ case "$1" in
 	# If it supports signaling:
 	echo -n "Reload service dnxClient "
 	/sbin/killproc -HUP $DNXCLIENT_BIN
-	#touch /var/run/dnxClient.pid
+	#touch @prefix@/var/run/dnxClient.pid
 	rc_status -v
 	
 	## Otherwise if it does not support reload:
@@ -130,8 +131,8 @@ case "$1" in
 
 	# Return value is slightly different for the status command:
 	# 0 - service up and running
-	# 1 - service dead, but /var/run/  pid  file exists
-	# 2 - service dead, but /var/lock/ lock file exists
+	# 1 - service dead, but @prefix@/var/run/  pid  file exists
+	# 2 - service dead, but @prefix@/var/lock/ lock file exists
 	# 3 - service not running (unused)
 	# 4 - service status unknown :-(
 	# 5--199 reserved (5--99 LSB, 100--149 distro, 150--199 appl.)
@@ -143,7 +144,7 @@ case "$1" in
 	rc_status -v
 	;;
     probe)
-	test /etc/dnxClient.cfg -nt /var/run/dnxClient.pid && echo reload
+	test @prefix@/etc/dnxClient.cfg -nt @prefix@/var/run/dnxClient.pid && echo reload
 	;;
     *)
 	echo "Usage: $0 {start|stop|status|try-restart|restart|force-reload|reload|probe}"

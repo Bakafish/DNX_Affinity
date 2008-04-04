@@ -55,6 +55,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <net/if.h>     // MUST be included before ifaddrs.h!
 #include <ifaddrs.h>
 
 /** @todo Dynamically allocate based on config file maxResultBuffer setting. */
@@ -438,9 +439,19 @@ static void * dnxWorker(void * data)
       // check for transmission error, or execute the job and reset retry count
       if (ret != DNX_OK)
       {
+         int terminate = 0;
+
          // if exceeded max retries and above pool minimum...
-         if (++retries > iwlm->cfg.maxRetries
-               && iwlm->threads > iwlm->cfg.poolMin)
+         if (++retries > iwlm->cfg.maxRetries)
+         {
+            DNX_PT_MUTEX_LOCK(&iwlm->mutex);
+            cleanThreadPool(iwlm);
+            iwlm->lastclean = time(0);
+            if (iwlm->threads > iwlm->cfg.poolMin)
+               terminate = 1;
+            DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
+         }
+         if (terminate)
          {
             dnxSyslog(LOG_INFO, "Worker[%lx]: Exiting - max retries exceeded", tid);
             break;
@@ -502,7 +513,7 @@ static void * dnxWorker(void * data)
                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
 
          xfree(result.resData);
-
+         
          // if we haven't cleaned up zombies in a while, then do it now
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);
          {
@@ -512,11 +523,11 @@ static void * dnxWorker(void * data)
                cleanThreadPool(iwlm);
                iwlm->lastclean = now;
             }
-            iwlm->active--;
+            iwlm->active--;   // reduce active count
          }
          DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 
-         ws->serial++;  // increment job serial number for next job
+         ws->serial++;     // increment job serial number for next job
          retries = 0;
       }
    }
@@ -635,9 +646,14 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
    // cache our (primary?) ip address in binary and string format
    if (getifaddrs(&ifa) == 0)
    {
-      // locate the first AF_NET address in our interface list
+      u_int setflags = IFF_UP | IFF_RUNNING;
+      u_int clrflags = IFF_LOOPBACK;
       struct ifaddrs * ifcur = ifa;
-      while (ifcur && ifcur->ifa_addr->sa_family != AF_INET)
+
+      // locate the first proper AF_NET address in our interface list
+      while (ifcur && (ifcur->ifa_addr->sa_family != AF_INET 
+            || (ifcur->ifa_flags & setflags) != setflags
+            || (ifcur->ifa_flags & clrflags) != 0))
          ifcur = ifcur->ifa_next;
 
       if (ifcur)
@@ -645,7 +661,8 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
          // cache binary and presentation (string) versions of the ip address
          iwlm->myipaddr = (unsigned long)
                ((struct sockaddr_in *)ifcur->ifa_addr)->sin_addr.s_addr;
-         inet_ntop(ifcur->ifa_addr->sa_family, ifcur->ifa_addr->sa_data, 
+         inet_ntop(ifcur->ifa_addr->sa_family, 
+               &((struct sockaddr_in *)ifcur->ifa_addr)->sin_addr, 
                iwlm->myipaddrstr, sizeof iwlm->myipaddrstr);
       }
       freeifaddrs(ifa);
