@@ -2,11 +2,11 @@ EXTRA_DIST = dnxClient.cfg.in dnxServer.cfg.in dnxcld.generic-init.in dnxcld.ini
 
 edit = sed \
    -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
+   -e 's|@sysrundir[@]|$(sysrundir)|g' \
+   -e 's|@syslogdir[@]|$(syslogdir)|g' \
    -e 's|@libexecdir[@]|$(libexecdir)|g' \
-   -e 's|@sysrunpath[@]|$(sysrunpath)|g' \
    -e 's|@dnx_user[@]|$(dnx_user)|g' \
    -e 's|@dnx_group[@]|$(dnx_group)|g' \
-   -e 's|@localstatedir[@]|$(localstatedir)|g' \
    -e 's|@prefix[@]|$(prefix)|g'
 
 all: dnxClient.cfg dnxServer.cfg dnxcld.generic-init dnxcld.init
