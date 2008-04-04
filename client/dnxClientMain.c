@@ -55,7 +55,7 @@
 #include <pwd.h>
 #include <grp.h>
 
-#ifdef HAVE_CONFIG_H
+#if HAVE_CONFIG_H
 # include "config.h"
 #else
 # define VERSION           "<unknown>"
@@ -152,6 +152,12 @@ static void version(FILE * fp, char * base)
       "    Default daemon user: "      DNX_DEFAULT_USER "\n"
       "    Default daemon group: "     DNX_DEFAULT_GROUP "\n"
 //    "    Compile flags: "            COMPILE_FLAGS "\n"
+#if DEBUG_HEAP
+      "    Debug heap is ENABLED.\n"
+#endif
+#if DEBUG_LOCKS
+      "    Debug locks are ENABLED.\n"
+#endif
       "\n",
       base
    );
@@ -1102,9 +1108,17 @@ int main(int argc, char ** argv)
    dnxLog("Agent: %s.", s_cfg.channelAgent);
    dnxLog("Dispatcher: %s.", s_cfg.wlm.dispatcher);
    dnxLog("Collector: %s.", s_cfg.wlm.collector);
-   if (s_cfg.debugFilePath)
+   if (s_cfg.debugFilePath && s_cfg.debugLevel != 0)
+   {
       dnxLog("Debug logging enabled at level %d to %s.", 
             s_cfg.debugLevel, s_cfg.debugFilePath);
+#if DEBUG_HEAP
+      dnxLog("Debug heap is enabled.");
+#endif
+#if DEBUG_LOCKS
+      dnxLog("Debug locks are enabled.");
+#endif
+   }
 
    // load dynamic plugin modules (e.g., nrpe, snmp, etc.)
    if ((ret = dnxPluginInit(s_cfg.pluginPath)) != DNX_OK)

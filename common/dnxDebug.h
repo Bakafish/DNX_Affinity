@@ -35,7 +35,11 @@
 #include <pthread.h>
 #include <assert.h>
 
-#if defined(DEBUG) && defined(PTHREAD_MUTEX_ERRORCHECK_NP)
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#if DEBUG_LOCKS && defined(PTHREAD_MUTEX_ERRORCHECK_NP)
 extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
 # define DNX_PT_MUTEX_INIT(mp) { \
       pthread_mutexattr_t attr; \
@@ -43,46 +47,50 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
       pthread_mutex_init((mp),&attr); \
       pthread_mutexattr_settype((mp), PTHREAD_MUTEX_ERRORCHECK_NP); \
       pthread_mutexattr_destroy(&attr); \
+      dnxDebug(2, "mutex INIT at %s:%d", __FILE__, __LINE__); \
    }
 # define DNX_PT_MUTEX_DESTROY(mp) \
+   dnxDebug(2, "mutex DESTROY at %s:%d", __FILE__, __LINE__); \
    if (pthread_mutex_destroy(mp) != 0) { \
-      dnxLog("mutex_destroy: mutex is in use at %s:%d!", __FILE__, __LINE__); \
+      dnxDebug(1, "mutex_destroy: mutex is in use at %s:%d!", __FILE__, __LINE__); \
       assert(0); \
    }
 # define DNX_PT_MUTEX_LOCK(mp) \
+   dnxDebug(10, "mutex LOCK at %s:%d", __FILE__, __LINE__); \
    if (pthread_mutex_lock(mp) != 0) { \
       switch (errno) { \
-      case EINVAL:   dnxLog("mutex_lock: mutex is not initialized at %s:%d!", __FILE__, __LINE__); break; \
-      case EDEADLK:  dnxLog("mutex_lock: mutex already locked by this thread at %s:%d!", __FILE__, __LINE__); break; \
-      default:       dnxLog("mutex_lock: unknown error %d: %s at %s:%d!", errno, strerror(errno), __FILE__, __LINE__); break; \
+      case EINVAL:   dnxDebug(1, "mutex_lock: mutex is not initialized at %s:%d!", __FILE__, __LINE__); break; \
+      case EDEADLK:  dnxDebug(1, "mutex_lock: mutex already locked by this thread at %s:%d!", __FILE__, __LINE__); break; \
+      default:       dnxDebug(1, "mutex_lock: unknown error %d: %s at %s:%d!", errno, strerror(errno), __FILE__, __LINE__); break; \
       } assert(0); \
    }
 # define DNX_PT_MUTEX_UNLOCK(mp) \
+   dnxDebug(10, "mutex UNLOCK at %s:%d", __FILE__, __LINE__); \
    if (pthread_mutex_unlock(mp) != 0) { \
       switch (errno) { \
-      case EINVAL:   dnxLog("mutex_unlock: mutex is not initialized at %s:%d!", __FILE__, __LINE__); break; \
-      case EPERM:    dnxLog("mutex_unlock: mutex not locked by this thread at %s:%d!", __FILE__, __LINE__); break; \
-      default:       dnxLog("mutex_unlock: unknown error %d: %s at %s:%d!", errno, strerror(errno), __FILE__, __LINE__); break; \
+      case EINVAL:   dnxDebug(1, "mutex_unlock: mutex is not initialized at %s:%d!", __FILE__, __LINE__); break; \
+      case EPERM:    dnxDebug(1, "mutex_unlock: mutex not locked by this thread at %s:%d!", __FILE__, __LINE__); break; \
+      default:       dnxDebug(1, "mutex_unlock: unknown error %d: %s at %s:%d!", errno, strerror(errno), __FILE__, __LINE__); break; \
       } assert(0); \
    }
-#else    /* !?(DEBUG && PTHREAD_MUTEX_ERRORCHECK_NP) */
+#else    /* !DEBUG_LOCKS || !?PTHREAD_MUTEX_ERRORCHECK_NP */
 # define DNX_PT_MUTEX_INIT(mp)      pthread_mutex_init((mp),0)
 # define DNX_PT_MUTEX_DESTROY(mp)   pthread_mutex_destroy(mp)
 # define DNX_PT_MUTEX_LOCK(mp)      pthread_mutex_lock(mp)
 # define DNX_PT_MUTEX_UNLOCK(mp)    pthread_mutex_unlock(mp)
-#endif   /* ?(DEBUG && PTRHEAD_MUTEX_ERRORCHECK_NP) */
+#endif   /* DEBUG && ?PTRHEAD_MUTEX_ERRORCHECK_NP */
 
-#ifdef DEBUG
+#if DEBUG_LOCKS
 # define DNX_PT_COND_DESTROY(cvp) \
    if (pthread_cond_destroy(cvp) != 0) { \
-      dnxLog("cond_destroy: condition-variable is in use at %s:%d!", __FILE__, __LINE__); \
+      dnxDebug(1, "cond_destroy: condition-variable is in use at %s:%d!", __FILE__, __LINE__); \
       assert(0); \
    }
-#else    /* !?DEBUG */
+#else    /* !DEBUG_LOCKS */
 # define DNX_PT_COND_DESTROY(cvp)   pthread_cond_destroy(cvp)
 #endif   /* ?DEBUG */
 
-#ifdef DEBUG_HEAP
+#if DEBUG_HEAP
 # include "dnxHeap.h"
 # define xmalloc(sz)    dnxMalloc((sz), __FILE__, __LINE__)
 # define xcalloc(n,sz)  dnxCalloc((n), (sz), __FILE__, __LINE__)

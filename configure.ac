@@ -117,7 +117,19 @@ AC_ARG_ENABLE([debug-heap],
 	       esac], [dbgheap=no])
 AM_CONDITIONAL([ENABLE_DEBUG_HEAP], [test "${dbgheap}" = yes])
 if test "${dbgheap}" = yes; then
-  CPPFLAGS="${CPPFLAGS} -DDEBUG_HEAP"
+  AC_DEFINE([DEBUG_HEAP], 1, [Define to 1 if heap debugging is desired.])
+fi
+
+AC_ARG_ENABLE([debug-locks], 
+	      [AS_HELP_STRING([--enable-debug-locks], [Turn on DNX debug lock support @<:@default is OFF@:>@])],
+	      [case "${enableval}" in
+		 yes) dbglocks=yes ;;
+		 no)  dbglocks=no  ;;
+		 *)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug-locks]) ;;
+	       esac], [dbglocks=no])
+AM_CONDITIONAL([ENABLE_DEBUG_LOCKS], [test "${dbglocks}" = yes])
+if test "${dbglocks}" = yes; then
+  AC_DEFINE([DEBUG_LOCKS], 1, [Define to 1 if lock debugging is desired.])
 fi
 
 AC_CONFIG_FILES([Makefile
@@ -137,11 +149,10 @@ AC_CONFIG_FILES([Makefile
 		 client/test/Makefile])
 AC_OUTPUT
 
-echo \
-"------------------------------------------------------------
+echo "------------------------------------------------------------
+  Project ${PACKAGE} version ${VERSION} configuration:"
 
-  Project ${PACKAGE} version ${VERSION} configuration:
-
+echo "
   Targeting Nagios version ${nagios_target}.
 
   Nagios user is '${nagios_user}'.
@@ -155,8 +166,16 @@ echo \
   Config directory is '${sysconfdir}'.
   System run path is '${sysrundir}'.
   System init directory is '${initrddir}'.
-  Compiler: '${CC} ${DEFS} ${CPPFLAGS} ${CFLAGS}'
+  Compiler: '${CC} ${DEFS} ${CPPFLAGS} ${CFLAGS}'."
 
+if test "${dbgheap}" = yes; then
+  echo "  Debug Heap ENABLED."
+fi
+if test "${dbglocks}" = yes; then
+  echo "  Debug Locks ENABLED."
+fi
+
+echo "
   Now type 'make @<:@prefix=<user-prefix>@:>@ @<:@<target>@:>@'
     where the optional <target> is:
       all                - build all binaries (default).
@@ -168,12 +187,13 @@ echo \
       install-clientcfg  - install client sample config script.
       install-servercfg  - install server sample config script.
       install-initscript - install system init script.
-      install-docs       - install all documentation.
+      install-docs       - install all documentation."
 
-    additionally on rpm-based systems only:
+echo "
+  additionally on rpm-based systems only:
       rpmcheck           - check whether rpms may be built.
       srcrpm             - build only source rpm.
-      rpms               - build source and binary rpms.
+      rpms               - build source and binary rpms."
 
-------------------------------------------------------------"
+echo "------------------------------------------------------------"
 
