@@ -1,0 +1,12 @@
+Source: dnx
+Section: unknown
+Priority: optional
+Maintainer: John Calcote <john.calcote@gmail.com>
+Build-Depends: debhelper (>= 4.1.16), gcc
+
+Package: dnx
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: Distributed Nagios eXecutor (DNX)
+ The Distributed Nagios eXecutor is a Nagios plugin that provides the ability to distribute Nagios checks among a distributed network of worker nodes. It provides a Nagios NEB module that can be configured to load with Nagios in the nagios.cfg file. It also provides a client daemon which can be configured to request work from the NEB module.
+
