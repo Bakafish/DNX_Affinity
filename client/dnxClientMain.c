@@ -62,11 +62,6 @@
 # define SYSCONFDIR "/etc"
 #endif
 
-#ifndef LOCALSTATEDIR
-# define LOCALSTATEDIR "/var"
-#endif
-#define PROCSTATEDIR LOCALSTATEDIR "/run"
-
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
 #define DNX_DEFAULT_NODE_CONFIG_FILE   SYSCONFDIR "/dnxClient.cfg"
@@ -403,11 +398,8 @@ static int createPidFile(char * base)
    char lockFile[1024];
    char szPid[32];
 
-   // ensure run directory exists (harmless if already exists)
-   mkdir(PROCSTATEDIR, 0744);
-
    // create lock-file name
-   sprintf(lockFile, PROCSTATEDIR "/%s.pid", base);
+   sprintf(lockFile, "/var/run/%s.pid", base);
 
    // open the lock file
    if ((s_lockfd = open(lockFile, O_RDWR | O_CREAT, 0644)) < 0)
@@ -451,7 +443,7 @@ static void removePidFile(char * base)
    char lockFile[1024];
 
    // create lock-file name
-   sprintf(lockFile, PROCSTATEDIR "/%s.pid", base);
+   sprintf(lockFile, "/var/run/%s.pid", base);
 
    // remove the lock file - we do this before closing it in order to prevent
    //    race conditions between the closing and removing operations.
