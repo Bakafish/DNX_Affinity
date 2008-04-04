@@ -11,7 +11,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildRequires:  
 Group:          Productivity/Security
 Summary:        Distributed Nagios eXecutor (DNX)
-Url:            http://openxdas.sourceforge.net
+Url:            http://dnx.sourceforge.net
 Source:         %{name}-%{version}.tar.gz
 
 %description
