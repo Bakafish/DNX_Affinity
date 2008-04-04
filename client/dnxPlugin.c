@@ -122,7 +122,7 @@ int dnxPluginRelease (void)
       gPluginPath = NULL;
    }
 
-   // TODO: Release module and plugin chains
+   /** @todo Release module and plugin chains. */
 
    return DNX_OK;
 }
@@ -214,7 +214,7 @@ int dnxPluginLocate (char *command, DNX_PLUGIN **plugin)
    if ((ret = dnxPluginBaseName(command, baseName, DNX_MAX_PLUGIN_NAME)) != DNX_OK)
       return ret;
 
-   // TODO: Search plugin chain
+   /** @todo Search plugin chain. */
 
    // HACK: Hardwired to only find the check_nrpe plugin
 #ifdef USE_NRPE_MODULE
@@ -271,7 +271,8 @@ int dnxPluginInternal (DNX_PLUGIN *plugin, char *command, int *resCode, char *re
    if (!gInitialized)
       return DNX_ERR_INVALID; // Not initialized
 
-   // Validate parameters (TODO: Check plugin parameter)
+   // Validate parameters 
+   /** @todo Check plugin parameter. */
    if (!command || !resCode || !resData || maxData < 2 || timeout < 0)
       return DNX_ERR_INVALID;
 
@@ -286,7 +287,7 @@ int dnxPluginInternal (DNX_PLUGIN *plugin, char *command, int *resCode, char *re
       return ret;
    }
 
-   // TODO: Invoke plugin entry-point via DNX_PLUGIN structure
+   /** @todo Invoke plugin entry-point via DNX_PLUGIN structure. */
 
    // HACK: Only works with static check_nrpe plugin for the moment
 #ifdef USE_NRPE_MODULE

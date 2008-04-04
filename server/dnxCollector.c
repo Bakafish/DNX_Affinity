@@ -170,7 +170,7 @@ static int dnxPostResult (DnxGlobalData *gData, DnxNewJob *pJob, DnxResult *pRes
    new_message->output[sizeof(new_message->output)-1] = '\0';
 
    // Free result output memory (now that it's been copied into new_message)
-   // TODO: Wrapper release DnxResult structure
+   /** @todo Wrapper release DnxResult structure. */
    free(pResult->resData);
 
    // Obtain a lock for writing to the buffer

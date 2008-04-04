@@ -764,13 +764,14 @@ int dnxAuditJob (DnxNewJob *pJob, char *action)
    {
       // Convert opaque Worker Node address to IPv4 address
       //
-      // TODO: This conversion should take place in the dnxUdpRead function
-      //       and the resultant address string stored in the DnxNewJob
-      //       structure.  This would have two benefits:
-      //
-      //    1. Encapsulates conversion at the protocol level.
-      //    2. Saves some time during logging.
-      //
+
+      /** @todo This conversion should take place in the dnxUdpRead function
+       * and the resultant address string stored in the DnxNewJob
+       * structure. This would have two benefits:
+       * 
+       *    1. Encapsulates conversion at the protocol level.
+       *    2. Saves some time during logging.
+       */
       memcpy(&src_addr, pJob->pNode->address, sizeof(src_addr));
       addr = ntohl(src_addr.sin_addr.s_addr);
 

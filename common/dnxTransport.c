@@ -246,7 +246,7 @@ int dnxChanMapInit (char *fileName)
    // Set initialization flag
    dnxInit = 1;
 
-   // TODO: Load global channel map from file, if specified
+   /** @todo Load global channel map from file, if specified. */
 
    return DNX_OK;
 }

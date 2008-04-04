@@ -61,7 +61,8 @@ int nebLog (char *fmt, ...)
       strncpy(sbuf, fmt, MAX_LOG_LINE);
    sbuf[MAX_LOG_LINE] = '\0';
 
-   // Publish the results (TODO: Need to make this thread-safe...)
+   // Publish the results
+   /** @todo Need to make this thread-safe... */
    write_to_all_logs(sbuf, NSLOG_INFO_MESSAGE);
 
    return DNX_OK;

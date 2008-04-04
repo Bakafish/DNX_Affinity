@@ -148,8 +148,9 @@ static int dnxDispatchJob (DnxGlobalData *gData, DnxNewJob *pSvcReq)
    if ((ret = dnxSendJob(gData, pSvcReq, pNode)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxDispatchJob: dnxSendJob failed: %d", pthread_self(), ret);
 
-   // TODO: Implement the fork-error re-scheduling logic
-   //       as found in run_service_check() in checks.c
+   /** @todo Implement the fork-error re-scheduling logic as 
+    * found in run_service_check() in checks.c. 
+    */
 
    return ret;
 }

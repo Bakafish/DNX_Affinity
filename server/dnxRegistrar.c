@@ -234,7 +234,7 @@ int dnxRegisterNode (DnxGlobalData *gData, DnxNodeRequest *pMsg)
    dnxDebug(1, "dnxRegisterNode: Received request %lu at %lu, expires at %lu", pMsg->guid.objSerial, (unsigned long)now, (unsigned long)(pMsg->expires));
 
    // Add this node to the Worker Node List
-   // TODO: Ensure that it doesn't already exist in the List...
+   /** @todo Ensure that it doesn't already exist in the List... */
    if ((ret = dnxQueuePut(gData->qReq, pMsg)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "dnxRegisterNode: dnxQueuePut failed: %d", ret);

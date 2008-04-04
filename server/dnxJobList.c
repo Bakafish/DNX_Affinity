@@ -349,9 +349,11 @@ int dnxJobListDispatch (DnxJobList *pJobList, DnxNewJob *pJob)
 
    // Wait on the condition variable if there are no pending jobs
    //
-   // TODO: Need to track total number of Pending jobs in the JobList structure?
-   //       OR simply just check to see if the dhead index points to a valid
-   //       Pending job?
+
+   /** @todo Need to track total number of Pending jobs in the JobList structure?
+    * OR simply just check to see if the dhead index points to a valid
+    * Pending job?
+    */
 
    // Start at current dispatch head
    current = pJobList->dhead;

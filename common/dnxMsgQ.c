@@ -209,7 +209,7 @@ int dnxMsgQRead (dnxChannel *channel, char *buf, int *size, int timeout, char *s
    if ((*size = (int)msgrcv(channel->chan, &msg, (size_t)*size, 0L, MSG_NOERROR)) == -1)
       return DNX_ERR_RECEIVE;
    
-   // TODO: Implement timeout logic
+   /** @todo Implement timeout logic. */
 
    return DNX_OK;
 }
@@ -240,7 +240,7 @@ int dnxMsgQWrite (dnxChannel *channel, char *buf, int size, int timeout, char *d
    if (msgsnd(channel->chan, &msg, (size_t)size, 0) == -1)
       return DNX_ERR_SEND;
    
-   // TODO: Implement timeout logic
+   /** @todo Implement timeout logic. */
 
    return DNX_OK;
 }
