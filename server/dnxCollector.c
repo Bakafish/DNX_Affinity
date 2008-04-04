@@ -34,6 +34,7 @@
 #include "dnxCollector.h"
 
 #include "dnxNebMain.h"
+#include "dnxDebug.h"
 #include "dnxError.h"
 #include "dnxQueue.h"
 #include "dnxProtocol.h"
@@ -66,8 +67,7 @@ void *dnxCollector (void *data)
    pthread_cleanup_push(dnxCollectorCleanup, data);
 
    // Wait for Go signal from dnxNebMain
-   if (pthread_mutex_lock(&(gData->tmGo)) != 0)
-      pthread_exit(NULL);
+   DNX_PT_MUTEX_LOCK(&gData->tmGo);
 
    // See if the go signal has already been broadcast
    if (gData->isGo == 0)
@@ -81,7 +81,7 @@ void *dnxCollector (void *data)
    }
 
    // Release the lock
-   pthread_mutex_unlock(&(gData->tmGo));
+   DNX_PT_MUTEX_UNLOCK(&gData->tmGo);
 
    dnxSyslog(LOG_INFO, "dnxCollector[%lx]: Awaiting service check results", pthread_self());
 
@@ -119,9 +119,6 @@ void *dnxCollector (void *data)
 
    // Remove thread cleanup handler
    pthread_cleanup_pop(1);
-
-   // Terminate this thread
-   pthread_exit(NULL);
 }
 
 //----------------------------------------------------------------------------
@@ -132,9 +129,10 @@ static void dnxCollectorCleanup (void *data)
    DnxGlobalData *gData = (DnxGlobalData *)data;
    assert(data);
 
-   // Unlock the Go signal mutex
-   if (&(gData->tmGo))
-      pthread_mutex_unlock(&(gData->tmGo));
+   // Unlock the Go signal mutex - Don't use the error check macro
+   /** @todo: Fix this - we should always know the state of our locks. */
+   if (&gData->tmGo)
+      pthread_mutex_unlock(&gData->tmGo);
 }
 
 //----------------------------------------------------------------------------
@@ -174,7 +172,7 @@ static int dnxPostResult (DnxGlobalData *gData, DnxNewJob *pJob, DnxResult *pRes
    free(pResult->resData);
 
    // Obtain a lock for writing to the buffer
-   pthread_mutex_lock(&service_result_buffer.buffer_lock);
+   DNX_PT_MUTEX_LOCK(&service_result_buffer.buffer_lock);
 
    // Handle overflow conditions
    if (service_result_buffer.items == check_result_buffer_slots)
@@ -199,7 +197,7 @@ static int dnxPostResult (DnxGlobalData *gData, DnxNewJob *pJob, DnxResult *pRes
       service_result_buffer.high = service_result_buffer.items;
 
    // Release lock on buffer
-   pthread_mutex_unlock(&service_result_buffer.buffer_lock);
+   DNX_PT_MUTEX_UNLOCK(&service_result_buffer.buffer_lock);
 
    return DNX_OK;
 }

@@ -84,7 +84,6 @@ typedef struct _DnxGlobalData_
    pthread_t tWLM;               // Work Load Manager thread handle
    pthread_cond_t wlmCond;
    pthread_mutex_t wlmMutex;
-   pthread_mutexattr_t wlmMutexAttr;
    int terminate;                // Thread pool termination flag
    time_t noLaterThan;           // Wait no later than this epoch time to terminate all threads
 
@@ -97,10 +96,7 @@ typedef struct _DnxGlobalData_
    int jobsProcessed;
 
    pthread_mutex_t threadMutex;
-   pthread_mutexattr_t threadMutexAttr;
-
    pthread_mutex_t jobMutex;
-   pthread_mutexattr_t jobMutexAttr;
 
    int  dnxLogFacility;          // DNX syslog facility
 } DnxGlobalData;

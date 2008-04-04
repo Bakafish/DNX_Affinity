@@ -27,9 +27,8 @@
 
 #include "dnxJobList.h"
 
+#include "dnxDebug.h"
 #include "dnxLogging.h"
-
-extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 
 //----------------------------------------------------------------------------
 // This routine is invoked by the DNX NEB module's initialization routine
@@ -77,11 +76,7 @@ int dnxJobListInit (DnxJobList **ppJobList, unsigned long size)
    (*ppJobList)->size = size;
 
    // Initialize the mutex and condition variable
-   pthread_mutexattr_init(&((*ppJobList)->mut_attr));
-#ifdef PTHREAD_MUTEX_ERRORCHECK_NP
-   pthread_mutexattr_settype(&((*ppJobList)->mut_attr), PTHREAD_MUTEX_ERRORCHECK_NP);
-#endif
-   pthread_mutex_init(&((*ppJobList)->mut), &((*ppJobList)->mut_attr));
+   DNX_PT_MUTEX_INIT(&(*ppJobList)->mut);
    pthread_cond_init(&((*ppJobList)->cond), NULL);
 
    return DNX_OK;
@@ -99,19 +94,10 @@ int dnxJobListWhack (DnxJobList **ppJobList)
       return DNX_ERR_INVALID;
 
    // Destroy the mutex
-   if (pthread_mutex_destroy(&((*ppJobList)->mut)) != 0)
-   {
-      dnxSyslog(LOG_ERR, "dnxJobListWhack: Unable to destroy mutex: mutex is in use!");
-      return DNX_ERR_BUSY;
-   }
-   pthread_mutexattr_destroy(&((*ppJobList)->mut_attr));
+   DNX_PT_MUTEX_DESTROY(&(*ppJobList)->mut);
 
    // Destroy the condition variable
-   if (pthread_cond_destroy(&((*ppJobList)->cond)) != 0)
-   {
-      dnxSyslog(LOG_ERR, "dnxJobListWhack: Unable to destroy condition-variable: condition-variable is in use!");
-      return DNX_ERR_BUSY;
-   }
+   DNX_PT_COND_DESTROY(&(*ppJobList)->cond);
 
    // Free the job list array
    if ((*ppJobList)->pList && (*ppJobList)->size > 0)
@@ -147,21 +133,7 @@ int dnxJobListAdd (DnxJobList *pJobList, DnxNewJob *pJob)
       return DNX_ERR_INVALID;
 
    // Acquire the lock on the job list
-   if (pthread_mutex_lock(&(pJobList->mut)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_lock: mutex has not been initialized");
-         break;
-      case EDEADLK:  // mutex already locked by this thread
-         dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_lock: deadlock condition: mutex already locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_LOCK(&pJobList->mut);
 
    tail = pJobList->tail;
 
@@ -194,21 +166,7 @@ int dnxJobListAdd (DnxJobList *pJobList, DnxNewJob *pJob)
 
 abend:
    // Release the lock on the job list
-   if (pthread_mutex_unlock(&(pJobList->mut)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_unlock: mutex has not been initialized");
-         break;
-      case EPERM:    // mutex not locked by this thread
-         dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_unlock: mutex not locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-      }
-      ret = DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_UNLOCK(&pJobList->mut);
 
    return ret;
 }
@@ -236,21 +194,7 @@ int dnxJobListExpire (DnxJobList *pJobList, DnxNewJob *pExpiredJobs, int *totalJ
       return DNX_ERR_INVALID;
 
    // Acquire the lock on the job list
-   if (pthread_mutex_lock(&(pJobList->mut)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_lock: mutex has not been initialized");
-         break;
-      case EDEADLK:  // mutex already locked by this thread
-         dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_lock: deadlock condition: mutex already locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_LOCK(&pJobList->mut);
 
    // Get the current time (After we acquire the lock! In case we had to wait to acquire it...)
    now = time(NULL);
@@ -295,21 +239,7 @@ int dnxJobListExpire (DnxJobList *pJobList, DnxNewJob *pExpiredJobs, int *totalJ
    *totalJobs = jobCount;
 
    // Release the lock on the job list
-   if (pthread_mutex_unlock(&(pJobList->mut)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_unlock: mutex has not been initialized");
-         break;
-      case EPERM:    // mutex not locked by this thread
-         dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_unlock: mutex not locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_UNLOCK(&pJobList->mut);
 
    return DNX_OK;
 }
@@ -331,21 +261,7 @@ int dnxJobListDispatch (DnxJobList *pJobList, DnxNewJob *pJob)
       return DNX_ERR_INVALID;
 
    // Acquire the lock on the job list
-   if (pthread_mutex_lock(&(pJobList->mut)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_lock: mutex has not been initialized");
-         break;
-      case EDEADLK:  // mutex already locked by this thread
-         dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_lock: deadlock condition: mutex already locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_LOCK(&pJobList->mut);
 
    // Wait on the condition variable if there are no pending jobs
    //
@@ -380,21 +296,7 @@ int dnxJobListDispatch (DnxJobList *pJobList, DnxNewJob *pJob)
    //dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", pJob->guid.objSerial, pJob->guid.objSlot, pJobList->head, pJobList->dhead, pJobList->tail);
 
    // Release the lock on the job list
-   if (pthread_mutex_unlock(&(pJobList->mut)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_unlock: mutex has not been initialized");
-         break;
-      case EPERM:    // mutex not locked by this thread
-         dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_unlock: mutex not locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_UNLOCK(&pJobList->mut);
 
    return DNX_OK;
 }
@@ -421,21 +323,7 @@ int dnxJobListCollect (DnxJobList *pJobList, DnxGuid *pGuid, DnxNewJob *pJob)
       return DNX_ERR_INVALID;
 
    // Acquire the lock on the job list
-   if (pthread_mutex_lock(&(pJobList->mut)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_lock: mutex has not been initialized");
-         break;
-      case EDEADLK:  // mutex already locked by this thread
-         dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_lock: deadlock condition: mutex already locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_LOCK(&pJobList->mut);
 
    //dnxDebug(8, "dnxJobListCollect: Compare [%lu,%lu] to [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", pGuid->objSerial, pGuid->objSlot,
    // pJobList->pList[current].guid.objSerial, pJobList->pList[current].guid.objSlot, pJobList->head, pJobList->dhead, pJobList->tail);
@@ -459,23 +347,10 @@ int dnxJobListCollect (DnxJobList *pJobList, DnxGuid *pGuid, DnxNewJob *pJob)
    if (current == pJobList->head && current != pJobList->tail)
       pJobList->head = ((current + 1) % pJobList->size);
 
-abend:
+abend:;
+
    // Release the lock on the job list
-   if (pthread_mutex_unlock(&(pJobList->mut)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_unlock: mutex has not been initialized");
-         break;
-      case EPERM:    // mutex not locked by this thread
-         dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_unlock: mutex not locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-      }
-      ret = DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_UNLOCK(&pJobList->mut);
 
    return ret;
 }

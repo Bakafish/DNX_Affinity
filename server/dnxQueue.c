@@ -28,6 +28,7 @@
 #include "dnxQueue.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxLogging.h"
 
 #include <stdlib.h>     // malloc() and free()
@@ -93,7 +94,7 @@ int dnxQueuePut (DnxQueue *queue, void *pPayload)
     qItem->next = NULL;
 
     /* lock the mutex, to assure exclusive access to the list */
-    rc = pthread_mutex_lock(queue->p_mutex);
+    DNX_PT_MUTEX_LOCK(queue->p_mutex);
 
     /* add new request to the end of the list, updating list */
     /* pointers as required */
@@ -139,7 +140,7 @@ int dnxQueuePut (DnxQueue *queue, void *pPayload)
     rc = pthread_cond_signal(queue->p_cond_var);
 
     /* unlock mutex */
-    rc = pthread_mutex_unlock(queue->p_mutex);
+    DNX_PT_MUTEX_UNLOCK(queue->p_mutex);
 
     return DNX_OK;
 }
@@ -164,7 +165,7 @@ int dnxQueueGet (DnxQueue *queue, void **ppPayload)
     assert(queue && ppPayload);
 
     /* lock the mutex, to assure exclusive access to the list */
-    rc = pthread_mutex_lock(queue->p_mutex);
+    DNX_PT_MUTEX_LOCK(queue->p_mutex);
 
     if (queue->size > 0) {
         qItem = queue->head;
@@ -183,7 +184,7 @@ int dnxQueueGet (DnxQueue *queue, void **ppPayload)
     }
 
     /* unlock mutex */
-    rc = pthread_mutex_unlock(queue->p_mutex);
+    DNX_PT_MUTEX_UNLOCK(queue->p_mutex);
 
     /* return the payload to the caller. */
     if (qItem) {
@@ -221,7 +222,7 @@ int dnxQueueGetWait (DnxQueue *queue, void **ppPayload)
     assert(queue && ppPayload);
 
     /* lock the mutex, to assure exclusive access to the list */
-    rc = pthread_mutex_lock(queue->p_mutex);
+    DNX_PT_MUTEX_LOCK(queue->p_mutex);
 
     /* Block this thread until it can dequeue a request */
     while (rc == 0 && qItem == NULL) {
@@ -246,7 +247,7 @@ int dnxQueueGetWait (DnxQueue *queue, void **ppPayload)
     }
 
     /* unlock mutex */
-    rc = pthread_mutex_unlock(queue->p_mutex);
+    DNX_PT_MUTEX_UNLOCK(queue->p_mutex);
 
     /* return the payload to the caller. */
     if (qItem) {
@@ -275,7 +276,7 @@ int dnxQueueNext (DnxQueue *queue, void **ppPayload)
     *ppPayload = NULL;
 
     /* lock the mutex, to assure exclusive access to the list */
-    rc = pthread_mutex_lock(queue->p_mutex);
+    DNX_PT_MUTEX_LOCK(queue->p_mutex);
 
     /* Save pointer to current payload */
     if (queue->current) {
@@ -289,7 +290,7 @@ int dnxQueueNext (DnxQueue *queue, void **ppPayload)
     }
 
     /* unlock mutex */
-    rc = pthread_mutex_unlock(queue->p_mutex);
+    DNX_PT_MUTEX_UNLOCK(queue->p_mutex);
 
     return (*ppPayload ? DNX_OK : DNX_ERR_NOTFOUND);
 }
@@ -306,8 +307,8 @@ DnxQueueResult dnxQueueFind (DnxQueue *queue, void **ppPayload, DnxQueueResult (
    if (!queue || !ppPayload || !Compare)
       return DNX_QRES_ERROR;
 
-    /* lock the mutex, to assure exclusive access to the list */
-    rc = pthread_mutex_lock(queue->p_mutex);
+   /* lock the mutex, to assure exclusive access to the list */
+   DNX_PT_MUTEX_LOCK(queue->p_mutex);
 
    // Walk the list
    for (qItem = queue->head; qItem; qItem = qItem->next)
@@ -320,10 +321,10 @@ DnxQueueResult dnxQueueFind (DnxQueue *queue, void **ppPayload, DnxQueueResult (
       }
    }
 
-    /* unlock mutex */
-    rc = pthread_mutex_unlock(queue->p_mutex);
+   /* unlock mutex */
+   DNX_PT_MUTEX_UNLOCK(queue->p_mutex);
 
-    return bFound;
+   return bFound;
 }
 
 //----------------------------------------------------------------------------
@@ -338,8 +339,8 @@ DnxQueueResult dnxQueueRemove (DnxQueue *queue, void **ppPayload, DnxQueueResult
    if (!queue || !ppPayload || !Compare)
       return DNX_QRES_ERROR;
 
-    /* lock the mutex, to assure exclusive access to the list */
-    rc = pthread_mutex_lock(queue->p_mutex);
+   /* lock the mutex, to assure exclusive access to the list */
+   DNX_PT_MUTEX_LOCK(queue->p_mutex);
 
    // Walk the list
    qPrev = NULL;
@@ -375,7 +376,7 @@ DnxQueueResult dnxQueueRemove (DnxQueue *queue, void **ppPayload, DnxQueueResult
    }
 
     /* unlock mutex */
-    rc = pthread_mutex_unlock(queue->p_mutex);
+   DNX_PT_MUTEX_UNLOCK(queue->p_mutex);
 
    if (bFound == DNX_QRES_FOUND)
    {
@@ -401,12 +402,12 @@ int dnxQueueSize (DnxQueue *queue, int *pSize)
     assert(queue && pSize);
 
     /* lock the mutex, to assure exclusive access to the list */
-    rc = pthread_mutex_lock(queue->p_mutex);
+    DNX_PT_MUTEX_LOCK(queue->p_mutex);
 
     *pSize = queue->size;
 
     /* unlock mutex */
-    rc = pthread_mutex_unlock(queue->p_mutex);
+    DNX_PT_MUTEX_UNLOCK(queue->p_mutex);
 
     return DNX_OK;
 }
@@ -428,7 +429,7 @@ int dnxQueueDelete (DnxQueue *queue)
     assert(queue);
 
     /* lock the mutex, to assure exclusive access to the list */
-    rc = pthread_mutex_lock(queue->p_mutex);
+    DNX_PT_MUTEX_LOCK(queue->p_mutex);
 
     /* first free any requests that might be on the queue */
     qItem = queue->head;
@@ -439,7 +440,7 @@ int dnxQueueDelete (DnxQueue *queue)
     }
 
     /* unlock mutex */
-    rc = pthread_mutex_unlock(queue->p_mutex);
+    DNX_PT_MUTEX_UNLOCK(queue->p_mutex);
 
     /* finally, free the queue's struct itself */
    //dnxDebug(10, "dnxQueueDelete: Free(queue=%p)", queue);

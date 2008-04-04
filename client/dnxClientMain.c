@@ -32,6 +32,7 @@
 #include "dnxClientMain.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxTransport.h"
 #include "dnxProtocol.h"
 #include "dnxConfig.h"
@@ -71,8 +72,6 @@ static int lockFd = -1;
 
 extern char * optarg;
 extern int optind, opterr, optopt;
-
-extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 
 static int getOptions (int argc, char **argv);
 static int getConfig (DnxGlobalData *gData);
@@ -361,18 +360,10 @@ static int initClientThreads (DnxGlobalData *gData)
    int rc, ret = DNX_OK;
 
    // Initialize the thread data mutex
-   pthread_mutexattr_init(&(gData->threadMutexAttr));
-#ifdef PTHREAD_MUTEX_ERRORCHECK_NP
-   pthread_mutexattr_settype(&(gData->threadMutexAttr), PTHREAD_MUTEX_ERRORCHECK_NP);
-#endif
-   pthread_mutex_init(&(gData->threadMutex), &(gData->threadMutexAttr));
+   DNX_PT_MUTEX_INIT(&gData->threadMutex);
 
    // Initialize the job data mutex
-   pthread_mutexattr_init(&(gData->jobMutexAttr));
-#ifdef PTHREAD_MUTEX_ERRORCHECK_NP
-   pthread_mutexattr_settype(&(gData->jobMutexAttr), PTHREAD_MUTEX_ERRORCHECK_NP);
-#endif
-   pthread_mutex_init(&(gData->jobMutex), &(gData->jobMutexAttr));
+   DNX_PT_MUTEX_INIT(&gData->jobMutex);
 
    // Kick-off the Work Load Manager thread
    if ((rc = pthread_create(&(gData->tWLM), NULL, dnxWLM, (void *)gData)) != 0)
@@ -397,7 +388,7 @@ static int releaseClientThreads (DnxGlobalData *gData)
       syslog(LOG_DEBUG, "releaseClientThreads: Signalling termination condition to WLM thread %lx", gData->tWLM);
 
    // Lock the thread data mutex
-   pthread_mutex_lock(&(gData->threadMutex));
+   DNX_PT_MUTEX_LOCK(&gData->threadMutex);
 
    // Set the latest time by which all worker threads must be terminated
    gData->noLaterThan = time(NULL) + gData->wlmShutdownGracePeriod;
@@ -405,7 +396,7 @@ static int releaseClientThreads (DnxGlobalData *gData)
    pthread_cond_signal(&(gData->wlmCond));   // Signal the WLM
 
    // Unlock the thread data mutex
-   pthread_mutex_unlock(&(gData->threadMutex));
+   DNX_PT_MUTEX_UNLOCK(&gData->threadMutex);
 
    // Wait for the WLM thread to exit
    if (gData->debug)
@@ -418,21 +409,13 @@ static int releaseClientThreads (DnxGlobalData *gData)
       sleep(100);
 
    // Destroy the thread data mutex
-   if (pthread_mutex_destroy(&(gData->threadMutex)) != 0)
-   {
-      syslog(LOG_ERR, "releaseClientThreads: Unable to destroy thread data mutex: mutex is in use!");
-   }
-   pthread_mutexattr_destroy(&(gData->threadMutexAttr));
+   DNX_PT_MUTEX_DESTROY(&gdata->threadMutex);
 
    // Unlock the job data mutex
-   pthread_mutex_unlock(&(gData->jobMutex));
+   DNX_PT_MUTEX_UNLOCK(&gData->jobMutex);
 
    // Destroy the job data mutex
-   if (pthread_mutex_destroy(&(gData->jobMutex)) != 0)
-   {
-      syslog(LOG_ERR, "releaseClientThreads: Unable to destroy job data mutex: mutex is in use!");
-   }
-   pthread_mutexattr_destroy(&(gData->jobMutexAttr));
+   DNX_PT_MUTEX_DESTROY(&gData->jobMutex);
 
    return DNX_OK;
 }
@@ -474,40 +457,12 @@ int dnxGetThreadsActive (void)
    int value;
 
    // Acquire the lock on the global thread data
-   if (pthread_mutex_lock(&(dnxGlobalData.threadMutex)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         syslog(LOG_ERR, "dnxGetThreadsActive: mutex_lock: mutex has not been initialized");
-         break;
-      case EDEADLK:  // mutex already locked by this thread
-         syslog(LOG_ERR, "dnxGetThreadsActive: mutex_lock: deadlock condition: mutex already locked by this thread!");
-         break;
-      default:    // Unknown condition
-         syslog(LOG_ERR, "dnxGetThreadsActive: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_LOCK(&dnxGlobalData.threadMutex);
 
    value = dnxGlobalData.threadsActive;
 
    // Release the lock on the global thread data
-   if (pthread_mutex_unlock(&(dnxGlobalData.threadMutex)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         syslog(LOG_ERR, "dnxGetThreadsActive: mutex_unlock: mutex has not been initialized");
-         break;
-      case EPERM:    // mutex not locked by this thread
-         syslog(LOG_ERR, "dnxGetThreadsActive: mutex_unlock: mutex not locked by this thread!");
-         break;
-      default:    // Unknown condition
-         syslog(LOG_ERR, "dnxGetThreadsActive: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_UNLOCK(&dnxGlobalData.threadMutex);
 
    return value;
 }
@@ -517,21 +472,7 @@ int dnxGetThreadsActive (void)
 int dnxSetThreadsActive (int value)
 {
    // Acquire the lock on the global thread data
-   if (pthread_mutex_lock(&(dnxGlobalData.threadMutex)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         syslog(LOG_ERR, "dnxSetThreadsActive: mutex_lock: mutex has not been initialized");
-         break;
-      case EDEADLK:  // mutex already locked by this thread
-         syslog(LOG_ERR, "dnxSetThreadsActive: mutex_lock: deadlock condition: mutex already locked by this thread!");
-         break;
-      default:    // Unknown condition
-         syslog(LOG_ERR, "dnxSetThreadsActive: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_LOCK(&dnxGlobalData.threadMutex);
 
    // Test value for positive or negative effect
    if (value > 0)
@@ -549,21 +490,7 @@ int dnxSetThreadsActive (int value)
    value = dnxGlobalData.threadsActive;
 
    // Release the lock on the global thread data
-   if (pthread_mutex_unlock(&(dnxGlobalData.threadMutex)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         syslog(LOG_ERR, "dnxSetThreadsActive: mutex_unlock: mutex has not been initialized");
-         break;
-      case EPERM:    // mutex not locked by this thread
-         syslog(LOG_ERR, "dnxSetThreadsActive: mutex_unlock: mutex not locked by this thread!");
-         break;
-      default:    // Unknown condition
-         syslog(LOG_ERR, "dnxSetThreadsActive: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_UNLOCK(&dnxGlobalData.threadMutex);
 
    return value;
 }
@@ -575,40 +502,12 @@ int dnxGetJobsActive (void)
    int value;
 
    // Acquire the lock on the global job data
-   if (pthread_mutex_lock(&(dnxGlobalData.jobMutex)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         syslog(LOG_ERR, "dnxGetJobsActive: mutex_lock: mutex has not been initialized");
-         break;
-      case EDEADLK:  // mutex already locked by this thread
-         syslog(LOG_ERR, "dnxGetJobsActive: mutex_lock: deadlock condition: mutex already locked by this thread!");
-         break;
-      default:    // Unknown condition
-         syslog(LOG_ERR, "dnxGetJobsActive: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_LOCK(&dnxGlobalData.jobMutex);
 
    value = dnxGlobalData.jobsActive;
 
    // Release the lock on the global job data
-   if (pthread_mutex_unlock(&(dnxGlobalData.jobMutex)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         syslog(LOG_ERR, "dnxGetJobsActive: mutex_unlock: mutex has not been initialized");
-         break;
-      case EPERM:    // mutex not locked by this thread
-         syslog(LOG_ERR, "dnxGetJobsActive: mutex_unlock: mutex not locked by this thread!");
-         break;
-      default:    // Unknown condition
-         syslog(LOG_ERR, "dnxGetJobsActive: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_UNLOCK(&dnxGlobalData.jobMutex);
 
    return value;
 }
@@ -618,21 +517,7 @@ int dnxGetJobsActive (void)
 int dnxSetJobsActive (int value)
 {
    // Acquire the lock on the global job data
-   if (pthread_mutex_lock(&(dnxGlobalData.jobMutex)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         syslog(LOG_ERR, "dnxSetJobsActive: mutex_lock: mutex has not been initialized");
-         break;
-      case EDEADLK:  // mutex already locked by this thread
-         syslog(LOG_ERR, "dnxSetJobsActive: mutex_lock: deadlock condition: mutex already locked by this thread!");
-         break;
-      default:    // Unknown condition
-         syslog(LOG_ERR, "dnxSetJobsActive: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_LOCK(&dnxGlobalData.jobMutex);
 
    // Test value for positive or negative effect
    if (value > 0)
@@ -649,21 +534,7 @@ int dnxSetJobsActive (int value)
    value = dnxGlobalData.jobsActive;
 
    // Release the lock on the global job data
-   if (pthread_mutex_unlock(&(dnxGlobalData.jobMutex)) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         syslog(LOG_ERR, "dnxSetJobsActive: mutex_unlock: mutex has not been initialized");
-         break;
-      case EPERM:    // mutex not locked by this thread
-         syslog(LOG_ERR, "dnxSetJobsActive: mutex_unlock: mutex not locked by this thread!");
-         break;
-      default:    // Unknown condition
-         syslog(LOG_ERR, "dnxSetJobsActive: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_UNLOCK(&dnxGlobalData.jobMutex);
 
    return value;
 }

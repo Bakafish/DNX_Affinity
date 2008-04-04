@@ -35,6 +35,7 @@
 #include "dnxDispatcher.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxProtocol.h"
 #include "dnxXml.h"
 #include "dnxNebMain.h"
@@ -68,8 +69,7 @@ void *dnxDispatcher (void *data)
    dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Waiting on the Go signal...", pthread_self());
 
    // Wait for Go signal from dnxNebMain
-   if (pthread_mutex_lock(&(gData->tmGo)) != 0)
-      pthread_exit(NULL);
+   DNX_PT_MUTEX_LOCK(&gData->tmGo);
 
    // See if the go signal has already been broadcast
    if (gData->isGo == 0)
@@ -83,7 +83,7 @@ void *dnxDispatcher (void *data)
    }
 
    // Release the lock
-   pthread_mutex_unlock(&(gData->tmGo));
+   DNX_PT_MUTEX_UNLOCK(&gData->tmGo);
 
    dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Awaiting new jobs...", pthread_self());
 
@@ -129,6 +129,7 @@ static void dnxDispatcherCleanup (void *data)
    assert(data);
 
    // Unlock the Go signal mutex
+   /** @todo Fix this - we should always know the state of our mutexes. */
    if (&(gData->tmGo))
       pthread_mutex_unlock(&(gData->tmGo));
 }

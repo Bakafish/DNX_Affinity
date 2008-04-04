@@ -35,6 +35,7 @@
 #include "dnxNebMain.h"
 
 #include "dnxConfig.h"
+#include "dnxDebug.h"
 #include "dnxProtocol.h"
 #include "dnxTransport.h"
 #include "dnxXml.h"
@@ -481,7 +482,7 @@ static int initThreads (void)
    int ret;
 
    // Create the starting condition synchronization variable
-   pthread_mutex_init(&dnxGlobalData.tmGo, NULL);
+   DNX_PT_MUTEX_UNLOCK(&dnxGlobalData.tmGo);
    pthread_cond_init(&dnxGlobalData.tcGo, NULL);
 
    // Clear the ShowStart flag
@@ -532,9 +533,9 @@ static int initThreads (void)
    dnxGlobalData.isGo = 1;
 
    // Signal all threads that it's show-time!
-   pthread_mutex_lock(&dnxGlobalData.tmGo);
+   DNX_PT_MUTEX_LOCK(&dnxGlobalData.tmGo);
    ret = pthread_cond_broadcast(&dnxGlobalData.tcGo);
-   pthread_mutex_unlock(&dnxGlobalData.tmGo);
+   DNX_PT_MUTEX_UNLOCK(&dnxGlobalData.tmGo);
 
    if (ret != 0)
    {
@@ -614,7 +615,7 @@ static int initQueues (void)
    }
 
    // Create the Worker Node Requests Queue (Worker Nodes wanting work)
-   pthread_mutex_init(&(dnxGlobalData.tmReq), NULL);
+   DNX_PT_MUTEX_INIT(&dnxGlobalData.tmReq);
    pthread_cond_init(&(dnxGlobalData.tcReq), NULL);
    if ((ret = dnxQueueInit(&(dnxGlobalData.qReq), &(dnxGlobalData.tmReq), &(dnxGlobalData.tcReq), total_services)) != DNX_OK)
    {
@@ -634,8 +635,8 @@ static int releaseQueues (void)
    
    // Remove the Worker Node Request Queue
    dnxQueueDelete(dnxGlobalData.qReq);
-   pthread_mutex_destroy(&(dnxGlobalData.tmReq));
-   pthread_cond_destroy(&(dnxGlobalData.tcReq));
+   DNX_PT_MUTEX_DESTROY(&dnxGlobalData.tmReq);
+   DNX_PT_COND_DESTROY(&dnxGlobalData.tcReq);
    
    return DNX_OK;
 }

@@ -28,6 +28,7 @@
 #include "dnxTcp.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxLogging.h"
 
 #include <sys/types.h>
@@ -45,20 +46,13 @@
 #include <errno.h>
 
 static pthread_mutex_t tcpMutex;
-static pthread_mutexattr_t tcpMutexAttr;
-
-extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
 
 //----------------------------------------------------------------------------
 
 int dnxTcpInit (void)
 {
    // Create protective mutex for non-reentrant functions (gethostbyname)
-   pthread_mutexattr_init(&tcpMutexAttr);
-#ifdef PTHREAD_MUTEX_ERRORCHECK_NP
-   pthread_mutexattr_settype(&tcpMutexAttr, PTHREAD_MUTEX_ERRORCHECK_NP);
-#endif
-   pthread_mutex_init(&tcpMutex, &tcpMutexAttr);
+   DNX_PT_MUTEX_INIT(&tcpMutex);
 
    return DNX_OK;
 }
@@ -68,9 +62,7 @@ int dnxTcpInit (void)
 int dnxTcpDeInit (void)
 {
    // Destroy the mutex
-   if (pthread_mutex_destroy(&tcpMutex) != 0)
-      dnxSyslog(LOG_ERR, "dnxTcpDeInit: Unable to destroy mutex: mutex is in use!");
-   pthread_mutexattr_destroy(&tcpMutexAttr);
+   DNX_PT_MUTEX_DESTROY(&tcpMutex);
 
    return DNX_OK;
 }
@@ -194,46 +186,18 @@ int dnxTcpOpen (dnxChannel *channel, dnxChanMode mode)   // 0=Passive, 1=Active
    else  // Resolve destination address
    {
       // Acquire the lock
-      if (pthread_mutex_lock(&tcpMutex) != 0)
-      {
-         switch (errno)
-         {
-         case EINVAL:   // mutex not initialized
-            dnxSyslog(LOG_ERR, "dnxTcpOpen: mutex_lock: mutex has not been initialized");
-            break;
-         case EDEADLK:  // mutex already locked by this thread
-            dnxSyslog(LOG_ERR, "dnxTcpOpen: mutex_lock: deadlock condition: mutex already locked by this thread!");
-            break;
-         default:    // Unknown condition
-            dnxSyslog(LOG_ERR, "dnxTcpOpen: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-         }
-         return DNX_ERR_THREAD;
-      }
+      DNX_PT_MUTEX_LOCK(&tcpMutex);
 
       // Try to resolve this address
       if ((he = gethostbyname(channel->host)) == NULL)
       {
-         pthread_mutex_unlock(&tcpMutex);
+         DNX_PT_MUTEX_UNLOCK(&tcpMutex);
          return DNX_ERR_ADDRESS;
       }
       memcpy(&(inaddr.sin_addr.s_addr), he->h_addr_list[0], he->h_length);
 
       // Release the lock
-      if (pthread_mutex_unlock(&tcpMutex) != 0)
-      {
-         switch (errno)
-         {
-         case EINVAL:   // mutex not initialized
-            dnxSyslog(LOG_ERR, "dnxTcpOpen: mutex_unlock: mutex has not been initialized");
-            break;
-         case EPERM:    // mutex not locked by this thread
-            dnxSyslog(LOG_ERR, "dnxTcpOpen: mutex_unlock: mutex not locked by this thread!");
-            break;
-         default:    // Unknown condition
-            dnxSyslog(LOG_ERR, "dnxTcpOpen: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-         }
-         return DNX_ERR_THREAD;
-      }
+      DNX_PT_MUTEX_UNLOCK(&tcpMutex);
    }
 
    // Create a socket

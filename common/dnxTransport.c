@@ -168,6 +168,7 @@
  
 #include "dnxTransport.h"
 
+#include "dnxDebug.h"
 #include "dnxError.h"
 #include "dnxLogging.h"
 
@@ -193,14 +194,9 @@ static urlTypeMap gTypeMap[] =
    { NULL, DNX_CHAN_UNKNOWN } 
 };
 
-static dnxChanMap gChannelMap[DNX_MAX_CHAN_MAP];
-
 static int dnxInit = 0;
-
 static pthread_mutex_t chanMutex;
-static pthread_mutexattr_t chanMutexAttr;
-
-extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
+static dnxChanMap gChannelMap[DNX_MAX_CHAN_MAP];
 
 // External TCP Transport Functions
 extern int dnxTcpInit (void);
@@ -232,11 +228,7 @@ int dnxChanMapInit (char *fileName)
    memset(gChannelMap, 0, sizeof(gChannelMap));
 
    // Create protective mutex
-   pthread_mutexattr_init(&chanMutexAttr);
-#ifdef PTHREAD_MUTEX_ERRORCHECK_NP
-   pthread_mutexattr_settype(&chanMutexAttr, PTHREAD_MUTEX_ERRORCHECK_NP);
-#endif
-   pthread_mutex_init(&chanMutex, &chanMutexAttr);
+   DNX_PT_MUTEX_INIT(&chanMutex);
 
    // Initialize lower layer transports
    dnxUdpInit();
@@ -278,12 +270,11 @@ int dnxChanMapRelease (void)
    dnxSetLastError(DNX_OK);
 
    // Destroy the mutex
-   if (pthread_mutex_destroy(&chanMutex) != 0)
+   if (DNX_PT_MUTEX_DESTROY(&chanMutex) != 0)
    {
       dnxSyslog(LOG_ERR, "dnxChanMapRelease: Unable to destroy mutex: mutex is in use!");
       //return DNX_ERR_BUSY;
    }
-   pthread_mutexattr_destroy(&chanMutexAttr);
 
    // De-Initialize lower layer transports
    dnxUdpDeInit();
@@ -308,21 +299,7 @@ int dnxChanMapAdd (char *name, char *url)
       return DNX_ERR_INVALID;
 
    // Acquire the lock on the global channel map
-   if (pthread_mutex_lock(&chanMutex) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxChanMapAdd: mutex_lock: mutex has not been initialized");
-         break;
-      case EDEADLK:  // mutex already locked by this thread
-         dnxSyslog(LOG_ERR, "dnxChanMapAdd: mutex_lock: deadlock condition: mutex already locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxChanMapAdd: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_LOCK(&chanMutex);
 
    // See if this name already exists, otherwise grab an empty channel slot
    chanMap = NULL;
@@ -359,21 +336,7 @@ abend:
       chanMap->type = DNX_CHAN_UNKNOWN;
    
    // Release the lock on the global channel map
-   if (pthread_mutex_unlock(&chanMutex) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxChanMapAdd: mutex_unlock: mutex has not been initialized");
-         break;
-      case EPERM:    // mutex not locked by this thread
-         dnxSyslog(LOG_ERR, "dnxChanMapAdd: mutex_unlock: mutex not locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxChanMapAdd: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-      }
-      ret = DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_UNLOCK(&chanMutex);
 
    return ret;
 }
@@ -443,21 +406,7 @@ int dnxChanMapDelete (char *name)
       return DNX_ERR_INVALID;
 
    // Acquire the lock on the global channel map
-   if (pthread_mutex_lock(&chanMutex) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxChanMapDelete: mutex_lock: mutex has not been initialized");
-         break;
-      case EDEADLK:  // mutex already locked by this thread
-         dnxSyslog(LOG_ERR, "dnxChanMapDelete: mutex_lock: deadlock condition: mutex already locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxChanMapDelete: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-      }
-      return DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_LOCK(&chanMutex);
 
    // Verify that this channel resource exists
    if ((ret = dnxChanMapFindName(name, &chanMap)) == DNX_OK)
@@ -470,21 +419,7 @@ int dnxChanMapDelete (char *name)
    }
 
    // Release the lock on the global channel map
-   if (pthread_mutex_unlock(&chanMutex) != 0)
-   {
-      switch (errno)
-      {
-      case EINVAL:   // mutex not initialized
-         dnxSyslog(LOG_ERR, "dnxChanMapDelete: mutex_unlock: mutex has not been initialized");
-         break;
-      case EPERM:    // mutex not locked by this thread
-         dnxSyslog(LOG_ERR, "dnxChanMapDelete: mutex_unlock: mutex not locked by this thread!");
-         break;
-      default:    // Unknown condition
-         dnxSyslog(LOG_ERR, "dnxChanMapDelete: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-      }
-      ret = DNX_ERR_THREAD;
-   }
+   DNX_PT_MUTEX_UNLOCK(&chanMutex);
 
    return ret;
 }

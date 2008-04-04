@@ -35,6 +35,7 @@
 
 #include "dnxNebMain.h"
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxProtocol.h"
 #include "dnxJobList.h"
 #include "dnxLogging.h"
@@ -67,8 +68,7 @@ void *dnxTimer (void *data)
    dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Waiting on the Go signal...", pthread_self());
 
    // Wait for Go signal from dnxNebMain
-   if (pthread_mutex_lock(&(gData->tmGo)) != 0)
-      pthread_exit(NULL);
+   DNX_PT_MUTEX_LOCK(&gData->tmGo);
 
    // See if the go signal has already been broadcast
    if (gData->isGo == 0)
@@ -82,7 +82,7 @@ void *dnxTimer (void *data)
    }
 
    // Release the lock
-   pthread_mutex_unlock(&(gData->tmGo));
+   DNX_PT_MUTEX_UNLOCK(&gData->tmGo);
 
    dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Watching for expired jobs...", pthread_self());
 
@@ -138,6 +138,7 @@ static void dnxTimerCleanup (void *data)
    assert(data);
 
    // Unlock the Go signal mutex
+   /** @todo Fix this - we should know the state of our mutexes. */
    if (&(gData->tmGo))
       pthread_mutex_unlock(&(gData->tmGo));
 }
@@ -219,7 +220,7 @@ static int dnxExpireJob (DnxNewJob *pExpire)
    strcpy(new_message->output, "(DNX Service Check Timed Out)");
 
    // Obtain a lock for writing to the buffer
-   pthread_mutex_lock(&service_result_buffer.buffer_lock);
+   DNX_PT_MUTEX_LOCK(&service_result_buffer.buffer_lock);
 
    // Handle overflow conditions
    if (service_result_buffer.items == check_result_buffer_slots)
@@ -244,7 +245,7 @@ static int dnxExpireJob (DnxNewJob *pExpire)
       service_result_buffer.high=service_result_buffer.items;
 
    // Release lock on buffer
-   pthread_mutex_unlock(&service_result_buffer.buffer_lock);
+   DNX_PT_MUTEX_UNLOCK(&service_result_buffer.buffer_lock);
 
    return DNX_OK;
 }

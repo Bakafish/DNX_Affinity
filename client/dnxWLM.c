@@ -35,6 +35,7 @@
 #include "dnxWLM.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxClientMain.h"
 #include "dnxWorker.h"
 
@@ -47,8 +48,6 @@
 #include <assert.h>
 #include <syslog.h>
 #include <errno.h>
-
-extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 
 static void dnxWLMCleanup (void *data);
 static int createThreadPool (DnxGlobalData *gData);
@@ -80,11 +79,7 @@ void *dnxWLM (void *data)
    pthread_cleanup_push(dnxWLMCleanup, data);
 
    // Initialize the mutex and condition variable
-   pthread_mutexattr_init(&(gData->wlmMutexAttr));
-#ifdef PTHREAD_MUTEX_ERRORCHECK_NP
-   pthread_mutexattr_settype(&(gData->wlmMutexAttr), PTHREAD_MUTEX_ERRORCHECK_NP);
-#endif
-   pthread_mutex_init(&(gData->wlmMutex), &(gData->wlmMutexAttr));
+   DNX_PT_MUTEX_INIT(&gData->wlmMutex);
    pthread_cond_init(&(gData->wlmCond), NULL);
 
    gData->tPool = NULL;
@@ -127,7 +122,7 @@ void *dnxWLM (void *data)
          syslog(LOG_DEBUG, "dnxWLM[%lx]: Waiting on condition variable", pthread_self());
 
       // Monitor thread pool performance
-      pthread_mutex_lock(&(gData->wlmMutex));
+      DNX_PT_MUTEX_LOCK(&gData->wlmMutex);
 
       gettimeofday(&now, NULL);
 
@@ -191,9 +186,8 @@ void *dnxWLM (void *data)
       if (gData->debug)
          syslog(LOG_DEBUG, "dnxWLM[%lx]: Active thread count: %d (%d)   Busy: %d", pthread_self(), activeThreads, gThreads, gJobs);
 
-      pthread_mutex_unlock(&(gData->wlmMutex));
+      DNX_PT_MUTEX_UNLOCK(&gData->wlmMutex);
    }
-
 
 abend:;
 
@@ -220,20 +214,13 @@ static void dnxWLMCleanup (void *data)
    gData->terminate = 1;
 
    // Unlock the mutex
-   pthread_mutex_unlock(&(gData->wlmMutex));
+   DNX_PT_MUTEX_UNLOCK(&gData->wlmMutex);
 
    // Destroy the mutex
-   if (pthread_mutex_destroy(&(gData->wlmMutex)) != 0)
-   {
-      syslog(LOG_ERR, "dnxWLMCleanup[%lx]: Unable to destroy mutex: mutex is in use!", pthread_self());
-   }
-   pthread_mutexattr_destroy(&(gData->wlmMutexAttr));
+   DNX_PT_MUTEX_DESTROY(&gData->wlmMutex);
 
    // Destroy the condition variable
-   if (pthread_cond_destroy(&(gData->wlmCond)) != 0)
-   {
-      syslog(LOG_ERR, "dnxWLMCleanup[%lx]: Unable to destroy condition-variable: condition-variable is in use!", pthread_self());
-   }
+   DNX_PT_COND_DESTROY(&gData->wlmCond);
 
    // If the worker thread pool exists...
    if (gData->tPool)

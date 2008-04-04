@@ -85,7 +85,6 @@ typedef struct _DnxJobList_
 
    // pthread mutex and condition-variable for Job List access
    pthread_mutex_t mut;
-   pthread_mutexattr_t mut_attr;
    pthread_cond_t cond;
 } DnxJobList;
 

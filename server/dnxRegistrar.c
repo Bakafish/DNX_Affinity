@@ -37,6 +37,7 @@
 
 #include "dnxNebMain.h"
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxQueue.h"
 #include "dnxProtocol.h"
 #include "dnxLogging.h"
@@ -66,8 +67,7 @@ void *dnxRegistrar (void *data)
    pthread_cleanup_push(dnxRegistrarCleanup, data);
 
    // Wait for Go signal from dnxNebMain
-   if (pthread_mutex_lock(&(gData->tmGo)) != 0)
-      pthread_exit(NULL);
+   DNX_PT_MUTEX_LOCK(&gData->tmGo);
 
    // See if the go signal has already been broadcast
    if (gData->isGo == 0)
@@ -81,7 +81,7 @@ void *dnxRegistrar (void *data)
    }
 
    // Release the lock
-   pthread_mutex_unlock(&(gData->tmGo));
+   DNX_PT_MUTEX_UNLOCK(&gData->tmGo);
 
    // Check for debug flag
    if (gData->debug)
@@ -121,6 +121,7 @@ static void dnxRegistrarCleanup (void *data)
    dnxDeregisterAllNodes(gData);
 
    // Unlock the Worker Node Request Queue mutex
+   /** @todo Fix this - we should always know the state of our mutexes. */
    if (&(gData->tmReq))
       pthread_mutex_unlock(&(gData->tmReq));
 
