@@ -1,4 +1,4 @@
-sbin_PROGRAMS = dnxstats
+bin_PROGRAMS = dnxstats
 
 dnxstats_SOURCES =\
  dnxstats.c

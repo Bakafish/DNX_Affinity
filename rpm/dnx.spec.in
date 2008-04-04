@@ -65,6 +65,7 @@ rm -rf "$RPM_BUILD_ROOT"
 %dir %{_libdir}/%{name}
 %{_prefix}/sbin/dnxClient
 %{_prefix}/sbin/rcdnxcld
+%{_prefix}/bin/dnxstats
 %{_libdir}/%{name}/dnxServer.a
 %{_libdir}/%{name}/dnxServer.la
 %{_libdir}/%{name}/dnxServer.so
