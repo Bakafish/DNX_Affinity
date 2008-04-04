@@ -19,7 +19,7 @@
 
 /** Implements the DNX Server logging functions.
  *
- * @file dnxLogging.c
+ * @file server/dnxLogging.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX_SERVER_IMPL

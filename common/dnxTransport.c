@@ -64,69 +64,72 @@
  *    5. DNX_MSG_GET_RESULT
  *    6. DNX_MSG_PUT_RESULT
  * 
- * Structure: DNX_MSG_REGISTER
- * Issued By: Dispatcher
- * Issued To: Scheduler
- * 
- *    <dnxMessage>
- *       <Request>Register</Request>
- *       <GUID>123456789</GUID>
- *    </dnxMessage>
- * 
- * Structure: DNX_MSG_DEREGISTER
- * Issued By: Dispatcher
- * Issued To: Scheduler
- * 
- *    <dnxMessage>
- *       <Request>Deregister</Request>
- *       <GUID>123456789</GUID>
- *    </dnxMessage>
- * 
- * Structure: DNX_MSG_GET_JOB
- * Issued By: Dispatcher, Worker
- * Issued To: Scheduler, Dispatcher
- * 
- *    <dnxMessage>
- *       <Request>GetJob</Request>
- *       <JobCapacity>5</JobCapacity>
- *    </dnxMessage>
- * 
- * DNX_MSG_PUT_JOB Structure
- * Issued By: Scheduler, Dispatcher
- * Issued To: Dispatcher, Worker
- * 
- *    <dnxMessage>
- *       <Request>PutJob</Request>
- *       <GUID>abc123</GUID>
- *       <State>Pending</State>
- *       <Command>check_spam</Command>
- *       <Param>param1</Param>
- *       <Param>param2</Param>
- *       <StartTime>2006-06-20 15:00:00</StartTime>
- *    </dnxMessage>
- * 
- * DNX_MSG_PUT_RESULT Structure
- * Issued By: Worker, Collector
- * Issued To: Collector, Reaper
- * 
- *    <dnxMessage>
- *       <Request>PutResult</Request>
- *       <GUID>abc123</GUID>
- *       <State>Completed</State>
- *       <EndTime>2006-06-20 15:00:05</EndTime>
- *       <ResultCode>0</ResultCode>
- *       <ResultData>OK: Everything's okie-dokie!</ResultData>
- *    </dnxMessage>
- * 
- * DNX_MSG_GET_RESULT Structure
- * Issued By: Reaper
- * Issued To: Collector
- * 
- *    <dnxMessage>
- *       <Request>GetResult</Request>
- *       <GUID>abc123</GUID>
- *    </dnxMessage>
- * 
+@verbatim   
+     
+   Structure: DNX_MSG_REGISTER
+   Issued By: Dispatcher
+   Issued To: Scheduler
+   
+      <dnxMessage>
+         <Request>Register</Request>
+         <GUID>123456789</GUID>
+      </dnxMessage>
+   
+   Structure: DNX_MSG_DEREGISTER
+   Issued By: Dispatcher
+   Issued To: Scheduler
+   
+      <dnxMessage>
+         <Request>Deregister</Request>
+         <GUID>123456789</GUID>
+      </dnxMessage>
+   
+   Structure: DNX_MSG_GET_JOB
+   Issued By: Dispatcher, Worker
+   Issued To: Scheduler, Dispatcher
+   
+      <dnxMessage>
+         <Request>GetJob</Request>
+         <JobCapacity>5</JobCapacity>
+      </dnxMessage>
+   
+   DNX_MSG_PUT_JOB Structure
+   Issued By: Scheduler, Dispatcher
+   Issued To: Dispatcher, Worker
+   
+      <dnxMessage>
+         <Request>PutJob</Request>
+         <GUID>abc123</GUID>
+         <State>Pending</State>
+         <Command>check_spam</Command>
+         <Param>param1</Param>
+         <Param>param2</Param>
+         <StartTime>2006-06-20 15:00:00</StartTime>
+      </dnxMessage>
+   
+   DNX_MSG_PUT_RESULT Structure
+   Issued By: Worker, Collector
+   Issued To: Collector, Reaper
+   
+      <dnxMessage>
+         <Request>PutResult</Request>
+         <GUID>abc123</GUID>
+         <State>Completed</State>
+         <EndTime>2006-06-20 15:00:05</EndTime>
+         <ResultCode>0</ResultCode>
+         <ResultData>OK: Everything's okie-dokie!</ResultData>
+      </dnxMessage>
+   
+   DNX_MSG_GET_RESULT Structure
+   Issued By: Reaper
+   Issued To: Collector
+   
+      <dnxMessage>
+         <Request>GetResult</Request>
+         <GUID>abc123</GUID>
+      </dnxMessage>
+
+@endverbatim   
  * The DNX Objects are:
  * 
  *    1. DNX_JOB

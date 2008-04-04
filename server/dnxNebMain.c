@@ -28,6 +28,10 @@
  * @ingroup DNX_SERVER_IMPL
  */
 
+/*!@defgroup DNX_SERVER_IMPL DNX NEB Module Implementation 
+ * @defgroup DNX_SERVER_IFC  DNX NEB Module Interface
+ */
+
 #include "dnxNebMain.h"
 #include "dnxConfig.h"
 #include "dnxProtocol.h"

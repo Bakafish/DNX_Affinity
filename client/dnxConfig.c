@@ -19,7 +19,7 @@
 
 /** Parses DNX Worker Node config file.
  *
- * @file dnxConfig.c
+ * @file client/dnxConfig.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX_CLIENT_IMPL

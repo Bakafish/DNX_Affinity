@@ -25,6 +25,10 @@
  * @ingroup DNX_CLIENT_IMPL
  */
 
+/*!@defgroup DNX_CLIENT_IMPL DNX Client Implementation 
+ * @defgroup DNX_CLIENT_IFC  DNX Client Interface
+ */
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>

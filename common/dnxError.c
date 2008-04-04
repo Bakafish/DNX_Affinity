@@ -25,6 +25,10 @@
  * @ingroup DNX_COMMON_IMPL
  */
 
+/*!@defgroup DNX_COMMON_IMPL DNX Common Services Implementation 
+ * @defgroup DNX_COMMON_IFC  DNX Common Services Interface
+ */
+
 #include "dnxError.h"
 
 static dnxError gLastError = DNX_OK;      // Last known error code

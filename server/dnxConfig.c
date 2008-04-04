@@ -19,7 +19,7 @@
 
 /** Parses DNX Server config file.
  *
- * @file dnxConfig.c
+ * @file server/dnxConfig.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX_SERVER_IMPL
