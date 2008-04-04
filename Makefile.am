@@ -1,13 +1,12 @@
 EXTRA_DIST = LEGAL TODO nagios
 
-if DO_DOXYGEN
-  OPT_DOXYGEN = doc
-endif
+SUBDIRS = etc obs common server client stats doc
 
-SUBDIRS = etc obs common server client stats $(OPT_DOXYGEN)
+docs install-docs:
+	cd doc && $(MAKE) $(AM_MAKEFLAGS) $@	
 
-doxygen:
-	cd doc && $(MAKE) $(AM_MAKEFLAGS) $@
+install-cfg install-initscript:
+	cd etc && $(MAKE) $(AM_MAKEFLAGS) $@
 
 dist-hook:
 	rm -rf `find $(distdir) -name .svn`

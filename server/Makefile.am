@@ -2,7 +2,7 @@ EXTRA_DIST = test sync_plugins.pl
 
 libexec_SCRIPTS = sync_plugins.pl
 
-pkglib_LTLIBRARIES = dnxServer.la
+lib_LTLIBRARIES = dnxServer.la
 
 noinst_HEADERS =\
  dnxCollector.h\
@@ -30,6 +30,10 @@ dnxServer_la_CPPFLAGS =\
 dnxServer_la_LIBADD = ../common/libcmn.la
 
 dnxServer_la_LDFLAGS = -module -avoid-version
+
+install-exec-hook:
+	rm $(DESTDIR)$(libdir)/dnxServer.a
+	rm $(DESTDIR)$(libdir)/dnxServer.la
 
 # ---------------------------------------------------------------------------
 # server-side unit tests

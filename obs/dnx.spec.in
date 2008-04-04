@@ -7,67 +7,148 @@
 #
 # Please submit bug fixes or comments via http://dnx.sourceforge.net
 #
+
 # norootforbuild
-#
+
 Name:           dnx
+Summary:        Distributed Nagios eXecutor for Nagios versions 2.x and 3.x
 Version:        @VERSION@
 Release:        1
-License:        GPL
+Group:          System/Monitoring
+License:        GNU General Public License (GPL)
+URL:            http://dnx.sourceforge.net
 Autoreqprov:    on
-BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-BuildRequires:  gcc
-Group:          Productivity/Security
-Summary:        Distributed Nagios eXecutor (DNX)
-Url:            http://dnx.sourceforge.net
 Source:         %{name}-%{version}.tar.gz
+Requires:       %{name}-client = %{version}
+Requires:       %{name}-server = %{version}
+BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
 The Distributed Nagios eXecutor (DNX) package provides a Nagios Event Broker
 (NEB) module and a client daemon process. DNX distributes the work of Nagios
 checks across a network of client nodes, thus providing significant scalability
-to the Natios monitoring software package.
+to the Natios monitoring software package. This package contains the software
+for both the client daemon and the server (NEB module).
+
+Authors:
+--------
+   Robert W. Ingraham <dnx-devel@lists.sourceforge.net>
+   John Calcote <jcalcote@users.sourceforge.net>
+   Adam Augustine <dnx-devel@lists.sourceforge.net>
+
+%package doc
+Summary:        Full DNX Documentation
+Group:          Documentation/Other
+# BuildRequires:  doxygen
+
+%description doc
+This package contains the OpenOffice and PDF documentation for the DNX package.
+
+Authors:
+--------
+   John Calcote <jcalcote@users.sourceforge.net>
+   Adam Augustine <dnx-devel@lists.sourceforge.net>
+
+%package client
+Summary:        DNX client daemon
+Group:          System/Monitoring
+
+%description client
+This package contains the Distributed Nagios eXecutor client daemon and sample
+configuration files.
+
+Authors:
+--------
+   Robert W. Ingraham <dnx-devel@lists.sourceforge.net>
+   John Calcote <jcalcote@users.sourceforge.net>
+
+%package server
+Summary:        DNX Nagios Event Broker (NEB) module.
+Group:          System/Monitoring
+# BuildRequires:  nagios-devel
+Requires:       nagios
+
+%description server
+This package contains the Distributed Nagios eXecutor NEB module, which is a 
+shared library that Nagios loads dynamically when configured to do so. It
+redirects nagios service checks to remote DNX clients. This package also 
+contains the sample configuration file for the DNX NEB module. This package 
+also contains the dnxstats utility, which can be used to query and control
+a dnx client process remotely.
+
+Authors:
+--------
+   Robert W. Ingraham <dnx-devel@lists.sourceforge.net>
+   John Calcote <jcalcote@users.sourceforge.net>
 
 %prep
 %setup
 
 %build
-%configure
+CFLAGS="%{optflags}" ./configure \
+   --prefix=%{_prefix} \
+   --libdir=%{_libdir}/nagios/brokers \
+   --libexecdir=%{_libdir}/nagios/plugins  \
+   --datadir=%{_datadir}/nagios \
+   --sysconfdir=%{_sysconfdir}/nagios
+
 make
+# make docs
+
+%check
 make check
 
 %install
 rm -rf %{buildroot}
 %makeinstall
-mkdir -p $RPM_BUILD_ROOT/etc/init.d
-mkdir -p $RPM_BUILD_ROOT/usr/sbin
-install -m 755 etc/dnxcld.init $RPM_BUILD_ROOT/etc/init.d/dnxcld
-ln -sf ../../etc/init.d/dnxcld $RPM_BUILD_ROOT/usr/sbin/rcdnxcld
 
-%post
+# Create output directories not created by %makeinstall
+mkdir -p %{buildroot}%{_sbindir}
+mkdir -p %{buildroot}%{_initrddir}
+mkdir -p %{buildroot}%{_sysconfdir}/nagios
+
+# Copy the init script and create the associated rc link in the sbin directory
+install -m 755 etc/dnxcld.init %{buildroot}%{_initrddir}/dnxcld
+ln -sf ../..%{_initrddir}/dnxcld %{buildroot}/usr/sbin/rcdnxcld
+
+# Copy configuration files
+install -m 644 etc/dnxClient.cfg %{buildroot}%{_sysconfdir}/nagios
+install -m 644 etc/dnxServer.cfg %{buildroot}%{_sysconfdir}/nagios
+
+%post client
 %{fillup_and_insserv -f dnxcld}
 
-%preun
+%preun client
 %stop_on_removal dnxcld
 
-%postun
+%postun client
 %restart_on_update dnxcld
 %insserv_cleanup
 
 %clean
-rm -rf "$RPM_BUILD_ROOT"
+rm -rf %{buildroot}
 
-%files
+%files doc
 %defattr(-,root,root)
 %doc AUTHORS COPYING ChangeLog NEWS README
-%config /etc/init.d/dnxcld
-%config /etc/dnxClient.cfg
-%config /etc/dnxServer.cfg
-%dir %{_libdir}/%{name}
-%{_prefix}/sbin/dnxClient
-%{_prefix}/sbin/rcdnxcld
+%doc doc/DNX_Workflow.pdf
+# %doc doc/%{name}-doxy-@VERSION@.tar.gz
+
+%files server
+%defattr(-,root,root)
+%config(noreplace) %_sysconfdir/nagios/dnxServer.cfg
+%{_libdir}/nagios/brokers/dnxServer.so
+%{_libdir}/nagios/plugins/sync_plugins.pl
+%defattr(755,root,root)
 %{_prefix}/bin/dnxstats
-%{_libdir}/%{name}/dnxServer.a
-%{_libdir}/%{name}/dnxServer.la
-%{_libdir}/%{name}/dnxServer.so
-%{_libdir}/sync_plugins.pl
+
+%files client
+%defattr(-,root,root)
+%config(noreplace) %{_sysconfdir}/nagios/dnxClient.cfg
+%defattr(755,root,root)
+%{_initrddir}/dnxcld
+%{_sbindir}/dnxClient
+%{_sbindir}/rcdnxcld
+
+%changelog
 

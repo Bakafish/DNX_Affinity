@@ -92,14 +92,14 @@
 # variable. The parameter value may be any valid file system path, or the 
 # keywords STDOUT or STDERR.
 
-#logFile = @syslogdir@/dnxsrv.log               # default
+#logFile = @localstatedir@/log/dnxsrv.log               # default
 
 # OPTIONAL: Debug logging output file.
 # Debug log messages may be directed to a log file though the use of this 
 # variable. The parameter value may be any valid file system path, or the 
 # keywords STDOUT or STDERR.
 
-#debugFile = @syslogdir@/dnxsrv.debug.log       # default
+#debugFile = @localstatedir@/log/dnxsrv.debug.log       # default
 
 # OPTIONAL: The DNX debug verbosity level.
 # Set this parameter to non-zero to enable debug output to the debug log. The 

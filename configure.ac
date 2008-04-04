@@ -6,13 +6,12 @@ AC_INIT(dnx, 0.15, dnx-devel@lists.sourceforge.net)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([client/dnxWLM.c])
 AC_CONFIG_HEADER([config.h])
+AC_PREFIX_DEFAULT([/usr/local/nagios])
 
 # Checks for programs.
 AC_PROG_LIBTOOL
 AC_PROG_CC
 AC_PROG_MAKE_SET
-AC_CHECK_PROG(DOXYGEN_INSTALLED, doxygen, yes)
-AM_CONDITIONAL(DO_DOXYGEN, [test x$DOXYGEN_INSTALLED = xyes])
 
 AC_ARG_WITH([nagios3x],
 	    [AS_HELP_STRING([--with-nagios3x], 
@@ -66,7 +65,6 @@ AC_DEFINE_UNQUOTED(BUILDARCH, ["$BUILDARCH"],
 
 AC_CONFIG_FILES([Makefile
 		 etc/Makefile
-		 etc/dnxcld.init
 		 obs/dnx.spec
 		 obs/dnx.dsc
 		 obs/debian.changelog
@@ -78,3 +76,31 @@ AC_CONFIG_FILES([Makefile
 		 client/Makefile
 		 stats/Makefile])
 AC_OUTPUT
+
+echo "------------------------------------------------------------"
+echo
+echo "  Project ${PACKAGE} version ${VERSION} configuration:"
+echo
+echo "  Prefix is currently '${prefix}'."
+echo
+echo "  Targeting Nagios version ${nagios_target}."
+echo
+echo "  Now type 'make @<:@prefix=<user-prefix>@:>@ @<:@<target>@:>@'"
+echo
+echo "    where the optional <target> is:"
+echo
+echo "      all                - build all binaries (default)."
+echo "      docs               - build doxygen documentation."
+echo "      install            - install all binaries and data."
+echo "      install-cfg        - install sample config scripts."
+echo "      install-docs       - install all documentation."
+echo "      install-initscript - install system init script."
+echo
+echo "    additionally on rpm-based systems only:"
+echo
+echo "      rpmcheck           - check whether rpms may be built."
+echo "      srcrpm             - build only source rpm."
+echo "      rpms               - build source and binary rpms."
+echo
+echo "------------------------------------------------------------"
+
