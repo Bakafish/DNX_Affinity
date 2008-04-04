@@ -36,14 +36,17 @@
 #ifndef _DNXREGISTRAR_H_
 #define _DNXREGISTRAR_H_
 
-#include "dnxNebMain.h"
+#include "dnxQueue.h"
+#include "dnxChannel.h"
+#include "dnxProtocol.h"
 
-void * dnxRegistrar(void * data);
-int dnxGetNodeRequest(DnxGlobalData * gData, DnxNodeRequest ** ppNode);
-int dnxProcessNodeRequest(DnxGlobalData * gData);
-int dnxRegisterNode(DnxGlobalData * gData, DnxNodeRequest * pMsg);
-int dnxDeregisterNode(DnxGlobalData * gData, DnxNodeRequest * pMsg);
-int dnxDeregisterAllNodes(DnxGlobalData * gData);
+typedef void DnxRegistrar;
+
+int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode);
+
+int dnxRegistrarCreate(long * debug, dnxChannel * dchannel, 
+      DnxQueue * rqueue, DnxRegistrar ** preg);
+void dnxRegistrarDestroy(DnxRegistrar * reg);
 
 #endif   /* _DNXREGISTRAR_H_ */
 

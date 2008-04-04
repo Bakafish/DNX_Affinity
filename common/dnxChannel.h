@@ -72,5 +72,9 @@ typedef struct _dnxChannel_
    int (*txDelete)(struct _dnxChannel_ * channel); // Release a channel using this transport
 } dnxChannel;
 
+/** @todo Temporarily define DnxChannel till we've fully redefined it. */
+
+#define DnxChannel dnxChannel
+
 #endif   /* _DNXCHANNEL_H_ */
 

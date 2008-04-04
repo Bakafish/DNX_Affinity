@@ -32,6 +32,7 @@
 #include "dnxTransport.h"
 #include "dnxProtocol.h"
 #include "dnxQueue.h"   // For dnxQueue definition
+#include "dnxRegistrar.h"
 
 #ifndef NSCORE
 # define NSCORE
@@ -102,9 +103,9 @@ typedef struct _DnxGlobalData_
    pthread_cond_t tcReq;   // Request Queue condition variable
    pthread_mutex_t tmReq;  // Request Queue mutex
    DnxQueue * qReq;        // Registered Worker Node Requests
+   DnxRegistrar * reg;     // The client node registrar.
 
    pthread_t tDispatcher;  // Dispatcher thread ID
-   pthread_t tRegistrar;   // Registrar thread ID
    pthread_t tCollector;   // Collector thread ID
    pthread_t tTimer;       // Timer thread ID
 

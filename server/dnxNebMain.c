@@ -211,9 +211,9 @@ static int releaseThreads(void)
 {
    int ret;
 
+   dnxRegistrarDestroy(dnxGlobalData.reg);
+
    // Cancel all threads
-   if (dnxGlobalData.tRegistrar && (ret = pthread_cancel(dnxGlobalData.tRegistrar)) != 0)
-      dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tRegistrar) failed with ret = %d", ret);
    if (dnxGlobalData.tDispatcher && (ret = pthread_cancel(dnxGlobalData.tDispatcher)) != 0)
       dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tDispatcher) failed with ret = %d", ret);
    if (dnxGlobalData.tTimer && (ret = pthread_cancel(dnxGlobalData.tTimer)) != 0)
@@ -222,8 +222,6 @@ static int releaseThreads(void)
       dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tCollector) failed with ret = %d", ret);
 
    // Wait for all threads to exit
-   if (dnxGlobalData.tRegistrar && (ret = pthread_join(dnxGlobalData.tRegistrar, NULL)) != 0)
-      dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tRegistrar) failed with ret = %d", ret);
    if (dnxGlobalData.tDispatcher && (ret = pthread_join(dnxGlobalData.tDispatcher, NULL)) != 0)
       dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tDispatcher) failed with ret = %d", ret);
    if (dnxGlobalData.tTimer && (ret = pthread_join(dnxGlobalData.tTimer, NULL)) != 0)
@@ -358,16 +356,6 @@ static int initThreads(void)
       
    }
 
-   // Create the Registrar thread
-   if ((ret = pthread_create(&dnxGlobalData.tRegistrar, NULL, dnxRegistrar, (void *)&dnxGlobalData)) != 0)
-   {
-      dnxGlobalData.isActive = 0;   // Init failure
-      dnxSyslog(LOG_ERR, "initThreads: Failed to create Registrar thread: %d", ret);
-      releaseThreads();    // Cancel prior threads
-      return DNX_ERR_THREAD;
-      
-   }
-
    // Create the Service Check Timer thread
    if ((ret = pthread_create(&dnxGlobalData.tTimer, NULL, dnxTimer, (void *)&dnxGlobalData)) != 0)
    {
@@ -376,6 +364,15 @@ static int initThreads(void)
       releaseThreads();    // Cancel prior threads
       return DNX_ERR_THREAD;
       
+   }
+
+   // Create the Registrar
+   if ((ret = dnxRegistrarCreate(&dnxGlobalData.debug, dnxGlobalData.pDispatch, 
+         dnxGlobalData.qReq, &dnxGlobalData.reg)) != DNX_OK)
+   {
+      dnxGlobalData.isActive = 0;   // Init failure
+      releaseThreads();    // Cancel prior threads
+      return ret;
    }
 
    // Set the ShowStart flag
@@ -775,7 +772,7 @@ static int ehSvcCheck(int event_type, void * data)
          dnxGlobalData.serialNo, (unsigned long)time(NULL), (unsigned long)(svcdata->start_time.tv_sec));
 
    // Locate the next available worker node from the Request Queue
-   if ((ret = dnxGetNodeRequest(&dnxGlobalData, &pNode)) != DNX_OK)
+   if ((ret = dnxGetNodeRequest(dnxGlobalData.reg, &pNode)) != DNX_OK)
    {
       dnxDebug(1, "dnxServer: ehSvcCheck: No worker nodes requests available: %d", ret);
       return OK;  // Unable to handle this request - Have Nagios handle it
