@@ -314,8 +314,7 @@ static int getOptions(int argc, char ** argv)
    if (!s_cfgfile)
       s_cfgfile = DNX_DEFAULT_NODE_CONFIG_FILE;
 
-   rplen = strlen(runpath);
-   if (rplen && runpath[rplen - 1] == '/')
+   if (runpath && (rplen = strlen(runpath)) != 0 && runpath[rplen - 1] == '/')
       runpath[rplen - 1] = 0;
 
    if (s_dbgflag)
