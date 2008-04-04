@@ -49,15 +49,239 @@
 #include <syslog.h>
 #include <errno.h>
 
-static void dnxWLMCleanup (void *data);
-static int createThreadPool (DnxGlobalData *gData);
-static int deleteThreadPool (DnxGlobalData *gData);
-static int growThreadPool (DnxGlobalData *gData, int gThreads);
-static int scanThreadPool (DnxGlobalData *gData, int *activeThreads);
+//----------------------------------------------------------------------------
+
+/** Delete all threads and thread resources in the thread pool.
+ * 
+ * @param[in] gData - the global data structure containing information about 
+ *    the thread pool to be deleted.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int deleteThreadPool(DnxGlobalData * gData)
+{
+   int i;
+   int ret = DNX_OK;
+
+   // Cancel all threads
+   for (i=0; i < gData->poolMax; i++)
+   {
+      if (gData->tPool[i].state == DNX_THREAD_RUNNING)
+      {
+         // Cancel each thread
+         if (gData->debug)
+            syslog(LOG_DEBUG, "deleteThreadPool: Canceling thread %lx", gData->tPool[i].tid);
+         if (pthread_cancel(gData->tPool[i].tid) != 0)
+         {
+            syslog(LOG_ERR, "deleteThreadPool: Failed to cancel thread %lx: %d", gData->tPool[i].tid, errno);
+            gData->tPool[i].state = DNX_THREAD_DEAD;
+            gData->tPool[i].tid = 0;
+         }
+      }
+   }
+
+   // Join all threads
+   for (i=0; i < gData->poolMax; i++)
+   {
+      if (gData->tPool[i].state != DNX_THREAD_DEAD)
+      {
+         // Join each thread
+         if (gData->debug)
+            syslog(LOG_DEBUG, "deleteThreadPool: Waiting to join thread %lx", gData->tPool[i].tid);
+         if (pthread_join(gData->tPool[i].tid, NULL) != 0)
+         {
+            syslog(LOG_ERR, "deleteThreadPool: Failed to join thread %lx: %d", gData->tPool[i].tid, errno);
+         }
+
+         // Free-up this thread-pool slot
+         gData->tPool[i].state = DNX_THREAD_DEAD;
+         gData->tPool[i].tid   = (pthread_t)0;
+      }
+   }
+
+   return ret;
+}
 
 //----------------------------------------------------------------------------
 
-void *dnxWLM (void *data)
+/** Dispatch thread clean-up routine.
+ * 
+ * @param[in] data - an opaque pointer to the the global data structure 
+ *    containing information about the thread to be cleaned up.
+ */
+static void dnxWLMCleanup(void * data)
+{
+   DnxGlobalData * gData = (DnxGlobalData *)data;
+
+   assert(data);
+
+   syslog(LOG_INFO, "dnxWLMCleanup[%lx]: WLM thread beginning "
+                    "termination sequence", pthread_self());
+
+   // Set the termination flag for the worker threads
+   gData->terminate = 1;
+
+   // Unlock the mutex
+   DNX_PT_MUTEX_UNLOCK(&gData->wlmMutex);
+
+   // Destroy the mutex
+   DNX_PT_MUTEX_DESTROY(&gData->wlmMutex);
+
+   // Destroy the condition variable
+   DNX_PT_COND_DESTROY(&gData->wlmCond);
+
+   // If the worker thread pool exists...
+   if (gData->tPool)
+   {
+      // Wait for worker threads to exit
+      deleteThreadPool(gData);
+
+      // Release thread pool tracking array
+      free(gData->tPool);
+   }
+   syslog(LOG_INFO, "dnxWLMCleanup[%lx]: WLM thread "
+                    "termination complete", pthread_self());
+}
+
+//----------------------------------------------------------------------------
+
+/** Create the global thread pool.
+ * 
+ * @param[in] gData - a pointer to the global data structure containing
+ *    configuration information about the thread pool to be created.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int createThreadPool(DnxGlobalData * gData)
+{
+   int i;
+   int ret = DNX_OK;
+
+   // Clear the termination flag for the worker threads
+   gData->terminate = 0;
+
+   for (i=0; i < gData->poolInitial; i++)
+   {
+      gData->tPool[i].state = DNX_THREAD_RUNNING;  // Set this thread's state to active
+      gData->tPool[i].data  = gData;   // Allow thread access to global data
+
+      // Create a worker thread
+      if ((ret = pthread_create(&(gData->tPool[i].tid), NULL, dnxWorker, &(gData->tPool[i]))) != 0)
+      {
+         syslog(LOG_ERR, "createThreadPool: Failed to create thread %d: %d", i, errno);
+         gData->tPool[i].state = DNX_THREAD_DEAD;
+         gData->tPool[i].tid   = (pthread_t)0;
+         ret = DNX_ERR_THREAD;
+         break;
+      }
+   }
+
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Grow the thread pool by the specified number of threads.
+ * 
+ * @param[in] gData - the global data structure containing information about
+ *    the thread pool to be increased.
+ * @param[in] gThreads - the number of threads by which to increase the pool.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int growThreadPool(DnxGlobalData * gData, int gThreads)
+{
+   int i, addThreads, growSize;
+   int ret = DNX_OK;
+
+   // Set additional thread count
+   growSize = addThreads = (int)((gThreads < gData->poolInitial) ? 
+         (gData->poolInitial - gThreads) : (gData->poolGrow));
+
+   // Scan for empty pool slots
+   for (i = 0; i < gData->poolMax && addThreads > 0; i++)
+   {
+      // Find an empty slot
+      if (gData->tPool[i].state == DNX_THREAD_DEAD)
+      {
+         // Clear this thread's local data structure
+         memset(&(gData->tPool[i]), 0, sizeof(DnxWorkerStatus));
+
+         gData->tPool[i].state = DNX_THREAD_RUNNING;  // Set this thread's state to active
+         gData->tPool[i].data = gData; // Allow thread access to global data
+
+         // Create a worker thread
+         if ((ret = pthread_create(&(gData->tPool[i].tid), NULL, 
+               dnxWorker, &(gData->tPool[i]))) != 0)
+         {
+            syslog(LOG_ERR, "growThreadPool: Failed to create thread %d: %d", i, ret);
+            gData->tPool[i].state = DNX_THREAD_DEAD;
+            gData->tPool[i].tid = (pthread_t)0;
+            ret = DNX_ERR_THREAD;
+            break;
+         }
+
+         addThreads--;  // Decrement the threads-to-add counter
+      }
+   }
+   syslog(LOG_INFO, "growThreadPool: Increased thread pool by %d", 
+         (int)(growSize - addThreads));
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Scan the global work load manager thread pool for dead threads.
+ * 
+ * @param[in] gData - the global data structure containing information about
+ *    the pool to be scanned.
+ * @param[out] activeThreads - the address of storage for returning the 
+ *    new number of active threads in the pool.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int scanThreadPool(DnxGlobalData * gData, int * activeThreads)
+{
+   int i;
+   int ret = DNX_OK;
+
+   // Clear the active thread counter
+   *activeThreads = 0;
+
+   // Look for zombie threads to join
+   for (i=0; i < gData->poolMax; i++)
+   {
+      if (gData->tPool[i].state == DNX_THREAD_ZOMBIE)
+      {
+         // Join each zombie thread
+         if (gData->debug)
+            syslog(LOG_DEBUG, "scanThreadPool: Waiting to join thread %lx", 
+                  gData->tPool[i].tid);
+
+         if (pthread_join(gData->tPool[i].tid, NULL) != 0)
+            syslog(LOG_ERR, "scanThreadPool: Failed to join thread %lx: %d", 
+                  gData->tPool[i].tid, errno);
+
+         // Free-up this thread-pool slot
+         gData->tPool[i].state = DNX_THREAD_DEAD;
+         gData->tPool[i].tid   = (pthread_t)0;
+      }
+      else if (gData->tPool[i].state == DNX_THREAD_RUNNING)
+         (*activeThreads)++;     // Increment active thread count
+   }
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** The main thread routine for the work load manager.
+ * 
+ * @param[in] data - an opaque pointer to the global data structure containing 
+ *    information about the work load manager thread.
+ * 
+ * @return Always returns NULL.
+ */
+void * dnxWLM(void * data)
 {
    DnxGlobalData *gData = (DnxGlobalData *)data;
    struct timeval  now;            // Time when we started waiting
@@ -198,191 +422,6 @@ abend:;
    pthread_exit(NULL);
 
    return 0;
-}
-
-//----------------------------------------------------------------------------
-// Dispatch thread clean-up routine
-
-static void dnxWLMCleanup (void *data)
-{
-   DnxGlobalData *gData = (DnxGlobalData *)data;
-   assert(data);
-
-   syslog(LOG_INFO, "dnxWLMCleanup[%lx]: WLM thread beginning termination sequence", pthread_self());
-
-   // Set the termination flag for the worker threads
-   gData->terminate = 1;
-
-   // Unlock the mutex
-   DNX_PT_MUTEX_UNLOCK(&gData->wlmMutex);
-
-   // Destroy the mutex
-   DNX_PT_MUTEX_DESTROY(&gData->wlmMutex);
-
-   // Destroy the condition variable
-   DNX_PT_COND_DESTROY(&gData->wlmCond);
-
-   // If the worker thread pool exists...
-   if (gData->tPool)
-   {
-      // Wait for worker threads to exit
-      deleteThreadPool(gData);
-
-      // Release thread pool tracking array
-      free(gData->tPool);
-   }
-
-   syslog(LOG_INFO, "dnxWLMCleanup[%lx]: WLM thread termination complete", pthread_self());
-}
-
-//----------------------------------------------------------------------------
-
-static int createThreadPool (DnxGlobalData *gData)
-{
-   int i;
-   int ret = DNX_OK;
-
-   // Clear the termination flag for the worker threads
-   gData->terminate = 0;
-
-   for (i=0; i < gData->poolInitial; i++)
-   {
-      gData->tPool[i].state = DNX_THREAD_RUNNING;  // Set this thread's state to active
-      gData->tPool[i].data  = gData;   // Allow thread access to global data
-
-      // Create a worker thread
-      if ((ret = pthread_create(&(gData->tPool[i].tid), NULL, dnxWorker, &(gData->tPool[i]))) != 0)
-      {
-         syslog(LOG_ERR, "createThreadPool: Failed to create thread %d: %d", i, errno);
-         gData->tPool[i].state = DNX_THREAD_DEAD;
-         gData->tPool[i].tid   = (pthread_t)0;
-         ret = DNX_ERR_THREAD;
-         break;
-      }
-   }
-
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-static int deleteThreadPool (DnxGlobalData *gData)
-{
-   int i;
-   int ret = DNX_OK;
-
-   // Cancel all threads
-   for (i=0; i < gData->poolMax; i++)
-   {
-      if (gData->tPool[i].state == DNX_THREAD_RUNNING)
-      {
-         // Cancel each thread
-         if (gData->debug)
-            syslog(LOG_DEBUG, "deleteThreadPool: Canceling thread %lx", gData->tPool[i].tid);
-         if (pthread_cancel(gData->tPool[i].tid) != 0)
-         {
-            syslog(LOG_ERR, "deleteThreadPool: Failed to cancel thread %lx: %d", gData->tPool[i].tid, errno);
-            gData->tPool[i].state = DNX_THREAD_DEAD;
-            gData->tPool[i].tid = 0;
-         }
-      }
-   }
-
-   // Join all threads
-   for (i=0; i < gData->poolMax; i++)
-   {
-      if (gData->tPool[i].state != DNX_THREAD_DEAD)
-      {
-         // Join each thread
-         if (gData->debug)
-            syslog(LOG_DEBUG, "deleteThreadPool: Waiting to join thread %lx", gData->tPool[i].tid);
-         if (pthread_join(gData->tPool[i].tid, NULL) != 0)
-         {
-            syslog(LOG_ERR, "deleteThreadPool: Failed to join thread %lx: %d", gData->tPool[i].tid, errno);
-         }
-
-         // Free-up this thread-pool slot
-         gData->tPool[i].state = DNX_THREAD_DEAD;
-         gData->tPool[i].tid   = (pthread_t)0;
-      }
-   }
-
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-static int growThreadPool (DnxGlobalData *gData, int gThreads)
-{
-   int i, addThreads, growSize;
-   int ret = DNX_OK;
-
-   // Set additional thread count
-   growSize = addThreads = (int)((gThreads < gData->poolInitial) ? (gData->poolInitial - gThreads) : (gData->poolGrow));
-
-   // Scan for empty pool slots
-   for (i=0; i < gData->poolMax && addThreads > 0; i++)
-   {
-      // Find an empty slot
-      if (gData->tPool[i].state == DNX_THREAD_DEAD)
-      {
-         // Clear this thread's local data structure
-         memset(&(gData->tPool[i]), 0, sizeof(DnxWorkerStatus));
-
-         gData->tPool[i].state = DNX_THREAD_RUNNING;  // Set this thread's state to active
-         gData->tPool[i].data = gData; // Allow thread access to global data
-
-         // Create a worker thread
-         if ((ret = pthread_create(&(gData->tPool[i].tid), NULL, dnxWorker, &(gData->tPool[i]))) != 0)
-         {
-            syslog(LOG_ERR, "growThreadPool: Failed to create thread %d: %d", i, ret);
-            gData->tPool[i].state = DNX_THREAD_DEAD;
-            gData->tPool[i].tid = (pthread_t)0;
-            ret = DNX_ERR_THREAD;
-            break;
-         }
-
-         addThreads--;  // Decrement the threads-to-add counter
-      }
-   }
-
-   syslog(LOG_INFO, "growThreadPool: Increased thread pool by %d", (int)(growSize - addThreads));
-
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-static int scanThreadPool (DnxGlobalData *gData, int *activeThreads)
-{
-   int i;
-   int ret = DNX_OK;
-
-   // Clear the active thread counter
-   *activeThreads = 0;
-
-   // Look for zombie threads to join
-   for (i=0; i < gData->poolMax; i++)
-   {
-      if (gData->tPool[i].state == DNX_THREAD_ZOMBIE)
-      {
-         // Join each zombie thread
-         if (gData->debug)
-            syslog(LOG_DEBUG, "scanThreadPool: Waiting to join thread %lx", gData->tPool[i].tid);
-         if (pthread_join(gData->tPool[i].tid, NULL) != 0)
-         {
-            syslog(LOG_ERR, "scanThreadPool: Failed to join thread %lx: %d", gData->tPool[i].tid, errno);
-         }
-
-         // Free-up this thread-pool slot
-         gData->tPool[i].state = DNX_THREAD_DEAD;
-         gData->tPool[i].tid   = (pthread_t)0;
-      }
-      else if (gData->tPool[i].state == DNX_THREAD_RUNNING)
-         (*activeThreads)++;     // Increment active thread count
-   }
-
-   return ret;
 }
 
 /*--------------------------------------------------------------------------*/

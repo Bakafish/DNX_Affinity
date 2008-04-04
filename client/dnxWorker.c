@@ -54,17 +54,251 @@
 /** @todo Dynamically allocate based upon config file maxResultBuffer setting */
 #define MAX_RESULT_DATA 1024
 
-static void dnxWorkerCleanup (void *data);
-static int initWorkerComm (DnxWorkerStatus *tData);
-static int releaseWorkerComm (DnxWorkerStatus *tData);
-static int dnxExecuteJob (DnxWorkerStatus *tData, DnxJob *pJob, DnxResult *pResult);
+//----------------------------------------------------------------------------
+
+/** Clean up work communications resources.
+ * 
+ * @param[in] tData - a pointer to a worker thread's status data structure.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int releaseWorkerComm(DnxWorkerStatus * tData)
+{
+   char szChan[64];
+   int ret;
+
+   // Close the dispatch channel
+   if ((ret = dnxDisconnect(tData->pDispatch)) != DNX_OK)
+      syslog(LOG_ERR, "releaseWorkerComm: dnxDisconnect(Dispatch) failed for thread %lx: %d", pthread_self(), ret);
+   tData->pDispatch = NULL;
+
+   // Delete this worker's dispatch channel
+   sprintf(szChan, "Dispatch:%lx", pthread_self());
+   if ((ret = dnxChanMapDelete(szChan)) != DNX_OK)
+      syslog(LOG_ERR, "releaseWorkerComm: dnxChanMapDelete(Dispatch) failed for thread %lx: %d", pthread_self(), ret);
+
+   // Close the collector channel
+   if ((ret = dnxDisconnect(tData->pCollect)) != DNX_OK)
+      syslog(LOG_ERR, "releaseWorkerComm: dnxDisconnect(Collect) failed for thread %lx: %d", pthread_self(), ret);
+   tData->pCollect = NULL;
+
+   // Delete this worker's collector channel
+   sprintf(szChan, "Collect:%lx", pthread_self());
+   if ((ret = dnxChanMapDelete(szChan)) != DNX_OK)
+      syslog(LOG_ERR, "releaseWorkerComm: dnxChanMapDelete(Collect) failed for thread %lx: %d", pthread_self(), ret);
+
+   return ret;
+}
 
 //----------------------------------------------------------------------------
 
-void *dnxWorker (void *data)
+/** Dispatch thread clean-up routine
+ * 
+ * @param[in] data - an opaque pointer to a worker thread's status data 
+ *    structure.
+ */
+static void dnxWorkerCleanup(void * data)
 {
-   DnxWorkerStatus *tData = (DnxWorkerStatus *)data;
-   DnxGlobalData *gData;
+   DnxWorkerStatus * tData = (DnxWorkerStatus *)data;
+
+   assert(data);
+
+   // Close our communications channels
+   releaseWorkerComm(tData);
+
+   // Let the WLM know this thread needs to be joined
+   tData->state = DNX_THREAD_ZOMBIE;
+
+   // Decrement active thread counter and Increment threads destroyed counter
+   dnxSetThreadsActive(-1);
+
+   syslog(LOG_INFO, "dnxWorker[%lx]: Thread Termination", pthread_self());
+}
+
+//----------------------------------------------------------------------------
+
+/** Initialize a worker thread's required communication resources.
+ * 
+ * @param[in] tData - a pointer to a worker thread's status data structure.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int initWorkerComm(DnxWorkerStatus * tData)
+{
+   DnxGlobalData * gData;
+   char szChan[64];
+   int ret = DNX_OK;
+
+   // Get reference to global data
+   gData = (DnxGlobalData *)(tData->data);
+
+   tData->pDispatch = tData->pCollect = NULL;
+
+   // Create unique name for worker dispatch channel
+   sprintf(szChan, "Dispatch:%lx", pthread_self());
+   
+   // Create a channel for sending DNX Job Requests
+   if ((ret = dnxChanMapAdd(szChan, gData->channelDispatcher)) != DNX_OK)
+   {
+      syslog(LOG_ERR, "initWorkerComm: dnxChanMapAdd(Dispatch) failed for thread %lx: %d", pthread_self(), ret);
+      return ret;
+   }
+
+   // Attempt to open the dispatch channel
+   if ((ret = dnxConnect(szChan, &(tData->pDispatch), DNX_CHAN_ACTIVE)) != DNX_OK)
+   {
+      syslog(LOG_ERR, "initWorkerComm: dnxConnect(Dispatch) failed for thread %lx: %d", pthread_self(), ret);
+      return ret;
+   }
+
+
+   // Create unique name for worker collector channel
+   sprintf(szChan, "Collect:%lx", pthread_self());
+   
+   // Create a channel for sending DNX Job Results
+   if ((ret = dnxChanMapAdd(szChan, gData->channelCollector)) != DNX_OK)
+   {
+      syslog(LOG_ERR, "initWorkerComm: dnxChanMapAdd(Collect) failed for thread %lx: %d", pthread_self(), ret);
+      return ret;
+   }
+
+   // Attempt to open the dispatch channel
+   if ((ret = dnxConnect(szChan, &(tData->pCollect), DNX_CHAN_ACTIVE)) != DNX_OK)
+   {
+      syslog(LOG_ERR, "initWorkerComm: dnxConnect(Collect) failed for thread %lx: %d", pthread_self(), ret);
+      return ret;
+   }
+   
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Initialize a worker thread's required communication resources.
+ * 
+ * @param[in] tData - a pointer to a worker thread's status data structure.
+ * @param[in] pJob - a job to be executed by this thread.
+ * @param[out] pResult - the address of storage for returning a job's result
+ *    code.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dnxExecuteJob(DnxWorkerStatus * tData, DnxJob * pJob, 
+      DnxResult * pResult)
+{
+   char resData[MAX_RESULT_DATA + 1];
+   DnxGlobalData * gData;
+   int ret;
+
+   // Get reference to global data
+   gData = (DnxGlobalData *)(tData->data);
+
+   // Increment the global jobs-active counter
+   dnxSetJobsActive(1);
+
+   // Announce job reception
+   if (gData->debug)
+      syslog(LOG_INFO, "dnxExecuteJob[%lx]: Received job [%lu,%lu] (T/O %d): %s", pthread_self(), pJob->guid.objSerial, pJob->guid.objSlot, pJob->timeout, pJob->cmd);
+
+   // Prepare result structure
+   pResult->guid = pJob->guid;         // Copy GUID over intact, as the server uses this for result matchup with the request
+   pResult->state = DNX_JOB_COMPLETE;  // Job can be either complete or expired
+   pResult->delta = 0;              // Job execution delta
+   pResult->resCode = DNX_PLUGIN_RESULT_OK;  // OK
+   pResult->resData = NULL;         // Result data
+
+   memset(resData, 0, sizeof(resData));
+
+   // Start job timer
+   time(&(tData->tJobStart));
+   
+   // Execute the job
+   ret = dnxPluginExecute(pJob->cmd, &(pResult->resCode), resData, MAX_RESULT_DATA, pJob->timeout);
+
+   // Compute job execution delta
+   pResult->delta = time(NULL) - tData->tJobStart;
+
+   // Store dynamic copy of the result string
+   if (resData[0] && (pResult->resData = strdup(resData)) == NULL)
+   {
+      syslog(LOG_ERR, "dnxExecuteJob[%lx]: Out of Memory: null result string for job [%lu,%lu]: %s", pthread_self(), pJob->guid.objSerial, pJob->guid.objSlot, pJob->cmd);
+      ret = DNX_ERR_MEMORY;
+   }
+
+   // Decrement the global jobs-active counter
+   dnxSetJobsActive(-1);
+
+   // Update per-thread statistics
+   tData->tJobStart = 0;
+   tData->tJobTime += pResult->delta;
+   if (pResult->resCode == DNX_PLUGIN_RESULT_OK)
+      tData->jobsOk++;
+   else
+      tData->jobsFail++;
+
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** A sleep routine - just in case sleep isn't a cancellation point.
+ * 
+ * @param[in] seconds - the number of seconds to sleep.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxThreadSleep(int seconds)
+{
+   pthread_mutex_t timerMutex = PTHREAD_MUTEX_INITIALIZER;
+   pthread_cond_t  timerCond  = PTHREAD_COND_INITIALIZER;
+   struct timeval  now;            // Time when we started waiting
+   struct timespec timeout;        // Timeout value for the wait function
+   int ret;
+
+   // Create temporary mutex for time waits
+   if ((ret = pthread_mutex_lock(&timerMutex)) != 0)
+   {
+      syslog(LOG_ERR, "dnxThreadSleep: Failed to lock timerMutex: %d", ret);
+      return ret;
+   }
+
+   gettimeofday(&now, NULL);
+
+   // timeval uses micro-seconds.
+   // timespec uses nano-seconds.
+   // 1 micro-second = 1000 nano-seconds.
+   timeout.tv_sec = now.tv_sec + seconds;
+   timeout.tv_nsec = now.tv_usec * 1000;
+
+   // Sleep for the specified time
+   if ((ret = pthread_cond_timedwait(&timerCond, &timerMutex, &timeout)) != ETIMEDOUT)
+   {
+      pthread_mutex_unlock(&timerMutex);
+      syslog(LOG_ERR, "dnxThreadSleep: Failed to wait on timerCondition: %d", ret);
+      return ret;
+   }
+
+   if ((ret = pthread_mutex_unlock(&timerMutex)) != 0)
+   {
+      syslog(LOG_ERR, "dnxThreadSleep: Failed to unlock timerMutex: %d", ret);
+   }
+
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** The main thread routine for a worker thread.
+ * 
+ * @param[in] data - an opaque pointer to a DnxWorkerStatus structure for this
+ *    thread.
+ * 
+ * @return Always returns NULL.
+ */
+void * dnxWorker (void * data)
+{
+   DnxWorkerStatus * tData = (DnxWorkerStatus *)data;
+   DnxGlobalData * gData;
    DnxNodeRequest Msg;
    DnxJob Job;
    DnxResult Result;
@@ -207,7 +441,6 @@ void *dnxWorker (void *data)
       }
    }
 
-
 abend:;
 
    // Remove thread cleanup handler
@@ -217,207 +450,6 @@ abend:;
    pthread_exit(NULL);
 
    return 0;
-}
-
-//----------------------------------------------------------------------------
-// Dispatch thread clean-up routine
-
-static void dnxWorkerCleanup (void *data)
-{
-   DnxWorkerStatus *tData = (DnxWorkerStatus *)data;
-
-   assert(data);
-
-   // Close our communications channels
-   releaseWorkerComm(tData);
-
-   // Let the WLM know this thread needs to be joined
-   tData->state = DNX_THREAD_ZOMBIE;
-
-   // Decrement active thread counter and Increment threads destroyed counter
-   dnxSetThreadsActive(-1);
-
-   syslog(LOG_INFO, "dnxWorker[%lx]: Thread Termination", pthread_self());
-}
-
-
-//----------------------------------------------------------------------------
-
-static int initWorkerComm (DnxWorkerStatus *tData)
-{
-   DnxGlobalData *gData;
-   char szChan[64];
-   int ret = DNX_OK;
-
-   // Get reference to global data
-   gData = (DnxGlobalData *)(tData->data);
-
-   tData->pDispatch = tData->pCollect = NULL;
-
-   // Create unique name for worker dispatch channel
-   sprintf(szChan, "Dispatch:%lx", pthread_self());
-   
-   // Create a channel for sending DNX Job Requests
-   if ((ret = dnxChanMapAdd(szChan, gData->channelDispatcher)) != DNX_OK)
-   {
-      syslog(LOG_ERR, "initWorkerComm: dnxChanMapAdd(Dispatch) failed for thread %lx: %d", pthread_self(), ret);
-      return ret;
-   }
-
-   // Attempt to open the dispatch channel
-   if ((ret = dnxConnect(szChan, &(tData->pDispatch), DNX_CHAN_ACTIVE)) != DNX_OK)
-   {
-      syslog(LOG_ERR, "initWorkerComm: dnxConnect(Dispatch) failed for thread %lx: %d", pthread_self(), ret);
-      return ret;
-   }
-
-
-   // Create unique name for worker collector channel
-   sprintf(szChan, "Collect:%lx", pthread_self());
-   
-   // Create a channel for sending DNX Job Results
-   if ((ret = dnxChanMapAdd(szChan, gData->channelCollector)) != DNX_OK)
-   {
-      syslog(LOG_ERR, "initWorkerComm: dnxChanMapAdd(Collect) failed for thread %lx: %d", pthread_self(), ret);
-      return ret;
-   }
-
-   // Attempt to open the dispatch channel
-   if ((ret = dnxConnect(szChan, &(tData->pCollect), DNX_CHAN_ACTIVE)) != DNX_OK)
-   {
-      syslog(LOG_ERR, "initWorkerComm: dnxConnect(Collect) failed for thread %lx: %d", pthread_self(), ret);
-      return ret;
-   }
-   
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-static int releaseWorkerComm (DnxWorkerStatus *tData)
-{
-   char szChan[64];
-   int ret;
-
-   // Close the dispatch channel
-   if ((ret = dnxDisconnect(tData->pDispatch)) != DNX_OK)
-      syslog(LOG_ERR, "releaseWorkerComm: dnxDisconnect(Dispatch) failed for thread %lx: %d", pthread_self(), ret);
-   tData->pDispatch = NULL;
-
-   // Delete this worker's dispatch channel
-   sprintf(szChan, "Dispatch:%lx", pthread_self());
-   if ((ret = dnxChanMapDelete(szChan)) != DNX_OK)
-      syslog(LOG_ERR, "releaseWorkerComm: dnxChanMapDelete(Dispatch) failed for thread %lx: %d", pthread_self(), ret);
-
-   // Close the collector channel
-   if ((ret = dnxDisconnect(tData->pCollect)) != DNX_OK)
-      syslog(LOG_ERR, "releaseWorkerComm: dnxDisconnect(Collect) failed for thread %lx: %d", pthread_self(), ret);
-   tData->pCollect = NULL;
-
-   // Delete this worker's collector channel
-   sprintf(szChan, "Collect:%lx", pthread_self());
-   if ((ret = dnxChanMapDelete(szChan)) != DNX_OK)
-      syslog(LOG_ERR, "releaseWorkerComm: dnxChanMapDelete(Collect) failed for thread %lx: %d", pthread_self(), ret);
-
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-int dnxThreadSleep (int seconds)
-{
-   pthread_mutex_t timerMutex = PTHREAD_MUTEX_INITIALIZER;
-   pthread_cond_t  timerCond  = PTHREAD_COND_INITIALIZER;
-   struct timeval  now;            // Time when we started waiting
-   struct timespec timeout;        // Timeout value for the wait function
-   int ret;
-
-   // Create temporary mutex for time waits
-   if ((ret = pthread_mutex_lock(&timerMutex)) != 0)
-   {
-      syslog(LOG_ERR, "dnxThreadSleep: Failed to lock timerMutex: %d", ret);
-      return ret;
-   }
-
-   gettimeofday(&now, NULL);
-
-   // timeval uses micro-seconds.
-   // timespec uses nano-seconds.
-   // 1 micro-second = 1000 nano-seconds.
-   timeout.tv_sec = now.tv_sec + seconds;
-   timeout.tv_nsec = now.tv_usec * 1000;
-
-   // Sleep for the specified time
-   if ((ret = pthread_cond_timedwait(&timerCond, &timerMutex, &timeout)) != ETIMEDOUT)
-   {
-      pthread_mutex_unlock(&timerMutex);
-      syslog(LOG_ERR, "dnxThreadSleep: Failed to wait on timerCondition: %d", ret);
-      return ret;
-   }
-
-   if ((ret = pthread_mutex_unlock(&timerMutex)) != 0)
-   {
-      syslog(LOG_ERR, "dnxThreadSleep: Failed to unlock timerMutex: %d", ret);
-   }
-
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-static int dnxExecuteJob (DnxWorkerStatus *tData, DnxJob *pJob, DnxResult *pResult)
-{
-   char resData[MAX_RESULT_DATA+1];
-   DnxGlobalData *gData;
-   int ret;
-
-   // Get reference to global data
-   gData = (DnxGlobalData *)(tData->data);
-
-   // Increment the global jobs-active counter
-   dnxSetJobsActive(1);
-
-   // Announce job reception
-   if (gData->debug)
-      syslog(LOG_INFO, "dnxExecuteJob[%lx]: Received job [%lu,%lu] (T/O %d): %s", pthread_self(), pJob->guid.objSerial, pJob->guid.objSlot, pJob->timeout, pJob->cmd);
-
-   // Prepare result structure
-   pResult->guid = pJob->guid;         // Copy GUID over intact, as the server uses this for result matchup with the request
-   pResult->state = DNX_JOB_COMPLETE;  // Job can be either complete or expired
-   pResult->delta = 0;              // Job execution delta
-   pResult->resCode = DNX_PLUGIN_RESULT_OK;  // OK
-   pResult->resData = NULL;         // Result data
-
-   memset(resData, 0, sizeof(resData));
-
-   // Start job timer
-   time(&(tData->tJobStart));
-   
-   // Execute the job
-   ret = dnxPluginExecute(pJob->cmd, &(pResult->resCode), resData, MAX_RESULT_DATA, pJob->timeout);
-
-   // Compute job execution delta
-   pResult->delta = time(NULL) - tData->tJobStart;
-
-   // Store dynamic copy of the result string
-   if (resData[0] && (pResult->resData = strdup(resData)) == NULL)
-   {
-      syslog(LOG_ERR, "dnxExecuteJob[%lx]: Out of Memory: null result string for job [%lu,%lu]: %s", pthread_self(), pJob->guid.objSerial, pJob->guid.objSlot, pJob->cmd);
-      ret = DNX_ERR_MEMORY;
-   }
-
-   // Decrement the global jobs-active counter
-   dnxSetJobsActive(-1);
-
-   // Update per-thread statistics
-   tData->tJobStart = 0;
-   tData->tJobTime += pResult->delta;
-   if (pResult->resCode == DNX_PLUGIN_RESULT_OK)
-      tData->jobsOk++;
-   else
-      tData->jobsFail++;
-
-   return ret;
 }
 
 /*--------------------------------------------------------------------------*/

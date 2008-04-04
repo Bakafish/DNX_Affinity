@@ -54,124 +54,39 @@ extern DnxGlobalData dnxGlobalData;
 
 static DnxVarMap DnxVarDictionary[] = 
 {
-   { "channelAgent",         DNX_VAR_STR, NULL },
-   { "channelDispatcher",    DNX_VAR_STR, NULL },
-   { "channelCollector",     DNX_VAR_STR, NULL },
-   { "poolInitial",          DNX_VAR_INT, NULL },
-   { "poolMin",              DNX_VAR_INT, NULL },
-   { "poolMax",              DNX_VAR_INT, NULL },
-   { "poolGrow",             DNX_VAR_INT, NULL },
-   { "wlmPollInterval",      DNX_VAR_INT, NULL },
-   { "wlmShutdownGracePeriod", DNX_VAR_INT, NULL },
-   { "threadRequestTimeout", DNX_VAR_INT, NULL },
-   { "threadMaxTimeouts",    DNX_VAR_INT, NULL },
-   { "threadTtlBackoff",     DNX_VAR_INT, NULL },
-   { "logFacility",          DNX_VAR_STR, NULL },
-   { "pluginPath",           DNX_VAR_STR, NULL },
-   { "maxResultBuffer",      DNX_VAR_INT, NULL },
-   { "debug",                DNX_VAR_INT, NULL },
-   { NULL, DNX_VAR_ERR, NULL }
+   { "channelAgent",          DNX_VAR_STR, NULL },
+   { "channelDispatcher",     DNX_VAR_STR, NULL },
+   { "channelCollector",      DNX_VAR_STR, NULL },
+   { "poolInitial",           DNX_VAR_INT, NULL },
+   { "poolMin",               DNX_VAR_INT, NULL },
+   { "poolMax",               DNX_VAR_INT, NULL },
+   { "poolGrow",              DNX_VAR_INT, NULL },
+   { "wlmPollInterval",       DNX_VAR_INT, NULL },
+   { "wlmShutdownGracePeriod",DNX_VAR_INT, NULL },
+   { "threadRequestTimeout",  DNX_VAR_INT, NULL },
+   { "threadMaxTimeouts",     DNX_VAR_INT, NULL },
+   { "threadTtlBackoff",      DNX_VAR_INT, NULL },
+   { "logFacility",           DNX_VAR_STR, NULL },
+   { "pluginPath",            DNX_VAR_STR, NULL },
+   { "maxResultBuffer",       DNX_VAR_INT, NULL },
+   { "debug",                 DNX_VAR_INT, NULL },
+   { NULL,                    DNX_VAR_ERR, NULL }
 };
 
-void displayGlobals (char *title);
-int parseLine (char *szFile, int lineNo, char *szLine);
-int validateVariable (char *szVar, char *szVal);
-int strTrim (char *szLine);
-
 //----------------------------------------------------------------------------
 
-void initGlobals (void)
+/** Parse a single line from a dnx configuration file.
+ * 
+ * @param[in] szFile - the name of the file being parsed.
+ * @param[in] lineNo - the line number currently being parsed.
+ * @param[in] szLine - a buffer containing the text of the line being parsed.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int parseLine(char * szFile, int lineNo, char * szLine)
 {
-   // 'cause C doesn't allow non-constant initializers in static structures
-   DnxVarDictionary[ 0].varStorage = &(dnxGlobalData.channelAgent);
-   DnxVarDictionary[ 1].varStorage = &(dnxGlobalData.channelDispatcher);
-   DnxVarDictionary[ 2].varStorage = &(dnxGlobalData.channelCollector);
-   DnxVarDictionary[ 3].varStorage = &(dnxGlobalData.poolInitial);
-   DnxVarDictionary[ 4].varStorage = &(dnxGlobalData.poolMin);
-   DnxVarDictionary[ 5].varStorage = &(dnxGlobalData.poolMax);
-   DnxVarDictionary[ 6].varStorage = &(dnxGlobalData.poolGrow);
-   DnxVarDictionary[ 7].varStorage = &(dnxGlobalData.wlmPollInterval);
-   DnxVarDictionary[ 8].varStorage = &(dnxGlobalData.wlmShutdownGracePeriod);
-   DnxVarDictionary[ 9].varStorage = &(dnxGlobalData.threadRequestTimeout);
-   DnxVarDictionary[10].varStorage = &(dnxGlobalData.threadMaxTimeouts);
-   DnxVarDictionary[11].varStorage = &(dnxGlobalData.threadTtlBackoff);
-   DnxVarDictionary[12].varStorage = &(dnxGlobalData.logFacility);
-   DnxVarDictionary[13].varStorage = &(dnxGlobalData.pluginPath);
-   DnxVarDictionary[14].varStorage = &(dnxGlobalData.maxResultBuffer);
-   DnxVarDictionary[15].varStorage = &(dnxGlobalData.debug);
-}
-
-//----------------------------------------------------------------------------
-
-void displayGlobals (char *title)
-{
-   static char *varFormat[] = { "ERROR", "%s", "%ld", "%f" };
-   DnxVarMap *pMap;
-
-   // Display title, is specified
-   if (title)
-      puts(title);
-
-   // Dump values of global variables
-   for (pMap = DnxVarDictionary; pMap->szVar; pMap++)
-   {
-      printf("%s = ", pMap->szVar);
-      switch (pMap->varType)
-      {
-      case DNX_VAR_STR:
-         printf(varFormat[pMap->varType], *((char **)(pMap->varStorage)));
-         break;
-      case DNX_VAR_INT:
-         printf(varFormat[pMap->varType], *((long *)pMap->varStorage));
-         break;
-      case DNX_VAR_DBL:
-         printf(varFormat[pMap->varType], *((double *)pMap->varStorage));
-         break;
-      default:
-         printf("UNKNOWN-VAR-TYPE");
-      }
-      printf("\n");
-   }
-}
-
-//----------------------------------------------------------------------------
-
-int parseFile (char *szFile)
-{
-   char szLine[DNX_MAX_CFG_LINE];
-   FILE *fp;
-   int lineNo;
-   int ret = 0;
-
-   // Open the config file
-   if ((fp = fopen(szFile, "r")) != NULL)
-   {
-      lineNo = 0; // Clear line counter
-
-      while (fgets(szLine, sizeof(szLine), fp) != NULL)
-      {
-         if ((ret = parseLine(szFile, lineNo, szLine)) != 0)
-            break;   // Encountered error condition
-      }
-
-      // Close config file
-      fclose(fp);
-   }
-   else
-   {
-      fprintf(stderr, "readCfg: Unable to open %s: %s\n", szFile, strerror(errno));
-      ret = 2;
-   }
-
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-int parseLine (char *szFile, int lineNo, char *szLine)
-{
-   char *szVar, *szVal;
-   char *cp;
+   char * szVar, * szVal;
+   char * cp;
 
    // Strip comments
    if ((cp = strchr(szLine, '#')) != NULL)
@@ -195,14 +110,16 @@ int parseLine (char *szFile, int lineNo, char *szLine)
    for (szVar = szLine; *szVar && *szVar <= ' '; szVar++);
    if (strTrim(szVar) < 1)
    {
-      fprintf(stderr, "%s: Line %d: Missing or invalid variable\n", szFile, lineNo);
+      fprintf(stderr, "%s: Line %d: Missing or invalid variable\n", 
+            szFile, lineNo);
       return 1;
    }
 
    for (szVal = cp; *szVal && *szVal <= ' '; szVal++);
    if (strTrim(szVal) < 1)
    {
-      fprintf(stderr, "%s: Line %d: Missing or invalid assignment value\n", szFile, lineNo);
+      fprintf(stderr, "%s: Line %d: Missing or invalid assignment value\n", 
+            szFile, lineNo);
       return 1;
    }
 
@@ -212,10 +129,20 @@ int parseLine (char *szFile, int lineNo, char *szLine)
 
 //----------------------------------------------------------------------------
 
-int validateVariable (char *szVar, char *szVal)
+/** Validate the format of a single variable with its value.
+ * 
+ * This routine also parses the value of a variable into its proper type in 
+ * the global variable storage table.
+ *
+ * @param[in] szVar - the name of the variable being validated.
+ * @param[in] szVal - the value string of the variable being validated.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int validateVariable(char * szVar, char * szVal)
 {
-   DnxVarMap *pMap;
-   char *eptr;
+   DnxVarMap * pMap;
+   char * eptr;
    int ret = 0;
 
    // Validate input paramters
@@ -226,35 +153,39 @@ int validateVariable (char *szVar, char *szVal)
    }
 
    // Lookup this variable in the global variable map
-   for (pMap = DnxVarDictionary; pMap->szVar && strcmp(szVar, pMap->szVar); pMap++);
+   for (pMap = DnxVarDictionary; pMap->szVar && strcmp(szVar, pMap->szVar); pMap++)
+      ;
 
    // Store the variable value
    switch (pMap->varType)
    {
-   case DNX_VAR_STR:
-      *((char **)(pMap->varStorage)) = strdup(szVal);
-      break;
-   case DNX_VAR_INT:
-      errno = 0;
-      *((long *)(pMap->varStorage)) = strtol(szVal, &eptr, 0);
-      if (*eptr || errno)
-      {
-         fprintf(stderr, "Invalid integer value for %s: %s\n", szVar, szVal);
+      case DNX_VAR_STR:
+         *((char **)(pMap->varStorage)) = strdup(szVal);
+         break;
+
+      case DNX_VAR_INT:
+         errno = 0;
+         *((long *)(pMap->varStorage)) = strtol(szVal, &eptr, 0);
+         if (*eptr || errno)
+         {
+            fprintf(stderr, "Invalid integer value for %s: %s\n", szVar, szVal);
+            ret = 1;
+         }
+         break;
+
+      case DNX_VAR_DBL:
+         errno = 0;
+         *((double *)(pMap->varStorage)) = strtod(szVal, &eptr);
+         if (*eptr || errno)
+         {
+            fprintf(stderr, "Invalid double value for %s: %s\n", szVar, szVal);
+            ret = 1;
+         }
+         break;
+
+      default:
+         fprintf(stderr, "Unknown variable: %s\n", szVar);
          ret = 1;
-      }
-      break;
-   case DNX_VAR_DBL:
-      errno = 0;
-      *((double *)(pMap->varStorage)) = strtod(szVal, &eptr);
-      if (*eptr || errno)
-      {
-         fprintf(stderr, "Invalid double value for %s: %s\n", szVar, szVal);
-         ret = 1;
-      }
-      break;
-   default:
-      fprintf(stderr, "Unknown variable: %s\n", szVar);
-      ret = 1;
    }
 
    return ret;
@@ -262,14 +193,126 @@ int validateVariable (char *szVar, char *szVal)
 
 //----------------------------------------------------------------------------
 
-int strTrim (char *szLine)
+/** Trim the trailing white space from a specified string.
+ * 
+ * Zero terminate the string after the last non-white-space character.
+ * 
+ * @param[in,out] szLine - a buffer containing the string to be trimmed.
+ *    On exit, the string contains no trailing white space.
+ * 
+ * @return The new length of @p szLine.
+ */
+static int strTrim(char * szLine)
 {
-   char *cp;
+   char * cp;
 
    // Strip trailing whitespace
-   for (cp = szLine + strlen(szLine) - 1; cp >= szLine && *cp <= ' '; cp--) *cp = '\0';
+   for (cp = szLine + strlen(szLine) - 1; cp >= szLine && *cp <= ' '; cp--) 
+      *cp = 0;
 
    return strlen(szLine);
+}
+
+//----------------------------------------------------------------------------
+
+/** Initialize configuration sub-system global variables.
+ */
+void initGlobals(void)
+{
+   // 'cause C doesn't allow non-constant initializers in static structures
+   DnxVarDictionary[ 0].varStorage = &(dnxGlobalData.channelAgent);
+   DnxVarDictionary[ 1].varStorage = &(dnxGlobalData.channelDispatcher);
+   DnxVarDictionary[ 2].varStorage = &(dnxGlobalData.channelCollector);
+   DnxVarDictionary[ 3].varStorage = &(dnxGlobalData.poolInitial);
+   DnxVarDictionary[ 4].varStorage = &(dnxGlobalData.poolMin);
+   DnxVarDictionary[ 5].varStorage = &(dnxGlobalData.poolMax);
+   DnxVarDictionary[ 6].varStorage = &(dnxGlobalData.poolGrow);
+   DnxVarDictionary[ 7].varStorage = &(dnxGlobalData.wlmPollInterval);
+   DnxVarDictionary[ 8].varStorage = &(dnxGlobalData.wlmShutdownGracePeriod);
+   DnxVarDictionary[ 9].varStorage = &(dnxGlobalData.threadRequestTimeout);
+   DnxVarDictionary[10].varStorage = &(dnxGlobalData.threadMaxTimeouts);
+   DnxVarDictionary[11].varStorage = &(dnxGlobalData.threadTtlBackoff);
+   DnxVarDictionary[12].varStorage = &(dnxGlobalData.logFacility);
+   DnxVarDictionary[13].varStorage = &(dnxGlobalData.pluginPath);
+   DnxVarDictionary[14].varStorage = &(dnxGlobalData.maxResultBuffer);
+   DnxVarDictionary[15].varStorage = &(dnxGlobalData.debug);
+}
+
+//----------------------------------------------------------------------------
+
+/** Parse a dnx configuration file into global variable storage.
+ * 
+ * @param[in] szFile - the name of the file to be parsed.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+int parseFile(char * szFile)
+{
+   char szLine[DNX_MAX_CFG_LINE];
+   FILE * fp;
+   int lineNo;
+   int ret = 0;
+
+   // Open the config file
+   if ((fp = fopen(szFile, "r")) != NULL)
+   {
+      lineNo = 0; // Clear line counter
+
+      while (fgets(szLine, sizeof(szLine), fp) != NULL)
+      {
+         if ((ret = parseLine(szFile, lineNo, szLine)) != 0)
+            break;   // Encountered error condition
+      }
+
+      // Close config file
+      fclose(fp);
+   }
+   else
+   {
+      fprintf(stderr, "readCfg: Unable to open %s: %s\n", szFile, strerror(errno));
+      ret = 2;
+   }
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Display the configuration sub-system variable table. [DEBUG CODE]
+ * 
+ * @param[in] title - an optional title to be displayed over the table dump.
+ */
+void displayGlobals(char * title)
+{
+   static char * varFormat[] = { "ERROR", "%s", "%ld", "%f" };
+   DnxVarMap * pMap;
+
+   // Display title, is specified
+   if (title)
+      puts(title);
+
+   // Dump values of global variables
+   for (pMap = DnxVarDictionary; pMap->szVar; pMap++)
+   {
+      printf("%s = ", pMap->szVar);
+      switch (pMap->varType)
+      {
+         case DNX_VAR_STR:
+            printf(varFormat[pMap->varType], *((char **)(pMap->varStorage)));
+            break;
+
+         case DNX_VAR_INT:
+            printf(varFormat[pMap->varType], *((long *)pMap->varStorage));
+            break;
+
+         case DNX_VAR_DBL:
+            printf(varFormat[pMap->varType], *((double *)pMap->varStorage));
+            break;
+
+         default:
+            printf("UNKNOWN-VAR-TYPE");
+      }
+      printf("\n");
+   }
 }
 
 /*--------------------------------------------------------------------------*/

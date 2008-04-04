@@ -40,28 +40,32 @@
 #include <syslog.h>
 #include <errno.h>
 
-#define MAX_PLUGIN_PREFIX  1024
-#define MAX_PLUGIN_PATH    2048
-#define DNX_MAX_ARGV    256
-#define MAX_INPUT_BUFFER   1024
+#define MAX_PLUGIN_PREFIX     1024
+#define MAX_PLUGIN_PATH       2048
+#define DNX_MAX_ARGV          256
+#define MAX_INPUT_BUFFER      1024
 #define DNX_MAX_PLUGIN_NAME   255
 
-static DNX_MODULE * gModules;    // Module Chain
-static DNX_MODULE * gPlugins;    // Plugin Chain
-static char * gPluginPath;       // Plugin Path
-static int gInitialized = 0;     // Initialization flag
+static DNX_MODULE * gModules; // Module Chain
+static DNX_MODULE * gPlugins; // Plugin Chain
+static char * gPluginPath;    // Plugin Path
+static int gInitialized = 0;  // Initialization flag
 
 // HACK: The NRPE module is hardwired for now...
 #ifdef USE_NRPE_MODULE
-extern int mod_nrpe(int argc, char **argv, char *resData);
+extern int mod_nrpe(int argc, char ** argv, char * resData);
 #endif
 
-static void strip (char *buffer);
-
 //----------------------------------------------------------------------------
-// Initializes the plugin utility library
 
-int dnxPluginInit (char *pluginPath)
+/** Initialize the dnx client plugin utility library.
+ *
+ * @param[in] pluginPath - the file system path where plugin libraries are
+ *    to be found.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginInit(char * pluginPath)
 {
    int len, extra = 0;
 
@@ -107,9 +111,12 @@ int dnxPluginInit (char *pluginPath)
 }
 
 //----------------------------------------------------------------------------
-// Releases the plugin utility library
 
-int dnxPluginRelease (void)
+/** Clean up the dnx plugin utility library.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginRelease(void)
 {
    if (!gInitialized)
       return DNX_ERR_INVALID; // Not initialized
@@ -128,48 +135,76 @@ int dnxPluginRelease (void)
 }
 
 //----------------------------------------------------------------------------
-// Registers a plugin with entry points
 
-int dnxPluginRegister (char *szPlugin, char *szErrMsg)
+/** Register a dnx plugin with entry points.
+ * 
+ * @param[in] szPlugin - the name of the plugin to be registered.
+ * @param[in] szErrMsg - an error message to be displayed if the plugin
+ *    could not be registered.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginRegister(char * szPlugin, char * szErrMsg)
 {
    if (!gInitialized)
-      return DNX_ERR_INVALID; // Not initialized
+      return DNX_ERR_INVALID;
 
    return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
-// Loads plugin module into memory
 
-int dnxPluginLoad (DNX_MODULE *module)
+/** Load a dnx plugin module into memory.
+ * 
+ * @param[in] module - the name of the module to be loaded.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginLoad(DNX_MODULE * module)
 {
    if (!gInitialized)
-      return DNX_ERR_INVALID; // Not initialized
+      return DNX_ERR_INVALID;
 
    return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
-// Unloads plugin module from memory
 
-int dnxPluginUnload (DNX_MODULE *module)
+/** Unload a dnx plugin module from memory.
+ * 
+ * @param[in] module - the name of the module to be unloaded.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginUnload(DNX_MODULE * module)
 {
    if (!gInitialized)
-      return DNX_ERR_INVALID; // Not initialized
+      return DNX_ERR_INVALID;
 
    return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
-// Finds and executes the plugin
 
-int dnxPluginExecute (char *command, int *resCode, char *resData, int maxData, int timeout)
+/** Find an appropriate dnx plugin and use it to execute a commmand.
+ * 
+ * @param[in] command - the command to be executed by the plugin.
+ * @param[out] resCode - the address of storage for the command's result code.
+ * @param[out] resData - the address of storage for the command's stdout text.
+ * @param[in] maxData - the maximum size of the @p resData buffer.
+ * @param[in] timeout - the maximum number of seconds to wait for @p command 
+ *    to complete before returning a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginExecute(char * command, int * resCode, char * resData, 
+      int maxData, int timeout)
 {
-   DNX_PLUGIN *plugin;
+   DNX_PLUGIN * plugin;
    int ret;
 
    if (!gInitialized)
-      return DNX_ERR_INVALID; // Not initialized
+      return DNX_ERR_INVALID;
 
    // Validate parameters
    if (!command || !resCode || !resData || maxData < 2)
@@ -191,20 +226,26 @@ int dnxPluginExecute (char *command, int *resCode, char *resData, int maxData, i
       *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
       sprintf(resData, "Unable to isolate plugin base name %d", ret);
    }
-
    return ret;
 }
 
 //----------------------------------------------------------------------------
-// Searches for a plugin in the plugin chain
 
-int dnxPluginLocate (char *command, DNX_PLUGIN **plugin)
+/** Search for a plugin in the plugin chain.
+ * 
+ * @param[in] command - the command to be executed.
+ * @param[out] plugin - the address of storage for the located plugin to 
+ *    be returned.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginLocate(char * command, DNX_PLUGIN ** plugin)
 {
-   char baseName[DNX_MAX_PLUGIN_NAME+1];
+   char baseName[DNX_MAX_PLUGIN_NAME + 1];
    int ret;
 
    if (!gInitialized)
-      return DNX_ERR_INVALID; // Not initialized
+      return DNX_ERR_INVALID;
 
    // Validate parameters
    if (!command || !plugin)
@@ -225,15 +266,24 @@ int dnxPluginLocate (char *command, DNX_PLUGIN **plugin)
 }
 
 //----------------------------------------------------------------------------
-// Isolate base name of a plugin command
 
-int dnxPluginBaseName (char *command, char *baseName, int maxData)
+/** Isolate the base name of a plugin command.
+ * 
+ * @param[in] command - the command for which to have the base name isolated.
+ * @param[out] baseName - the address of storage for the returned base name.
+ * @param[in] maxData - the maximum size of the @p baseName buffer.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginBaseName(char * command, char * baseName, int maxData)
 {
-   char *cp, *ep, *base;
+   char * cp, * ep, * base;
    int len;
 
    // Skip leading whitespace
-   for (cp=command; *cp && *cp <= ' '; cp++);
+   for (cp=command; *cp && *cp <= ' '; cp++)
+      ;
+
    if (!*cp)
       return DNX_ERR_INVALID; // No basename - string is empty
 
@@ -260,16 +310,30 @@ int dnxPluginBaseName (char *command, char *baseName, int maxData)
 }
 
 //----------------------------------------------------------------------------
-// Executes an internal plugin module
 
-int dnxPluginInternal (DNX_PLUGIN *plugin, char *command, int *resCode, char *resData, int maxData, int timeout)
+/** Executes an internal plugin module.
+ * 
+ * @param[in] plugin - the plugin module to execute against @p command.
+ * @param[in] command - the command to have @p plugin execute.
+ * @param[out] resCode - the address of storage for the result code returned
+ *    by @p plugin.
+ * @param[out] resData - the resulting STDOUT text from the execution 
+ *    of @p command by @p plugin.
+ * @param[in] maxData - the maximum size of the @p resData buffer.
+ * @param[in] timeout - the maximum number of seconds to wait for @p plugin
+ *    to complete execution of @p command before returning a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginInternal(DNX_PLUGIN * plugin, char * command, int * resCode, 
+      char * resData, int maxData, int timeout)
 {
-   char temp_buffer[MAX_INPUT_BUFFER+1];
-   char *argv[DNX_MAX_ARGV];
+   char temp_buffer[MAX_INPUT_BUFFER + 1];
+   char * argv[DNX_MAX_ARGV];
    int argc, len, ret;
 
    if (!gInitialized)
-      return DNX_ERR_INVALID; // Not initialized
+      return DNX_ERR_INVALID;
 
    // Validate parameters 
    /** @todo Check plugin parameter. */
@@ -325,15 +389,61 @@ int dnxPluginInternal (DNX_PLUGIN *plugin, char *command, int *resCode, char *re
 }
 
 //----------------------------------------------------------------------------
-// Executes an external plugin module
 
-int dnxPluginExternal (char *command, int *resCode, char *resData, int maxData, int timeout)
+/** Strip leading and trailing whitespace from a specified string.
+ * 
+ * Leading white space is removed by moving all text from the first non-
+ * white space character and after to the beginning of @p buffer. Trailing
+ * white space is removed by simply zero-terminating the string after the 
+ * last non-white space character in @p buffer.
+ * 
+ * @param[in,out] buffer - the buffer whose leading and trailing white space
+ *    should be removed. 
+ */
+static void strip(char * buffer)
 {
-   char temp_buffer[MAX_INPUT_BUFFER+1];
-   char temp_cmd[MAX_PLUGIN_PATH+1];
-   char *plugin, *cp, *bp, *ep;
+   register char * cp, * ep;
+
+   if (!buffer || !*buffer)
+      return;
+
+   /* strip end of string */
+   for (ep = buffer + strlen(buffer) - 1; ep >= buffer && *ep <= ' '; ep--)
+      ;
+
+   *++ep = '\0';
+
+   /* strip beginning of string (by shifting) */
+   for (cp = buffer; *cp && *cp <= ' '; cp++)
+      ;
+
+   if (cp != buffer) 
+      memmove(buffer, cp, (ep-cp)+1);
+}
+
+//----------------------------------------------------------------------------
+
+/** Execute an external command line.
+ * 
+ * @param[in] command - the command to be executed.
+ * @param[out] resCode - the address of storage for the result code returned
+ *    by @p command.
+ * @param[out] resData - the resulting STDOUT text from the execution 
+ *    of @p command.
+ * @param[in] maxData - the maximum size of the @p resData buffer.
+ * @param[in] timeout - the maximum number of seconds to wait for @p command 
+ *    to complete before returning a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginExternal(char * command, int * resCode, char * resData, 
+      int maxData, int timeout)
+{
+   char temp_buffer[MAX_INPUT_BUFFER + 1];
+   char temp_cmd[MAX_PLUGIN_PATH + 1];
+   char * plugin, * cp, * bp, * ep;
    struct timeval tv;
-   PFILE *pf;
+   PFILE * pf;
    fd_set fd_read;
    int p_out, p_err;
    int count, fdmax;
@@ -341,7 +451,7 @@ int dnxPluginExternal (char *command, int *resCode, char *resData, int maxData, 
    time_t start_time;
 
    if (!gInitialized)
-      return DNX_ERR_INVALID; // Not initialized
+      return DNX_ERR_INVALID;
 
    // Validate parameters
    if (!command || !resCode || !resData || maxData < 2)
@@ -354,7 +464,9 @@ int dnxPluginExternal (char *command, int *resCode, char *resData, int maxData, 
    *resData = '\0';
 
    // Find non-whitespace beginning of command string
-   for (cp=command; *cp && *cp <= ' '; cp++);
+   for (cp = command; *cp && *cp <= ' '; cp++)
+      ;
+
    if (!*cp)
    {
       *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
@@ -366,10 +478,10 @@ int dnxPluginExternal (char *command, int *resCode, char *resData, int maxData, 
    if (gPluginPath)
    {
       // Find end of plugin base name
-      for (bp=ep=cp; *ep && *ep > ' '; ep++)
-      {
-         if (*ep == '/') bp = ep + 1;
-      }
+      for (bp = ep = cp; *ep && *ep > ' '; ep++)
+         if (*ep == '/') 
+            bp = ep + 1;
+
       if (bp == ep)
       {
          *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
@@ -421,6 +533,7 @@ int dnxPluginExternal (char *command, int *resCode, char *resData, int maxData, 
    time(&start_time);
 
    // Wait for some data to show up on the pipe
+   /** @todo We can't count on only a single select call here. */
    if ((count = select(fdmax, &fd_read, NULL, NULL, &tv)) < 0)
    {
       // Select error
@@ -500,9 +613,18 @@ int dnxPluginExternal (char *command, int *resCode, char *resData, int maxData, 
 }
 
 //----------------------------------------------------------------------------
-// Performs time sensitive fgets
 
-char *dnxFgets (char *data, int size, FILE *fp, int timeout)
+/** Perform a time sensitive fgets.
+ * 
+ * @param[out] data - the address of storage for returning data from @p fp.
+ * @param[in] size - the maximum size of @p data in bytes.
+ * @param[in] fp - the file pointer to be read.
+ * @param[in] timeout - the maximum number of seconds to wait for data to be
+ *    returned before failing with a timeout error.
+ * 
+ * @return The address of @p data on success, or NULL on error.
+ */
+char * dnxFgets(char * data, int size, FILE * fp, int timeout)
 {
    struct timeval tv;
    fd_set fd_read;
@@ -538,11 +660,24 @@ char *dnxFgets (char *data, int size, FILE *fp, int timeout)
 }
 
 //----------------------------------------------------------------------------
-// Converts plugin string to vector array
 
-int dnxPluginVector (char *command, int *argc, char **argv, int max)
+/** Convert a dnx plugin string to a vector array.
+ * 
+ * The @p command buffer is modified such that each command argument is 
+ * null-terminated on return.
+ * 
+ * @param[in] command - the string to be converted.
+ * @param[out] argc - the address of storage for the number of elements 
+ *    actually returned in @p argv.
+ * @param[out] argv - the address of storage for returning a null-terminated 
+ *    array of pointers to white-space-separated arguments in @p command.
+ * @param[in] max - the maximum number of entries in the @p argv array.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginVector(char * command, int * argc, char ** argv, int max)
 {
-   char *cp, *ep;
+   char * cp, * ep;
    int idx = 0;
    int ret = DNX_OK;
 
@@ -583,25 +718,6 @@ int dnxPluginVector (char *command, int *argc, char **argv, int max)
    *argc = idx;   // Set the arg vector total
 
    return ret;
-}
-
-//----------------------------------------------------------------------------
-// Strips leading and trailing whitespace from the specified string
-
-static void strip (char *buffer)
-{
-   register char *cp, *ep;
-
-   if (!buffer || !*buffer)
-      return;
-
-   /* strip end of string */
-   for (ep = buffer + strlen(buffer) - 1; ep >= buffer && *ep <= ' '; ep--);
-   *++ep = '\0';
-
-   /* strip beginning of string (by shifting) */
-   for (cp = buffer; *cp && *cp <= ' '; cp++);
-   if (cp != buffer) memmove(buffer, cp, (ep-cp)+1);
 }
 
 /*--------------------------------------------------------------------------*/

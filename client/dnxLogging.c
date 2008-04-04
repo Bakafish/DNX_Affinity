@@ -37,14 +37,21 @@
 
 #define MAX_LOG_LINE 1023
 
-extern DnxGlobalData dnxGlobalData;    // Private module data
+extern DnxGlobalData dnxGlobalData;
 
 /*--------------------------------------------------------------------------*/
 
-int dnxSyslog (int priority, char *fmt, ...)
+/** Log a parameterized message to the dnx system log file.
+ * 
+ * @param[in] priority - a priority value for the log message.
+ * @param[in] fmt - a format specifier string similar to that of printf.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxSyslog(int priority, char * fmt, ...)
 {
    va_list ap;
-   char sbuf[MAX_LOG_LINE+1];
+   char sbuf[MAX_LOG_LINE + 1];
 
    // Validate input parameters
    if (!fmt)
@@ -70,10 +77,20 @@ int dnxSyslog (int priority, char *fmt, ...)
 
 /*--------------------------------------------------------------------------*/
 
-int dnxDebug (int level, char *fmt, ...)
+/** Log a parameterized message to the dnx DEBUG log.
+ * 
+ * This routine logs a debug message if the current global (configured) 
+ * debug level is greater than or equal the value of @p level.
+ * 
+ * @param[in] level - the debug level at which to log the message.
+ * @param[in] fmt - a format specifier string similar to that of printf.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxDebug(int level, char * fmt, ...)
 {
    va_list ap;
-   char sbuf[MAX_LOG_LINE+1];
+   char sbuf[MAX_LOG_LINE + 1];
 
    // Validate input parameters
    if (!fmt)
