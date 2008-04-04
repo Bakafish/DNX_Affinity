@@ -33,58 +33,64 @@
 #include "dnxError.h"
 #include "dnxChannel.h"
 #include "dnxConfig.h"
-#include "dnxNebMain.h"
 #include "dnxLogging.h"
 
 #define DNX_MAX_CFG_LINE   2048
 
+typedef struct DnxConfigData
+{
+   char * channelDispatcher;
+   char * channelCollector;
+   char * authWorkerNodes;
+   long maxNodeRequests;      // Max number of node requests we will accept
+   long minServiceSlots;
+   long expirePollInterval;
+   char * localCheckPattern;
+   char * syncScript;
+   char * logFacility;
+   char * auditWorkerJobs;
+   long debug;
+} DnxConfigData;
+
+static DnxConfigData config;
+
 typedef enum _DnxVarType_ { DNX_VAR_ERR = 0, DNX_VAR_STR, DNX_VAR_INT, DNX_VAR_DBL } DnxVarType;
 
-typedef struct _DnxVarMap_ {
-   char *szVar;
+typedef struct _DnxVarMap_ 
+{
+   char * szVar;
    DnxVarType varType;
-   void *varStorage;
+   void * varStorage;
 } DnxVarMap;
 
 extern DnxGlobalData dnxGlobalData;
 
-static DnxVarMap DnxVarDictionary[] = {
-{ "channelDispatcher",    DNX_VAR_STR, NULL },
-{ "channelCollector",     DNX_VAR_STR, NULL },
-{ "authWorkerNodes",      DNX_VAR_STR, NULL },
-{ "maxNodeRequests",      DNX_VAR_INT, NULL },
-{ "minServiceSlots",      DNX_VAR_INT, NULL },
-{ "expirePollInterval",   DNX_VAR_INT, NULL },
-{ "localCheckPattern",    DNX_VAR_STR, NULL },
-{ "syncScript",           DNX_VAR_STR, NULL },
-{ "logFacility",          DNX_VAR_STR, NULL },
-{ "auditWorkerJobs",      DNX_VAR_STR, NULL },
-{ "debug",                DNX_VAR_INT, NULL },
-{ NULL, DNX_VAR_ERR, NULL }
+static DnxVarMap DnxVarDictionary[] = 
+{
+   {"channelDispatcher",  DNX_VAR_STR, &config.channelDispatcher},
+   {"channelCollector",   DNX_VAR_STR, &config.channelCollector},
+   {"authWorkerNodes",    DNX_VAR_STR, &config.authWorkerNodes},
+   {"maxNodeRequests",    DNX_VAR_INT, &config.maxNodeRequests},
+   {"minServiceSlots",    DNX_VAR_INT, &config.minServiceSlots},
+   {"expirePollInterval", DNX_VAR_INT, &config.expirePollInterval},
+   {"localCheckPattern",  DNX_VAR_STR, &config.localCheckPattern},
+   {"syncScript",         DNX_VAR_STR, &config.syncScript},
+   {"logFacility",        DNX_VAR_STR, &config.logFacility},
+   {"auditWorkerJobs",    DNX_VAR_STR, &config.auditWorkerJobs},
+   {"debug",              DNX_VAR_INT, &config.debug},
+   {0, DNX_VAR_ERR, 0}
 };
 
-void displayGlobals (char *title);
-int parseLine (char *szFile, int lineNo, char *szLine);
-int validateVariable (char *szVar, char *szVal);
-int strTrim (char *szLine);
+void displayGlobals(char * title);
+int parseLine(char * szFile, int lineNo, char * szLine);
+int validateVariable(char * szVar, char * szVal);
+int strTrim(char * szLine);
 
 
 //----------------------------------------------------------------------------
 
 void initGlobals (void)
 {
-   // 'cause C doesn't allow non-constant initializers in static structures
-   DnxVarDictionary[ 0].varStorage = &(dnxGlobalData.channelDispatcher);
-   DnxVarDictionary[ 1].varStorage = &(dnxGlobalData.channelCollector);
-   DnxVarDictionary[ 2].varStorage = &(dnxGlobalData.authWorkerNodes);
-   DnxVarDictionary[ 3].varStorage = &(dnxGlobalData.maxNodeRequests);
-   DnxVarDictionary[ 4].varStorage = &(dnxGlobalData.minServiceSlots);
-   DnxVarDictionary[ 5].varStorage = &(dnxGlobalData.expirePollInterval);
-   DnxVarDictionary[ 6].varStorage = &(dnxGlobalData.localCheckPattern);
-   DnxVarDictionary[ 7].varStorage = &(dnxGlobalData.syncScript);
-   DnxVarDictionary[ 8].varStorage = &(dnxGlobalData.logFacility);
-   DnxVarDictionary[ 9].varStorage = &(dnxGlobalData.auditWorkerJobs);
-   DnxVarDictionary[10].varStorage = &(dnxGlobalData.debug);
 }
 
 //----------------------------------------------------------------------------

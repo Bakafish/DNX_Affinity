@@ -37,6 +37,7 @@
 #include "dnxProtocol.h"
 #include "dnxJobList.h"
 #include "dnxLogging.h"
+#include "dsaudit.h"
 
 #include <assert.h>
 
@@ -150,7 +151,7 @@ static void * dnxTimer(void * data)
          {
             dnxDebug(1, "dnxTimer[%lx]: Expiring Job: %s", pthread_self(), ExpiredList[i].cmd);
 
-            dnxAuditJob(&ExpiredList[i], "EXPIRE");
+            dsAuditJob(&ExpiredList[i], "EXPIRE");
 
             ret |= dnxExpireJob(&ExpiredList[i]);
 

@@ -38,6 +38,7 @@
 #include "dnxCollector.h"
 #include "dnxJobList.h"
 #include "dnxLogging.h"
+#include "dsaudit.h"
 
 #include <assert.h>
 
@@ -105,7 +106,7 @@ void *dnxCollector (void *data)
             dnxDebug(1, "dnxCollector[%lx]: Posted result [%lu,%lu]: %d", pthread_self(), sResult.guid.objSerial, sResult.guid.objSlot, ret);
 
             // Worker Audit Logging
-            dnxAuditJob(&Job, "COLLECT");
+            dsAuditJob(&Job, "COLLECT");
 
             // Release this Job's resources
             dnxJobCleanup(&Job);

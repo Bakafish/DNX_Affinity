@@ -3,6 +3,7 @@ EXTRA_DIST = test sync_plugins.pl
 pkglib_LTLIBRARIES = dnxServer.la
 
 noinst_HEADERS =\
+ dsaudit.h\
  dnxCollector.h\
  dnxDispatcher.h\
  dnxJobList.h\
@@ -12,6 +13,7 @@ noinst_HEADERS =\
  dnxTimer.h
 
 dnxServer_la_SOURCES =\
+ dsaudit.c\
  dnxCollector.c\
  dnxConfig.c\
  dnxDispatcher.c\

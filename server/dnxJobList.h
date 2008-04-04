@@ -30,6 +30,7 @@
 
 #include "dnxProtocol.h"   /* for DnxGuid, DnxJobState, DnxNodeRequest */
 
+#include "nebstructs.h"    /* for nebstruct_service_check_data */
 #include "objects.h"       /* for service */
 
 #include <time.h>
@@ -62,12 +63,16 @@ typedef struct _DnxJobList_
    pthread_cond_t cond;    /*!< Job list condition variable */
 } DnxJobList;
 
-int dnxJobListAdd (DnxJobList * pJobList, DnxNewJob * pJob);
-int dnxJobListExpire (DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs);
-int dnxJobListDispatch (DnxJobList * pJobList, DnxNewJob * pJob);
-int dnxJobListCollect (DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob);
+int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob);
+int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs);
+int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob);
+int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob);
 
-int dnxJobListInit (DnxJobList ** ppJobList, unsigned long size);
+int dnxPostNewJob(DnxJobList * jobList, unsigned long serial, 
+   nebstruct_service_check_data * ds, DnxNodeRequest * pNode);
+void dnxJobCleanup(DnxNewJob * pJob);
+
+int dnxJobListInit(DnxJobList ** ppJobList, unsigned long size);
 void dnxJobListExit(DnxJobList ** ppJobList);
 
 #endif   /* _DNXJOBLIST_H_ */

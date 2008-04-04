@@ -41,6 +41,7 @@
 #include "dnxRegistrar.h"
 #include "dnxJobList.h"
 #include "dnxLogging.h"
+#include "dsaudit.h"
 
 static void dnxDispatcherCleanup (void *data);
 static int dnxDispatchJob (DnxGlobalData *gData, DnxNewJob *pSvcReq);
@@ -99,12 +100,12 @@ void *dnxDispatcher (void *data)
          if ((ret = dnxDispatchJob(gData, &SvcReq)) == DNX_OK)
          {
             // Worker Audit Logging
-            dnxAuditJob(&SvcReq, "DISPATCH");
+            dsAuditJob(&SvcReq, "DISPATCH");
          }
          else
          {
             dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxDispatchJob failed: %d", pthread_self(), ret);
-            dnxAuditJob(&SvcReq, "DISPATCH-FAIL");
+            dsAuditJob(&SvcReq, "DISPATCH-FAIL");
          }
       }
    }
