@@ -109,3 +109,4 @@ int dnxJobCleanup (DnxNewJob *pJob);
 int dnxAuditJob (DnxNewJob *pJob, char *action);
 
 #endif   /* _DNXNEBMAIN_H_ */
+

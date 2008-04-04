@@ -58,3 +58,4 @@ int dnxXmlClose(DnxXmlBuf *xbuf);
 int dnxMakeGuid (DnxGuid *pGuid, DnxObjType xType, unsigned long xSerial, unsigned long xSlot);
 
 #endif   /* _DNXXML_H_ */
+

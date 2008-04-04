@@ -41,3 +41,4 @@ int dnxUdpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *sr
 int dnxUdpWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst);
 
 #endif   /* _DNXUDP_H_ */
+

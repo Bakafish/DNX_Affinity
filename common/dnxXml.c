@@ -376,4 +376,3 @@ int dnxMakeGuid (DnxGuid *pGuid, DnxObjType xType, unsigned long xSerial, unsign
 	return DNX_OK;
 }
 
-//----------------------------------------------------------------------------

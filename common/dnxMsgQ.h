@@ -41,3 +41,4 @@ int dnxMsgQRead (dnxChannel *channel, char *buf, int *size, int timeout, char *s
 int dnxMsgQWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst);
 
 #endif   /* _DNXMSGQ_H_ */
+

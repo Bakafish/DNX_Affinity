@@ -37,3 +37,4 @@
 void *dnxCollector (void *data);
 
 #endif   /* _DNXCOLLECTOR_H_ */
+

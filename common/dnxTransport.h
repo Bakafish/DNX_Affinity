@@ -54,3 +54,4 @@ int dnxPut (dnxChannel *channel, char *buf, int size, int timeout, char *dst);
 int dnxChannelDebug (dnxChannel *channel, int doDebug);
 
 #endif   /* _DNXTRANSPORT_H_ */
+

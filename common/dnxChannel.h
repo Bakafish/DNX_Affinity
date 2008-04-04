@@ -57,3 +57,4 @@ typedef struct _dnxChannel_ {
 } dnxChannel;
 
 #endif   /* _DNXCHANNEL_H_ */
+

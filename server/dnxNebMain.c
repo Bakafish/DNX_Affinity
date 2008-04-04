@@ -778,4 +778,3 @@ int dnxAuditJob (DnxNewJob *pJob, char *action)
 	return DNX_OK;
 }
 
-/*--------------------------------------------------------------------------*/

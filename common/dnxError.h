@@ -60,3 +60,4 @@ void dnxSetLastError (dnxError errno);
 char *dnxErrorString (dnxError errno);
 
 #endif   /* _DNXERROR_H_ */
+

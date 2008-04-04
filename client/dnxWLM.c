@@ -417,4 +417,3 @@ static int scanThreadPool (DnxGlobalData *gData, int *activeThreads)
 	return ret;
 }
 
-//----------------------------------------------------------------------------

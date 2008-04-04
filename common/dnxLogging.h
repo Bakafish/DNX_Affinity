@@ -35,3 +35,4 @@ int dnxSyslog (int priority, char *fmt, ...);
 int dnxDebug (int level, char *fmt, ...);
 
 #endif   /* _DNXLOGGING_H_ */
+

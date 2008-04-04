@@ -50,4 +50,5 @@
 void *dnxWorker (void *data);
 int dnxThreadSleep (int seconds);
 
-#endif
+#endif   /* _DNXWORKER_H_ */
+

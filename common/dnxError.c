@@ -74,4 +74,3 @@ char *dnxErrorString (dnxError errno)
 	return (char *)((errno < 0 || errno > DNX_ERR_LASTERROR) ? "Unknown error code" : gErrCatalog[errno]);
 }
 
-//----------------------------------------------------------------------------

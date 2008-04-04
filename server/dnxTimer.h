@@ -34,3 +34,4 @@ int dnxTimerInit(DnxJobList * jobList);
 void dnxTimerExit(void);
 
 #endif   /* _DNXTIMER_H_ */
+

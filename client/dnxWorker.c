@@ -439,4 +439,3 @@ static int dnxExecuteJob (DnxWorkerStatus *tData, DnxJob *pJob, DnxResult *pResu
 	return ret;
 }
 
-//----------------------------------------------------------------------------

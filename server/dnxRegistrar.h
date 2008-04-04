@@ -44,3 +44,4 @@ int dnxDeregisterNode (DnxGlobalData *gData, DnxNodeRequest *pMsg);
 int dnxDeregisterAllNodes (DnxGlobalData *gData);
 
 #endif   /* _DNXREGISTRAR_H_ */
+

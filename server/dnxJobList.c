@@ -354,5 +354,3 @@ void dnxJobListExit(DnxJobList ** ppJobList)
    *ppJobList = NULL;
 }
 
-
-//----------------------------------------------------------------------------

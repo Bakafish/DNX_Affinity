@@ -295,5 +295,3 @@ static DnxQueueResult dnxRemoveNode (void *pLeft, void *pRight)
 	return (DNX_QRES_FOUND);
 }
 
-
-//----------------------------------------------------------------------------

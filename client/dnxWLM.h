@@ -49,4 +49,5 @@
 
 void *dnxWLM (void *data);
 
-#endif
+#endif   /* _DNXWLM_H_ */
+

@@ -606,4 +606,3 @@ int dnxChannelDebug (dnxChannel *channel, int doDebug)
 	return DNX_OK;
 }
 
-//----------------------------------------------------------------------------

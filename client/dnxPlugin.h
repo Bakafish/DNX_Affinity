@@ -86,3 +86,4 @@ char *dnxFgets (char *data, int size, FILE *fp, int timeout);
 int dnxPluginVector (char *command, int *argc, char **argv, int max);
 
 #endif /* _DNXPLUGIN_H_ */
+

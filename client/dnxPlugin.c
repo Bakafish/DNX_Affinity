@@ -603,4 +603,3 @@ static void strip (char *buffer)
 	if (cp != buffer) memmove(buffer, cp, (ep-cp)+1);
 }
 
-//----------------------------------------------------------------------------

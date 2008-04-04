@@ -86,3 +86,4 @@ extern int dnxQueueSize (DnxQueue *queue, int *pSize);
 extern int dnxQueueDelete (DnxQueue *queue);
 
 #endif   /* _DNXQUEUE_H_ */
+

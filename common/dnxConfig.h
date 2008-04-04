@@ -32,3 +32,4 @@ void initGlobals (void);
 int parseFile (char *szFile);
 
 #endif   /* _DNXCONFIG_H_ */
+

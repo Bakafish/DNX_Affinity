@@ -244,4 +244,3 @@ int dnxMsgQWrite (dnxChannel *channel, char *buf, int size, int timeout, char *d
 	return DNX_OK;
 }
 
-//----------------------------------------------------------------------------

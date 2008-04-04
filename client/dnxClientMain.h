@@ -122,3 +122,4 @@ int dnxGetJobsActive (void);
 int dnxSetJobsActive (int value);
 
 #endif   /* _DNXMAIN_H_ */
+

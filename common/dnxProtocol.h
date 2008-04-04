@@ -107,3 +107,4 @@ int dnxPutResult (dnxChannel *channel, DnxResult *pResult, char *address);
 int dnxGetMgmtRequest (dnxChannel *channel, DnxMgmtRequest *pRequest, char *address, int timeout);
 
 #endif   /* _DNXPROTOCOL_H_ */
+

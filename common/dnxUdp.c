@@ -406,4 +406,3 @@ int dnxUdpWrite (dnxChannel *channel, char *buf, int size, int timeout, char *ds
 	return DNX_OK;
 }
 
-//----------------------------------------------------------------------------

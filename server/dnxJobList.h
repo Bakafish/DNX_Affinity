@@ -71,3 +71,4 @@ int dnxJobListInit (DnxJobList ** ppJobList, unsigned long size);
 void dnxJobListExit(DnxJobList ** ppJobList);
 
 #endif   /* _DNXJOBLIST_H_ */
+

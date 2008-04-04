@@ -43,3 +43,4 @@ int dnxTcpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *sr
 int dnxTcpWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst);
 
 #endif   /* _DNXTCP_H_ */
+

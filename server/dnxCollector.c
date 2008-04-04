@@ -204,4 +204,3 @@ static int dnxPostResult (DnxGlobalData *gData, DnxNewJob *pJob, DnxResult *pRes
 	return DNX_OK;
 }
 
-//----------------------------------------------------------------------------

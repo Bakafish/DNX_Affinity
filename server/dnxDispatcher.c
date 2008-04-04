@@ -180,4 +180,3 @@ static int dnxSendJob (DnxGlobalData *gData, DnxNewJob *pSvcReq, DnxNodeRequest 
 	return ret;
 }
 
-//----------------------------------------------------------------------------
