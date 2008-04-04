@@ -17,73 +17,73 @@
  
   --------------------------------------------------------------------------*/
 
-//	dnxPlugin.h
+// dnxPlugin.h
 //
-//	Utility routines to support plugin loading and execution.
+// Utility routines to support plugin loading and execution.
 //
-//	Copyright (c) 2006-2007 Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+// Copyright (c) 2006-2007 Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
 //
-//	First Written:   2006-09-09
-//	Last Modified:   2007-03-21
+// First Written:   2006-09-09
+// Last Modified:   2007-03-21
 //
-//	License:
+// License:
 //
-//	This program is free software; you can redistribute it and/or modify
-//	it under the terms of the GNU General Public License version 2 as
-//	published by the Free Software Foundation.
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License version 2 as
+// published by the Free Software Foundation.
 //
-//	This program is distributed in the hope that it will be useful,
-//	but WITHOUT ANY WARRANTY; without even the implied warranty of
-//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//	GNU General Public License for more details.
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 //
-//	You should have received a copy of the GNU General Public License
-//	along with this program; if not, write to the Free Software
-//	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 //
 
 #ifndef _DNXPLUGIN_H_
 #define _DNXPLUGIN_H_
 
 //
-//	Constants
+// Constants
 //
 
-#define DNX_PLUGIN_RESULT_OK		0
-#define DNX_PLUGIN_RESULT_WARNING	1
-#define DNX_PLUGIN_RESULT_CRITICAL	2
-#define DNX_PLUGIN_RESULT_UNKNOWN	3
+#define DNX_PLUGIN_RESULT_OK     0
+#define DNX_PLUGIN_RESULT_WARNING   1
+#define DNX_PLUGIN_RESULT_CRITICAL  2
+#define DNX_PLUGIN_RESULT_UNKNOWN   3
 
 
 //
-//	Structures
+// Structures
 //
 
 typedef struct _DnxModule_ {
-	char *path;
-	void *handle;
-	int (*init)(void);
-	int (*deinit)(void);
-	struct _DnxModule_ *next;
-	struct _DnxModule_ *prev;
+   char *path;
+   void *handle;
+   int (*init)(void);
+   int (*deinit)(void);
+   struct _DnxModule_ *next;
+   struct _DnxModule_ *prev;
 } DNX_MODULE;
 
 typedef struct _DnxPlugin_ {
-	char *name;
-	int (*func)(int argc, char **argv);
-	DNX_MODULE *parent;
-	struct _DnxPlugin_ *next;
-	struct _DnxPlugin_ *prev;
+   char *name;
+   int (*func)(int argc, char **argv);
+   DNX_MODULE *parent;
+   struct _DnxPlugin_ *next;
+   struct _DnxPlugin_ *prev;
 } DNX_PLUGIN;
 
 
 //
-//	Globals
+// Globals
 //
 
 
 //
-//	Prototypes
+// Prototypes
 //
 
 // Initializes the plugin utility library
