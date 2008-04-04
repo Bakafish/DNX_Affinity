@@ -674,7 +674,7 @@ int dnxCfgParserParse(DnxCfgParser * cp, void * ppvals[])
             line++;
             if ((err = dnxParseCfgLine(buf, icp->dict, ppvals)) != 0)
             {
-               dnxSyslog(LOG_ERR, "cfgParser [%s]: Syntax error on line %d: %s", 
+               dnxLog("cfgParser [%s]: Syntax error on line %d: %s.", 
                      icp->cfgfile, line, dnxErrorString(err));
                if (!ret) ret = err; // return only the first error
             }

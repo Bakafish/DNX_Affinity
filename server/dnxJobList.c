@@ -69,7 +69,7 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    // verify space in the job list
    if (ilist->list[tail].state && (tail = (tail + 1) % ilist->size) == ilist->head)
    {
-      dnxSyslog(LOG_ERR, "dnxJobListAdd: Out of job slots (max=%lu): %s", 
+      dnxLog("dnxJobListAdd: Out of job slots (max=%lu): %s.", 
             ilist->size, pJob->cmd);
       ret = DNX_ERR_CAPACITY;
    }
@@ -89,7 +89,7 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    
       ilist->tail = tail;
    
-      dnxDebug(8, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", 
+      dnxDebug(8, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu.", 
             pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, 
             ilist->tail);
    
@@ -193,7 +193,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
       timeout.tv_nsec = now.tv_usec * 1000;
 
-      dnxDebug(8, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu", 
+      dnxDebug(8, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu.", 
             ilist->head, ilist->dhead, ilist->tail);
 
       if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, 
@@ -215,7 +215,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       if (ilist->dhead != ilist->tail)
          ilist->dhead = (current + 1) % ilist->size;
    
-      dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu", 
+      dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu.", 
             pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
    }
 
@@ -244,7 +244,7 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
 
    dnxDebug(8, 
          "dnxJobListCollect: Compare job [%lu,%lu] to job [%lu,%lu]: "
-         "Head=%lu, DHead=%lu, Tail=%lu", pxid->objSerial, pxid->objSlot,
+         "Head=%lu, DHead=%lu, Tail=%lu.", pxid->objSerial, pxid->objSlot,
          ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot, 
          ilist->head, ilist->dhead, ilist->tail);
 

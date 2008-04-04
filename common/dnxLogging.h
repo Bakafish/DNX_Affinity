@@ -28,14 +28,11 @@
 #ifndef _DNXLOGGING_H_
 #define _DNXLOGGING_H_
 
-#include <syslog.h>
-
 /** Log a parameterized message to the dnx system log file.
  * 
- * @param[in] priority - a priority value for the log message.
  * @param[in] fmt - a format specifier string similar to that of printf.
  */
-void dnxSyslog(int priority, char * fmt, ... );
+void dnxLog(char * fmt, ... );
 
 /** Log a parameterized message to the dnx DEBUG log.
  * 
@@ -44,17 +41,42 @@ void dnxSyslog(int priority, char * fmt, ... );
  * 
  * @param[in] level - the debug level at which to log the message.
  * @param[in] fmt - a format specifier string similar to that of printf.
- * 
- * @return Zero on success, or a non-zero error code.
  */
 void dnxDebug(int level, char * fmt, ... );
 
-/** Initialize logging functionality.
+/** Log a parameterized message to the global audit log file.
  * 
- * @param[in] debug - a pointer to the global debug level.
- * @param[in] logFacility - a pointer to the global log facility.
+ * Returns quickly if auditing is disabled because a null or empty log file
+ * was specified on startup.
+ * 
+ * @param[in] fmt - a format specifier string similar to that of printf.
+ * 
+ * @return Zero on success, or a non-zero error value.
  */
-void initLogging(int * debug, int * logFacility);
+int dnxAudit(char * fmt, ... );
+
+/** Initialize the logging sub-system with global references.
+ * 
+ * System and debug logging defaults to STDOUT. Both "STDOUT" and "STDERR"
+ * may be specified as log file strings for the log, debug and audit file 
+ * paths. The audit log is optional, and is disabled if @p auditFile is null 
+ * or empty.
+ * 
+ * The address of the debug flag is passed so it can change the behavior of
+ * the logging system dynamically.
+ * 
+ * @param[in] logFile - the global log file path.
+ * @param[in] debugFile - the global debug file path.
+ * @param[in] auditFile - the global audit file path (optional).
+ * @param[in] debugLevel - the address of the global debug level indicator.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxLogInit(char * logFile, char * debugFile, char * auditFile, 
+      int * debugLevel);
+
+/** Close any open log file. */
+void dnxLogExit(void);
 
 #endif   /* _DNXLOGGING_H_ */
 

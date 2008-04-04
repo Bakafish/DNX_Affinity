@@ -65,7 +65,7 @@ void dnxJobCleanup(DnxNewJob * pJob);
  * @param[in] pJob - the job to be audited.
  * @param[in] action - the audit action that we're logging.
  * 
- * @return Always returns zero.
+ * @return Zero on success or a non-zero error value.
  */
 int dnxAuditJob(DnxNewJob * pJob, char * action);
 

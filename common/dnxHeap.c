@@ -243,7 +243,7 @@ void * dnxMalloc(size_t sz, char * file, int line)
 
    link_block(ohp);
 
-   dnxDebug(10, "dnxHeap: alloc(%ld) == %p", sz, &ohp[1]);
+   dnxDebug(10, "dnxHeap: alloc(%ld) == %p.", sz, &ohp[1]);
 
    return &ohp[1];
 }
@@ -315,7 +315,7 @@ void dnxFree(void * p)
       overhead * ohp = &((overhead *)p)[-1];
       if (!unlink_block(ohp))
       {
-         dnxDebug(1, "dnxHeap: free(%p) - attempt to free non-heap address", p);
+         dnxDebug(1, "dnxHeap: free(%p) - attempt to free non-heap address.", p);
          assert(0);
          return;
       }
@@ -323,7 +323,7 @@ void dnxFree(void * p)
          return;
       free(ohp->file);
       free(ohp);
-      dnxDebug(10, "dnxHeap: free(%p)", p);
+      dnxDebug(10, "dnxHeap: free(%p).", p);
    }
 }
 

@@ -28,78 +28,207 @@
 #include "dnxLogging.h"
 #include "dnxError.h"
 
-#include <stdarg.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
-#include <syslog.h>
+#include <time.h>
+#include <errno.h>
 #include <assert.h>
+#include <unistd.h>
 
-#define MAX_LOG_LINE 1023                    //!< Maximum log line length
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
 
-static int defDebug = 0;                     //!< The default debug level
-static int defLogFacility = LOG_LOCAL7;      //!< The default log facility
+#ifndef LOCALSTATEDIR
+# define LOCALSTATEDIR     "/var"
+#endif
 
-static int * pDebug = &defDebug;             //!< A pointer to the debug level
-static int * pLogFacility = &defLogFacility; //!< A pointer to the log facility
+#define LOGDIR             LOCALSTATEDIR "/log"
+
+#ifndef DEF_LOG_FILE
+# define DEF_LOG_FILE      LOGDIR "/dnx.log"
+#endif
+
+#ifndef DEF_DEBUG_FILE
+# define DEF_DEBUG_FILE    LOGDIR "/dnx.debug.log"
+#endif
+
+#ifndef DEF_DEBUG_LEVEL
+# define DEF_DEBUG_LEVEL   0
+#endif
+
+#define MAX_LOG_LINE       1023              //!< Maximum log line length.
+
+static int defDebugLevel   = DEF_DEBUG_LEVEL;//!< The default debug level.
+static int * s_debugLevel  = &defDebugLevel; //!< A pointer to the debug level.
+static FILE * s_logFile    = 0;              //!< The global log file.
+static FILE * s_debugFile  = 0;              //!< The global debug file.
+static FILE * s_auditFile  = 0;              //!< The global audit file.
+
+/*--------------------------------------------------------------------------
+                              IMPLEMENTATION
+  --------------------------------------------------------------------------*/
+
+/** A variable argument logger function that takes a stream.
+ * 
+ * @param[in] fp - the stream to write to.
+ * @param[in] fmt - the format string to write.
+ * @param[in] ap - the argument list to use.
+ * 
+ * @return zero on success or a non-zero error value if the data could not
+ * be written.
+ */
+static int vlogger(FILE * fp, char * fmt, va_list ap)
+{
+   if (fp)
+   {
+      if (!isatty(fileno(fp)))
+      {
+         time_t tm = time(0);
+         if (fprintf(fp, "[%.*s] ", 24, ctime(&tm)) < 0)
+            return errno;
+      }
+      if (vfprintf(fp, fmt, ap) < 0)
+         return errno;
+      if (fputc('\n', fp) == EOF)
+         return errno;
+      if (fflush(fp) == EOF)
+         return errno;
+   }
+   return 0;
+}
 
 /*--------------------------------------------------------------------------
                                  INTERFACE
   --------------------------------------------------------------------------*/
 
-void dnxSyslog(int priority, char * fmt, ...)
+void dnxLog(char * fmt, ... )
 {
-   char sbuf[MAX_LOG_LINE + 1];
-
    assert(fmt);
 
-   // see if we need formatting
-   if (strchr(fmt, '%'))
+   va_list ap;
+   va_start(ap, fmt);
+   (void)vlogger(s_logFile? s_logFile: stdout, fmt, ap);
+   va_end(ap);
+}
+
+//----------------------------------------------------------------------------
+
+void dnxDebug(int level, char * fmt, ... )
+{
+   assert(fmt);
+
+   if (level <= *s_debugLevel)
    {
       va_list ap;
       va_start(ap, fmt);
-      vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
+      (void)vlogger(s_debugFile? s_debugFile: stdout, fmt, ap);
       va_end(ap);
    }
-   else
-      strncpy(sbuf, fmt, MAX_LOG_LINE);
-
-   sbuf[MAX_LOG_LINE] = 0;
-
-   syslog(*pLogFacility | priority, "%s", sbuf);
 }
 
 //----------------------------------------------------------------------------
 
-void dnxDebug(int level, char * fmt, ...)
+int dnxAudit(char * fmt, ... )
 {
-   char sbuf[MAX_LOG_LINE + 1];
+   int ret = 0;
 
    assert(fmt);
 
-   if (level <= *pDebug)
+   if (s_auditFile)
    {
-      // see if we need formatting
-      if (strchr(fmt, '%'))
-      {
-         va_list ap;
-         va_start(ap, fmt);
-         vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
-         va_end(ap);
-      }
-      else
-         strncpy(sbuf, fmt, MAX_LOG_LINE);
-      sbuf[MAX_LOG_LINE] = 0;
-
-      syslog(*pLogFacility | LOG_DEBUG, "%s", sbuf);
+      va_list ap;
+      va_start(ap, fmt);
+      ret = vlogger(s_auditFile, fmt, ap);
+      va_end(ap);
    }
+   return ret;
 }
 
 //----------------------------------------------------------------------------
 
-void initLogging(int * debug, int * logFacility)
+int dnxLogInit(char * logFile, char * debugFile, char * auditFile, 
+      int * debugLevel)
 {
-   pDebug = debug;
-   pLogFacility = logFacility;
+   // set debug level pointer
+   s_debugLevel = debugLevel;
+
+   // open log file - default to stdout (global default)
+   s_logFile = s_debugFile = stdout;
+   if (logFile && *logFile && strcmp(logFile, "stdout") != 0)
+   {
+      if (strcmp(logFile, "stderr") == 0)
+         s_logFile = stderr;
+      else
+      {
+         int eno;
+         mode_t oldmask = umask(0077);    // only owner can read/write
+         s_logFile = fopen(logFile, "a");
+         eno = errno;
+         umask(oldmask);
+         if (!s_logFile)
+         {
+            s_logFile = stdout;           // stdout on failure; return error
+            return eno;
+         }
+      }
+   }
+
+   // open debug file
+   if (debugFile && *debugFile || strcmp(debugFile, "stdout") != 0)
+   {
+      if (strcmp(debugFile, "stderr") == 0)
+         s_debugFile = stderr;
+      else
+      {
+         int eno;
+         mode_t oldmask = umask(0077);
+         s_debugFile = fopen(debugFile, "a");
+         eno = errno;
+         umask(oldmask);
+         if (!s_debugFile)
+         {
+            s_debugFile = stdout;
+            return eno;
+         }
+      }
+   }
+
+   // open audit log
+   if (auditFile && *auditFile)
+   {
+      if (strcmp(auditFile, "stdout") == 0)
+         s_auditFile = stdout;
+      else if (strcmp(debugFile, "stderr") == 0)
+         s_auditFile = stderr;
+      else
+      {
+         int eno;
+         mode_t oldmask = umask(0077);
+         s_auditFile = fopen(auditFile, "a");
+         eno = errno;
+         umask(oldmask);
+         if (!s_auditFile)
+            return eno;
+      }
+   }
+   return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
+void dnxLogExit(void)
+{
+   if (s_auditFile && s_auditFile != stdout && s_auditFile != stderr) 
+      fclose(s_auditFile);
+   if (s_debugFile && s_debugFile != stdout && s_auditFile != stderr) 
+      fclose(s_debugFile);
+   if (s_logFile && s_logFile != stdout && s_logFile != stderr) 
+      fclose(s_logFile);
+   s_logFile = s_debugFile = s_auditFile = 0;
 }
 
 /*--------------------------------------------------------------------------*/

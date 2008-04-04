@@ -638,14 +638,14 @@ int dnxPluginInit(char * pluginPath)
    {
       if ((len = strlen(pluginPath)) < 1 || len > MAX_PLUGIN_PREFIX)
       {
-         dnxSyslog(LOG_ERR, "dnxPluginInit: Invalid plugin path");
+         dnxLog("Invalid plugin path.");
          return DNX_ERR_INVALID;
       }
 
       // ensure that the plugin path prefix is absolute
       if (*pluginPath != '/')
       {
-         dnxSyslog(LOG_ERR, "dnxPluginInit: Plugin path is not absolute");
+         dnxLog("Plugin path is not absolute.");
          return DNX_ERR_INVALID;
       }
 

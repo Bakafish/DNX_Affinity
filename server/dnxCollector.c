@@ -81,7 +81,7 @@ static void * dnxCollector(void * data)
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
 
-   dnxSyslog(LOG_INFO, "dnxCollector[%lx]: Awaiting service check results", tid);
+   dnxLog("dnxCollector[%lx]: Awaiting service check results.", tid);
 
    while (1)
    {
@@ -90,7 +90,7 @@ static void * dnxCollector(void * data)
       if ((ret = dnxWaitForResult(icoll->channel, 
             &sResult, sResult.address, DNX_COLLECTOR_TIMEOUT)) == DNX_OK)
       {
-         dnxDebug(2, "dnxCollector[%lx]: Received result for job [%lu,%lu]: %s", 
+         dnxDebug(2, "dnxCollector[%lx]: Received result for job [%lu,%lu]: %s.", 
                tid, sResult.xid.objSerial, sResult.xid.objSlot, sResult.resData);
 
          // dequeue the matching service request from the pending job queue
@@ -102,7 +102,7 @@ static void * dnxCollector(void * data)
             /** @todo Wrapper release DnxResult structure. */
             xfree(sResult.resData);
 
-            dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s", 
+            dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s.", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot, 
                   dnxErrorString(ret));
 
@@ -111,11 +111,11 @@ static void * dnxCollector(void * data)
             dnxJobCleanup(&Job);
          }
          else
-            dnxSyslog(LOG_WARNING, "dnxCollector[%lx]: Dequeue job failed: %s",
+            dnxLog("dnxCollector[%lx]: Dequeue job failed: %s.",
                   tid, dnxErrorString(ret));
       }
       else if (ret != DNX_ERR_TIMEOUT)
-         dnxSyslog(LOG_ERR, "dnxCollector[%lx]: Receive failed: %s", 
+         dnxLog("dnxCollector[%lx]: Receive failed: %s.", 
                tid, dnxErrorString(ret));
    }
    return 0;
@@ -151,13 +151,13 @@ int dnxCollectorCreate(char * chname,
    }
    if ((ret = dnxChanMapAdd(chname, collurl)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxCollectorCreate: dnxChanMapAdd(%s) failed: %s", 
+      dnxLog("dnxCollectorCreate: dnxChanMapAdd(%s) failed: %s.", 
             chname, dnxErrorString(ret));
       goto e1;
    }
    if ((ret = dnxConnect(chname, 0, &icoll->channel)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxCollectorCreate: dnxConnect(%s) failed: %s", 
+      dnxLog("dnxCollectorCreate: dnxConnect(%s) failed: %s.", 
             chname, dnxErrorString(ret));
       goto e2;
    }
@@ -165,7 +165,7 @@ int dnxCollectorCreate(char * chname,
    // create the collector thread
    if ((ret = pthread_create(&icoll->tid, 0, dnxCollector, icoll)) != 0)
    {
-      dnxSyslog(LOG_ERR, "dnxCollectorCreate: thread creation failed: %s", 
+      dnxLog("dnxCollectorCreate: thread creation failed: %s.", 
             dnxErrorString(ret));
       ret = DNX_ERR_THREAD;
       goto e3;

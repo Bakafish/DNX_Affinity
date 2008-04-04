@@ -113,7 +113,7 @@ static int dnxTcpOpen(iDnxChannel * icp, int active)
 
    if ((sd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
    {
-      dnxSyslog(LOG_ERR, "dnxUdpOpen: socket failed: %s", strerror(errno));
+      dnxLog("dnxUdpOpen: socket failed: %s.", strerror(errno));
       return DNX_ERR_OPEN;
    }
 
@@ -123,7 +123,7 @@ static int dnxTcpOpen(iDnxChannel * icp, int active)
       if (connect(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
       {
          close(sd);
-         dnxSyslog(LOG_ERR, "dnxTcpOpen: connect(%lx) failed: %s", 
+         dnxLog("dnxTcpOpen: connect(%lx) failed: %s.", 
                (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
          return DNX_ERR_OPEN;
       }
@@ -134,7 +134,7 @@ static int dnxTcpOpen(iDnxChannel * icp, int active)
       if (bind(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
       {
          close(sd);
-         dnxSyslog(LOG_ERR, "dnxTcpOpen: bind(%lx) failed: %s", 
+         dnxLog("dnxTcpOpen: bind(%lx) failed: %s.", 
                (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
          return DNX_ERR_OPEN;
       }
@@ -226,7 +226,7 @@ static int dnxTcpRead(iDnxChannel * icp, char * buf, int * size,
 
       if (errno != EINTR) 
       {
-         dnxSyslog(LOG_ERR, "dnxTcpRead: select failed: %s", strerror(errno));
+         dnxLog("dnxTcpRead: select failed: %s.", strerror(errno));
          return DNX_ERR_RECEIVE;
       }
 
@@ -328,7 +328,7 @@ static int dnxTcpWrite(iDnxChannel * icp, char * buf, int size,
 
       if (errno != EINTR)
       {
-         dnxSyslog(LOG_ERR, "dnxTcpWrite: select failed: %s", strerror(errno));
+         dnxLog("dnxTcpWrite: select failed: %s.", strerror(errno));
          return DNX_ERR_SEND;
       }
 

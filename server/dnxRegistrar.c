@@ -119,7 +119,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    {
       pReq->expires = (*ppMsg)->expires;
       dnxDebug(2, 
-            "dnxRegistrar[%lx]: Updated req [%lu,%lu] at %u; expires at %u", 
+            "dnxRegistrar[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
             tid, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
@@ -127,12 +127,12 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    {
       *ppMsg = 0;    // we're keeping this message; return NULL
       dnxDebug(2, 
-            "dnxRegistrar[%lx]: Added req [%lu,%lu] at %u; expires at %u", 
+            "dnxRegistrar[%lx]: Added req [%lu,%lu] at %u; expires at %u.", 
             tid, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
    else
-      dnxSyslog(LOG_ERR, "DNX Registrar: Unable to enqueue node request: %s", 
+      dnxLog("DNX Registrar: Unable to enqueue node request: %s.", 
             dnxErrorString(ret));
 
    return ret;
@@ -182,7 +182,7 @@ static void * dnxRegistrar(void * data)
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
 
-   dnxSyslog(LOG_INFO, "DNX Registrar: Awaiting worker node requests...");
+   dnxLog("DNX Registrar: Awaiting worker node requests...");
 
    while (1)
    {
@@ -221,7 +221,7 @@ static void * dnxRegistrar(void * data)
       pthread_cleanup_pop(0);
 
       if (ret != DNX_OK && ret != DNX_ERR_TIMEOUT)
-         dnxSyslog(LOG_ERR, "DNX Registrar: Process node request failed: %s", 
+         dnxLog("DNX Registrar: Process node request failed: %s.", 
                dnxErrorString(ret));
    }
    return 0;
@@ -248,7 +248,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
          break;
 
       dnxDebug(3, 
-            "dnxRegisterNode: Expired req [%lu,%lu] at %u; expired at %u", 
+            "dnxRegisterNode: Expired req [%lu,%lu] at %u; expired at %u.", 
             node->xid.objSerial, node->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(node->expires % 1000));
 
@@ -259,11 +259,11 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    }
 
    if (discard_count > 0)
-      dnxDebug(1, "dnxGetNodeRequest: Discarded %d expired node requests", 
+      dnxDebug(1, "dnxGetNodeRequest: Discarded %d expired node requests.", 
             discard_count);
 
    if (ret != DNX_OK)
-      dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s",
+      dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s.",
             dnxErrorString(ret));
 
    *ppNode = node;   // return a node or NULL
@@ -289,15 +289,13 @@ int dnxRegistrarCreate(unsigned queuesz, DnxChannel * dispchan,
 
    if ((ret = dnxQueueCreate(queuesz, xfree, &ireg->rqueue)) != 0)
    {
-      dnxSyslog(LOG_ERR, "DNX Registrar: Queue creation failed: %s", 
-            dnxErrorString(ret));
+      dnxLog("DNX Registrar: Queue creation failed: %s.", dnxErrorString(ret));
       xfree(ireg);
       return ret;
    }
    if ((ret = pthread_create(&ireg->tid, 0, dnxRegistrar, ireg)) != 0)
    {
-      dnxSyslog(LOG_ERR, "DNX Registrar: Thread creation failed: %s", 
-            strerror(ret));
+      dnxLog("DNX Registrar: Thread creation failed: %s.", strerror(ret));
       xfree(ireg);
       return DNX_ERR_THREAD;
    }

@@ -125,55 +125,53 @@ static void * dnxWorker(void * data);
 static void logConfigChanges(DnxWlmCfgData * ocp, DnxWlmCfgData * ncp)
 {
    if (strcmp(ocp->dispatcher, ncp->dispatcher) != 0)
-      dnxSyslog(LOG_INFO, 
-            "WLM: Dispatcher URL changed from %s to %s. "
-            "NOTE: Changing the dispatcher URL requires a restart", 
+      dnxLog("Config parameter 'channelDispatcher' changed from %s to %s. "
+            "NOTE: Changing the dispatcher URL requires a restart.", 
             ocp->dispatcher, ncp->dispatcher);
 
    if (strcmp(ocp->collector, ncp->collector) != 0)
-      dnxSyslog(LOG_INFO, 
-            "WLM: Collector URL changed from %s to %s. "
-            "NOTE: Changing the collector URL requires a restart", 
+      dnxLog("Config parameter 'channelCollector' changed from %s to %s. "
+            "NOTE: Changing the collector URL requires a restart.", 
             ocp->collector, ncp->collector);
 
    if (ocp->reqTimeout != ncp->reqTimeout)
-      dnxSyslog(LOG_INFO, "WLM: threadRequestTimeout changed from %u to %u", 
+      dnxLog("Config parameter 'threadRequestTimeout' changed from %u to %u.", 
             ocp->reqTimeout, ncp->reqTimeout);
 
    if (ocp->ttlBackoff != ncp->ttlBackoff)
-      dnxSyslog(LOG_INFO, "WLM: threadTtlBackoff changed from %u to %u", 
+      dnxLog("Config parameter 'threadTtlBackoff' changed from %u to %u.", 
             ocp->ttlBackoff, ncp->ttlBackoff);
 
    if (ocp->maxRetries != ncp->maxRetries)
-      dnxSyslog(LOG_INFO, "WLM: threadMaxTimeouts changed from %u to %u", 
+      dnxLog("Config parameter 'threadMaxTimeouts' changed from %u to %u.", 
             ocp->maxRetries, ncp->maxRetries);
 
    if (ocp->poolMin != ncp->poolMin)
-      dnxSyslog(LOG_INFO, "WLM: poolMin changed from %u to %u", 
+      dnxLog("Config parameter 'poolMin' changed from %u to %u.", 
             ocp->poolMin, ncp->poolMin);
 
    if (ocp->poolInitial != ncp->poolInitial)
-      dnxSyslog(LOG_INFO, "WLM: poolInitial changed from %u to %u", 
+      dnxLog("Config parameter 'poolInitial' changed from %u to %u.", 
             ocp->poolInitial, ncp->poolInitial);
 
    if (ocp->poolMax != ncp->poolMax)
-      dnxSyslog(LOG_INFO, "WLM: poolMax changed from %u to %u", 
+      dnxLog("Config parameter 'poolMax' changed from %u to %u.", 
             ocp->poolMax, ncp->poolMax);
 
    if (ocp->poolGrow != ncp->poolGrow)
-      dnxSyslog(LOG_INFO, "WLM: poolGrow changed from %u to %u", 
+      dnxLog("Config parameter 'poolGrow' changed from %u to %u.", 
             ocp->poolGrow, ncp->poolGrow);
 
    if (ocp->pollInterval != ncp->pollInterval)
-      dnxSyslog(LOG_INFO, "WLM: wlmPollInterval changed from %u to %u", 
+      dnxLog("Config parameter 'wlmPollInterval' changed from %u to %u.", 
             ocp->pollInterval, ncp->pollInterval);
 
    if (ocp->shutdownGrace != ncp->shutdownGrace)
-      dnxSyslog(LOG_INFO, "WLM: wlmShutdownGracePeriod changed from %u to %u", 
+      dnxLog("Config parameter 'wlmShutdownGracePeriod' changed from %u to %u.", 
             ocp->shutdownGrace, ncp->shutdownGrace);
 
    if (ocp->maxResults != ncp->maxResults)
-      dnxSyslog(LOG_INFO, "WLM: maxResultBuffer changed from %u to %u", 
+      dnxLog("Config parameter 'maxResultBuffer' changed from %u to %u.", 
             ocp->maxResults, ncp->maxResults);
 }
 
@@ -194,14 +192,12 @@ static int initWorkerComm(DnxWorkerStatus * ws)
    sprintf(szChan, "Dispatch:%lx", ws);
    if ((ret = dnxChanMapAdd(szChan, ws->iwlm->cfg.dispatcher)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "WLM: dnxChanMapAdd(Dispatch:%lx) failed, %d: %s", 
-            ws, ret, dnxErrorString(ret));
+      dnxLog("WLM: Failed to initialize dispatcher channel: %s.", dnxErrorString(ret));
       return ret;
    }
    if ((ret = dnxConnect(szChan, 1, &ws->dispatch)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "WLM: dnxConnect(Dispatch:%lx) failed, %d: %s", 
-            ws, ret, dnxErrorString(ret));
+      dnxLog("WLM: Failed to open dispatcher channel: %s.", dnxErrorString(ret));
       return ret;
    }
 
@@ -209,14 +205,12 @@ static int initWorkerComm(DnxWorkerStatus * ws)
    sprintf(szChan, "Collect:%lx", ws);
    if ((ret = dnxChanMapAdd(szChan, ws->iwlm->cfg.collector)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "WLM: dnxChanMapAdd(Collect:%lx) failed, %d: %s", 
-            ws, ret, dnxErrorString(ret));
+      dnxLog("WLM: Failed to initialize collector channel: %s.", dnxErrorString(ret));
       return ret;
    }
    if ((ret = dnxConnect(szChan, 1, &ws->collect)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "WLM: dnxConnect(Collect:%lx) failed, %d: %s", 
-            ws, ret, dnxErrorString(ret));
+      dnxLog("WLM: Failed to open collector channel: %s.", dnxErrorString(ret));
       return ret;
    }
    return 0;
@@ -267,8 +261,8 @@ static int workerCreate(iDnxWlm * iwlm, DnxWorkerStatus ** pws)
    // initialize our communications channels
    if ((ret = initWorkerComm(ws)) != 0)
    {
-      dnxSyslog(LOG_ERR, "WLM: Failed to initialize worker comm channels, %d: %s", 
-            ret, dnxErrorString(ret));
+      dnxLog("WLM: Failed to initialize worker comm channels: %s.", 
+            dnxErrorString(ret));
       xfree(ws);
       return ret;
    }
@@ -277,8 +271,7 @@ static int workerCreate(iDnxWlm * iwlm, DnxWorkerStatus ** pws)
    ws->state = DNX_THREAD_RUNNING; // set thread state to active
    if ((ret = pthread_create(&ws->tid, 0, dnxWorker, ws)) != 0)
    {
-      dnxSyslog(LOG_ERR, "WLM: Failed to create worker thread, %d: %s", 
-            ret, strerror(ret));
+      dnxLog("WLM: Failed to create worker thread: %s.", strerror(ret));
       releaseWorkerComm(ws);
       xfree(ws);
       return DNX_ERR_THREAD;
@@ -323,7 +316,7 @@ static int growThreadPool(iDnxWlm * iwlm)
       iwlm->threads++;
       iwlm->tcreated++;
    }
-   dnxSyslog(LOG_INFO, "WLM: Increased thread pool by %d", growsz - add);
+   dnxLog("WLM: Increased thread pool by %d.", growsz - add);
    return ret;
 }
 
@@ -362,7 +355,7 @@ static void cleanThreadPool(iDnxWlm * iwlm)
       }
       i++;
    }
-   dnxDebug(1, "WLM: Threads: %d; Busy: %d", iwlm->threads, iwlm->active);
+   dnxDebug(1, "WLM: Threads: %d; Busy: %d.", iwlm->threads, iwlm->active);
 }
 
 //----------------------------------------------------------------------------
@@ -375,7 +368,7 @@ static void dnxWorkerCleanup(void * data)
 {
    assert(data);
    ((DnxWorkerStatus *)data)->state = DNX_THREAD_ZOMBIE;
-   dnxDebug(2, "Worker[%lx]: Terminating", pthread_self());
+   dnxDebug(2, "Worker[%lx]: Terminating.", pthread_self());
 }
 
 //----------------------------------------------------------------------------
@@ -423,11 +416,11 @@ static void * dnxWorker(void * data)
          {
             case DNX_ERR_SEND:
             case DNX_ERR_TIMEOUT:
-               dnxSyslog(LOG_ERR, "Worker[%lx]: Unable to contact server: %s", 
+               dnxLog("Worker[%lx]: Unable to contact server: %s.", 
                      tid, dnxErrorString(ret));
                break;
             default:
-               dnxSyslog(LOG_ERR, "Worker[%lx]: dnxWantJob failed: %s", 
+               dnxLog("Worker[%lx]: dnxWantJob failed: %s.", 
                      tid, dnxErrorString(ret));
          }
       }
@@ -439,11 +432,11 @@ static void * dnxWorker(void * data)
             case DNX_ERR_TIMEOUT:  
                break;                  // Timeout is OK here
             case DNX_ERR_RECEIVE:
-               dnxSyslog(LOG_ERR, "Worker[%lx]: Unable to contact server: %s", 
+               dnxLog("Worker[%lx]: Unable to contact server: %s.", 
                      tid, dnxErrorString(ret));
                break;
             default:
-               dnxSyslog(LOG_ERR, "Worker[%lx]: dnxGetJob failed: %s", 
+               dnxLog("Worker[%lx]: dnxGetJob failed: %s.", 
                      tid, dnxErrorString(ret));
          }
       }
@@ -465,7 +458,7 @@ static void * dnxWorker(void * data)
          }
          if (terminate)
          {
-            dnxSyslog(LOG_INFO, "Worker[%lx]: Exiting - max retries exceeded", tid);
+            dnxLog("Worker[%lx]: Exiting - max retries exceeded.", tid);
             break;
          }
       }
@@ -488,7 +481,7 @@ static void * dnxWorker(void * data)
          }
          DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 
-         dnxDebug(2, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s", 
+         dnxDebug(2, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
 
          // prepare result structure
@@ -516,12 +509,12 @@ static void * dnxWorker(void * data)
          else 
             ws->jobsfail++;
 
-         dnxDebug(2, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s", 
+         dnxDebug(2, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, result.delta, 
                result.resCode, result.resData);
 
          if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK)
-            dnxSyslog(LOG_ERR, "Worker[%lx]: Post job [%lu,%lu] results failed: %s", 
+            dnxLog("Worker[%lx]: Post job [%lu,%lu] results failed: %s.", 
                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
 
          xfree(result.resData);
@@ -688,7 +681,7 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
       xfree(iwlm);
       if (!iwlm->myipaddr)
       {
-         dnxSyslog(LOG_ERR, "WLM: Unable to access network interfaces.");
+         dnxLog("WLM: Unable to access network interfaces.");
          return DNX_ERR_ADDRESS;
       }
       return DNX_ERR_MEMORY;
@@ -702,13 +695,11 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
       if ((ret = growThreadPool(iwlm)) != DNX_OK)
       {
          if (iwlm->threads)
-            dnxSyslog(LOG_ERR, 
-                  "WLM: Error creating SOME worker threads: %s; "
+            dnxLog("WLM: Error creating SOME worker threads: %s; "
                   "continuing with smaller initial pool.", dnxErrorString(ret));
          else
          {
-            dnxSyslog(LOG_ERR, 
-                  "WLM: Error creating ANY worker threads: %s; "
+            dnxLog("WLM: Error creating ANY worker threads: %s; "
                   "terminating.", dnxErrorString(ret));
             DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
             DNX_PT_MUTEX_DESTROY(&iwlm->mutex);
@@ -719,7 +710,7 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
    }
    DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 
-   dnxSyslog(LOG_INFO, "WLM: Started worker thread pool.");
+   dnxLog("WLM: Started worker thread pool.");
 
    *pwlm = (DnxWlm *)iwlm;
 
@@ -735,7 +726,7 @@ void dnxWlmDestroy(DnxWlm * wlm)
 
    assert(wlm);
 
-   dnxSyslog(LOG_INFO, "WLM: Beginning termination sequence...");
+   dnxLog("WLM: Beginning termination sequence...");
 
    // sleep till we can't stand it anymore, then kill everyone
    iwlm->terminate = 1;
@@ -751,7 +742,7 @@ void dnxWlmDestroy(DnxWlm * wlm)
       for (i = 0; i < iwlm->threads; i++)
          if (iwlm->pool[i]->state == DNX_THREAD_RUNNING)
          {
-            dnxDebug(1, "WLMDestroy: Cancelling worker[%lx]", iwlm->pool[i]->tid);
+            dnxDebug(1, "WLMDestroy: Cancelling worker[%lx].", iwlm->pool[i]->tid);
             pthread_cancel(iwlm->pool[i]->tid);
          }
 
@@ -763,7 +754,7 @@ void dnxWlmDestroy(DnxWlm * wlm)
    DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
    DNX_PT_MUTEX_DESTROY(&iwlm->mutex);
 
-   dnxSyslog(LOG_INFO, "WLM: Termination sequence complete");
+   dnxLog("WLM: Termination sequence complete.");
 
    xfree(iwlm);
 }

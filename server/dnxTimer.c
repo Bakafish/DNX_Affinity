@@ -103,8 +103,7 @@ static void * dnxTimer(void * data)
    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
    pthread_cleanup_push(dnxTimerCleanup, data);
 
-   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Watching for expired jobs...", 
-         pthread_self());
+   dnxLog("dnxTimer[%lx]: Watching for expired jobs...", pthread_self());
 
    while (1)
    {
@@ -122,7 +121,7 @@ static void * dnxTimer(void * data)
             char msg[128];
             DnxNewJob * job = &ExpiredList[i];
 
-            dnxDebug(1, "dnxTimer[%lx]: Expiring Job [%lu,%lu]: %s", 
+            dnxDebug(1, "dnxTimer[%lx]: Expiring Job [%lu,%lu]: %s.", 
                   pthread_self(), job->xid.objSerial, job->xid.objSlot, job->cmd);
 
             dnxAuditJob(job, "EXPIRE");
@@ -139,12 +138,11 @@ static void * dnxTimer(void * data)
       }
 
       if (totalExpired > 0 || ret != DNX_OK)
-         dnxDebug(2, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d: %s", 
+         dnxDebug(2, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d: %s.", 
                pthread_self(), totalExpired, ret, dnxErrorString(ret));
    }
 
-   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Exiting with ret code %d: %s", 
-         pthread_self(), ret, dnxErrorString(ret));
+   dnxLog("dnxTimer[%lx]: Terminating: %s.", pthread_self(), dnxErrorString(ret));
 
    pthread_cleanup_pop(1);
    return 0;
@@ -176,8 +174,7 @@ int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer)
    // create the timer thread
    if ((ret = pthread_create(&itimer->tid, 0, dnxTimer, itimer)) != 0)
    {
-      dnxSyslog(LOG_ERR, "Timer: thread creation failed with %d: %s", 
-            ret, dnxErrorString(ret));
+      dnxLog("Timer thread creation failed: %s.", dnxErrorString(ret));
       xfree(itimer);
       return DNX_ERR_THREAD;
    }

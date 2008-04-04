@@ -110,7 +110,7 @@ static int dnxUdpOpen(iDnxChannel * icp, int active)
 
    if ((sd = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
    {
-      dnxSyslog(LOG_ERR, "dnxUdpOpen: socket failed: %s", strerror(errno));
+      dnxLog("dnxUdpOpen: socket failed: %s.", strerror(errno));
       return DNX_ERR_OPEN;
    }
 
@@ -121,7 +121,7 @@ static int dnxUdpOpen(iDnxChannel * icp, int active)
       // now use send() and write() in addition to sendto() and sendmsg()
       if (connect(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
       {
-         dnxSyslog(LOG_ERR, "dnxUdpOpen: connect(%lx) failed: %s", 
+         dnxLog("dnxUdpOpen: connect(%lx) failed: %s.", 
                (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
          close(sd);
          return DNX_ERR_OPEN;
@@ -134,7 +134,7 @@ static int dnxUdpOpen(iDnxChannel * icp, int active)
       if (bind(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
       {
          close(sd);
-         dnxSyslog(LOG_ERR, "dnxUdpOpen: bind(%lx) failed: %s", 
+         dnxLog("dnxUdpOpen: bind(%lx) failed: %s.", 
                (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
          return DNX_ERR_OPEN;
       }
@@ -225,7 +225,7 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,
 
       if (errno != EINTR) 
       {
-         dnxSyslog(LOG_ERR, "dnxUdpRead: select failed: %s", strerror(errno));
+         dnxLog("dnxUdpRead: select failed: %s.", strerror(errno));
          return DNX_ERR_RECEIVE;
       }
 
@@ -306,7 +306,7 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,
 
       if (errno != EINTR)
       {
-         dnxSyslog(LOG_ERR, "dnxUdpWrite: select failed: %s", strerror(errno));
+         dnxLog("dnxUdpWrite: select failed: %s.", strerror(errno));
          return DNX_ERR_SEND;
       }
 

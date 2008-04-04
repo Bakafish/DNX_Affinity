@@ -74,8 +74,6 @@
 
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
-#define DNX_VERSION                    VERSION
-
 #define DNX_DEFAULT_SERVER_CONFIG_FILE SYSCONFDIR "/dnxServer.cfg"
 
 // specify event broker API version (required)
@@ -102,8 +100,9 @@ typedef struct DnxServerCfg
    unsigned expirePollInterval;     //!< The job expiration timer check interval.
    char * localCheckPattern;        //!< The regular expression for local jobs.
    char * syncScript;               //!< The sync script path and file name.
-   char * logFacility;              //!< The syslog logging facility string.
-   char * auditWorkerJobs;          //!< The syslog audit facility string.
+   char * logFilePath;              //!< The system log file path.
+   char * debugFilePath;            //!< The debug log file path.
+   char * auditFilePath;            //!< The audit log file path.
    unsigned debugLevel;             //!< The global debug level.
 } DnxServerCfg;
 
@@ -117,10 +116,14 @@ static DnxCollector * collector;    //!< The job list results collector.
 static time_t start_time;           //!< The module start time.
 static void * myHandle;             //!< Private NEB module handle.
 static regex_t regEx;               //!< Compiled regular expression structure.
-static int dnxLogFacility;          //!< The syslog logging facility code.
-static int auditLogFacility;        //!< The syslog audit facility code.
 
-/** The array of cfg variable addresses for the configuration parser. */
+/** The array of cfg variable addresses for the configuration parser. 
+ *
+ * The order of this array must be kept in sync with the order of the
+ * dictionary with which it will be used.
+ * 
+ * @todo: Make this array position independent.
+ */
 static void * ppvals[] =
 {
    &cfg.dispatcherUrl,
@@ -131,46 +134,15 @@ static void * ppvals[] =
    &cfg.expirePollInterval,
    &cfg.localCheckPattern,
    &cfg.syncScript,
-   &cfg.logFacility,
-   &cfg.auditWorkerJobs,
+   &cfg.logFilePath,
+   &cfg.debugFilePath,
+   &cfg.auditFilePath,
    &cfg.debugLevel,
 };
 
 /*--------------------------------------------------------------------------
                               IMPLEMENTATION
   --------------------------------------------------------------------------*/
-
-/** Returns the syslog facility code matching a specified facility string.
- * 
- * @param[in] szFacility - the facility string to be verfied.
- * @param[out] nFacility - the address of storage in which the matching 
- *    facility code should be returned.
- *
- * @return The facility code matching @p szFacility, or -1 on no match.
- */
-static int verifyFacility(char * szFacility, int * nFacility)
-{
-   static struct FacCode { char * str; int val; } facodes[] = 
-   {
-      { "LOG_LOCAL0",   LOG_LOCAL0 },
-      { "LOG_LOCAL1",   LOG_LOCAL1 },
-      { "LOG_LOCAL2",   LOG_LOCAL2 },
-      { "LOG_LOCAL3",   LOG_LOCAL3 },
-      { "LOG_LOCAL4",   LOG_LOCAL4 },
-      { "LOG_LOCAL5",   LOG_LOCAL5 },
-      { "LOG_LOCAL6",   LOG_LOCAL6 },
-      { "LOG_LOCAL7",   LOG_LOCAL7 },
-      { 0, -1 }
-   };
-
-   struct FacCode * p;
-   
-   for (p = facodes; p->str && strcmp(szFacility, p->str); p++);
-
-   return *nFacility = p->val;
-}
-
-//----------------------------------------------------------------------------
 
 /** Cleanup the config file parser. */
 static void releaseConfig(void) 
@@ -194,17 +166,18 @@ static int initConfig(char * ConfigFile)
 {
    static DnxCfgDict dict[] = 
    {
-      { "channelDispatcher",   DNX_CFG_URL      },
-      { "channelCollector",    DNX_CFG_URL      },
-      { "authWorkerNodes",     DNX_CFG_STRING   },
-      { "maxNodeRequests",     DNX_CFG_UNSIGNED },
-      { "minServiceSlots",     DNX_CFG_UNSIGNED },
-      { "expirePollInterval",  DNX_CFG_UNSIGNED },
-      { "localCheckPattern",   DNX_CFG_STRING   },
-      { "syncScript",          DNX_CFG_FSPATH   },
-      { "logFacility",         DNX_CFG_STRING   },
-      { "auditWorkerJobs",     DNX_CFG_STRING   },
-      { "debugLevel",          DNX_CFG_UNSIGNED },
+      { "channelDispatcher",  DNX_CFG_URL      },
+      { "channelCollector",   DNX_CFG_URL      },
+      { "authWorkerNodes",    DNX_CFG_STRING   },
+      { "maxNodeRequests",    DNX_CFG_UNSIGNED },
+      { "minServiceSlots",    DNX_CFG_UNSIGNED },
+      { "expirePollInterval", DNX_CFG_UNSIGNED },
+      { "localCheckPattern",  DNX_CFG_STRING   },
+      { "syncScript",         DNX_CFG_FSPATH   },
+      { "logFile",            DNX_CFG_FSPATH   },
+      { "debugFile",          DNX_CFG_FSPATH   },
+      { "auditFile",          DNX_CFG_FSPATH   },
+      { "debugLevel",         DNX_CFG_UNSIGNED },
       { 0 },
    };
    static char cfgdefs[] =
@@ -213,7 +186,7 @@ static int initConfig(char * ConfigFile)
       "maxNodeRequests = 0x7FFFFFFF\n"
       "minServiceSlots = 100\n"
       "expirePollInterval = 5\n"
-      "logFacility = LOG_LOCAL7\n";
+      "logFile = /var/log/dnxsrv.log\n";
 
    int ret;
 
@@ -232,33 +205,25 @@ static int initConfig(char * ConfigFile)
       // validate configuration items in context
       ret = DNX_ERR_INVALID;
       if (!cfg.dispatcherUrl)
-         dnxSyslog(LOG_ERR, "config: Missing channelDispatcher parameter");
+         dnxLog("config: Missing channelDispatcher parameter.");
       else if (!cfg.collectorUrl)
-         dnxSyslog(LOG_ERR, "config: Missing channelCollector parameter");
+         dnxLog("config: Missing channelCollector parameter.");
       else if (cfg.maxNodeRequests < 1)
-         dnxSyslog(LOG_ERR, "config: Invalid maxNodeRequests parameter");
+         dnxLog("config: Invalid maxNodeRequests parameter.");
       else if (cfg.minServiceSlots < 1)
-         dnxSyslog(LOG_ERR, "config: Invalid minServiceSlots parameter");
+         dnxLog("config: Invalid minServiceSlots parameter.");
       else if (cfg.expirePollInterval < 1)
-         dnxSyslog(LOG_ERR, "config: Invalid expirePollInterval parameter");
+         dnxLog("config: Invalid expirePollInterval parameter.");
       else if (cfg.localCheckPattern
             && (err = regcomp(&regEx, cfg.localCheckPattern, 
                   REG_EXTENDED | REG_NOSUB)) != 0)
       {
          char buffer[128];
          regerror(err, &regEx, buffer, sizeof(buffer));
-         dnxSyslog(LOG_ERR, "config: Failed to compile localCheckPattern (\"%s\"): %s", 
-               cfg.localCheckPattern, buffer);
+         dnxLog("config: Failed to compile localCheckPattern (\"%s\"): %s.", 
+                cfg.localCheckPattern, buffer);
          regfree(&regEx);
       }
-      else if (cfg.logFacility 
-               && verifyFacility(cfg.logFacility, &dnxLogFacility) == -1)
-         dnxSyslog(LOG_ERR, "config: Invalid syslog facility: %s", 
-               cfg.logFacility);
-      else if (cfg.auditWorkerJobs 
-            && verifyFacility(cfg.auditWorkerJobs, &auditLogFacility) == -1)
-         dnxSyslog(LOG_ERR, "config: Invalid audit facility: %s", 
-               cfg.auditWorkerJobs);
       else
          ret = DNX_OK;
    }
@@ -503,28 +468,25 @@ static int dnxCalculateJobListSize(void)
    if (size < 1)
    {
       size = 100;
-      dnxSyslog(LOG_WARNING, 
-            "init: No Nagios services defined! "
-            "Defaulting to %d slots in the DNX job queue", size);
+      dnxLog("No Nagios services defined! "
+             "Defaulting to %d slots in the DNX job queue.", size);
    }
 
    // check for configuration minServiceSlots override
    if (size < cfg.minServiceSlots)
    {
-      dnxSyslog(LOG_WARNING, 
-         "init: Overriding calculated service check slot count. "
-         "Increasing from %d to configured minimum: %d", 
-         size, cfg.minServiceSlots);
+      dnxLog("Overriding calculated service check slot count. "
+             "Increasing from %d to configured minimum: %d.", 
+             size, cfg.minServiceSlots);
       size = cfg.minServiceSlots;
    }
 
    // check for configuration maxNodeRequests override
    if (size > cfg.maxNodeRequests)
    {
-      dnxSyslog(LOG_WARNING, 
-         "init: Overriding calculated service check slot count. "
-         "Decreasing from %d to configured maximum: %d", size, 
-         cfg.maxNodeRequests);
+      dnxLog("Overriding calculated service check slot count. "
+             "Decreasing from %d to configured maximum: %d.", size, 
+             cfg.maxNodeRequests);
       size = cfg.maxNodeRequests;
    }
    return size;
@@ -560,12 +522,12 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
    Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
    Job.pNode      = pNode;
 
-   dnxDebug(2, "DnxNebMain: Posting Job [%lu]: %s", serial, Job.cmd);
+   dnxDebug(2, "DnxNebMain: Posting Job [%lu]: %s.", serial, Job.cmd);
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "dnxPostNewJob: Failed to post Job [%lu]; \"%s\": %d", 
-            Job.xid.objSerial, Job.cmd, ret);
+      dnxLog("Failed to post Job [%lu]; \"%s\": %d.", 
+             Job.xid.objSerial, Job.cmd, ret);
 
    dnxAuditJob(&Job, "ASSIGN");
 
@@ -597,7 +559,7 @@ static int ehSvcCheck(int event_type, void * data)
 
    if (svcdata == 0)
    {
-      dnxSyslog(LOG_ERR, "dnxServer: Received NULL service data structure");
+      dnxLog("Service handler received NULL service data structure.");
       return ERROR;  // shouldn't happen - internal Nagios error
    }
 
@@ -607,17 +569,17 @@ static int ehSvcCheck(int event_type, void * data)
    // check for local execution pattern on command line
    if (cfg.localCheckPattern && regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
    {
-      dnxDebug(1, "ehSvcCheck: Job will execute locally: %s", svcdata->command_line);
+      dnxDebug(1, "Service will execute locally: %s.", svcdata->command_line);
       return OK;     // tell nagios execute locally
    }
 
-   dnxDebug(2, "ehSvcCheck: Received Job [%lu] at %lu (%lu)",
+   dnxDebug(2, "ehSvcCheck: Received Job [%lu] at %lu (%lu).",
          serial, (unsigned long)time(0), 
          (unsigned long)svcdata->start_time.tv_sec);
 
    if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
    {
-      dnxDebug(1, "ehSvcCheck: No worker nodes requests available: %s", 
+      dnxDebug(1, "ehSvcCheck: No worker nodes requests available: %s.", 
             dnxErrorString(ret));
       return OK;     // tell nagios execute locally
    }
@@ -649,8 +611,7 @@ static int ehSvcCheck(int event_type, void * data)
 
    if ((ret = dnxPostNewJob(joblist, serial, jdp, svcdata, pNode)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxServer: Unable to post job [%lu]: %s", 
-            serial, dnxErrorString(ret));
+      dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
       xfree(jdp);
       return OK;     // tell nagios execute locally
    }
@@ -715,22 +676,17 @@ static int dnxServerInit(void)
 
    if ((ret = dnxChanMapInit(0)) != 0)
    {
-      dnxSyslog(LOG_ERR, "dnxServerInit: dnxChanMapInit failed with %d: %s", 
-            ret, dnxErrorString(ret));
+      dnxLog("Failed to initialize channel map: %s.", dnxErrorString(ret));
       return ret;
    }
 
    joblistsz = dnxCalculateJobListSize();
 
-   dnxSyslog(LOG_INFO, 
-         "dnxServerInit: Allocating %d service request slots in the DNX job list", 
-         joblistsz);
+   dnxLog("Allocating %d service request slots in the DNX job list.", joblistsz);
 
    if ((ret = dnxJobListCreate(joblistsz, &joblist)) != 0)
    {
-      dnxSyslog(LOG_ERR, 
-            "dnxServerInit: Failed to initialize DNX job list with %d slots", 
-            joblistsz);
+      dnxLog("Failed to initialize DNX job list with %d slots.", joblistsz);
       return ret;
    }
 
@@ -752,8 +708,8 @@ static int dnxServerInit(void)
    // registration for this event starts everything rolling
    neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA, myHandle, 0, ehSvcCheck);
 
-   dnxSyslog(LOG_INFO, "dnxServerInit: Registered for SERVICE_CHECK_DATA event");
-   dnxSyslog(LOG_INFO, "dnxServerInit: Server initialization completed");
+   dnxLog("Registered for SERVICE_CHECK_DATA event.");
+   dnxLog("Server initialization completed.");
 
    return 0;
 }
@@ -775,15 +731,13 @@ static int launchScript(char * script)
    // exec the script - system waits till child completes
    if ((ret = system(script)) == -1)
    {
-      dnxSyslog(LOG_ERR, "launchScript: Failed to exec script with %d: %s", 
-            errno, strerror(errno));
+      dnxLog("Failed to exec script: %s.", strerror(errno));
       ret = DNX_ERR_INVALID;
    }
    else
       ret = DNX_OK;
 
-   dnxSyslog(LOG_INFO, "launchScript: Sync script returned %d", 
-         WEXITSTATUS(ret));
+   dnxLog("Sync script returned %d.", WEXITSTATUS(ret));
 
    return ret;
 }
@@ -811,20 +765,19 @@ static int ehProcessData(int event_type, void * data)
    assert(procdata);
    if (!procdata)
    {
-      dnxSyslog(LOG_ERR, "ehProcessData: Received NULL process data structure");
+      dnxLog("Startup handler received NULL process data structure.");
       return ERROR;
    }
 
    // look for process event loop start event
    if (procdata->type == NEBTYPE_PROCESS_EVENTLOOPSTART)
    {
-      dnxDebug(2, "ehProcessData: Received PROCESS_EVENTLOOPSTART event");
+      dnxDebug(2, "Startup handler received PROCESS_EVENTLOOPSTART event.");
 
       // execute sync script, if defined
       if (cfg.syncScript)
       {
-         dnxSyslog(LOG_INFO, "ehProcessData: Executing plugin sync script: %s", 
-               cfg.syncScript);
+         dnxLog("Startup handler executing plugin sync script: %s.", cfg.syncScript);
 
          // NB: This halts Nagios execution until the script exits...
          launchScript(cfg.syncScript);
@@ -855,11 +808,11 @@ void dnxJobCleanup(DnxNewJob * pJob)
 
 int dnxAuditJob(DnxNewJob * pJob, char * action)
 {
-   struct sockaddr_in src_addr;
-   in_addr_t addr;
-
-   if (cfg.auditWorkerJobs)
+   if (cfg.auditFilePath)
    {
+      struct sockaddr_in src_addr;
+      in_addr_t addr;
+
       // Convert opaque Worker Node address to IPv4 address
 
       /** @todo This conversion should take place in the dnxUdpRead function
@@ -872,19 +825,15 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
       memcpy(&src_addr, pJob->pNode->address, sizeof(src_addr));
       addr = ntohl(src_addr.sin_addr.s_addr);
 
-      syslog(auditLogFacility | LOG_INFO,
-         "%s: Job %lu: Worker %u.%u.%u.%u-%lx: %s",
-         action,
-         pJob->xid.objSerial,
-         (unsigned)((addr >> 24) & 0xff),
-         (unsigned)((addr >> 16) & 0xff),
-         (unsigned)((addr >>  8) & 0xff),
-         (unsigned)( addr        & 0xff),
-         pJob->pNode->xid.objSlot,
-         pJob->cmd
-         );
+      return dnxAudit(
+            "%s: Job %lu: Worker %u.%u.%u.%u-%lx: %s",
+                  action, pJob->xid.objSerial,
+                  (unsigned)((addr >> 24) & 0xff),
+                  (unsigned)((addr >> 16) & 0xff),
+                  (unsigned)((addr >>  8) & 0xff),
+                  (unsigned)( addr        & 0xff),
+                  pJob->pNode->xid.objSlot, pJob->cmd);
    }
-
    return DNX_OK;
 }
 
@@ -901,12 +850,13 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
  */
 int nebmodule_deinit(int flags, int reason)
 {
-   dnxSyslog(LOG_INFO, "dnxServer: DNX Server shutdown initiated.");
+   dnxLog("-------- DNX Server Module Shutdown Initiated --------");
    dnxServerDeInit();
-   dnxSyslog(LOG_INFO, "dnxServer: DNX Server shutdown completed.");
 
    xheapchk();
 
+   dnxLog("-------- DNX Server Module Shutdown Completed --------");
+   dnxLogExit();
    return 0;
 }
 
@@ -930,46 +880,45 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
 
    myHandle = handle;
 
-   dnxSyslog(LOG_INFO, "dnxServer: DNX Server module version %s", DNX_VERSION);
-   dnxSyslog(LOG_INFO, "dnxServer: Copyright (c) 2006-2007 "
-                       "Intellectual Reserve. All rights reserved.");
-   
    // module args string should contain a fully-qualified config file path
    if (!args || !*args)
-   {
       args = DNX_DEFAULT_SERVER_CONFIG_FILE;
-      dnxSyslog(LOG_ERR, "dnxServer: DNX config file not specified. "
-                         "Defaulting to %s", args);
-   }
 
-   // temporarily set defaults so initConfig has somewhere to write
-   dnxLogFacility = LOG_LOCAL7;
-   auditLogFacility = 0;
    if ((ret = initConfig(args)) != 0)
+      return ERROR;
+
+   // set configured debug level and syslog log facility code
+   if ((ret = dnxLogInit(cfg.logFilePath, cfg.debugFilePath, 
+         cfg.auditFilePath, &cfg.debugLevel)) != 0)
    {
-      dnxSyslog(LOG_ERR, "dnxServer: Failed to load configuration: %d", ret);
+      dnxLog("Failed to initialize system/debug/audit logging: %s.", 
+            dnxErrorString(ret));
+      releaseConfig();
       return ERROR;
    }
 
-   // set configured debug level and syslog log facility code
-   initLogging(&cfg.debugLevel, &dnxLogFacility);
+   dnxLog("-------- DNX Server Module Version %s Startup --------", VERSION);
+   dnxLog("Copyright (c) 2006-2008 Intellectual Reserve. All rights reserved.");
+   dnxLog("Configuration file: %s.", args);
+   if (cfg.auditFilePath)
+      dnxLog("Auditing enabled to %s.", cfg.auditFilePath);
+   if (cfg.debugFilePath)
+      dnxLog("Debug logging enabled at level %d to %s.", 
+            cfg.debugLevel, cfg.debugFilePath);
 
    // subscribe to PROCESS_DATA call-backs in order to defer initialization
    //    until after Nagios validates its configuration and environment.
    if ((ret = neb_register_callback(NEBCALLBACK_PROCESS_DATA, 
          myHandle, 0, ehProcessData)) != OK)
    {
-      dnxSyslog(LOG_ERR, 
-            "dnxServer: PROCESS_DATA event registration failed with %d: %s", 
-            ret, dnxErrorString(ret));
+      dnxLog("PROCESS_DATA event registration failed: %s.", dnxErrorString(ret));
       releaseConfig();
+      dnxLogExit();
       return ERROR;
    }
-
-   dnxSyslog(LOG_INFO, "dnxServer: Registered for PROCESS_DATA event");
-   dnxSyslog(LOG_INFO, "dnxServer: Module initialization completed");
-
    start_time = time(0);
+
+   dnxLog("-------- DNX Server Module Startup Complete --------");
 
    return OK;
 }

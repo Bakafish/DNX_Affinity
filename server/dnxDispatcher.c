@@ -78,7 +78,7 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    int ret;
 
    dnxDebug(2, 
-         "dnxDispatcher[%lx]: Dispatching job [%lu,%lu] (%s) to node %u.%u.%u.%u",
+         "dnxDispatcher[%lx]: Dispatching job [%lu,%lu] (%s) to node %u.%u.%u.%u.",
          tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
          sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5]);
 
@@ -90,8 +90,7 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    job.cmd      = pSvcReq->cmd;
 
    if ((ret = dnxSendJob(idisp->channel, &job, pNode->address)) != DNX_OK)
-      dnxSyslog(LOG_ERR, 
-            "Unable to send job [%lu,%lu] (%s) to worker node %u.%u.%u.%u: %s",
+      dnxLog("Unable to send job [%lu,%lu] (%s) to worker node %u.%u.%u.%u: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
             sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5], 
             dnxErrorString(ret));
@@ -139,7 +138,7 @@ static void * dnxDispatcher(void * data)
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
 
-   dnxSyslog(LOG_INFO, "Dispatcher awaiting jobs...");
+   dnxLog("Dispatcher awaiting jobs...");
 
    while (1)
    {
@@ -191,13 +190,13 @@ int dnxDispatcherCreate(char * chname, char * dispurl, DnxJobList * joblist,
    }
    if ((ret = dnxChanMapAdd(chname, dispurl)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxDispatcherCreate: dnxChanMapAdd(%s) failed: %s",
+      dnxLog("dnxDispatcherCreate: dnxChanMapAdd(%s) failed: %s.",
             chname, dnxErrorString(ret));
       goto e1;
    }
    if ((ret = dnxConnect(chname, 0, &idisp->channel)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxDispatcherCreate: dnxConnect(%s) failed: %s",
+      dnxLog("dnxDispatcherCreate: dnxConnect(%s) failed: %s.",
             chname, dnxErrorString(ret));
       goto e2;
    }
@@ -205,7 +204,7 @@ int dnxDispatcherCreate(char * chname, char * dispurl, DnxJobList * joblist,
    // create the dispatcher thread
    if ((ret = pthread_create(&idisp->tid, 0, dnxDispatcher, idisp)) != 0)
    {
-      dnxSyslog(LOG_ERR, "dnxDispatcherCreate: thread creation failed: %s",
+      dnxLog("dnxDispatcherCreate: thread creation failed: %s.",
             dnxErrorString(ret));
       ret = DNX_ERR_THREAD;
       goto e3;

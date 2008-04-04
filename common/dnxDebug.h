@@ -46,23 +46,23 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
    }
 # define DNX_PT_MUTEX_DESTROY(mp) \
    if (pthread_mutex_destroy(mp) != 0) { \
-      dnxSyslog(LOG_ERR, "mutex_destroy: mutex is in use at %s:%d!", __FILE__, __LINE__); \
+      dnxLog("mutex_destroy: mutex is in use at %s:%d!", __FILE__, __LINE__); \
       assert(0); \
    }
 # define DNX_PT_MUTEX_LOCK(mp) \
    if (pthread_mutex_lock(mp) != 0) { \
       switch (errno) { \
-      case EINVAL:   dnxSyslog(LOG_ERR, "mutex_lock: mutex is not initialized at %s:%d!", __FILE__, __LINE__); break; \
-      case EDEADLK:  dnxSyslog(LOG_ERR, "mutex_lock: mutex already locked by this thread at %s:%d!", __FILE__, __LINE__); break; \
-      default:       dnxSyslog(LOG_ERR, "mutex_lock: unknown error %d: %s at %s:%d!", errno, strerror(errno), __FILE__, __LINE__); break; \
+      case EINVAL:   dnxLog("mutex_lock: mutex is not initialized at %s:%d!", __FILE__, __LINE__); break; \
+      case EDEADLK:  dnxLog("mutex_lock: mutex already locked by this thread at %s:%d!", __FILE__, __LINE__); break; \
+      default:       dnxLog("mutex_lock: unknown error %d: %s at %s:%d!", errno, strerror(errno), __FILE__, __LINE__); break; \
       } assert(0); \
    }
 # define DNX_PT_MUTEX_UNLOCK(mp) \
    if (pthread_mutex_unlock(mp) != 0) { \
       switch (errno) { \
-      case EINVAL:   dnxSyslog(LOG_ERR, "mutex_unlock: mutex is not initialized at %s:%d!", __FILE__, __LINE__); break; \
-      case EPERM:    dnxSyslog(LOG_ERR, "mutex_unlock: mutex not locked by this thread at %s:%d!", __FILE__, __LINE__); break; \
-      default:       dnxSyslog(LOG_ERR, "mutex_unlock: unknown error %d: %s at %s:%d!", errno, strerror(errno), __FILE__, __LINE__); break; \
+      case EINVAL:   dnxLog("mutex_unlock: mutex is not initialized at %s:%d!", __FILE__, __LINE__); break; \
+      case EPERM:    dnxLog("mutex_unlock: mutex not locked by this thread at %s:%d!", __FILE__, __LINE__); break; \
+      default:       dnxLog("mutex_unlock: unknown error %d: %s at %s:%d!", errno, strerror(errno), __FILE__, __LINE__); break; \
       } assert(0); \
    }
 #else    /* !?(DEBUG && PTHREAD_MUTEX_ERRORCHECK_NP) */
@@ -75,7 +75,7 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
 #ifdef DEBUG
 # define DNX_PT_COND_DESTROY(cvp) \
    if (pthread_cond_destroy(cvp) != 0) { \
-      dnxSyslog(LOG_ERR, "cond_destroy: condition-variable is in use at %s:%d!", __FILE__, __LINE__); \
+      dnxLog("cond_destroy: condition-variable is in use at %s:%d!", __FILE__, __LINE__); \
       assert(0); \
    }
 #else    /* !?DEBUG */
