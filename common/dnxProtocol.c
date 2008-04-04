@@ -117,8 +117,10 @@ int dnxSendNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * addre
    // create the XML message
    dnxXmlOpen (&xbuf, "NodeRequest");
    dnxXmlAdd  (&xbuf, "XID",     DNX_XML_XID,  &pReg->xid);
+   dnxXmlAdd  (&xbuf, "GUID",    DNX_XML_XID,  &pReg->xid);    // old format - for bc
    dnxXmlAdd  (&xbuf, "ReqType", DNX_XML_INT,  &pReg->reqType);
    dnxXmlAdd  (&xbuf, "JobCap",  DNX_XML_UINT, &pReg->jobCap);
+   dnxXmlAdd  (&xbuf, "Capacity",DNX_XML_UINT, &pReg->jobCap); // old format - for bc
    dnxXmlAdd  (&xbuf, "TTL",     DNX_XML_UINT, &pReg->ttl);
    dnxXmlClose(&xbuf);
 
@@ -207,6 +209,7 @@ int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address)
    // create the XML message
    dnxXmlOpen (&xbuf, "Job");
    dnxXmlAdd  (&xbuf, "XID",      DNX_XML_XID,  &pJob->xid);
+   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pJob->xid); // old format - for bc
    dnxXmlAdd  (&xbuf, "State",    DNX_XML_INT,  &pJob->state);
    dnxXmlAdd  (&xbuf, "Priority", DNX_XML_INT,  &pJob->priority);
    dnxXmlAdd  (&xbuf, "Timeout",  DNX_XML_INT,  &pJob->timeout);
@@ -303,6 +306,7 @@ int dnxSendResult(DnxChannel * channel, DnxResult * pResult, char * address)
    // create the XML message
    dnxXmlOpen (&xbuf, "Result");
    dnxXmlAdd  (&xbuf, "XID",        DNX_XML_XID,  &pResult->xid);
+   dnxXmlAdd  (&xbuf, "GUID",       DNX_XML_XID,  &pResult->xid); // old format - for bc
    dnxXmlAdd  (&xbuf, "State",      DNX_XML_INT,  &pResult->state);
    dnxXmlAdd  (&xbuf, "Delta",      DNX_XML_UINT, &pResult->delta);
    dnxXmlAdd  (&xbuf, "ResultCode", DNX_XML_INT,  &pResult->resCode);
@@ -383,6 +387,7 @@ int dnxSendMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, char * a
    // create the XML message
    dnxXmlOpen (&xbuf, "MgmtRequest");
    dnxXmlAdd  (&xbuf, "XID",    DNX_XML_XID, &pRequest->xid);
+   dnxXmlAdd  (&xbuf, "GUID",   DNX_XML_XID, &pRequest->xid);  // old format - for bc
    dnxXmlAdd  (&xbuf, "Action", DNX_XML_STR, &pRequest->action);
    dnxXmlClose(&xbuf);
 
@@ -459,6 +464,7 @@ int dnxSendMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address
    // create the XML message
    dnxXmlOpen (&xbuf, "MgmtReply");
    dnxXmlAdd  (&xbuf, "XID",    DNX_XML_XID, &pReply->xid);
+   dnxXmlAdd  (&xbuf, "GUID",   DNX_XML_XID, &pReply->xid); // old format - for bc
    dnxXmlAdd  (&xbuf, "Result", DNX_XML_STR, &pReply->reply);
    dnxXmlClose(&xbuf);
 

@@ -88,7 +88,7 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    
       ilist->tail = tail;
    
-      dnxDebug(8, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", 
+      dnxDebug(8, "dnxJobListAdd: Job [%lu-%lu]: Head=%lu, DHead=%lu, Tail=%lu", 
             pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, 
             ilist->dhead, ilist->tail);
    
@@ -215,7 +215,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       if (ilist->dhead != ilist->tail)
          ilist->dhead = (current + 1) % ilist->size;
    
-      dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]: "
+      dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu-%lu]: "
                   "Head=%lu, DHead=%lu, Tail=%lu", 
             pJob->xid.objSerial, pJob->xid.objSlot, 
             ilist->head, ilist->dhead, ilist->tail);

@@ -142,7 +142,7 @@ static void dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result
    char resData[MAX_RESULT_DATA + 1];
    pthread_t tid = pthread_self();
 
-   dnxDebug(1, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s", 
+   dnxDebug(1, "Worker[%lx]: Received job [%lu-%lu] (T/O %d): %s", 
          tid, job->xid.objSerial, job->xid.objSlot, 
          job->timeout, job->cmd);
 
@@ -171,7 +171,7 @@ static void dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result
    // store allocated copy of the result string
    if (*resData && (result->resData = xstrdup(resData)) == 0)
       dnxSyslog(LOG_ERR, 
-            "Worker[%lx]: Results allocation failure for job [%lu,%lu]: %s", 
+            "Worker[%lx]: Results allocation failure for job [%lu-%lu]: %s", 
             tid, job->xid.objSerial, job->xid.objSlot, job->cmd);
 
    // update per-thread statistics
@@ -179,7 +179,7 @@ static void dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result
    if (result->resCode == DNX_PLUGIN_RESULT_OK) ws->jobsok++;
    else                                         ws->jobsfail++;
 
-   dnxDebug(1, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s", 
+   dnxDebug(1, "Worker[%lx]: Job [%lu-%lu] completed in %lu seconds: %d, %s", 
          tid, job->xid.objSerial, job->xid.objSlot, 
          result->delta, result->resCode, result->resData);
 }

@@ -90,7 +90,7 @@ static void * dnxCollector(void * data)
       if ((ret = dnxWaitForResult(icoll->channel, 
             &sResult, sResult.address, DNX_COLLECTOR_TIMEOUT)) == DNX_OK)
       {
-         dnxDebug(1, "dnxCollector[%lx]: Received result for [%lu,%lu]: %s", 
+         dnxDebug(1, "dnxCollector[%lx]: Received result for [%lu-%lu]: %s", 
                tid, sResult.xid.objSerial, sResult.xid.objSlot, sResult.resData);
 
          // dequeue the matching service request from the pending job queue
