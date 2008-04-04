@@ -34,7 +34,8 @@
 
 #include <sys/time.h>
 
-#define DNX_JOBLIST_TIMEOUT 5
+#define DNX_JOBLIST_TIMEOUT   5  /*!< Wake up to see if we're shutting down. */
+#define DNX_TIMER_SLEEP       5  /*!< JobList timer sleep interval. */
 
 /** The JobList implementation data structure. */
 typedef struct iDnxJobList_ 
@@ -377,7 +378,8 @@ int dnxJobListCreate(unsigned size, DnxJobList ** ppJobList)
    DNX_PT_MUTEX_INIT(&ilist->mut);
    pthread_cond_init(&ilist->cond, 0);
 
-   if ((ret = dnxTimerCreate((DnxJobList *)ilist, &ilist->timer)) != 0)
+   if ((ret = dnxTimerCreate((DnxJobList *)ilist, 
+         DNX_TIMER_SLEEP, &ilist->timer)) != 0)
    {
       DNX_PT_COND_DESTROY(&ilist->cond);
       DNX_PT_MUTEX_DESTROY(&ilist->mut);
@@ -462,7 +464,7 @@ do {                                                                          \
 static int verbose;
 
 /* functional stubs */
-int dnxTimerCreate(DnxJobList * jl, DnxTimer ** pt) { *pt = 0; return 0; }
+int dnxTimerCreate(DnxJobList * jl, int s, DnxTimer ** pt) { *pt = 0; return 0; }
 void dnxTimerDestroy(DnxTimer * t) { }
 int dnxSyslog(int p, char * f, ... )
 {

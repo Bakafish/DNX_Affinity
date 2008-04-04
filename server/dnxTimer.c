@@ -33,8 +33,6 @@
 
 #include "dnxTimer.h"
 
-#include "nagios.h"
-
 #include "dnxNebMain.h"
 #include "dnxError.h"
 #include "dnxDebug.h"
@@ -52,14 +50,15 @@
 #include <error.h>
 #include <assert.h>
 
-#define DNX_TIMER_SLEEP 5  /*!< Timer sleep interval. */
-#define MAX_EXPIRED     10 /*!< Maximum expired jobs during interval. */
+#define DNX_DEF_TIMER_SLEEP   5  /*!< Default timer sleep interval. */
+#define MAX_EXPIRED           10 /*!< Maximum expired jobs during interval. */
 
 /** DNX job expiration timer implementation structure. */
 typedef struct iDnxTimer_
 {
    DnxJobList * joblist;   /*!< Job list to be expired. */
    pthread_t tid;          /*!< Timer thread ID. */
+   int sleeptime;          /*!< Seconds to sleep between passes. */
    int running;            /*!< Running flag - as opposed to cancellation. */
 } iDnxTimer;
 
@@ -79,8 +78,10 @@ typedef struct iDnxTimer_
 static void dnxCancelableSleep(int seconds)
 {
 #if HAVE_NANOSLEEP
-   struct timespec rqt = {seconds, 0};
-   while (nanosleep(&rqt, &rqt) != 0 && errno == EINTR)
+   struct timespec rqt;
+   rqt.tv_sec = seconds;
+   rqt.tv_nsec = 0L;
+   while (nanosleep(&rqt, &rqt) == -1 && errno == EINTR)
       ;
 #else
    pthread_mutex_t timerMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -142,7 +143,7 @@ static void * dnxTimer(void * data)
 
    while (itimer->running)
    {
-      dnxCancelableSleep(DNX_TIMER_SLEEP);
+      dnxCancelableSleep(itimer->sleeptime);
 
       // search for expired jobs in the pending queue
       totalExpired = MAX_EXPIRED;
@@ -187,22 +188,28 @@ static void * dnxTimer(void * data)
 /** Create a new job list expiration timer object.
  * 
  * @param[in] joblist - the job list that should be expired by the timer.
+ * @param[in] sleeptime - time between expiration checks, in seconds.
  * @param[out] ptimer - the address of storage for returning the new object
  *    reference.
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxTimerCreate(DnxJobList * joblist, DnxTimer ** ptimer)
+int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer)
 {
    iDnxTimer * itimer;
    int ret;
 
-   assert(ptimer);
+   assert(joblist && ptimer);
+
+   // don't allow sleep times outside the range 1 sec to 5 minutes
+   if (sleeptime < 1 || sleeptime > 300)
+      sleeptime = DNX_DEF_TIMER_SLEEP;
 
    if ((itimer = (iDnxTimer *)xmalloc(sizeof *itimer)) == 0)
       return DNX_ERR_MEMORY;
 
    itimer->joblist = joblist;
+   itimer->sleeptime = sleeptime;
    itimer->running = 1;
 
    if ((ret = pthread_create(&itimer->tid, 0, dnxTimer, itimer)) != 0)
@@ -234,6 +241,143 @@ void dnxTimerDestroy(DnxTimer * timer)
 
    xfree(itimer);
 }
+
+/*--------------------------------------------------------------------------
+                                 UNIT TEST
+
+   From within dnx/server, compile with GNU tools using this command line:
+    
+      gcc -DDEBUG -DDNX_TIMER_TEST -DHAVE_NANOSLEEP -g -O0 -I../common \
+         -I../nagios/nagios-2.7/include dnxTimer.c \
+         ../common/dnxError.c -lpthread -lgcc_s -lrt -o dnxTimerTest
+
+   Note: Leave out -DHAVE_NANOSLEEP if your system doesn't have nanosleep.
+
+  --------------------------------------------------------------------------*/
+
+#ifdef DNX_TIMER_TEST
+
+#include <time.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+
+#define elemcount(x) (sizeof(x)/sizeof(*(x)))
+
+/* test-bed helper macros */
+#define CHECK_ZERO(expr)                                                      \
+do {                                                                          \
+   int ret;                                                                   \
+   if ((ret = (expr)) != 0)                                                   \
+   {                                                                          \
+      fprintf(stderr, "FAILED: '%s'\n  at %s(%d).\n  error %d: %s\n",         \
+            #expr, __FILE__, __LINE__, ret, dnxErrorString(ret));             \
+      exit(1);                                                                \
+   }                                                                          \
+} while (0)
+#define CHECK_TRUE(expr)                                                      \
+do {                                                                          \
+   if (!(expr))                                                               \
+   {                                                                          \
+      fprintf(stderr, "FAILED: Boolean(%s)\n  at %s(%d).\n",                  \
+            #expr, __FILE__, __LINE__);                                       \
+      exit(1);                                                                \
+   }                                                                          \
+} while (0)
+#define CHECK_NONZERO(expr)   CHECK_ZERO(!(expr))
+#define CHECK_FALSE(expr)     CHECK_TRUE(expr)
+
+/* test static globals */
+static int verbose;
+static DnxNewJob fakejob;
+static DnxJobList fakejoblist;
+static int fakepayload;
+static DnxNodeRequest fakenode;
+static int entered_dnxJobListExpire;
+
+/* functional stubs */
+int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs)
+{
+   CHECK_TRUE(pJobList == &fakejoblist);
+   CHECK_TRUE(*totalJobs > 0);
+   memcpy(&pExpiredJobs[0], &fakejob, sizeof *pExpiredJobs);
+   *totalJobs = 1;
+   entered_dnxJobListExpire = 1;
+   return 0;
+}
+int nagiosPostResult(service * svc, time_t start_time, int early_timeout, 
+      int res_code, char * res_data)
+{
+   CHECK_TRUE(svc == (service *)&fakepayload);
+   CHECK_TRUE(start_time == 100);
+   CHECK_TRUE(early_timeout != 0);
+   CHECK_TRUE(res_code == STATE_UNKNOWN);
+   CHECK_ZERO(memcmp(res_data, "(DNX Service", 12));
+   return 0;
+}
+int dnxSyslog(int p, char * f, ... )
+{
+   if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
+   return 0;
+}
+int dnxDebug(int l, char * f, ... )
+{
+   if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
+   return 0;
+}
+int dnxAuditJob(DnxNewJob * pJob, char * action) { return 0; }
+int dnxJobCleanup(DnxNewJob * pJob) { return 0; }
+
+/* test main */
+int main(int argc, char ** argv)
+{
+   DnxTimer * timer;
+   iDnxTimer * itimer;
+
+   verbose = argc > 1? 1: 0;
+
+   // setup test harness
+   fakenode.guid.objType   = DNX_OBJ_JOB;
+   fakenode.guid.objSerial = 1;
+   fakenode.guid.objSlot   = 2;
+   fakenode.reqType        = DNX_REQ_DEREGISTER;
+   fakenode.jobCap         = 1;
+   fakenode.ttl            = 2;
+   fakenode.expires        = 3;
+   strcpy(fakenode.address, "fake address");
+
+   fakejob.state           = DNX_JOB_INPROGRESS;
+   fakejob.guid.objType    = DNX_OBJ_JOB;
+   fakejob.guid.objSerial  = 1;
+   fakejob.guid.objSlot    = 2;
+   fakejob.cmd             = "fake command line";
+   fakejob.start_time      = 100;
+   fakejob.timeout         = 10;
+   fakejob.expires         = fakejob.start_time + fakejob.timeout;
+   fakejob.payload         = &fakepayload;
+   fakejob.pNode           = &fakenode;
+
+   entered_dnxJobListExpire = 0;
+
+   // create a short timer and reference it as a concrete object for testing
+   CHECK_ZERO(dnxTimerCreate(&fakejoblist, 1, &timer));
+   itimer = (iDnxTimer *)timer;
+
+   // check internal state
+   CHECK_TRUE(itimer->joblist == &fakejoblist);
+   CHECK_TRUE(itimer->tid != 0);
+   CHECK_TRUE(itimer->sleeptime == 1);
+   CHECK_TRUE(itimer->running != 0);
+
+   // wait for timer to have made one pass though timer thread loop
+   while (!entered_dnxJobListExpire)
+      dnxCancelableSleep(1);
+
+   // shut down
+   dnxTimerDestroy(timer);
+}
+
+#endif   /* DNX_TIMER_TEST */
 
 /*--------------------------------------------------------------------------*/
 

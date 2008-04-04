@@ -33,10 +33,13 @@ dnxServer_la_LDFLAGS = -module -avoid-version
 # ---------------------------------------------------------------------------
 # server-side unit tests
 #
-TESTS = dnxJobListTest
-check_PROGRAMS = dnxJobListTest
+TESTS = dnxJobListTest dnxTimerTest
+check_PROGRAMS = dnxJobListTest dnxTimerTest
 
 dnxJobListTest_SOURCES = dnxJobList.c @top_srcdir@/common/dnxError.c
 dnxJobListTest_CPPFLAGS = -DDEBUG -DDNX_JOBLIST_TEST -I$(top_srcdir)/common
-dnxJobListTest_LDADD = ../common/libcmn.la
+
+dnxTimerTest_SOURCES = dnxTimer.c @top_srcdir@/common/dnxError.c
+dnxTimerTest_CPPFLAGS = -DDEBUG -DDNX_TIMER_TEST\
+ -I$(top_srcdir)/common -I$(top_srcdir)/nagios/nagios-2.7/include
 

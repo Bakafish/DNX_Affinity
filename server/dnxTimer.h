@@ -39,7 +39,7 @@
 /** DNX job expiration timer abstract type. */
 typedef struct { int unused; } DnxTimer;
 
-int dnxTimerCreate(DnxJobList * joblist, DnxTimer ** ptimer);
+int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer);
 void dnxTimerDestroy(DnxTimer * timer);
 
 #endif   /* _DNXTIMER_H_ */
