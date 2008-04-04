@@ -76,7 +76,7 @@
 #endif
 
 #ifndef SYSRUNPATH
-# define SYSRUNPATH     "var/run/dnx"
+# define SYSRUNPATH     "/var/run/dnx"
 #endif
 
 #ifndef DNXUSER
