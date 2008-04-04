@@ -95,7 +95,7 @@ static void strip(char * buf)
 {
    register char * cp, * ep;
    assert(buf);
-   ep = buf + strlen(cp);
+   ep = buf + strlen(buf);
    while (ep > buf && !isspace(ep[-1])) ep--;
    *ep = 0;                      // terminate at last space (or existing null)
    cp = buf;
