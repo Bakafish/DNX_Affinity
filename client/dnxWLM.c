@@ -177,6 +177,10 @@ static int dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result)
    if (result->resCode == DNX_PLUGIN_RESULT_OK) ws->jobsok++;
    else                                         ws->jobsfail++;
 
+   dnxDebug(1, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s", 
+         tid, job->xid.objSerial, job->xid.objSlot, 
+         result->delta, result->resCode, result->resData);
+
    return ret;
 }
 
