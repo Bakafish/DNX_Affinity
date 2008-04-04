@@ -434,7 +434,7 @@ static void releaseConfig(void)
 static int initConfig(char * cfgfile)
 {
    DnxCfgDict dict[] = 
-   {
+   {  // Do NOT change the order, unless you know what you're doing!
       { "channelAgent",           DNX_CFG_URL,      &s_cfg.channelAgent      },
       { "logFile",                DNX_CFG_FSPATH,   &s_cfg.logFilePath       },
       { "debugFile",              DNX_CFG_FSPATH,   &s_cfg.debugFilePath     },
@@ -744,25 +744,40 @@ static void logGblConfigChanges(DnxCfgData * ocp, DnxCfgData * ncp)
    if (strcmp(ocp->channelAgent, ncp->channelAgent) != 0)
       dnxLog("Config parameter 'channelAgent' changed from %s to %s. "
             "NOTE: Changing the agent URL requires a restart.", 
-            ocp->channelAgent, ncp->channelAgent);
+            ocp? ocp->channelAgent: "<unknown>", ncp->channelAgent);
 
    if (strcmp(ocp->logFilePath, ncp->logFilePath) != 0)
       dnxLog("Config parameter 'logFile' changed from %s to %s. "
             "NOTE: Changing the log file path requires a restart.", 
-            ocp->logFilePath, ncp->logFilePath);
+            ocp? ocp->logFilePath: "<unknown>", ncp->logFilePath);
 
    if (strcmp(ocp->debugFilePath, ncp->debugFilePath) != 0)
       dnxLog("Config parameter 'debugFile' changed from %s to %s. "
             "NOTE: Changing the debug log file path requires a restart.", 
-            ocp->debugFilePath, ncp->debugFilePath);
+            ocp? ocp->debugFilePath: "<unknown>", ncp->debugFilePath);
 
    if (strcmp(ocp->pluginPath, ncp->pluginPath) != 0)
       dnxLog("Config parameter 'pluginPath' changed from %s to %s.",
-            ocp->pluginPath, ncp->pluginPath);
+            ocp? ocp->pluginPath: "<unknown>", ncp->pluginPath);
+
+   if (strcmp(ocp->user, ncp->user) != 0)
+      dnxLog("Config parameter 'user' changed from %s to %s. "
+            "NOTE: Changing the dnx user requires a restart.", 
+            ocp? ocp->user: "<unknown>", ncp->user);
+
+   if (strcmp(ocp->group, ncp->group) != 0)
+      dnxLog("Config parameter 'group' changed from %s to %s. "
+            "NOTE: Changing the dnx group requires a restart.", 
+            ocp? ocp->group: "<unknown>", ncp->group);
+
+   if (strcmp(ocp->runPath, ncp->runPath) != 0)
+      dnxLog("Config parameter 'runPath' changed from %s to %s. "
+            "NOTE: Changing the dnx pid/lock file directory requires a restart.", 
+            ocp? ocp->runPath: "<unknown>", ncp->runPath);
 
    if (ocp->debugLevel != ncp->debugLevel)
       dnxLog("Config parameter 'debugLevel' changed from %u to %u.", 
-            ocp->debugLevel, ncp->debugLevel);
+            ocp? ocp->debugLevel: 0, ncp->debugLevel);
 }
 
 //----------------------------------------------------------------------------
@@ -903,6 +918,66 @@ static char * buildHelpReply(void)
 
 //----------------------------------------------------------------------------
 
+/** Release a previously copied configuration data structure.
+ * 
+ * @param[in] cpy - the structure to be freed.
+ */
+static void freeCfgData(DnxCfgData * cpy)
+{
+   xfree(cpy->channelAgent);
+   xfree(cpy->logFilePath);
+   xfree(cpy->debugFilePath);
+   xfree(cpy->pluginPath);
+   xfree(cpy->user);
+   xfree(cpy->group);
+   xfree(cpy->runPath);
+   xfree(cpy->wlm.dispatcher);
+   xfree(cpy->wlm.collector);
+   xfree(cpy);
+}
+
+//----------------------------------------------------------------------------
+
+/** Make a dynamic copy of all configuration data.
+ * 
+ * @param[in] org - the structure to be copied.
+ * 
+ * @return Pointer to allocated copy, or NULL on memory allocation failure.
+ */
+static DnxCfgData * copyCfgData(DnxCfgData * org)
+{
+   DnxCfgData * cpy;
+
+   // make new config structure
+   if ((cpy = (DnxCfgData *)xmalloc(sizeof *cpy)) == 0)
+      return 0;
+
+   // copy all values
+   *cpy = *org;
+
+   // attempt to make string buffer copies
+   cpy->channelAgent = xstrdup(org->channelAgent);
+   cpy->logFilePath = xstrdup(org->logFilePath);
+   cpy->debugFilePath = xstrdup(org->debugFilePath);
+   cpy->pluginPath = xstrdup(org->pluginPath);
+   cpy->user = xstrdup(org->user);
+   cpy->group = xstrdup(org->group);
+   cpy->runPath = xstrdup(org->runPath);
+   cpy->wlm.dispatcher = xstrdup(org->wlm.dispatcher);
+   cpy->wlm.collector = xstrdup(org->wlm.collector);
+
+   // if any buffer copies failed, free everything, return NULL
+   if (cpy->channelAgent == 0 || cpy->logFilePath == 0
+         || cpy->debugFilePath == 0 || cpy->pluginPath == 0
+         || cpy->user == 0 || cpy->group == 0 || cpy->runPath == 0
+         || cpy->wlm.dispatcher == 0 || cpy->wlm.collector == 0)
+      freeCfgData(cpy), cpy = 0;
+
+   return cpy;
+}
+
+//----------------------------------------------------------------------------
+
 /** The main event loop for the dnxClient process.
  * 
  * @return Zero on success, or a non-zero error code.
@@ -969,13 +1044,15 @@ static int processCommands(void)
 
       if (s_reconfig)
       {
-         DnxCfgData old = s_cfg;
+         DnxCfgData * old;
 
          dnxLog("Agent received RECONFIGURE request. Reconfiguring...");
 
          // reparse config file into temporary cfg structure and validate
+         old = copyCfgData(&s_cfg);
          if ((ret = dnxCfgParserParse(s_parser, 0)) == 0)
-             logGblConfigChanges(&old, &s_cfg);
+            logGblConfigChanges(old, &s_cfg);
+         if (old) freeCfgData(old);
          dnxLog("Reconfiguration: %s.", dnxErrorString(ret));
          s_reconfig = 0;
       }
@@ -1017,12 +1094,7 @@ int main(int argc, char ** argv)
       goto e0;
 
    // initialize the logging subsystem with configured settings
-   if ((ret = dnxLogInit(s_cfg.logFilePath, s_cfg.debugFilePath, 0,
-         &s_cfg.debugLevel)) != 0)
-   {
-      dnxLog("Failed to initialize logging: %s.", dnxErrorString(ret));
-      goto e1;
-   }
+   dnxLogInit(s_cfg.logFilePath, s_cfg.debugFilePath, 0, &s_cfg.debugLevel);
 
    dnxLog("-------- DNX Client Daemon Version %s Startup --------", VERSION);
    dnxLog("Copyright (c) 2006-2008 Intellectual Reserve. All rights reserved.");
@@ -1084,7 +1156,6 @@ e0:dnxLog("-------- DNX Client Daemon Shutdown Complete --------");
 
    xheapchk();    // works when debug heap is compiled in
 
-   dnxLogExit();
    return ret;
 }
 

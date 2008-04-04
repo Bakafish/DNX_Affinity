@@ -69,14 +69,9 @@ int dnxAudit(char * fmt, ... );
  * @param[in] debugFile - the global debug file path.
  * @param[in] auditFile - the global audit file path (optional).
  * @param[in] debugLevel - the address of the global debug level indicator.
- * 
- * @return Zero on success, or a non-zero error code.
  */
-int dnxLogInit(char * logFile, char * debugFile, char * auditFile, 
+void dnxLogInit(char * logFile, char * debugFile, char * auditFile, 
       int * debugLevel);
-
-/** Close any open log file. */
-void dnxLogExit(void);
 
 #endif   /* _DNXLOGGING_H_ */
 

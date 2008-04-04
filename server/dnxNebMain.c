@@ -209,7 +209,7 @@ static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
 static int initConfig(char * cfgfile)
 {
    DnxCfgDict dict[] = 
-   {
+   {  // Do NOT change the order, unless you know what you're doing!
       { "channelDispatcher",  DNX_CFG_URL,      &cfg.dispatcherUrl      },
       { "channelCollector",   DNX_CFG_URL,      &cfg.collectorUrl       },
       { "authWorkerNodes",    DNX_CFG_STRING,   &cfg.authWorkerNodes    },
@@ -875,7 +875,6 @@ int nebmodule_deinit(int flags, int reason)
    xheapchk();
 
    dnxLog("-------- DNX Server Module Shutdown Completed --------");
-   dnxLogExit();
    return 0;
 }
 
@@ -907,14 +906,8 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
       return ERROR;
 
    // set configured debug level and syslog log facility code
-   if ((ret = dnxLogInit(cfg.logFilePath, cfg.debugFilePath, 
-         cfg.auditFilePath, &cfg.debugLevel)) != 0)
-   {
-      dnxLog("Failed to initialize system/debug/audit logging: %s.", 
-            dnxErrorString(ret));
-      releaseConfig();
-      return ERROR;
-   }
+   dnxLogInit(cfg.logFilePath, cfg.debugFilePath, cfg.auditFilePath, 
+         &cfg.debugLevel);
 
    dnxLog("-------- DNX Server Module Version %s Startup --------", VERSION);
    dnxLog("Copyright (c) 2006-2008 Intellectual Reserve. All rights reserved.");
@@ -932,7 +925,6 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
    {
       dnxLog("PROCESS_DATA event registration failed: %s.", dnxErrorString(ret));
       releaseConfig();
-      dnxLogExit();
       return ERROR;
    }
    start_time = time(0);

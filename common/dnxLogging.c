@@ -60,13 +60,15 @@
 # define DEF_DEBUG_LEVEL   0
 #endif
 
-#define MAX_LOG_LINE       1023              //!< Maximum log line length.
+/** Maximum log line length. */
+#define MAX_LOG_LINE       1023
 
-static int defDebugLevel   = DEF_DEBUG_LEVEL;//!< The default debug level.
-static int * s_debugLevel  = &defDebugLevel; //!< A pointer to the debug level.
-static FILE * s_logFile    = 0;              //!< The global log file.
-static FILE * s_debugFile  = 0;              //!< The global debug file.
-static FILE * s_auditFile  = 0;              //!< The global audit file.
+static int defDebugLevel = DEF_DEBUG_LEVEL;  //!< The default debug level.
+
+static int * s_debugLevel = &defDebugLevel;  //!< Debug level pointer.
+static char s_LogFileName[FILENAME_MAX + 1] = DEF_LOG_FILE;
+static char s_DbgFileName[FILENAME_MAX + 1] = DEF_DEBUG_FILE;
+static char s_AudFileName[FILENAME_MAX + 1] = "";
 
 /*--------------------------------------------------------------------------
                               IMPLEMENTATION
@@ -107,12 +109,27 @@ static int vlogger(FILE * fp, char * fmt, va_list ap)
 
 void dnxLog(char * fmt, ... )
 {
-   assert(fmt);
-
+   FILE * fp_fopened = 0;
+   FILE * fp = stdout;
    va_list ap;
+
+   assert(fmt);
+   
+   // check first for standard file handle references
+   if (*s_LogFileName && strcmp(s_LogFileName, "STDOUT") != 0)
+   {
+      if (strcmp(s_LogFileName, "STDERR") == 0)
+         fp = stderr;
+      else 
+         fp_fopened = fopen(s_LogFileName, "a+");
+   }
+
    va_start(ap, fmt);
-   (void)vlogger(s_logFile? s_logFile: stdout, fmt, ap);
+   (void)vlogger(fp_fopened? fp_fopened: fp, fmt, ap);
    va_end(ap);
+
+   if (fp_fopened)
+      fclose(fp_fopened);
 }
 
 //----------------------------------------------------------------------------
@@ -120,13 +137,29 @@ void dnxLog(char * fmt, ... )
 void dnxDebug(int level, char * fmt, ... )
 {
    assert(fmt);
+   assert(s_debugLevel);
 
    if (level <= *s_debugLevel)
    {
+      FILE * fp_fopened = 0;
+      FILE * fp = stdout;
       va_list ap;
+
+      // check first for standard file handle references
+      if (*s_DbgFileName && strcmp(s_DbgFileName, "STDOUT") != 0)
+      {
+         if (strcmp(s_DbgFileName, "STDERR") == 0)
+            fp = stderr;
+         else
+            fp_fopened = fopen(s_DbgFileName, "a+");
+      }
+   
       va_start(ap, fmt);
-      (void)vlogger(s_debugFile? s_debugFile: stdout, fmt, ap);
+      (void)vlogger(fp_fopened? fp_fopened: fp, fmt, ap);
       va_end(ap);
+
+      if (fp_fopened)
+         fclose(fp_fopened);
    }
 }
 
@@ -138,97 +171,51 @@ int dnxAudit(char * fmt, ... )
 
    assert(fmt);
 
-   if (s_auditFile)
+   if (*s_AudFileName)
    {
+      FILE * fp_fopened = 0;
+      FILE * fp = 0;
       va_list ap;
+
+      // check first for standard file handle references
+      if (strcmp(s_AudFileName, "STDOUT") == 0)
+         fp = stdout;
+      else if (strcmp(s_AudFileName, "STDERR") == 0)
+         fp = stderr;
+      else if ((fp = fp_fopened = fopen(s_AudFileName, "a+")) == 0)
+         return errno;
+
       va_start(ap, fmt);
-      ret = vlogger(s_auditFile, fmt, ap);
+      ret = vlogger(fp, fmt, ap);
       va_end(ap);
+
+      if (fp_fopened)
+         fclose(fp_fopened);
    }
    return ret;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxLogInit(char * logFile, char * debugFile, char * auditFile, 
+void dnxLogInit(char * logFile, char * debugFile, char * auditFile, 
       int * debugLevel)
 {
-   // set debug level pointer
+   if (logFile)
+   {
+      strncpy(s_LogFileName, logFile, sizeof(s_LogFileName) - 1);
+      s_LogFileName[sizeof(s_LogFileName) - 1] = 0;
+   }
+   if (debugFile)
+   {
+      strncpy(s_DbgFileName, debugFile, sizeof(s_DbgFileName) - 1);
+      s_DbgFileName[sizeof(s_DbgFileName) - 1] = 0;
+   }
+   if (auditFile)
+   {
+      strncpy(s_AudFileName, auditFile, sizeof(s_AudFileName) - 1);
+      s_AudFileName[sizeof(s_AudFileName) - 1] = 0;
+   }
    s_debugLevel = debugLevel;
-
-   // open log file - default to stdout (global default)
-   s_logFile = s_debugFile = stdout;
-   if (logFile && *logFile && strcmp(logFile, "STDOUT") != 0)
-   {
-      if (strcmp(logFile, "STDERR") == 0)
-         s_logFile = stderr;
-      else
-      {
-         int eno;
-         mode_t oldmask = umask(0077);    // only owner can read/write
-         s_logFile = fopen(logFile, "a");
-         eno = errno;
-         umask(oldmask);
-         if (!s_logFile)
-         {
-            s_logFile = stdout;           // stdout on failure; return error
-            return eno;
-         }
-      }
-   }
-
-   // open debug file
-   if (debugFile && *debugFile && strcmp(debugFile, "STDOUT") != 0)
-   {
-      if (strcmp(debugFile, "STDERR") == 0)
-         s_debugFile = stderr;
-      else
-      {
-         int eno;
-         mode_t oldmask = umask(0077);
-         s_debugFile = fopen(debugFile, "a");
-         eno = errno;
-         umask(oldmask);
-         if (!s_debugFile)
-         {
-            s_debugFile = stdout;
-            return eno;
-         }
-      }
-   }
-
-   // open audit log
-   if (auditFile && *auditFile)
-   {
-      if (strcmp(auditFile, "STDOUT") == 0)
-         s_auditFile = stdout;
-      else if (strcmp(debugFile, "STDERR") == 0)
-         s_auditFile = stderr;
-      else
-      {
-         int eno;
-         mode_t oldmask = umask(0077);
-         s_auditFile = fopen(auditFile, "a");
-         eno = errno;
-         umask(oldmask);
-         if (!s_auditFile)
-            return eno;
-      }
-   }
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-void dnxLogExit(void)
-{
-   if (s_auditFile && s_auditFile != stdout && s_auditFile != stderr) 
-      fclose(s_auditFile);
-   if (s_debugFile && s_debugFile != stdout && s_auditFile != stderr) 
-      fclose(s_debugFile);
-   if (s_logFile && s_logFile != stdout && s_logFile != stderr) 
-      fclose(s_logFile);
-   s_logFile = s_debugFile = s_auditFile = 0;
 }
 
 /*--------------------------------------------------------------------------*/
