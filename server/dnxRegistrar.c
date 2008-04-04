@@ -70,13 +70,13 @@ typedef struct iDnxRegistrar_
  */
 static DnxQueueResult dnxCompareNodeReq(void * pLeft, void * pRight)
 {
+   DnxXID * pxl = &((DnxNodeRequest *)pLeft)->xid;
+   DnxXID * pxr = &((DnxNodeRequest *)pRight)->xid;
+
    assert(pLeft && pRight);
 
-   return
-      (
-         ((DnxNodeRequest *)pLeft)->xid.objType   == ((DnxNodeRequest *)pRight)->xid.objType 
-      && ((DnxNodeRequest *)pLeft)->xid.objSerial == ((DnxNodeRequest *)pRight)->xid.objSerial
-      ) ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
+   return pxl->objType == pxr->objType && pxl->objSerial == pxr->objSerial ? 
+         DNX_QRES_FOUND : DNX_QRES_CONTINUE;
 }
 
 //----------------------------------------------------------------------------
@@ -103,18 +103,19 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
       pReq->expires = pMsg->expires;
-      dnxDebug(1, "dnxRegisterNode: Updated existing request %lu at %lu, now expires at %lu", 
-            pMsg->xid.objSerial, (unsigned long)now, (unsigned long)pMsg->expires);
+      dnxDebug(1, 
+            "dnxRegisterNode: Updated request [%lu-%lu] at %u; expires at %u", 
+            pMsg->xid.objSerial, pMsg->xid.objSlot, 
+            (unsigned)(now % 1000), (unsigned)(pMsg->expires % 1000));
    }
+   else if ((ret = dnxQueuePut(ireg->rqueue, pMsg)) != DNX_OK)
+      dnxSyslog(LOG_ERR, "DNX Registrar: dnxQueuePut failed: %s", 
+            dnxErrorString(ret));
    else
-   {
-      if ((ret = dnxQueuePut(ireg->rqueue, pMsg)) != DNX_OK)
-         dnxSyslog(LOG_ERR, "dnxRegisterNode: dnxQueuePut failed: %s", 
-               dnxErrorString(ret));
-      else
-         dnxDebug(1, "dnxRegisterNode: Appended new request %lu at %lu, expires at %lu", 
-               pMsg->xid.objSerial, (unsigned long)now, (unsigned long)pMsg->expires);
-   }
+      dnxDebug(1, 
+            "dnxRegisterNode: Added request [%lu-%lu] at %u; expires at %u", 
+            pMsg->xid.objSerial, pMsg->xid.objSlot, 
+            (unsigned)(now % 1000), (unsigned)(pMsg->expires % 1000));
    return ret;
 }
 

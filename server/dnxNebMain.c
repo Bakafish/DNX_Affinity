@@ -675,7 +675,7 @@ static int ehProcessData(int event_type, void * data)
                                  INTERFACE
   --------------------------------------------------------------------------*/
 
-int dnxJobCleanup(DnxNewJob * pJob)
+void dnxJobCleanup(DnxNewJob * pJob)
 {
    if (pJob)
    {
@@ -693,8 +693,6 @@ int dnxJobCleanup(DnxNewJob * pJob)
          pJob->pNode = 0;
       }
    }
-
-   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------

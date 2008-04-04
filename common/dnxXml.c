@@ -437,48 +437,19 @@ int dnxXmlClose(DnxXmlBuf * xbuf)
 
    Alternatively, a heap check may be done with the following command line:
 
-      gcc -DDEBUG -DDEBUG_HEAP -DDNX_XML_TEST -g -O0 -o \
-         dnxXmlTest dnxXml.c dnxError.c dnxHeap.c
+      gcc -DDEBUG -DDEBUG_HEAP -DDNX_XML_TEST -g -O0 -o dnxXmlTest \
+         dnxXml.c dnxError.c dnxHeap.c
 
   --------------------------------------------------------------------------*/
 
 #ifdef DNX_XML_TEST
 
-/* test-bed helper macros */
-#define CHECK_ZERO(expr)                                                      \
-do {                                                                          \
-   int ret;                                                                   \
-   if ((ret = (expr)) != 0)                                                   \
-   {                                                                          \
-      fprintf(stderr, "FAILED: '%s'\n  at %s(%d).\n  error %d: %s\n",         \
-            #expr, __FILE__, __LINE__, ret, dnxErrorString(ret));             \
-      exit(1);                                                                \
-   }                                                                          \
-} while (0)
-#define CHECK_TRUE(expr)                                                      \
-do {                                                                          \
-   if (!(expr))                                                               \
-   {                                                                          \
-      fprintf(stderr, "FAILED: Boolean(%s)\n  at %s(%d).\n",                  \
-            #expr, __FILE__, __LINE__);                                       \
-      exit(1);                                                                \
-   }                                                                          \
-} while (0)
-#define CHECK_NONZERO(expr)   CHECK_ZERO(!(expr))
-#define CHECK_FALSE(expr)     CHECK_TRUE(!(expr))
+#include "utesthelp.h"
 
 static verbose;
 
-#include <stdarg.h>
-void dnxSyslog(int l, char * f, ... )
-      { if (verbose) { va_list a; va_start(a,f); 
-            vprintf(f,a); va_end(a); puts(""); } }
-
-#ifdef DEBUG_HEAP
-void dnxDebug(int l, char * f, ... )
-      { if (verbose) { va_list a; va_start(a,f); 
-            vprintf(f,a); va_end(a); puts(""); } }
-#endif
+IMPLEMENT_DNX_SYSLOG(verbose);
+IMPLEMENT_DNX_DEBUG(verbose);
 
 int main(int argc, char ** argv)
 {
@@ -579,7 +550,7 @@ int main(int argc, char ** argv)
    return 0;
 }
 
-#endif   /* DNX_CFGPARSER_TEST */
+#endif   /* DNX_XML_TEST */
 
 /*--------------------------------------------------------------------------*/
 

@@ -213,37 +213,11 @@ void dnxTimerDestroy(DnxTimer * timer)
 
 #ifdef DNX_TIMER_TEST
 
+#include "utesthelp.h"
 #include <time.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
 
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
-/* test-bed helper macros */
-#define CHECK_ZERO(expr)                                                      \
-do {                                                                          \
-   int ret;                                                                   \
-   if ((ret = (expr)) != 0)                                                   \
-   {                                                                          \
-      fprintf(stderr, "FAILED: '%s'\n  at %s(%d).\n  error %d: %s\n",         \
-            #expr, __FILE__, __LINE__, ret, dnxErrorString(ret));             \
-      exit(1);                                                                \
-   }                                                                          \
-} while (0)
-#define CHECK_TRUE(expr)                                                      \
-do {                                                                          \
-   if (!(expr))                                                               \
-   {                                                                          \
-      fprintf(stderr, "FAILED: Boolean(%s)\n  at %s(%d).\n",                  \
-            #expr, __FILE__, __LINE__);                                       \
-      exit(1);                                                                \
-   }                                                                          \
-} while (0)
-#define CHECK_NONZERO(expr)   CHECK_ZERO(!(expr))
-#define CHECK_FALSE(expr)     CHECK_TRUE(expr)
-
-/* test static globals */
 static int verbose;
 static DnxNewJob fakejob;
 static DnxJobList fakejoblist;
@@ -251,7 +225,10 @@ static int fakepayload;
 static DnxNodeRequest fakenode;
 static int entered_dnxJobListExpire;
 
-/* functional stubs */
+// functional stubs
+IMPLEMENT_DNX_SYSLOG(verbose);
+IMPLEMENT_DNX_DEBUG(verbose);
+
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs)
 {
    CHECK_TRUE(pJobList == &fakejoblist);
@@ -271,20 +248,9 @@ int nagiosPostResult(service * svc, time_t start_time, int early_timeout,
    CHECK_ZERO(memcmp(res_data, "(DNX Service", 12));
    return 0;
 }
-void dnxSyslog(int p, char * f, ... )
-{
-   if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
-   return 0;
-}
-void dnxDebug(int l, char * f, ... )
-{
-   if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
-   return 0;
-}
 int dnxAuditJob(DnxNewJob * pJob, char * action) { return 0; }
-int dnxJobCleanup(DnxNewJob * pJob) { return 0; }
+void dnxJobCleanup(DnxNewJob * pJob) { }
 
-/* test main */
 int main(int argc, char ** argv)
 {
    DnxTimer * timer;

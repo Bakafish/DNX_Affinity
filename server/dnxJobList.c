@@ -234,37 +234,37 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    unsigned long current;
    int ret = DNX_OK;
 
-   assert(pJobList && pxid && pJob);  // parameter validation
+   assert(pJobList && pxid && pJob);   // parameter validation
 
    current = pxid->objSlot;
 
    assert(current < ilist->size);
    if (current >= ilist->size)         // runtime validation requires check
-      return DNX_ERR_INVALID;
+      return DNX_ERR_INVALID;          // corrupt client network message
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
 
-   dnxDebug(8, "dnxJobListCollect: Compare [%lu,%lu] to "
-               "[%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", 
+   dnxDebug(8, "dnxJobListCollect: Compare [%lu-%lu] to [%lu-%lu]: "
+               "Head=%lu, DHead=%lu, Tail=%lu", 
       pxid->objSerial, pxid->objSlot, ilist->list[current].xid.objSerial, 
       ilist->list[current].xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
 
    // verify that the XID of this result matches the XID of the service check
    if (ilist->list[current].state == DNX_JOB_NULL 
-         || memcmp(pxid, &ilist->list[current].xid, sizeof(DnxXID)) != 0)
-      ret = DNX_ERR_NOTFOUND;    // job expired and was removed by the timer
+         || memcmp(pxid, &ilist->list[current].xid, sizeof *pxid) != 0)
+      ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
    else
    {
       // make a copy for the Collector
-      memcpy(pJob, &ilist->list[current], sizeof(DnxNewJob));
+      memcpy(pJob, &ilist->list[current], sizeof *pJob);
       pJob->state = DNX_JOB_COMPLETE;
    
-      // dequeue this job
+      // dequeue this job; make slot available for another job
       ilist->list[current].state = DNX_JOB_NULL;
    
       // update the job list head
       if (current == ilist->head && current != ilist->tail)
-         ilist->head = ((current + 1) % ilist->size);
+         ilist->head = (current + 1) % ilist->size;
    }
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
@@ -341,57 +341,23 @@ void dnxJobListDestroy(DnxJobList * pJobList)
 
 #ifdef DNX_JOBLIST_TEST
 
+#include "utesthelp.h"
 #include <time.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <assert.h>
 
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
-/* test-bed helper macros */
-#define CHECK_ZERO(expr)                                                      \
-do {                                                                          \
-   int ret;                                                                   \
-   if ((ret = (expr)) != 0)                                                   \
-   {                                                                          \
-      fprintf(stderr, "FAILED: '%s'\n  at %s(%d).\n  error %d: %s\n",         \
-            #expr, __FILE__, __LINE__, ret, dnxErrorString(ret));             \
-      exit(1);                                                                \
-   }                                                                          \
-} while (0)
-#define CHECK_TRUE(expr)                                                      \
-do {                                                                          \
-   if (!(expr))                                                               \
-   {                                                                          \
-      fprintf(stderr, "FAILED: Boolean(%s)\n  at %s(%d).\n",                  \
-            #expr, __FILE__, __LINE__);                                       \
-      exit(1);                                                                \
-   }                                                                          \
-} while (0)
-#define CHECK_NONZERO(expr)   CHECK_ZERO(!(expr))
-#define CHECK_FALSE(expr)     CHECK_TRUE(expr)
-
-/* command-line verbose flag */
 static int verbose;
 
-/* functional stubs */
+// functional stubs
+IMPLEMENT_DNX_DEBUG(verbose);
+IMPLEMENT_DNX_SYSLOG(verbose);
+
 int dnxTimerCreate(DnxJobList * jl, int s, DnxTimer ** pt) { *pt = 0; return 0; }
 void dnxTimerDestroy(DnxTimer * t) { }
-void dnxSyslog(int p, char * f, ... )
-{
-   if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
-   return 0;
-}
-void dnxDebug(int l, char * f, ... )
-{
-   if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
-   return 0;
-}
+
 int dnxMakeXID(DnxXID * x, DnxObjType t, unsigned long s, unsigned long l)
       { x->objType = t; x->objSerial = s; x->objSlot = l; return DNX_OK; }
 
-/* test main */
 int main(int argc, char ** argv)
 {
    DnxJobList * jobs;

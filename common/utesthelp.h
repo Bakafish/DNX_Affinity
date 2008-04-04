@@ -54,13 +54,12 @@ do {                                                                          \
 #define CHECK_NONZERO(expr)    CHECK_ZERO(!(expr))
 #define CHECK_FALSE(expr)      CHECK_TRUE(!(expr))
 
-#define IMPLEMENT_DNX_DEBUG(v) \
-void dnxDebug(int l, char * f, ... ) \
+#define IMPLEMENT_DNX_LOGGER(v,name) \
+void dnx##name(int l, char * f, ... ) \
 { if (v) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); } }
 
-#define IMPLEMENT_DNX_SYSLOG(v) \
-void dnxLog(char * f, ... ) \
-{ if (v) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); } }
-
+#define IMPLEMENT_DNX_DEBUG(v)  IMPLEMENT_DNX_LOGGER(v,Debug)
+#define IMPLEMENT_DNX_SYSLOG(v) IMPLEMENT_DNX_LOGGER(v,Syslog)
+     
 /*--------------------------------------------------------------------------*/
 

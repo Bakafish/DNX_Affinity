@@ -61,10 +61,8 @@ int nagiosPostResult(service * svc, time_t start_time,
 /** Release all resources associated with a job object.
  * 
  * @param[in] pJob - the job to be freed.
- * 
- * @return Always returns zero.
  */
-int dnxJobCleanup(DnxNewJob * pJob);
+void dnxJobCleanup(DnxNewJob * pJob);
 
 /** Send an audit message to the dnx server audit log.
  * 

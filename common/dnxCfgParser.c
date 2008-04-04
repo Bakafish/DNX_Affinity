@@ -468,44 +468,21 @@ void dnxCfgParserDestroy(DnxCfgParser * cp)
 /*--------------------------------------------------------------------------
                                  TEST MAIN
 
-   From within dnx/server, compile with GNU tools using this command line:
+   From within dnx/common, compile with GNU tools using this command line:
     
-      gcc -DDEBUG -DDNX_CFGPARSER_TEST -g -O0 -o dnxCfgParserTest \
-         dnxCfgParser.c dnxError.c
+      gcc -DDEBUG -DDNX_CFGPARSER_TEST -g -O0 \
+         -o dnxCfgParserTest dnxCfgParser.c dnxError.c
 
    Alternatively, a heap check may be done with the following command line:
 
-      gcc -DDEBUG -DDEBUG_HEAP -DDNX_CFGPARSER_TEST -g -O0 -o \
-         dnxCfgParserTest dnxCfgParser.c dnxError.c dnxHeap.c
+      gcc -DDEBUG -DDEBUG_HEAP -DDNX_CFGPARSER_TEST -g -O0 \
+         -o dnxCfgParserTest dnxCfgParser.c dnxError.c dnxHeap.c
 
   --------------------------------------------------------------------------*/
 
 #ifdef DNX_CFGPARSER_TEST
 
-#include <stdarg.h>
-
-/* test-bed helper macros */
-#define CHECK_ZERO(expr)                                                      \
-do {                                                                          \
-   int ret;                                                                   \
-   if ((ret = (expr)) != 0)                                                   \
-   {                                                                          \
-      fprintf(stderr, "FAILED: '%s'\n  at %s(%d).\n  error %d: %s\n",         \
-            #expr, __FILE__, __LINE__, ret, dnxErrorString(ret));             \
-      exit(1);                                                                \
-   }                                                                          \
-} while (0)
-#define CHECK_TRUE(expr)                                                      \
-do {                                                                          \
-   if (!(expr))                                                               \
-   {                                                                          \
-      fprintf(stderr, "FAILED: Boolean(%s)\n  at %s(%d).\n",                  \
-            #expr, __FILE__, __LINE__);                                       \
-      exit(1);                                                                \
-   }                                                                          \
-} while (0)
-#define CHECK_NONZERO(expr)   CHECK_ZERO(!(expr))
-#define CHECK_FALSE(expr)     CHECK_TRUE(!(expr))
+#include "utesthelp.h"
 
 #define TEST_FILE_NAME "cfgtest.cfg"
 #define TEST_FILE_CONTENTS                                                    \
@@ -522,16 +499,11 @@ do {                                                                          \
      
 static verbose;
 
+IMPLEMENT_DNX_DEBUG(verbose);
+
 static void test_errhandler(int err, int line, char * buf, void * data) 
-{
-   if (verbose)
-      printf("test_errhandler: Error %d, Line %d, Buffer '%s'.\n", err, line, buf);
-}
-void dnxDebug(int l, char * f, ... )
-{
-   if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
-   return 0;
-}
+{ if (verbose) printf("test_errhandler: Error %d, Line %d, Buffer '%s'.\n", 
+      err, line, buf); }
 
 int main(int argc, char ** argv)
 {

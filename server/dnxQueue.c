@@ -434,42 +434,14 @@ void dnxQueueDestroy(DnxQueue * queue)
 
 #ifdef DNX_QUEUE_TEST
 
+#include "utesthelp.h"
 #include <time.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <assert.h>
 
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
-/* test-bed helper macros */
-#define CHECK_ZERO(expr)                                                      \
-do {                                                                          \
-   int ret;                                                                   \
-   if ((ret = (expr)) != 0)                                                   \
-   {                                                                          \
-      fprintf(stderr, "FAILED: '%s'\n  at %s(%d).\n  error %d: %s\n",         \
-            #expr, __FILE__, __LINE__, ret, dnxErrorString(ret));             \
-      exit(1);                                                                \
-   }                                                                          \
-/* printf("SUCCESS: '%s'\n", #expr); */                                       \
-} while (0)
-#define CHECK_TRUE(expr)                                                      \
-do {                                                                          \
-   if (!(expr))                                                               \
-   {                                                                          \
-      fprintf(stderr, "FAILED: Boolean(%s)\n  at %s(%d).\n",                  \
-            #expr, __FILE__, __LINE__);                                       \
-      exit(1);                                                                \
-   }                                                                          \
-/* printf("SUCCESS: '%s'\n", #expr); */                                       \
-} while (0)
-#define CHECK_NONZERO(expr)   CHECK_ZERO(!(expr))
-#define CHECK_FALSE(expr)     CHECK_TRUE(expr)
-
 static int free_count;
 
-/* functional stubs */
+// functional stubs
 static DnxQueueResult qtcmp(void * left, void * right)
       { return strcmp((char *)left, (char *)right) == 0? 
             DNX_QRES_FOUND: DNX_QRES_CONTINUE; }
@@ -480,7 +452,6 @@ static void qtfree(void * p)
    free(p);
 }
 
-/* test main */
 int main(int argc, char ** argv)
 {
    DnxQueue * queue;
