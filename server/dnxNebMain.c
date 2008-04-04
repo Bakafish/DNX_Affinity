@@ -61,19 +61,20 @@
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);
 
 // module static data
-static DnxJobList * jobs;        // The master job list
-static DnxRegistrar * reg;       // The client node registrar.
-static DnxTimer * timer;         // The job list expiration timer.
-static DnxDispatcher * disp;     // The job list dispatcher.
-static DnxCollector * coll;      // The job list results collector.
-static time_t start_time;        // The module start time
-static void * myHandle;          // Private NEB module handle
-static regex_t regEx;            // Compiled regular expression structure
-static int dnxLogFacility;       // DNX syslog facility
-static int auditLogFacility;     // Worker audit syslog facility
+static DnxJobList * joblist;        // The master job list
+static DnxRegistrar * registrar;    // The client node registrar.
+static DnxDispatcher * dispatcher;  // The job list dispatcher.
+static DnxCollector * collector;    // The job list results collector.
+static time_t start_time;           // The module start time
+static void * myHandle;             // Private NEB module handle
+static regex_t regEx;               // Compiled regular expression structure
+
+/** @todo These should be combined into config data. */
+static int dnxLogFacility;          // DNX syslog facility
+static int auditLogFacility;        // Worker audit syslog facility
 
 // module GLOBAL data
-DnxServerCfg cfg;                // The GLOBAL server config parameters
+DnxServerCfg cfg;                   // The GLOBAL server config parameters
 
 //----------------------------------------------------------------------------
 
@@ -236,7 +237,7 @@ static int dnxCalculateJobListSize(void)
 
 /** Post a new job from Nagios to the dnxServer job queue.
  * 
- * @param[in] jobs - the job list to which the new job should be posted.
+ * @param[in] joblist - the job list to which the new job should be posted.
  * @param[in] serial - the serial number of the new job.
  * @param[in] ds - a pointer to the nagios job that's being posted.
  * @param[in] pNode - a dnxClient node request structure that is being 
@@ -245,7 +246,7 @@ static int dnxCalculateJobListSize(void)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxPostNewJob(DnxJobList * jobs, unsigned long serial, 
+static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial, 
       nebstruct_service_check_data * ds, DnxNodeRequest * pNode)
 {
    service * svc;
@@ -277,7 +278,7 @@ static int dnxPostNewJob(DnxJobList * jobs, unsigned long serial,
    dnxDebug(1, "DnxNebMain: Posting Job %lu: %s", serial, Job.cmd);
 
    // Post to the Job Queue
-   if ((ret = dnxJobListAdd(jobs, &Job)) != DNX_OK)
+   if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxPostNewJob: Failed to post Job \"%s\": %d", Job.cmd, ret);
 
    // Worker Audit Logging
@@ -306,7 +307,6 @@ int dnxJobCleanup(DnxNewJob * pJob)
       }
 
       // Free the node request message
-      //dnxDebug(10, "dnxJobCleanup: Free(pNode=%p)", pJob->pNode);
       if (pJob->pNode)
       {
          free(pJob->pNode);
@@ -418,23 +418,22 @@ static int ehSvcCheck(int event_type, void * data)
          serial, (unsigned long)time(NULL), (unsigned long)(svcdata->start_time.tv_sec));
 
    // Locate the next available worker node from the Request Queue
-   if ((ret = dnxGetNodeRequest(reg, &pNode)) != DNX_OK)
+   if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
    {
       dnxDebug(1, "dnxServer: ehSvcCheck: No worker nodes requests available: %d", ret);
       return OK;  // Unable to handle this request - Have Nagios handle it
    }
 
    // Post this service check to the Job Queue
-   if ((ret = dnxPostNewJob(jobs, serial, svcdata, pNode)) != 0)
+   if ((ret = dnxPostNewJob(joblist, serial, svcdata, pNode)) != 0)
    {
       dnxSyslog(LOG_ERR, "dnxServer: ehSvcCheck: Failed to post new job: %d", ret);
       return OK;  // Unable to handle this request - Have Nagios handle it
    }
 
-   // Increment service check serial number
    serial++;
 
-   // Tell Nagios that we are overriding the handling of this event
+   // tell Nagios that we are overriding the handling of this event
    return NEBERROR_CALLBACKOVERRIDE;
 }
 
@@ -454,25 +453,24 @@ static int dnxServerDeInit(void)
    neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ehSvcCheck);
 
    // ensure we don't destroy non-existent objects from here on out...
-   if (coll)
-      dnxCollectorDestroy(&coll);
+   if (registrar)
+      dnxRegistrarDestroy(registrar);
 
-   if (disp)
-      dnxDispatcherDestroy(&disp);
+   if (dispatcher)
+      dnxDispatcherDestroy(&dispatcher);
 
-   if (timer)
-      dnxTimerDestroy(timer);
+   if (collector)
+      dnxCollectorDestroy(&collector);
 
-   if (reg)
-      dnxRegistrarDestroy(reg);
-
-   if (jobs)
-      dnxJobListWhack(&jobs);
+   if (joblist)
+      dnxJobListDestroy(joblist);
 
    if (cfg.localCheckPattern)
       regfree(&regEx);
 
-   dnxChanMapRelease();    // doesn't matter if we haven't initialized here
+   // it doesn't matter if we haven't initialized the
+   // channel map - it can figure that out for itself
+   dnxChanMapRelease();
 
    return OK;
 }
@@ -485,10 +483,13 @@ static int dnxServerDeInit(void)
  */
 static int dnxServerInit(void)
 {
-   int ret, joblistsz = dnxCalculateJobListSize();
+   int ret, joblistsz;
 
-   dnxSyslog(LOG_INFO, "dnxServerInit: Allocating %d service request "
-                       "slots in the DNX job list", joblistsz);
+   // clear globals so we know what to "undo" as we back out
+   joblist = 0;
+   registrar = 0;
+   dispatcher = 0;
+   collector = 0;
 
    if ((ret = dnxChanMapInit(0)) != 0)
    {
@@ -496,7 +497,12 @@ static int dnxServerInit(void)
       return ret;
    }
 
-   if ((ret = dnxJobListInit(&jobs, joblistsz)) != 0)
+   joblistsz = dnxCalculateJobListSize();
+
+   dnxSyslog(LOG_INFO, "dnxServerInit: Allocating %d service request "
+                       "slots in the DNX job list", joblistsz);
+
+   if ((ret = dnxJobListCreate(&joblist, joblistsz)) != 0)
    {
       dnxSyslog(LOG_ERR, "dnxServerInit: Failed to initialize DNX job "
                          "list with %d slots", joblistsz);
@@ -504,18 +510,15 @@ static int dnxServerInit(void)
    }
 
    if ((ret = dnxCollectorCreate(&cfg.debug, "Collect", 
-         cfg.channelCollector, jobs, &coll)) != 0)
+         cfg.channelCollector, joblist, &collector)) != 0)
       return ret;
 
    if ((ret = dnxDispatcherCreate(&cfg.debug, "Dispatch", 
-         cfg.channelDispatcher, jobs, &disp)) != 0)
+         cfg.channelDispatcher, joblist, &dispatcher)) != 0)
       return ret;
 
    if ((ret = dnxRegistrarCreate(&cfg.debug, joblistsz,
-         dnxDispatcherGetChannel(disp), &reg)) != 0)
-      return ret;
-
-   if ((ret = dnxTimerCreate(jobs, &timer)) != 0)
+         dnxDispatcherGetChannel(dispatcher), &registrar)) != 0)
       return ret;
 
    // registration for this event starts everything rolling
@@ -658,13 +661,6 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
       dnxSyslog(LOG_ERR, "dnxServer: DNX config file not specified");
       return ERROR;
    }
-
-   // clear globals for initialization (so we know what to undo as we back out)
-   jobs = 0;
-   reg = 0;
-   timer = 0;
-   disp = 0;
-   coll = 0;
 
    dnxLogFacility = LOG_LOCAL7;
    auditLogFacility = 0;

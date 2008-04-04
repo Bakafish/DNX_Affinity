@@ -44,25 +44,16 @@ typedef struct _DnxNewJob_
    DnxNodeRequest * pNode; // Worker Request that will handle this Job
 } DnxNewJob;
 
-typedef struct _DnxJobList_ 
-{
-   DnxNewJob * pList;      // Array of Job Structures
-   unsigned long size;     // Number of elements
-   unsigned long head;     // List head
-   unsigned long tail;     // List tail
-   unsigned long dhead;    // Head of waiting jobs
+/** Abstraction for a DNX Job List object. */
+typedef void DnxJobList;
 
-   // pthread mutex and condition-variable for Job List access
-   pthread_mutex_t mut;
-   pthread_cond_t cond;
-} DnxJobList;
-
-int dnxJobListInit(DnxJobList ** ppJobList, unsigned long size);
-int dnxJobListWhack(DnxJobList ** ppJobList);
 int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob);
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs);
 int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob);
 int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob);
+
+int dnxJobListCreate(DnxJobList ** ppJobList, unsigned long size);
+void dnxJobListDestroy(DnxJobList * pJobList);
 
 #endif   /* _DNXJOBLIST_H_ */
 
