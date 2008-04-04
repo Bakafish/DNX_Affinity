@@ -33,18 +33,18 @@
 /** An enumeration of data types that the configuration parser understands. 
  * 
  * The comment after each type in the enumeration describes the data type
- * that should be passed as a void pointer in the corresponding element of 
- * the @em ppvals parameters of the functions defined below.
+ * that should be passed as a void pointer in the @em value field of the 
+ * dictionary structure.
  * 
  * The syntax is clearly not strictly conformant to C language syntax. For
- * example (&char*) indicates that the address of a character pointer should
+ * example, (&char*) indicates that the address of a character pointer should
  * be passed. Strict C language syntax would be more like (char**), but this 
  * syntax is ambiguous. It could mean that a variable defined as char ** is
  * passed by value, or that a variable of type char * is passed by address.
  * 
  * The addresses of pointer types (eg., &char*) are returned as references to 
- * allocated heap blocks, while the addresses of integral types are returned 
- * by value as objects.
+ * allocated heap blocks, while the addresses of pointer-sized integral types 
+ * (eg., &unsigned) are returned by value as objects.
  * 
  * Strings, string arrays and pointer arrays are null-terminated. The first 
  * element of integer arrays is the size of the remaining array of values.
@@ -70,7 +70,25 @@ typedef struct DnxCfgDict
 {
    char * varname;            //!< The string name of the variable.
    DnxCfgType type;           //!< The type of the variable.
+   void * valptr;             //!< The address of the value object.
 } DnxCfgDict;
+
+/** A function type defining the prototype for a validator function. 
+ * 
+ * The elements of @p ppvals correspond directly to the entries in the
+ * user specified configuration dictionary. However, these pointers refer to 
+ * temporary space. Once this validator function has returned success, then
+ * the values in this temporary space are exported to the user dictionary.
+ * 
+ * @param[in] dict - a reference to (a copy of) the user-specified dictionary.
+ * @param[in] ppvals - an array of pointers to configuration values.
+ * @param[in] passthru - an opaque pointer passed through from the 
+ *    dnxCfgParserCreate @p passthru parameter.
+ * 
+ * @return Zero on success, or a non-zero error value which is subsequently
+ * returned through the dnxCfgParserParse function.
+ */
+typedef int DnxCfgValidator_t(DnxCfgDict * dict, void * ppvals[], void * passthru);
 
 /** An abstraction data type for the DNX configuration parser. */
 typedef struct { int unused; } DnxCfgParser;
@@ -93,6 +111,10 @@ typedef struct { int unused; } DnxCfgParser;
  * file. The @p cmdover string is parsed AFTER the configuration file, thus
  * @p cmdover entries override configuration file entries.
  * 
+ * The validator function @p vfp is called after all values are parsed. The 
+ * values will only be written to the user's dictionary after @p vfp returns 
+ * success (0). 
+ * 
  * @param[in] cfgdefs - an optional string containing default config file 
  *    entries. Pass NULL if not required.
  * @param[in] cfgfile - an optional path name of the config file to be parsed.
@@ -103,49 +125,33 @@ typedef struct { int unused; } DnxCfgParser;
  *    valid configuration variable name and type for this parser. The @p dict
  *    array should be terminated with NULL field values (a NULL pointer in the 
  *    @em varname field, and DNX_CFG_NULL in the @em type field).
+ * @param[in] vfp - a pointer to a validator function.
  * @param[out] cpp - the address of storage for the newly created 
  *    configuration parser object.
  * 
  * @return Zero on success, or a non-zero error value.
  */
 int dnxCfgParserCreate(char * cfgdefs, char * cfgfile, char * cmdover, 
-      DnxCfgDict * dict, DnxCfgParser ** cpp);
+      DnxCfgDict * dict, DnxCfgValidator_t * vfp, DnxCfgParser ** cpp);
 
 /** Parse a configuration file into a value array.
  * 
- * Depending on the type of the data value, the @p ppvals array will either
- * return the value, or the address of allocated storage containing the value.
- * If the internal type of the value (defined in the comment following the 
- * dnx config value type enumeration entry) is, for example, &int, then the 
- * config value is set by value; if the type is, say &char*, then, the config
- * value is allocated and returned by reference.
+ * Parses an optional default set of configuration values, followed by the 
+ * configuration file, followed by an optional set of command line override
+ * configuration values. After all parsing is complete, calls the validator 
+ * function (if specified). If the validator passes (returns success - 0), 
+ * then the parsed values are copied into the user's dictionary and success
+ * is returned. Otherwise no dictionary value changes take effect.
  * 
  * @param[in] cp - the configuration parser object on which to run the parser.
- * @param[out] ppvals - an array of opaque pointers to storage locations for 
- *    the values parsed from @p cfgfile. Each element of the array is the 
- *    address of storage for either the actual value or the address of 
- *    allocated storage for the string or array value. The fields in @p ppvals 
- *    are typed by the corresponding type fields in the @p dict array. This
- *    array need not be terminated, but must be as large as the number of 
- *    valid entries in the @p dict array (minus the null-terminator entry).
+ * @param[in] passthru - an opaque pointer to user data that's passed through 
+ *    to the validator function.
  * 
  * @return Zero on success, or a non-zero error value. Possible error 
  * values include DNX_OK (on success), DNX_ERR_ACCESS, DNX_ERR_NOTFOUND, 
  * DNX_ERR_SYNTAX or DNX_ERR_MEMORY.
  */
-int dnxCfgParserParse(DnxCfgParser * cp, void * ppvals[]);
-
-/** Free memory in all pointer types in a value array; zero addresses.
- * 
- * @param[in] dict - the dictionary to be cleared. The @p dict array should
- *    be terminated with NULL field values (a NULL pointer in the @em varname 
- *    field, and DNX_CFG_NULL in the @em type field).
- * @param[in] ppvals - an array of opaque pointers to value storage addresses,
- *    each of which contains either the address of a stored object, or the 
- *    address of allocated storage. The fields in @p ppvals are typed by the
- *    corresponding type fields in the @p dict array.
- */
-void dnxCfgParserFreeCfgValues(DnxCfgParser * cp, void * ppvals[]);
+int dnxCfgParserParse(DnxCfgParser * cp, void * passthru);
 
 /** Destroy a previously created configuration parser object.
  * 

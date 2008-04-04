@@ -117,29 +117,6 @@ static time_t start_time;           //!< The module start time.
 static void * myHandle;             //!< Private NEB module handle.
 static regex_t regEx;               //!< Compiled regular expression structure.
 
-/** The array of cfg variable addresses for the configuration parser. 
- *
- * The order of this array must be kept in sync with the order of the
- * dictionary with which it will be used.
- * 
- * @todo: Make this array position independent.
- */
-static void * ppvals[] =
-{
-   &cfg.dispatcherUrl,
-   &cfg.collectorUrl,
-   &cfg.authWorkerNodes,
-   &cfg.maxNodeRequests,
-   &cfg.minServiceSlots,
-   &cfg.expirePollInterval,
-   &cfg.localCheckPattern,
-   &cfg.syncScript,
-   &cfg.logFilePath,
-   &cfg.debugFilePath,
-   &cfg.auditFilePath,
-   &cfg.debugLevel,
-};
-
 /*--------------------------------------------------------------------------
                               IMPLEMENTATION
   --------------------------------------------------------------------------*/
@@ -150,8 +127,69 @@ static void releaseConfig(void)
    if (cfg.localCheckPattern)
       regfree(&regEx);
 
-   dnxCfgParserFreeCfgValues(parser, ppvals);
    dnxCfgParserDestroy(parser);
+}
+
+//----------------------------------------------------------------------------
+
+/** Validate a configuration data structure in context.
+ * 
+ * @param[in] dict - the dictionary used by the DnxCfgParser.
+ * @param[in] vptrs - an array of opaque objects (either pointers or values)
+ *    to be checked.
+ * @param[in] passthru - an opaque pointer passed through from 
+ *    dnxCfgParserCreate. In this routine, it's the regex_t object into which
+ *    we should parse the regular expression if one is given.
+ * 
+ * @return Zero on success, or a non-zero error value. This error value is
+ * passed back through dnxCfgParserParse.
+ */
+static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
+{
+   regex_t * rep = (regex_t *)passthru;
+   int err, ret = DNX_ERR_INVALID;
+   DnxServerCfg cfg;
+
+   assert(dict && vptrs && passthru);
+
+   // setup data structure so we can use the same functionality we had before
+   cfg.dispatcherUrl      = (char   *)vptrs[ 0];
+   cfg.collectorUrl       = (char   *)vptrs[ 1];
+   cfg.authWorkerNodes    = (char   *)vptrs[ 2];
+   cfg.maxNodeRequests    = (unsigned)vptrs[ 3];
+   cfg.minServiceSlots    = (unsigned)vptrs[ 4];
+   cfg.expirePollInterval = (unsigned)vptrs[ 5];
+   cfg.localCheckPattern  = (char   *)vptrs[ 6];
+   cfg.syncScript         = (char   *)vptrs[ 7];
+   cfg.logFilePath        = (char   *)vptrs[ 8];
+   cfg.debugFilePath      = (char   *)vptrs[ 9];
+   cfg.auditFilePath      = (char   *)vptrs[10];
+   cfg.debugLevel         = (unsigned)vptrs[11];
+
+   // validate configuration items in context
+   if (!cfg.dispatcherUrl)
+      dnxLog("config: Missing channelDispatcher parameter.");
+   else if (!cfg.collectorUrl)
+      dnxLog("config: Missing channelCollector parameter.");
+   else if (cfg.maxNodeRequests < 1)
+      dnxLog("config: Invalid maxNodeRequests parameter.");
+   else if (cfg.minServiceSlots < 1)
+      dnxLog("config: Invalid minServiceSlots parameter.");
+   else if (cfg.expirePollInterval < 1)
+      dnxLog("config: Invalid expirePollInterval parameter.");
+   else if (cfg.localCheckPattern && (err = regcomp(rep, 
+         cfg.localCheckPattern, REG_EXTENDED | REG_NOSUB)) != 0)
+   {
+      char buffer[128];
+      regerror(err, rep, buffer, sizeof buffer);
+      dnxLog("config: Failed to compile localCheckPattern (\"%s\"): %s.", 
+             cfg.localCheckPattern, buffer);
+      regfree(rep);
+   }
+   else
+      ret = 0;
+
+   return ret;
 }
 
 //----------------------------------------------------------------------------
@@ -164,23 +202,23 @@ static void releaseConfig(void)
  */
 static int initConfig(char * cfgfile)
 {
-   static DnxCfgDict dict[] = 
+   DnxCfgDict dict[] = 
    {
-      { "channelDispatcher",  DNX_CFG_URL      },
-      { "channelCollector",   DNX_CFG_URL      },
-      { "authWorkerNodes",    DNX_CFG_STRING   },
-      { "maxNodeRequests",    DNX_CFG_UNSIGNED },
-      { "minServiceSlots",    DNX_CFG_UNSIGNED },
-      { "expirePollInterval", DNX_CFG_UNSIGNED },
-      { "localCheckPattern",  DNX_CFG_STRING   },
-      { "syncScript",         DNX_CFG_FSPATH   },
-      { "logFile",            DNX_CFG_FSPATH   },
-      { "debugFile",          DNX_CFG_FSPATH   },
-      { "auditFile",          DNX_CFG_FSPATH   },
-      { "debugLevel",         DNX_CFG_UNSIGNED },
+      { "channelDispatcher",  DNX_CFG_URL,      &cfg.dispatcherUrl      },
+      { "channelCollector",   DNX_CFG_URL,      &cfg.collectorUrl       },
+      { "authWorkerNodes",    DNX_CFG_STRING,   &cfg.authWorkerNodes    },
+      { "maxNodeRequests",    DNX_CFG_UNSIGNED, &cfg.maxNodeRequests    },
+      { "minServiceSlots",    DNX_CFG_UNSIGNED, &cfg.minServiceSlots    },
+      { "expirePollInterval", DNX_CFG_UNSIGNED, &cfg.expirePollInterval },
+      { "localCheckPattern",  DNX_CFG_STRING,   &cfg.localCheckPattern  },
+      { "syncScript",         DNX_CFG_FSPATH,   &cfg.syncScript         },
+      { "logFile",            DNX_CFG_FSPATH,   &cfg.logFilePath        },
+      { "debugFile",          DNX_CFG_FSPATH,   &cfg.debugFilePath      },
+      { "auditFile",          DNX_CFG_FSPATH,   &cfg.auditFilePath      },
+      { "debugLevel",         DNX_CFG_UNSIGNED, &cfg.debugLevel         },
       { 0 },
    };
-   static char cfgdefs[] =
+   char cfgdefs[] =
       "channelDispatcher = udp://0:12480\n"
       "channelCollector = udp://0:12481\n"
       "maxNodeRequests = 0x7FFFFFFF\n"
@@ -189,48 +227,22 @@ static int initConfig(char * cfgfile)
       "logFile = /var/log/dnxsrv.log\n";
 
    int ret;
+   regex_t re;
+
+   // clear the regex string, as we may write into it
+   memset(&re, 0, sizeof re);
 
    // create global configuration parser object
-   if ((ret = dnxCfgParserCreate(cfgdefs, cfgfile, 0, dict, &parser)) != 0)
+   if ((ret = dnxCfgParserCreate(cfgdefs, cfgfile, 0, dict, 
+         validateCfg, &parser)) != 0)
       return ret;
 
    // parse configuration file; pass defaults
-   if ((ret = dnxCfgParserParse(parser, ppvals)) == 0)
-   {
-      int err;
+   if ((ret = dnxCfgParserParse(parser, &re)) == 0)
+      regEx = re;
+   else
+      dnxCfgParserDestroy(parser);
 
-      // clear the regex string, as we may write into it
-      memset(&regEx, 0, sizeof regEx);
-
-      // validate configuration items in context
-      ret = DNX_ERR_INVALID;
-      if (!cfg.dispatcherUrl)
-         dnxLog("config: Missing channelDispatcher parameter.");
-      else if (!cfg.collectorUrl)
-         dnxLog("config: Missing channelCollector parameter.");
-      else if (cfg.maxNodeRequests < 1)
-         dnxLog("config: Invalid maxNodeRequests parameter.");
-      else if (cfg.minServiceSlots < 1)
-         dnxLog("config: Invalid minServiceSlots parameter.");
-      else if (cfg.expirePollInterval < 1)
-         dnxLog("config: Invalid expirePollInterval parameter.");
-      else if (cfg.localCheckPattern
-            && (err = regcomp(&regEx, cfg.localCheckPattern, 
-                  REG_EXTENDED | REG_NOSUB)) != 0)
-      {
-         char buffer[128];
-         regerror(err, &regEx, buffer, sizeof(buffer));
-         dnxLog("config: Failed to compile localCheckPattern (\"%s\"): %s.", 
-                cfg.localCheckPattern, buffer);
-         regfree(&regEx);
-      }
-      else
-         ret = DNX_OK;
-   }
-
-   if (ret != DNX_OK)
-      dnxCfgParserFreeCfgValues(parser, ppvals);
-   
    return ret;
 }
 

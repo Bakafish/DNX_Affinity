@@ -90,7 +90,7 @@ typedef struct DnxCfgData
 // module statics
 static DnxCfgData s_cfg;         //!< The system configuration parameters.
 static DnxCfgParser * s_parser;  //!< The system configuration parser.
-static DnxWlm * s_wlm;           //!< The system worker thread pool.
+static DnxWlm * s_wlm = 0;       //!< The system worker thread pool.
 static DnxChannel * s_agent;     //!< The agent management channel.
 static char * s_progname;        //!< The base program name.
 static char * s_cfgfile;         //!< The system configuration file name.
@@ -101,34 +101,6 @@ static int s_shutdown = 0;       //!< The shutdown signal flag.
 static int s_reconfig = 0;       //!< The reconfigure signal flag.
 static int s_debugsig = 0;       //!< The debug toggle signal flag.
 static int s_lockfd = -1;        //!< The system PID file descriptor.
-
-/** The array of cfg variable addresses for the configuration parser. 
- *
- * The order of this array must be kept in sync with the order of the
- * dictionary with which it will be used.
- * 
- * @todo: Make this array position independent.
- */
-static void * s_ppvals[] =
-{
-   &s_cfg.channelAgent,
-   &s_cfg.logFilePath,
-   &s_cfg.debugFilePath,
-   &s_cfg.pluginPath,
-   &s_cfg.debugLevel,
-   &s_cfg.wlm.dispatcher,
-   &s_cfg.wlm.collector,
-   &s_cfg.wlm.poolInitial,
-   &s_cfg.wlm.poolMin,
-   &s_cfg.wlm.poolMax,
-   &s_cfg.wlm.poolGrow,
-   &s_cfg.wlm.pollInterval,
-   &s_cfg.wlm.shutdownGrace,
-   &s_cfg.wlm.reqTimeout,
-   &s_cfg.wlm.maxRetries,
-   &s_cfg.wlm.ttlBackoff,
-   &s_cfg.wlm.maxResults,
-};
 
 //----------------------------------------------------------------------------
 
@@ -282,37 +254,63 @@ static int getOptions(int argc, char ** argv)
 
 /** Validate a configuration data structure in context.
  * 
- * @param[in] pcfg - the configuration data structure to be validated.
+ * @param[in] dict - the dictionary used by the DnxCfgParser.
+ * @param[in] vptrs - an array of opaque objects (either pointers or values)
+ *    to be checked.
+ * @param[in] passthru - an opaque pointer passed through from 
+ *    dnxCfgParserCreate.
  * 
- * @return Zero on success, or a non-zero error value.
+ * @return Zero on success, or a non-zero error value. This error value is
+ * passed back through dnxCfgParserParse.
  */
-static int validateCfg(DnxCfgData * pcfg)
+static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
 {
-   if (!pcfg->wlm.dispatcher)
+   int ret = DNX_ERR_INVALID;
+   DnxCfgData cfg;
+
+   // setup data structure so we can use the same functionality we had before
+   cfg.channelAgent      = (char   *)vptrs[ 0];
+   cfg.logFilePath       = (char   *)vptrs[ 1];
+   cfg.debugFilePath     = (char   *)vptrs[ 2];
+   cfg.pluginPath        = (char   *)vptrs[ 3];
+   cfg.debugLevel        = (unsigned)vptrs[ 4];
+   cfg.wlm.dispatcher    = (char   *)vptrs[ 5];
+   cfg.wlm.collector     = (char   *)vptrs[ 6];
+   cfg.wlm.poolInitial   = (unsigned)vptrs[ 7];
+   cfg.wlm.poolMin       = (unsigned)vptrs[ 8];
+   cfg.wlm.poolMax       = (unsigned)vptrs[ 9];
+   cfg.wlm.poolGrow      = (unsigned)vptrs[10];
+   cfg.wlm.pollInterval  = (unsigned)vptrs[11];
+   cfg.wlm.shutdownGrace = (unsigned)vptrs[12];
+   cfg.wlm.reqTimeout    = (unsigned)vptrs[13];
+   cfg.wlm.maxRetries    = (unsigned)vptrs[14];
+   cfg.wlm.ttlBackoff    = (unsigned)vptrs[15];
+   cfg.wlm.maxResults    = (unsigned)vptrs[16];
+
+   if (!cfg.wlm.dispatcher)
       dnxLog("config: Missing channelDispatcher parameter.");
-   else if (!pcfg->wlm.collector)
+   else if (!cfg.wlm.collector)
       dnxLog("config: Missing channelCollector parameter.");
-   if (pcfg->wlm.poolInitial < 1 || pcfg->wlm.poolInitial > pcfg->wlm.poolMax)
+   if (cfg.wlm.poolInitial < 1 || cfg.wlm.poolInitial > cfg.wlm.poolMax)
       dnxLog("config: Invalid poolInitial parameter.");
-   else if (pcfg->wlm.poolMin < 1 || pcfg->wlm.poolMin > pcfg->wlm.poolMax)
+   else if (cfg.wlm.poolMin < 1 || cfg.wlm.poolMin > cfg.wlm.poolMax)
       dnxLog("config: Invalid poolMin parameter.");
-   else if (pcfg->wlm.poolGrow < 1 || pcfg->wlm.poolGrow >= pcfg->wlm.poolMax)
+   else if (cfg.wlm.poolGrow < 1 || cfg.wlm.poolGrow >= cfg.wlm.poolMax)
       dnxLog("config: Invalid poolGrow parameter.");
-   else if (pcfg->wlm.pollInterval < 1)
+   else if (cfg.wlm.pollInterval < 1)
       dnxLog("config: Invalid wlmPollInterval parameter.");
-   else if (pcfg->wlm.shutdownGrace < 0)
+   else if (cfg.wlm.shutdownGrace < 0)
       dnxLog("config: Invalid wlmShutdownGracePeriod parameter.");
-   else if (pcfg->wlm.reqTimeout < 1 
-         || pcfg->wlm.reqTimeout <= pcfg->wlm.ttlBackoff)
+   else if (cfg.wlm.reqTimeout < 1 || cfg.wlm.reqTimeout <= cfg.wlm.ttlBackoff)
       dnxLog("config: Invalid threadRequestTimeout parameter.");
-   else if (pcfg->wlm.ttlBackoff >= pcfg->wlm.reqTimeout)
+   else if (cfg.wlm.ttlBackoff >= cfg.wlm.reqTimeout)
       dnxLog("config: Invalid threadTtlBackoff parameter.");
-   else if (pcfg->wlm.maxResults < 1024)
+   else if (cfg.wlm.maxResults < 1024)
       dnxLog("config: Invalid maxResultBuffer parameter.");
    else
-      return 0;
+      ret = s_wlm? dnxWlmReconfigure(s_wlm, &cfg.wlm): 0;
 
-   return DNX_ERR_INVALID;
+   return ret;
 }
 
 //----------------------------------------------------------------------------
@@ -320,7 +318,6 @@ static int validateCfg(DnxCfgData * pcfg)
 /** Cleanup the config file parser. */
 static void releaseConfig(void) 
 {
-   dnxCfgParserFreeCfgValues(s_parser, s_ppvals);
    dnxCfgParserDestroy(s_parser);
    xfree(s_cmdover);
 }
@@ -334,28 +331,28 @@ static void releaseConfig(void)
  */
 static int initConfig(char * cfgfile)
 {
-   static DnxCfgDict dict[] = 
+   DnxCfgDict dict[] = 
    {
-      { "channelAgent",           DNX_CFG_URL      },
-      { "logFile",                DNX_CFG_FSPATH   },
-      { "debugFile",              DNX_CFG_FSPATH   },
-      { "pluginPath",             DNX_CFG_FSPATH   },
-      { "debugLevel",             DNX_CFG_UNSIGNED },
-      { "channelDispatcher",      DNX_CFG_URL      },
-      { "channelCollector",       DNX_CFG_URL      },
-      { "poolInitial",            DNX_CFG_UNSIGNED },
-      { "poolMin",                DNX_CFG_UNSIGNED },
-      { "poolMax",                DNX_CFG_UNSIGNED },
-      { "poolGrow",               DNX_CFG_UNSIGNED },
-      { "wlmPollInterval",        DNX_CFG_UNSIGNED },
-      { "wlmShutdownGracePeriod", DNX_CFG_UNSIGNED },
-      { "threadRequestTimeout",   DNX_CFG_UNSIGNED },
-      { "threadMaxRetries",       DNX_CFG_UNSIGNED },
-      { "threadTtlBackoff",       DNX_CFG_UNSIGNED },
-      { "maxResultBuffer",        DNX_CFG_UNSIGNED },
+      { "channelAgent",           DNX_CFG_URL,      &s_cfg.channelAgent      },
+      { "logFile",                DNX_CFG_FSPATH,   &s_cfg.logFilePath       },
+      { "debugFile",              DNX_CFG_FSPATH,   &s_cfg.debugFilePath     },
+      { "pluginPath",             DNX_CFG_FSPATH,   &s_cfg.pluginPath        },
+      { "debugLevel",             DNX_CFG_UNSIGNED, &s_cfg.debugLevel        },
+      { "channelDispatcher",      DNX_CFG_URL,      &s_cfg.wlm.dispatcher    },
+      { "channelCollector",       DNX_CFG_URL,      &s_cfg.wlm.collector     },
+      { "poolInitial",            DNX_CFG_UNSIGNED, &s_cfg.wlm.poolInitial   },
+      { "poolMin",                DNX_CFG_UNSIGNED, &s_cfg.wlm.poolMin       },
+      { "poolMax",                DNX_CFG_UNSIGNED, &s_cfg.wlm.poolMax       },
+      { "poolGrow",               DNX_CFG_UNSIGNED, &s_cfg.wlm.poolGrow      },
+      { "wlmPollInterval",        DNX_CFG_UNSIGNED, &s_cfg.wlm.pollInterval  },
+      { "wlmShutdownGracePeriod", DNX_CFG_UNSIGNED, &s_cfg.wlm.shutdownGrace },
+      { "threadRequestTimeout",   DNX_CFG_UNSIGNED, &s_cfg.wlm.reqTimeout    },
+      { "threadMaxRetries",       DNX_CFG_UNSIGNED, &s_cfg.wlm.maxRetries    },
+      { "threadTtlBackoff",       DNX_CFG_UNSIGNED, &s_cfg.wlm.ttlBackoff    },
+      { "maxResultBuffer",        DNX_CFG_UNSIGNED, &s_cfg.wlm.maxResults    },
       { 0 },
    };
-   static char cfgdefs[] = 
+   char cfgdefs[] = 
       "channelAgent = udp://0:12480\n"
       "poolInitial = 20\n"
       "poolMin = 20\n"
@@ -374,12 +371,11 @@ static int initConfig(char * cfgfile)
 
    // create global configuration parser object
    if ((ret = dnxCfgParserCreate(cfgdefs, s_cfgfile, s_cmdover, dict, 
-         &s_parser)) != 0)
+         validateCfg, &s_parser)) != 0)
       return ret;
 
    // parse config file
-   if ((ret = dnxCfgParserParse(s_parser, s_ppvals)) != 0
-         || (ret = validateCfg(&s_cfg)) != 0)
+   if ((ret = dnxCfgParserParse(s_parser, 0)) != 0)
       releaseConfig();
 
    return ret;
@@ -752,42 +748,13 @@ static int processCommands(void)
 
       if (s_reconfig)
       {
-         static DnxCfgData tmp_cfg;
-         static void * tmp_ppvals[] =
-         {
-            &tmp_cfg.channelAgent,
-            &tmp_cfg.logFilePath,
-            &tmp_cfg.debugFilePath,
-            &tmp_cfg.pluginPath,
-            &tmp_cfg.debugLevel,
-            &tmp_cfg.wlm.dispatcher,
-            &tmp_cfg.wlm.collector,
-            &tmp_cfg.wlm.poolInitial,
-            &tmp_cfg.wlm.poolMin,
-            &tmp_cfg.wlm.poolMax,
-            &tmp_cfg.wlm.poolGrow,
-            &tmp_cfg.wlm.pollInterval,
-            &tmp_cfg.wlm.shutdownGrace,
-            &tmp_cfg.wlm.reqTimeout,
-            &tmp_cfg.wlm.maxRetries,
-            &tmp_cfg.wlm.ttlBackoff,
-            &tmp_cfg.wlm.maxResults,
-         };
+         DnxCfgData old = s_cfg;
 
          dnxLog("Agent received RECONFIGURE request. Reconfiguring...");
 
          // reparse config file into temporary cfg structure and validate
-         if ((ret = dnxCfgParserParse(s_parser, tmp_ppvals)) == 0
-               && (ret = validateCfg(&tmp_cfg)) != 0)
-            dnxCfgParserFreeCfgValues(s_parser, tmp_ppvals);
-         else if ((ret = dnxWlmReconfigure(s_wlm, &tmp_cfg.wlm)) == 0)
-         {
-            // reconfigure completed successfully - log diffs; 
-            //    free old values and reassign to new values.
-            logGblConfigChanges(&s_cfg, &tmp_cfg);
-            dnxCfgParserFreeCfgValues(s_parser, s_ppvals);
-            s_cfg = tmp_cfg;
-         }
+         if ((ret = dnxCfgParserParse(s_parser, 0)) == 0)
+             logGblConfigChanges(&old, &s_cfg);
          dnxLog("Reconfiguration: %s.", dnxErrorString(ret));
          s_reconfig = 0;
       }
