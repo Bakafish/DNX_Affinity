@@ -141,6 +141,7 @@ echo "  DNX client group is '${dnx_group}'."
 echo
 echo "  Path prefix is '${prefix}'."
 echo "  Data directory is '${datadir}'."
+echo "  Config directory is '${sysconfdir}'."
 echo "  Client run path is '${sysrunpath}'."
 echo "  Local state directory is '${localstatedir}'."
 echo "  System init directory is '${initrddir}'."

@@ -25,23 +25,14 @@ install-initscript: dnxcld.generic-init dnxcld.init
 	fi
 	$(LN_S) -f @initrddir@/dnxcld $(DESTDIR)@sbindir@/rcdnxcld
 
-# Install sample config files
+# Install *sample* config files
 install-cfg: install-clientcfg install-servercfg
 
-install-clientcfg: install-clientcfg-nochown
-	chown @dnx_user@:@dnx_group@ $(DESTDIR)@sysconfdir@/dnxClient.cfg
-
-install-servercfg: install-servercfg-nochown
-	chown @nagios_user@:@nagios_group@ $(DESTDIR)@sysconfdir@/dnxServer.cfg
-
-# RPM support targets - rpmbuild doesn't like targets that chown things
-install-cfg-nochown: install-clientcfg-nochown install-servercfg-nochown
-
-install-clientcfg-nochown: dnxClient.cfg
+install-clientcfg: dnxClient.cfg
 	$(mkdir_p) $(DESTDIR)@sysconfdir@
 	$(INSTALL_DATA) dnxClient.cfg $(DESTDIR)@sysconfdir@/dnxClient.cfg
 
-install-servercfg-nochown: dnxServer.cfg
+install-servercfg: dnxServer.cfg
 	$(mkdir_p) $(DESTDIR)@sysconfdir@
 	$(INSTALL_DATA) dnxServer.cfg $(DESTDIR)@sysconfdir@/dnxServer.cfg
 
@@ -60,6 +51,7 @@ dnxClient.cfg dnxServer.cfg: Makefile
 	mv $@.tmp $@
 
 dnxcld.init: $(srcdir)/dnxcld.init.in
+dnxcld.generic-init: $(srcdir)/dnxcld.generic-init.in
 dnxClient.cfg: $(srcdir)/dnxClient.cfg.in
 dnxServer.cfg: $(srcdir)/dnxServer.cfg.in
 
