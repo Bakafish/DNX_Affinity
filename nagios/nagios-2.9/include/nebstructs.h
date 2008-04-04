@@ -168,6 +168,7 @@ typedef struct nebstruct_service_check_struct{
 	int             return_code;
 	char            *output;
 	char            *perf_data;
+	void            *object;
         }nebstruct_service_check_data;
 
 

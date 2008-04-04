@@ -14,6 +14,14 @@ AC_PROG_MAKE_SET
 AC_CHECK_PROG(DOXYGEN_INSTALLED, doxygen, yes)
 AM_CONDITIONAL(DO_DOXYGEN, [test x$DOXYGEN_INSTALLED = xyes])
 
+AC_ARG_WITH([nagios-2_9],
+            [AS_HELP_STRING([--with-nagios-2_9],
+              [build against nagios 2.9 header files (default: 2.7)])],
+            [nagios_target=2.9],
+            [nagios_target=2.7])
+
+AC_SUBST(nagios_target)
+
 # Checks for libraries.
 AC_CHECK_LIB([pthread], [pthread_create])
 

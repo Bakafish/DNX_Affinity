@@ -1,3 +1,5 @@
+THE NAGIOS INCLUDE DIRECTORY
+----------------------------
 This directory contains information external to, but required by the dnx 
 project build system. Prior to 2.10, nagios did not provide a devel package
 for popular Linux distros, so the required header files were not available
@@ -17,3 +19,25 @@ gain the most functionality from dnx. In future releases, these patches have
 been or will be incorporated into the mainline nagios source. We hope that 
 beyond 2.10/3.0, there will no longer be a need for any patch files for the
 sake of dnx.
+
+APPLYING A NAGIOS DNX PATCH
+---------------------------
+To apply a patch file, unpack the corresponding distribution (eg., nagios-2.7),
+change into the root of the unpack directory and run the following command:
+
+$ patch -p1 <nagios-2.7-dnx.patch
+
+with appropriate changes for your environment. Then build the patched version
+of nagios as usual (eg., ./configure; make nagios).
+
+BUIDLING DNX AGAINST NAGIOS HEADERS
+-----------------------------------
+To build dnx against a particular version of nagios header files found in 
+this directory structure use the --with-nagios-2_x command line option with
+the dnx configure script:
+
+$ ./configure --with-nagios-2_9
+$ make
+
+The default action is to build against  nagios 2.7 header files.
+ 

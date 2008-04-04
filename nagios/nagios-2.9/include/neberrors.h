@@ -50,6 +50,7 @@
 #define NEBERROR_CALLBACKNOTFOUND   203     /* the callback could not be found */
 #define NEBERROR_NOMODULEHANDLE     204     /* no module handle specified */
 #define NEBERROR_BADMODULEHANDLE    205     /* bad module handle */
+#define NEBERROR_CALLBACKOVERRIDE   206     /* callback overrides Nagios handling of event */
 
 
 

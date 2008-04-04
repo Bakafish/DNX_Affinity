@@ -24,7 +24,7 @@ dnxServer_la_SOURCES =\
 
 INCLUDES =\
  -I$(top_srcdir)/common\
- -I$(top_srcdir)/nagios/nagios-2.7/include
+ -I$(top_srcdir)/nagios/nagios-@nagios_target@/include
 
 dnxServer_la_LIBADD = ../common/libcmn.la
 
