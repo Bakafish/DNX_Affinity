@@ -67,6 +67,12 @@
 # define SYSCONFDIR "/etc"
 #endif
 
+#ifndef SYSRUNPATH
+# define SYSRUNPATH "/var/run"
+#endif
+
+#define DNX_DEFAULT_RUN_PATH SYSRUNPATH
+
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
 #define DNX_DEFAULT_NODE_CONFIG_FILE   SYSCONFDIR "/dnxClient.cfg"
@@ -88,6 +94,7 @@ static DnxWlm * s_wlm;           //!< The system worker thread pool.
 static DnxChannel * s_agent;     //!< The agent management channel.
 static char * s_progname;        //!< The base program name.
 static char * s_cfgfile;         //!< The system configuration file name.
+static char * s_runpath = 0;     //!< The system pid/lock file path.
 static char * s_cmdover = 0;     //!< The command line overrides string.
 static int s_dbgflag = 0;        //!< The system debug flag.
 static int s_shutdown = 0;       //!< The shutdown signal flag.
@@ -125,31 +132,34 @@ static void * s_ppvals[] =
 
 //----------------------------------------------------------------------------
 
-/** Display program usage text to STDERR and exit with an error.
+/** Display program usage text to STDERR and exit with an error. 
+ * 
+ * @param[in] base - the base file name of this program.
  */
-static void usage(void)
+static void usage(char * base)
 {
-   fprintf(stderr, "\nUsage: %s [options]", s_progname);
+   fprintf(stderr, "\nUsage: %s [options]", base);
    fprintf(stderr, "\nWhere [options] are:\n");
-   fprintf(stderr, "   -c, --cfgfile <file>    specify the location of the config file.\n");
-   fprintf(stderr, "   -l, --logfile <file>    specify the location of the log file.\n");
-   fprintf(stderr, "   -D, --dbgfile <file>    specify the location of the debug log file.\n");
+   fprintf(stderr, "   -c, --cfgfile <file>    specify the file and path of the config file.\n");
+   fprintf(stderr, "   -l, --logfile <file>    specify the file and path of the log file.\n");
+   fprintf(stderr, "   -D, --dbgfile <file>    specify the file and path of the debug log file.\n");
    fprintf(stderr, "   -g, --dbglevel <value>  specify the level of debugging output.\n");
    fprintf(stderr, "   -d, --debug             enable debug mode (will not become a daemon).\n");
+   fprintf(stderr, "   -r, --runpath <path>    specify the path of the lock/pid file.\n");
    fprintf(stderr, "   -v, --version           display DNX client version and exit.\n");
    fprintf(stderr, "   -h, --help              display this help screen and exit.\n\n");
-   exit(1);
 }
 
 //----------------------------------------------------------------------------
 
-/** Display program version information to STDOUT and exit successfully.
+/** Display program version information to STDOUT and exit successfully. 
+ * 
+ * @param[in] base - the base file name of this program.
  */
-static void version(void)
+static void version(char * base)
 {
    printf("\n  %s version %s\n  Bug reports: %s.\n\n", 
-         s_progname, VERSION, PACKAGE_BUGREPORT);
-   exit(0);
+         base, VERSION, PACKAGE_BUGREPORT);
 }
 
 //----------------------------------------------------------------------------
@@ -192,14 +202,16 @@ static void appendString(char ** spp, char * fmt, ... )
  * 
  * @param[in] argc - the number of elements in the @p argv array.
  * @param[in] argv - a null-terminated array of command-line arguments.
+ * 
+ * @return Zero on success, or a non-zero error value.
  */
-static void getOptions(int argc, char ** argv)
+static int getOptions(int argc, char ** argv)
 {
 // extern int optind;
    extern char * optarg;
    extern int opterr, optopt;
 
-   static char opts[] = "c:dg:l:D:vh";
+   static char opts[] = "c:dr:g:l:D:vh";
    static struct option longopts[] = 
    {
       { "cfgfile",  required_argument, 0, 'c' },
@@ -207,15 +219,20 @@ static void getOptions(int argc, char ** argv)
       { "dbgfile",  required_argument, 0, 'D' },
       { "dbglevel", required_argument, 0, 'g' },
       { "debug",    no_argument,       0, 'd' },
+      { "runpath",  required_argument, 0, 'r' },
       { "version",  no_argument,       0, 'v' },
       { "help",     no_argument,       0, 'h' },
       { 0, 0, 0, 0 },
    };
 
    int ch;
+   char * cp;
    char * logfile = 0;
    char * dbgfile = 0;
    char * dbglvl = 0;
+
+   // set program base name
+   s_progname = (char *)((cp = strrchr(argv[0], '/')) != 0 ? (cp + 1) : argv[0]);
 
    opterr = 0; /* Disable error messages */
 
@@ -223,31 +240,23 @@ static void getOptions(int argc, char ** argv)
    {
       switch (ch)
       {
-         case 'c':
-            s_cfgfile = optarg;
-            break;
-         case 'd':
-            s_dbgflag = 1;
-            break;
-         case 'g':
-            dbglvl = optarg;
-            break;
-         case 'l':
-            logfile = optarg;
-            break;
-         case 'D':
-            dbgfile = optarg;
-            break;
-         case 'v':
-            version();
-            break;
+         case 'c': s_cfgfile = optarg; break;
+         case 'd': s_dbgflag = 1;      break;
+         case 'r': s_runpath = optarg; break;
+         case 'g': dbglvl    = optarg; break;
+         case 'l': logfile   = optarg; break;
+         case 'D': dbgfile   = optarg; break;
+         case 'v': version(s_progname); exit(0);
          case 'h':
-         default:
-            usage();
+         default : return usage(s_progname), -1;
       }
    }
+
    if (!s_cfgfile)
       s_cfgfile = DNX_DEFAULT_NODE_CONFIG_FILE;
+
+   if (!s_runpath)
+      s_runpath = DNX_DEFAULT_RUN_PATH;
 
    if (s_dbgflag)
       appendString(&s_cmdover, "logFile=STDOUT\ndebugFile=STDOUT\n");
@@ -260,6 +269,8 @@ static void getOptions(int argc, char ** argv)
 
    if (dbglvl)
       appendString(&s_cmdover, "debugLevel=%s\n", dbglvl);
+
+   return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -313,9 +324,10 @@ static void releaseConfig(void)
 
 /** Read and parse the dnxClient configuration file.
  * 
+ * @param[in] cfgfile - the configuration file to use.
  * @return Zero on success, or a non-zero error value.
  */
-static int initConfig(void)
+static int initConfig(char * cfgfile)
 {
    static DnxCfgDict dict[] = 
    {
@@ -447,7 +459,7 @@ static int createPidFile(char * base)
    char szPid[32];
 
    // create lock-file name
-   sprintf(lockFile, "/var/run/%s.pid", base);
+   sprintf(lockFile, "%s/%s.pid", s_runpath, base);
 
    // open the lock file
    if ((s_lockfd = open(lockFile, O_RDWR | O_CREAT, 0644)) < 0)
@@ -489,7 +501,7 @@ static void removePidFile(char * base)
    char lockFile[1024];
 
    // create lock-file name
-   sprintf(lockFile, "/var/run/%s.pid", base);
+   sprintf(lockFile, "%s/%s.pid", s_runpath, base);
 
    // remove the lock file - we do this before closing it in order to prevent
    //    race conditions between the closing and removing operations.
@@ -501,16 +513,21 @@ static void removePidFile(char * base)
 
 //----------------------------------------------------------------------------
 
-/** Turn this process into a daemon. */
-static void daemonize(void)
+/** Turn this process into a daemon. 
+ * 
+ * @param[in] base - the base file name of this program.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int daemonize(char * base)
 {
    int pid, fd;
 
    // fork to allow parent process to exit
    if ((pid = fork()) < 0)
    {
-      dnxLog("Failed to fork process: %s.", strerror(errno));
-      exit(1);
+      dnxLog("Failed 1st fork: %s.", strerror(errno));
+      return -1;
    }
    else if (pid != 0)
       exit(0);
@@ -521,8 +538,8 @@ static void daemonize(void)
    // fork again to allow process group leader to exit
    if ((pid = fork()) < 0)
    {
-      dnxLog("Failed to fork process: %s.", strerror(errno));
-      exit(1);
+      dnxLog("Failed 2nd fork: %s.", strerror(errno));
+      return -1;
    }
    else if (pid != 0)
       exit(0);
@@ -540,8 +557,10 @@ static void daemonize(void)
    dup2(fd, 2);
 
    // create pid file
-   if (createPidFile(s_progname) != 0)
-      exit(1);
+   if (createPidFile(base) != 0)
+      return -1;
+
+   return 0;   // continue execution as a daemon
 }
 
 /** Log changes between old and new global configuration data sets.
@@ -681,26 +700,19 @@ static int processCommands(void)
  */
 int main(int argc, char ** argv)
 {
-   char * cp;
    int ret;
 
-   // set program base name
-   s_progname = (char *)((cp = strrchr(argv[0], '/')) != 0 ? (cp + 1) : argv[0]);
-
-   // parse command line options
-   getOptions(argc, argv);
-
-   // parse configuration file into global configuration data structure
-   if ((ret = initConfig()) != DNX_OK)
-      return ret;
+   // parse command line options; read configuration file
+   if ((ret = getOptions(argc, argv)) != DNX_OK
+         || (ret = initConfig(s_cfgfile)) != DNX_OK)
+      goto e0;
 
    // initialize the logging subsystem with configured settings
    if ((ret = dnxLogInit(s_cfg.logFilePath, s_cfg.debugFilePath, 0,
          &s_cfg.debugLevel)) != 0)
    {
-      dnxLog("Failed to initialize system/debug/audit logging: %s.", 
-            dnxErrorString(ret));
-      goto e0;
+      dnxLog("Failed to initialize logging: %s.", dnxErrorString(ret));
+      goto e1;
    }
 
    dnxLog("-------- DNX Client Daemon Version %s Startup --------", VERSION);
@@ -717,7 +729,7 @@ int main(int argc, char ** argv)
    if ((ret = dnxPluginInit(s_cfg.pluginPath)) != DNX_OK)
    {
       dnxLog("Plugin init failed: %s.", dnxErrorString(ret));
-      goto e0;
+      goto e1;
    }
 
    // install signal handlers
@@ -731,20 +743,21 @@ int main(int argc, char ** argv)
    signal(SIGUSR1, sighandler);
    signal(SIGUSR2, SIG_IGN);
 
-   // daemonize
-   if (!s_dbgflag) daemonize();
+   // daemonize if not running in debug mode
+   if (!s_dbgflag && (ret = daemonize(s_progname)) != 0)
+      goto e2;
 
    // initialize the communications stack
    if ((ret = initClientComm()) != DNX_OK)
    {
       dnxLog("Communications init failed: %s.", dnxErrorString(ret));
-      goto e1;
+      goto e3;
    }
 
    if ((ret = dnxWlmCreate(&s_cfg.wlm, &s_wlm)) != 0)
    {
       dnxLog("Thread pool init failed: %s.", dnxErrorString(ret));
-      goto e2;
+      goto e4;
    }
 
    //----------------------------------------------------------------------
@@ -754,11 +767,11 @@ int main(int argc, char ** argv)
    dnxDebug(1, "Command-loop exited: %s.", dnxErrorString(ret));
 
    dnxWlmDestroy(s_wlm);
-e2:releaseClientComm();
-e1:removePidFile(s_progname);
-   dnxPluginRelease();
-e0:releaseConfig();
-
+e4:releaseClientComm();
+e3:removePidFile(s_progname);
+e2:dnxPluginRelease();
+e1:releaseConfig();
+e0:
    xheapchk();    // works when debug heap is compiled in
 
    dnxLog("-------- DNX Client Daemon Shutdown Complete --------");

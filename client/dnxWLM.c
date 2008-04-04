@@ -754,9 +754,11 @@ void dnxWlmDestroy(DnxWlm * wlm)
    DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
    DNX_PT_MUTEX_DESTROY(&iwlm->mutex);
 
-   dnxLog("WLM: Termination sequence complete.");
-
+   xfree(iwlm->cfg.dispatcher);
+   xfree(iwlm->cfg.collector);
    xfree(iwlm);
+
+   dnxLog("WLM: Termination sequence complete.");
 }
 
 /*--------------------------------------------------------------------------*/
