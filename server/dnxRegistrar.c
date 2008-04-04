@@ -192,7 +192,6 @@ static int dnxProcessNodeRequest(iDnxRegistrar * ireg)
 
    if ((pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg)) == NULL)
       return DNX_ERR_MEMORY;
-   dnxDebug(10, "dnxProcessNodeRequest: Malloc(pMsg=%p)", pMsg);
 
    // Wait on the dispatch socket for a request
    if ((ret = dnxWaitForNodeRequest(ireg->dispchan, pMsg, pMsg->address, 
@@ -214,14 +213,10 @@ static int dnxProcessNodeRequest(iDnxRegistrar * ireg)
                                "unsupported request type: %d", pMsg->reqType);
       }
    }
-
    if (ret != DNX_OK)
    {
       if (ret == DNX_ERR_TIMEOUT)
-         ret = DNX_OK;  // Timeout is OK in this instance
-
-      // Free message struct if things didn't work out
-      dnxDebug(10, "dnxProcessNodeRequest: Free(pMsg=%p)", pMsg);
+         ret = DNX_OK;     // Timeout is OK in this instance
       xfree(pMsg);
    }
    return ret;

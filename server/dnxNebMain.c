@@ -395,9 +395,7 @@ static int ehSvcCheck(int event_type, void * data)
    if (svcdata->type != NEBTYPE_SERVICECHECK_INITIATE)
       return OK;  // Ignore non-initialization events
 
-#if 0
    dnxDebug(5, "ehSvcCheck: Received Service Check Init event");
-#endif
 
    // See if this job should be executed locally.
    //

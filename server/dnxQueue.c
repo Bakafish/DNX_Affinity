@@ -77,8 +77,6 @@ int dnxQueuePut(DnxQueue * queue, void * pPayload)
    if ((item = (iDnxQueueEntry *)xmalloc(sizeof *item)) == NULL)
       return DNX_ERR_MEMORY;
    
-   dnxDebug(10, "dnxQueuePut: Malloc(item=%p, pPayload=%p)", item, pPayload);
-   
    item->pPayload = pPayload;
    item->next = NULL;
    
@@ -113,12 +111,8 @@ int dnxQueuePut(DnxQueue * queue, void * pPayload)
        * with the payload. Then we can call the payload destructor.
        */
       if (item->pPayload)
-      {
-         dnxDebug(10, "dnxQueuePut: Free(item->pPayload=%p)", item->pPayload);
          xfree(item->pPayload);
-      }
 
-      dnxDebug(10, "dnxQueuePut: Free(item=%p)", item);
       xfree(item);
    }
    
@@ -171,7 +165,6 @@ int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
    if (item) 
    {
       *ppPayload = item->pPayload;
-      dnxDebug(10, "dnxQueueGet: Free(item=%p, *ppPayload=%p)", item, *ppPayload);
       xfree(item);
       return DNX_OK;
    }
@@ -234,10 +227,8 @@ DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload,
    DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
 
    if (bFound == DNX_QRES_FOUND)
-   {
-      dnxDebug(10, "dnxQueueRemove: Free(item=%p)", item);
       xfree(item);       // free the queue entry wrapper object
-   }
+
    return bFound;
 }
 
@@ -292,7 +283,6 @@ int dnxQueueGetWait(DnxQueue * queue, void ** ppPayload)
    if (item) 
    {
       *ppPayload = item->pPayload;
-      dnxDebug(10, "dnxQueueGetWait: Free(item=%p, *ppPayload=%p)", item, *ppPayload);
       xfree(item);
       return DNX_OK;
    }
@@ -425,8 +415,6 @@ int dnxQueueCreate(int max_size, DnxQueue ** pqueue)
    if ((iqueue = (iDnxQueue *)xmalloc(sizeof *iqueue)) == NULL)
       return DNX_ERR_MEMORY;
    
-   dnxDebug(10, "dnxQueueInit: Malloc(*ppQueue=%p)", iqueue);
-   
    // initialize queue
    iqueue->head = NULL;
    iqueue->tail = NULL;
@@ -474,7 +462,6 @@ void dnxQueueDestroy(DnxQueue * queue)
    DNX_PT_MUTEX_DESTROY(&iqueue->mutex);
    pthread_cond_destroy(&iqueue->cv);
 
-   dnxDebug(10, "dnxQueueDelete: Free(queue=%p)", iqueue);
    xfree(iqueue);
 }
 

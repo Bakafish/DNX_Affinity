@@ -5,6 +5,7 @@ noinst_HEADERS =\
  dnxConfig.h\
  dnxDebug.h\
  dnxError.h\
+ dnxHeap.h\
  dnxLogging.h\
  dnxMsgQ.h\
  dnxProtocol.h\
@@ -16,6 +17,7 @@ noinst_HEADERS =\
 
 libcmn_la_SOURCES =\
  dnxError.c\
+ dnxHeap.c\
  dnxMsgQ.c\
  dnxProtocol.c\
  dnxTcp.c\

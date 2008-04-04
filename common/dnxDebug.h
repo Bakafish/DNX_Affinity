@@ -25,8 +25,8 @@
  * @ingroup DNX_COMMON_IFC
  */
 
-#ifndef _DXDEBUG_H_
-#define _DXDEBUG_H_
+#ifndef _DNXDEBUG_H_
+#define _DNXDEBUG_H_
 
 #include "dnxLogging.h"
 
@@ -99,5 +99,5 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
 # define xfree          free
 #endif
 
-#endif   /* !?_DXDEBUG_H_ */
+#endif   /* !?_DNXDEBUG_H_ */
 
