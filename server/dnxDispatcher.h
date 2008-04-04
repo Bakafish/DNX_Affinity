@@ -17,21 +17,25 @@
  
   --------------------------------------------------------------------------*/
 
-/** Prototypes and definitions for the DNX Timer thread.
+/** Implements the DNX Job List mechanism.
  *
- * @file dstimer.h
+ * The purpose of this thread is to dispatch service check jobs to the
+ * registered worker nodes for execution.  It accomplishes this by
+ * accepting work node registrations and then dispatching service check
+ * jobs to registered worker nodes using a weighted-round-robin algorithm.
+ * The algorithm's weighting is based upon the number of jobs-per-second
+ * throughput rating of each worker node.
+ *
+ * @file dnxDispatcher.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
 
-#ifndef _DSTIMER_H_
-#define _DSTIMER_H_
+#ifndef _DNXDISPATCHER_H_
+#define _DNXDISPATCHER_H_
 
-#include "dsjoblist.h"
+void *dnxDispatcher (void *data);
 
-int dnxTimerInit(DnxJobList * jobList);
-void dnxTimerExit(void);
-
-#endif   /* _DSTIMER_H_ */
+#endif   /* _DNXDISPATCHER_H_ */
 

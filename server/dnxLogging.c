@@ -17,7 +17,7 @@
  
   --------------------------------------------------------------------------*/
 
-/** Implements the DNX Client logging functions.
+/** Implements the DNX Server logging functions.
  *
  * @file dnxLogging.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
@@ -26,11 +26,8 @@
  */
 
 #include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
-#include <syslog.h>
 
-#include "dnxClientMain.h"
+#include "dnxNebMain.h"
 #include "dnxError.h"
 #include "dnxLogging.h"
 
@@ -38,6 +35,37 @@
 
 extern DnxGlobalData dnxGlobalData;		// Private module data
 
+/*--------------------------------------------------------------------------*/
+
+#if 0
+// Variadic logging function - wrapper for NEB logging function
+int nebLog (char *fmt, ...)
+{
+	va_list ap;
+	char sbuf[MAX_LOG_LINE+1];
+
+	// Validate input parameters
+	if (!fmt)
+		return DNX_ERR_INVALID;
+
+	// See if we need formatting
+	if (strchr(fmt, '%'))
+	{
+		// Format the string
+		va_start(ap, fmt);
+		vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
+		va_end(ap);
+	}
+	else
+		strncpy(sbuf, fmt, MAX_LOG_LINE);
+	sbuf[MAX_LOG_LINE] = '\0';
+
+	// Publish the results (TODO: Need to make this thread-safe...)
+	write_to_all_logs(sbuf, NSLOG_INFO_MESSAGE);
+
+	return DNX_OK;
+}
+#endif
 
 /*--------------------------------------------------------------------------*/
 

@@ -17,7 +17,7 @@
  
   --------------------------------------------------------------------------*/
 
-/** Parses DNX Worker Node config file.
+/** Parses DNX Server config file.
  *
  * @file dnxConfig.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
@@ -33,7 +33,8 @@
 #include "dnxError.h"
 #include "dnxChannel.h"
 #include "dnxConfig.h"
-#include "dnxClientMain.h"
+#include "dnxNebMain.h"
+#include "dnxLogging.h"
 
 #define DNX_MAX_CFG_LINE	2048
 
@@ -48,21 +49,16 @@ typedef struct _DnxVarMap_ {
 extern DnxGlobalData dnxGlobalData;
 
 static DnxVarMap DnxVarDictionary[] = {
-{ "channelAgent",         DNX_VAR_STR, NULL },
 { "channelDispatcher",    DNX_VAR_STR, NULL },
 { "channelCollector",     DNX_VAR_STR, NULL },
-{ "poolInitial",          DNX_VAR_INT, NULL },
-{ "poolMin",              DNX_VAR_INT, NULL },
-{ "poolMax",              DNX_VAR_INT, NULL },
-{ "poolGrow",             DNX_VAR_INT, NULL },
-{ "wlmPollInterval",      DNX_VAR_INT, NULL },
-{ "wlmShutdownGracePeriod", DNX_VAR_INT, NULL },
-{ "threadRequestTimeout", DNX_VAR_INT, NULL },
-{ "threadMaxTimeouts",    DNX_VAR_INT, NULL },
-{ "threadTtlBackoff",     DNX_VAR_INT, NULL },
+{ "authWorkerNodes",      DNX_VAR_STR, NULL },
+{ "maxNodeRequests",      DNX_VAR_INT, NULL },
+{ "minServiceSlots",      DNX_VAR_INT, NULL },
+{ "expirePollInterval",   DNX_VAR_INT, NULL },
+{ "localCheckPattern",    DNX_VAR_STR, NULL },
+{ "syncScript",           DNX_VAR_STR, NULL },
 { "logFacility",          DNX_VAR_STR, NULL },
-{ "pluginPath",           DNX_VAR_STR, NULL },
-{ "maxResultBuffer",      DNX_VAR_INT, NULL },
+{ "auditWorkerJobs",      DNX_VAR_STR, NULL },
 { "debug",                DNX_VAR_INT, NULL },
 { NULL, DNX_VAR_ERR, NULL }
 };
@@ -78,22 +74,17 @@ int strTrim (char *szLine);
 void initGlobals (void)
 {
 	// 'cause C doesn't allow non-constant initializers in static structures
-	DnxVarDictionary[ 0].varStorage = &(dnxGlobalData.channelAgent);
-	DnxVarDictionary[ 1].varStorage = &(dnxGlobalData.channelDispatcher);
-	DnxVarDictionary[ 2].varStorage = &(dnxGlobalData.channelCollector);
-	DnxVarDictionary[ 3].varStorage = &(dnxGlobalData.poolInitial);
-	DnxVarDictionary[ 4].varStorage = &(dnxGlobalData.poolMin);
-	DnxVarDictionary[ 5].varStorage = &(dnxGlobalData.poolMax);
-	DnxVarDictionary[ 6].varStorage = &(dnxGlobalData.poolGrow);
-	DnxVarDictionary[ 7].varStorage = &(dnxGlobalData.wlmPollInterval);
-	DnxVarDictionary[ 8].varStorage = &(dnxGlobalData.wlmShutdownGracePeriod);
-	DnxVarDictionary[ 9].varStorage = &(dnxGlobalData.threadRequestTimeout);
-	DnxVarDictionary[10].varStorage = &(dnxGlobalData.threadMaxTimeouts);
-	DnxVarDictionary[11].varStorage = &(dnxGlobalData.threadTtlBackoff);
-	DnxVarDictionary[12].varStorage = &(dnxGlobalData.logFacility);
-	DnxVarDictionary[13].varStorage = &(dnxGlobalData.pluginPath);
-	DnxVarDictionary[14].varStorage = &(dnxGlobalData.maxResultBuffer);
-	DnxVarDictionary[15].varStorage = &(dnxGlobalData.debug);
+	DnxVarDictionary[ 0].varStorage = &(dnxGlobalData.channelDispatcher);
+	DnxVarDictionary[ 1].varStorage = &(dnxGlobalData.channelCollector);
+	DnxVarDictionary[ 2].varStorage = &(dnxGlobalData.authWorkerNodes);
+	DnxVarDictionary[ 3].varStorage = &(dnxGlobalData.maxNodeRequests);
+	DnxVarDictionary[ 4].varStorage = &(dnxGlobalData.minServiceSlots);
+	DnxVarDictionary[ 5].varStorage = &(dnxGlobalData.expirePollInterval);
+	DnxVarDictionary[ 6].varStorage = &(dnxGlobalData.localCheckPattern);
+	DnxVarDictionary[ 7].varStorage = &(dnxGlobalData.syncScript);
+	DnxVarDictionary[ 8].varStorage = &(dnxGlobalData.logFacility);
+	DnxVarDictionary[ 9].varStorage = &(dnxGlobalData.auditWorkerJobs);
+	DnxVarDictionary[10].varStorage = &(dnxGlobalData.debug);
 }
 
 //----------------------------------------------------------------------------
@@ -103,7 +94,7 @@ void displayGlobals (char *title)
 	static char *varFormat[] = { "ERROR", "%s", "%ld", "%f" };
 	DnxVarMap *pMap;
 
-	// Display title, is specified
+	// Display title, if specified
 	if (title)
 		puts(title);
 
@@ -154,7 +145,7 @@ int parseFile (char *szFile)
 	}
 	else
 	{
-		fprintf(stderr, "readCfg: Unable to open %s: %s\n", szFile, strerror(errno));
+		dnxSyslog(LOG_ERR, "readCfg: Unable to open %s: %s", szFile, strerror(errno));
 		ret = 2;
 	}
 
@@ -182,7 +173,7 @@ int parseLine (char *szFile, int lineNo, char *szLine)
 	// Look for equivalence delimiter
 	if ((cp = strchr(szLine, '=')) == NULL)
 	{
-		fprintf(stderr, "parseLine: Missing '=' equivalence operator\n");
+		dnxSyslog(LOG_ERR, "parseLine: Missing '=' equivalence operator");
 		return 1;	// Parse error: no delimiter
 	}
 	*cp++ = '\0';
@@ -190,14 +181,14 @@ int parseLine (char *szFile, int lineNo, char *szLine)
 	for (szVar = szLine; *szVar && *szVar <= ' '; szVar++);
 	if (strTrim(szVar) < 1)
 	{
-		fprintf(stderr, "%s: Line %d: Missing or invalid variable\n", szFile, lineNo);
+		dnxSyslog(LOG_ERR, "%s: Line %d: Missing or invalid variable", szFile, lineNo);
 		return 1;
 	}
 
 	for (szVal = cp; *szVal && *szVal <= ' '; szVal++);
 	if (strTrim(szVal) < 1)
 	{
-		fprintf(stderr, "%s: Line %d: Missing or invalid assignment value\n", szFile, lineNo);
+		dnxSyslog(LOG_ERR, "%s: Line %d: Missing or invalid assignment value", szFile, lineNo);
 		return 1;
 	}
 
@@ -216,7 +207,7 @@ int validateVariable (char *szVar, char *szVal)
 	// Validate input paramters
 	if (!szVar || !szVal)
 	{
-		fprintf(stderr, "validateVariable: null parameter(s)\n");
+		dnxSyslog(LOG_ERR, "validateVariable: null parameter(s)");
 		return 1;
 	}
 
@@ -234,7 +225,7 @@ int validateVariable (char *szVar, char *szVal)
 		*((long *)(pMap->varStorage)) = strtol(szVal, &eptr, 0);
 		if (*eptr || errno)
 		{
-			fprintf(stderr, "Invalid integer value for %s: %s\n", szVar, szVal);
+			dnxSyslog(LOG_ERR, "Invalid integer value for %s: %s", szVar, szVal);
 			ret = 1;
 		}
 		break;
@@ -243,12 +234,12 @@ int validateVariable (char *szVar, char *szVal)
 		*((double *)(pMap->varStorage)) = strtod(szVal, &eptr);
 		if (*eptr || errno)
 		{
-			fprintf(stderr, "Invalid double value for %s: %s\n", szVar, szVal);
+			dnxSyslog(LOG_ERR, "Invalid double value for %s: %s", szVar, szVal);
 			ret = 1;
 		}
 		break;
 	default:
-		fprintf(stderr, "Unknown variable: %s\n", szVar);
+		dnxSyslog(LOG_ERR, "Unknown variable: %s", szVar);
 		ret = 1;
 	}
 

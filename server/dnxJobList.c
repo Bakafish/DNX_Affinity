@@ -19,22 +19,17 @@
 
 /** Implements the DNX Job List mechanism.
  *
- * @file dsjoblist.c
+ * @file dnxJobList.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
 
-#include "dsjoblist.h"
-
-#include "dsaudit.h"
-
+#include "dnxJobList.h"
 #include "dnxLogging.h"
 #include "dnxError.h"
 #include "dnxDebug.h"
 
-
-static int auditingEnabled;   /*!< Is job auditing enabled? */
 
 /** Add a new job to a job list.
  *
@@ -275,82 +270,6 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob)
 }
 
 
-/** Post a new job to a job list.
- * 
- * @param[in] jobList - the list to which a new job should be posted.
- * @param[in] serial - the serial number of the new job.
- * @param[in] ds - the Nabios object representing the job.
- * @param[in] pNode - the request node to be assigned to the job.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int dnxPostNewJob (DnxJobList * jobList, unsigned long serial, nebstruct_service_check_data * ds, DnxNodeRequest * pNode)
-{
-   service * svc;
-   DnxNewJob Job;
-   int ret;
-
-   // Obtain a pointer to the Nagios service definition structure
-#ifdef DNX_EMBEDDED_SVC_OBJECT
-   if ((svc = (service *)(ds->object)) == NULL)
-#else
-   if ((svc = find_service(ds->host_name, ds->service_description)) == NULL)
-#endif
-   {
-      // ERROR - This should never happen here: The service was not found.
-      dnxSyslog(LOG_ERR, "dnxPostNewJob: Could not find service %s for host %s",
-         ds->service_description, ds->host_name);
-      return DNX_ERR_INVALID;
-   }
-
-   // Fill-in the job structure with the necessary information
-   dnxMakeGuid(&(Job.guid), DNX_OBJ_JOB, serial, 0);
-   Job.svc        = svc;
-   Job.cmd        = strdup(ds->command_line);
-   Job.start_time = ds->start_time.tv_sec;
-   Job.timeout    = ds->timeout;
-   Job.expires    = Job.start_time + Job.timeout;
-   Job.pNode      = pNode;
-
-   dnxDebug(1, "DnxNebMain: Posting Job %lu: %s", serial, Job.cmd);
-
-   // Post to the Job Queue
-   if ((ret = dnxJobListAdd(jobList, &Job)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "dnxPostNewJob: Failed to post Job \"%s\": %d", Job.cmd, ret);
-
-   // Worker Audit Logging
-   dsAuditJob(&Job, "ASSIGN");
-
-   return ret;
-}
-
-
-/** Delete all resources (memory) specific to a given job.
- * 
- * @param[in] pJob - the job to be deleted.
- */
-void dnxJobCleanup (DnxNewJob * pJob)
-{
-   if (pJob)
-   {
-      // Free the Pending Job command string
-      if (pJob->cmd)
-      {
-         free(pJob->cmd);
-         pJob->cmd = NULL;
-      }
-
-      // Free the node request message
-      dnxDebug(10, "dnxJobCleanup: Free(pNode=%p)", pJob->pNode);
-      if (pJob->pNode)
-      {
-         free(pJob->pNode);
-         pJob->pNode = NULL;
-      }
-   }
-}
-
-
 /** Initialize a new JobList object.
  *
  * This routine is invoked by the DNX NEB module's initialization routine to 
@@ -434,6 +353,4 @@ void dnxJobListExit(DnxJobList ** ppJobList)
 
    *ppJobList = NULL;
 }
-
-/*-------------------------------------------------------------------------*/
 

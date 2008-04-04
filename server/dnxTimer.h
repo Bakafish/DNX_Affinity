@@ -17,19 +17,21 @@
  
   --------------------------------------------------------------------------*/
 
-/** Definitions and prototypes for managing DNX server config file.
+/** Prototypes and definitions for the DNX Timer thread.
  *
- * @file dsconfig.h
+ * @file dnxTimer.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
 
-#ifndef _DSCONFIG_H_
-#define _DSCONFIG_H_
+#ifndef _DNXTIMER_H_
+#define _DNXTIMER_H_
 
-void initGlobals(void);
-int parseFile(char * szFile);
+#include "dnxJobList.h"
 
-#endif   /* _DSCONFIG_H_ */
+int dnxTimerInit(DnxJobList * jobList);
+void dnxTimerExit(void);
+
+#endif   /* _DNXTIMER_H_ */
 

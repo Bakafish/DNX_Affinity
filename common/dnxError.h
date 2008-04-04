@@ -28,31 +28,31 @@
 #ifndef _DNXERROR_H_
 #define _DNXERROR_H_
 
-#define MAX_ERR_STR        1023
+#define MAX_ERR_STR			1023
 
-#define DNX_OK          0  // A-OK, Okey-Dokey, Rock-On
+#define DNX_OK				0	// A-OK, Okey-Dokey, Rock-On
 
-#define DNX_ERR_INVALID    1  // Invalid arguments or parameters
-#define  DNX_ERR_CAPACITY  2  // Out of channel slots or XML buffer space
-#define DNX_ERR_BADURL     3  // Invalid, malformed URL
-#define DNX_ERR_ALREADY    4  // Already init or deinit
-#define DNX_ERR_EXIST      5  // Channel already exists
-#define DNX_ERR_UNSUPPORTED   6  // Unsupported protocol
-#define DNX_ERR_MEMORY     7  // Out of memory
-#define DNX_ERR_OPEN    8  // Channel open error
-#define DNX_ERR_SIZE    9  // Message size is out of bounds
-#define DNX_ERR_SEND    10 // Message transmission failure
-#define DNX_ERR_RECEIVE    11 // Message reception failure
-#define DNX_ERR_ADDRESS    12 // Invalid communications address
-#define DNX_ERR_NOTFOUND   13 // Requested resource was not found
-#define DNX_ERR_SYNTAX     14 // Incorrect/invalid XML message
-#define DNX_ERR_THREAD     15 // Thread error
-#define DNX_ERR_TIMEOUT    16 // Timeout
-#define DNX_ERR_BUSY    17 // Resource is busy
+#define DNX_ERR_INVALID		1	// Invalid arguments or parameters
+#define	DNX_ERR_CAPACITY	2	// Out of channel slots or XML buffer space
+#define DNX_ERR_BADURL		3	// Invalid, malformed URL
+#define DNX_ERR_ALREADY		4	// Already init or deinit
+#define DNX_ERR_EXIST		5	// Channel already exists
+#define DNX_ERR_UNSUPPORTED	6	// Unsupported protocol
+#define DNX_ERR_MEMORY		7	// Out of memory
+#define DNX_ERR_OPEN		8	// Channel open error
+#define DNX_ERR_SIZE		9	// Message size is out of bounds
+#define DNX_ERR_SEND		10	// Message transmission failure
+#define DNX_ERR_RECEIVE		11	// Message reception failure
+#define DNX_ERR_ADDRESS		12	// Invalid communications address
+#define DNX_ERR_NOTFOUND	13	// Requested resource was not found
+#define DNX_ERR_SYNTAX		14	// Incorrect/invalid XML message
+#define DNX_ERR_THREAD		15	// Thread error
+#define DNX_ERR_TIMEOUT		16	// Timeout
+#define DNX_ERR_BUSY		17	// Resource is busy
 
-#define DNX_ERR_LASTERROR  17
+#define DNX_ERR_LASTERROR	17
 
-typedef int dnxError;
+typedef int	dnxError;
 
 
 dnxError dnxGetLastError (void);

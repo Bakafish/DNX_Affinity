@@ -29,22 +29,22 @@
 #define _DNXWLM_H_
 
 //
-// Constants
+//	Constants
 //
 
 
 //
-// Structures
+//	Structures
 //
 
 
 //
-// Globals
+//	Globals
 //
 
 
 //
-// Prototypes
+//	Prototypes
 //
 
 void *dnxWLM (void *data);

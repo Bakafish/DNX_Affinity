@@ -31,13 +31,13 @@
 // Obtain definitions of dnxChanType, dnxChanMap and dnxChannel
 #include "dnxChannel.h"
 
-#define DNX_MAX_CHAN_MAP   1000
+#define DNX_MAX_CHAN_MAP	1000
 
 typedef struct _dnxChanMap_ {
-   char *name;       // Channel name, as read from configuration file
-   char *url;        // Channel connection specification
-   dnxChanType type;    // Channel type: which transport to use
-   int (*txAlloc) (dnxChannel **channel, char *url);  // Transport's channel factory
+	char *name;			// Channel name, as read from configuration file
+	char *url;			// Channel connection specification
+	dnxChanType	type; 	// Channel type: which transport to use
+	int (*txAlloc) (dnxChannel **channel, char *url);	// Transport's channel factory
 } dnxChanMap;
 
 int dnxChanMapInit (char *fileName);

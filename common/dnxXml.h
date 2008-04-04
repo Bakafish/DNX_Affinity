@@ -34,20 +34,20 @@
 #include "dnxProtocol.h"
 
 typedef enum _DnxXmlMsg_ {
-   DNX_XML_UNKNOWN = 0,
-   DNX_XML_SHORT,
-   DNX_XML_USHORT,
-   DNX_XML_INT,
-   DNX_XML_UINT,
-   DNX_XML_LONG,
-   DNX_XML_ULONG,
-   DNX_XML_STR,
-   DNX_XML_GUID
+	DNX_XML_UNKNOWN = 0,
+	DNX_XML_SHORT,
+	DNX_XML_USHORT,
+	DNX_XML_INT,
+	DNX_XML_UINT,
+	DNX_XML_LONG,
+	DNX_XML_ULONG,
+	DNX_XML_STR,
+	DNX_XML_GUID
 } DnxXmlType;
 
 typedef struct _DnxXmlBuf_ {
-   char buf[DNX_MAX_MSG];
-   unsigned size;
+	char buf[DNX_MAX_MSG];
+	unsigned size;
 } DnxXmlBuf;
 
 

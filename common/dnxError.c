@@ -27,28 +27,28 @@
 
 #include "dnxError.h"
 
-static dnxError gLastError = DNX_OK;      // Last known error code
+static dnxError gLastError = DNX_OK;		// Last known error code
 
 #if 0
-static char gLastErrStr[MAX_ERR_STR+1];      // Last error message
+static char gLastErrStr[MAX_ERR_STR+1];		// Last error message
 #endif
 
 static char * gErrCatalog[] = {
-   "A-OK, Okey-Dokey, Rock-On",
-   "Invalid arguments or parameters",
-   "Resource is exhausted",
-   "Invalid or malformed URL",
-   "Resource is already initialized/deinitialized",
-   "Resource already exists",
-   "Unsupported protocol",
-   "Out of memory",
-   "Channel open error",
-   "Message size is out of bounds",
-   "Message transmission failure",
-   "Message reception failure",
-   "Invalid communications address",
-   "Requested resource was not found",
-   "Incorrect or invalid XML message"
+	"A-OK, Okey-Dokey, Rock-On",
+	"Invalid arguments or parameters",
+	"Resource is exhausted",
+	"Invalid or malformed URL",
+	"Resource is already initialized/deinitialized",
+	"Resource already exists",
+	"Unsupported protocol",
+	"Out of memory",
+	"Channel open error",
+	"Message size is out of bounds",
+	"Message transmission failure",
+	"Message reception failure",
+	"Invalid communications address",
+	"Requested resource was not found",
+	"Incorrect or invalid XML message"
 };
 
 // TODO: Create mechanism for preserving error stack details
@@ -57,20 +57,20 @@ static char * gErrCatalog[] = {
 
 dnxError dnxGetLastError (void)
 {
-   return gLastError;
+	return gLastError;
 }
 
 //----------------------------------------------------------------------------
 
 void dnxSetLastError (dnxError errno)
 {
-   gLastError = errno;
+	gLastError = errno;
 }
 
 //----------------------------------------------------------------------------
 
 char *dnxErrorString (dnxError errno)
 {
-   return (char *)((errno < 0 || errno > DNX_ERR_LASTERROR) ? "Unknown error code" : gErrCatalog[errno]);
+	return (char *)((errno < 0 || errno > DNX_ERR_LASTERROR) ? "Unknown error code" : gErrCatalog[errno]);
 }
 

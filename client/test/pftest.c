@@ -39,46 +39,45 @@
 
 int main (int argc, char **argv)
 {
-   PFILE *pf;
-   int i;
-   char data[1024];
+	PFILE *pf;
+	int i;
+	char data[1024];
 
-   // Identify ourself and parentage
-   printf("Before PFOPEN: Pid=%d, PGrp=%d, PPid=%d\n", getpid(), getpgrp(), getppid());
-   fflush(stdout);
+	// Identify ourself and parentage
+	printf("Before PFOPEN: Pid=%d, PGrp=%d, PPid=%d\n", getpid(), getpgrp(), getppid());
+	fflush(stdout);
 
-   // pfopen
-   if ((pf = pfopen("pgrp", "r")) == NULL)
-   {
-      fprintf(stderr, "Main: pfopen failed: %s\n", strerror(errno));
-      exit(1);
-   }
+	// pfopen
+	if ((pf = pfopen("pgrp", "r")) == NULL)
+	{
+		fprintf(stderr, "Main: pfopen failed: %s\n", strerror(errno));
+		exit(1);
+	}
 
-   // Read child output
-   printf("Child Output:\n");
-   fflush(stdout);
-   i = 0;
-   while (i < 2 && fgets(data, sizeof(data), PF_OUT(pf)) != NULL)
-   {
-      printf("%s", data);
-      i++;
-   }
-   printf("*** END of child output ***\n");
-   fflush(stdout);
+	// Read child output
+	printf("Child Output:\n");
+	fflush(stdout);
+	i = 0;
+	while (i < 2 && fgets(data, sizeof(data), PF_OUT(pf)) != NULL)
+	{
+		printf("%s", data);
+		i++;
+	}
+	printf("*** END of child output ***\n");
+	fflush(stdout);
 
-   // Terminate child process
-   printf("Sending group term signal to child process group\n");
-   fflush(stdout);
-   pfkill(pf, SIGTERM);
-   
-   // Close pipe to child process
-   printf("Closing connection to child process\n");
-   fflush(stdout);
-   pfclose(pf);
+	// Terminate child process
+	printf("Sending group term signal to child process group\n");
+	fflush(stdout);
+	pfkill(pf, SIGTERM);
+	
+	// Close pipe to child process
+	printf("Closing connection to child process\n");
+	fflush(stdout);
+	pfclose(pf);
 
-   printf("SUCCESS\n");
-   fflush(stdout);
+	printf("SUCCESS\n");
+	fflush(stdout);
 
-   exit(0);
+	exit(0);
 }
-

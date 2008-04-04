@@ -29,22 +29,22 @@
 #define _DNXWORKER_H_
 
 //
-// Constants
+//	Constants
 //
 
 
 //
-// Structures
+//	Structures
 //
 
 
 //
-// Globals
+//	Globals
 //
 
 
 //
-// Prototypes
+//	Prototypes
 //
 
 void *dnxWorker (void *data);
