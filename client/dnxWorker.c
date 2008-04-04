@@ -34,6 +34,7 @@
 
 #include "dnxWorker.h"
 
+#include "dnxError.h"
 #include "dnxClientMain.h"
 #include "dnxTransport.h"
 #include "dnxProtocol.h"

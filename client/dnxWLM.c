@@ -34,6 +34,7 @@
 
 #include "dnxWLM.h"
 
+#include "dnxError.h"
 #include "dnxClientMain.h"
 #include "dnxWorker.h"
 

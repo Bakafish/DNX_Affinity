@@ -28,6 +28,8 @@
 #ifndef _DNXMAIN_H_
 #define _DNXMAIN_H_
 
+#include "dnxChannel.h"
+
 #include <sys/types.h>
 #include <sys/time.h>
 #include <pthread.h>
