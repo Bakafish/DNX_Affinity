@@ -70,7 +70,7 @@ char * dnxErrorString(dnxError eno)
       "Message reception failure",
       "Invalid communications address",
       "Resource was not found",
-      "Incorrect or invalid XML message",
+      "Incorrect or invalid text",
       "Threading error",
       "Timeout error",
       "Resource is busy",

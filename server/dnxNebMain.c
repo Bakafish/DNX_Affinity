@@ -69,12 +69,7 @@
 
 #define DNX_EMBEDDED_SVC_OBJECT        1
 
-// default configuration values
 #define DNX_DEFAULT_SERVER_CONFIG_FILE SYSCONFDIR "/dnxServer.cfg"
-#define DNX_DEFAULT_MAX_NODE_REQUESTS  0x7FFFFFFF
-#define DNX_DEFAULT_MIN_SERVICE_SLOTS  100
-#define DNX_DEFAULT_EXPIRE_POLL_INT    5
-#define DNX_DEFAULT_LOG_FACILITY       "LOG_LOCAL7"
 
 // specify event broker API version (required)
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);
@@ -82,33 +77,75 @@ NEB_API_VERSION(CURRENT_NEB_API_VERSION);
 /** The internal server module configuration data structure. */
 typedef struct DnxServerCfg
 {
-   char * dispatcherUrl;
-   char * collectorUrl;
-   char * authWorkerNodes;
-   unsigned maxNodeRequests;  // Maximum number of node requests we will accept
-   unsigned minServiceSlots;  // Minimum number of node requests we will accept
-   unsigned expirePollInterval;
-   char * localCheckPattern;
-   char * syncScript;
-   char * logFacility;
-   char * auditWorkerJobs;
-   unsigned debug;
+   char * dispatcherUrl;            //!< The dispatcher channel URL.
+   char * collectorUrl;             //!< The collector channel URL.
+   char * authWorkerNodes;          //!< The authorized worker node address list.
+   unsigned maxNodeRequests;        //!< The maximum acceptable node requests.
+   unsigned minServiceSlots;        //!< The minimum acceptable node requests.
+   unsigned expirePollInterval;     //!< The job expiration timer check interval.
+   char * localCheckPattern;        //!< The regular expression for local jobs.
+   char * syncScript;               //!< The sync script path and file name.
+   char * logFacility;              //!< The syslog logging facility string.
+   char * auditWorkerJobs;          //!< The syslog audit facility string.
+   unsigned debugLevel;             //!< The global debug level.
 } DnxServerCfg;
 
 // module static data
-static DnxJobList * joblist;        // The master job list
-static DnxRegistrar * registrar;    // The client node registrar.
-static DnxDispatcher * dispatcher;  // The job list dispatcher.
-static DnxCollector * collector;    // The job list results collector.
-static time_t start_time;           // The module start time
-static void * myHandle;             // Private NEB module handle
-static regex_t regEx;               // Compiled regular expression structure
-static DnxServerCfg cfg;            // The server configuration parameters
-static DnxCfgParser * cfgParser;    // The configuration file parser. 
+static DnxServerCfg cfg;            //!< The server configuration parameters.
+static DnxJobList * joblist;        //!< The master job list.
+static DnxRegistrar * registrar;    //!< The client node registrar.
+static DnxDispatcher * dispatcher;  //!< The job list dispatcher.
+static DnxCollector * collector;    //!< The job list results collector.
+static time_t start_time;           //!< The module start time.
+static void * myHandle;             //!< Private NEB module handle.
+static regex_t regEx;               //!< Compiled regular expression structure.
+static int dnxLogFacility;          //!< The syslog logging facility code.
+static int auditLogFacility;        //!< The syslog audit facility code.
 
-/** @todo These should be combined into config data. */
-static int dnxLogFacility;          // DNX syslog facility
-static int auditLogFacility;        // Worker audit syslog facility
+/** The system default configuration parameters. */
+static char * cfgdefs[] =
+{
+   "channelDispatcher   = udp://0:12480",
+   "channelCollector    = udp://0:12481",
+   "maxNodeRequests     = 0x7FFFFFFF",
+   "minServiceSlots     = 100",
+   "expirePollInterval  = 5",
+   "logFacility         = LOG_LOCAL7",
+   0,
+};
+
+/** The configuration parser dictionary. */
+static DnxCfgDict dict[] = 
+{
+   { "channelDispatcher",   DNX_CFG_URL      },
+   { "channelCollector",    DNX_CFG_URL      },
+   { "authWorkerNodes",     DNX_CFG_STRING   },
+   { "maxNodeRequests",     DNX_CFG_UNSIGNED },
+   { "minServiceSlots",     DNX_CFG_UNSIGNED },
+   { "expirePollInterval",  DNX_CFG_UNSIGNED },
+   { "localCheckPattern",   DNX_CFG_STRING   },
+   { "syncScript",          DNX_CFG_FSPATH   },
+   { "logFacility",         DNX_CFG_STRING   },
+   { "auditWorkerJobs",     DNX_CFG_STRING   },
+   { "debugLevel",          DNX_CFG_UNSIGNED },
+   { 0 },
+};
+
+/** The array of cfg variable addresses for the configuration parser. */
+static void * ppvals[] =
+{
+   &cfg.dispatcherUrl,
+   &cfg.collectorUrl,
+   &cfg.authWorkerNodes,
+   &cfg.maxNodeRequests,
+   &cfg.minServiceSlots,
+   &cfg.expirePollInterval,
+   &cfg.localCheckPattern,
+   &cfg.syncScript,
+   &cfg.logFacility,
+   &cfg.auditWorkerJobs,
+   &cfg.debugLevel,
+};
 
 /*--------------------------------------------------------------------------
                               IMPLEMENTATION
@@ -154,36 +191,15 @@ static int verifyFacility(char * szFacility, int * nFacility)
  */
 static int initConfig(char * ConfigFile)
 {
-   static DnxCfgDictionary dict[] = 
-   {
-      {"channelDispatcher",   DNX_CFG_URL,      &cfg.dispatcherUrl      },
-      {"channelCollector",    DNX_CFG_URL,      &cfg.collectorUrl       },
-      {"authWorkerNodes",     DNX_CFG_STRING,   &cfg.authWorkerNodes    },
-      {"maxNodeRequests",     DNX_CFG_UNSIGNED, &cfg.maxNodeRequests    },
-      {"minServiceSlots",     DNX_CFG_UNSIGNED, &cfg.minServiceSlots    },
-      {"expirePollInterval",  DNX_CFG_UNSIGNED, &cfg.expirePollInterval },
-      {"localCheckPattern",   DNX_CFG_STRING,   &cfg.localCheckPattern  },
-      {"syncScript",          DNX_CFG_FSPATH,   &cfg.syncScript         },
-      {"logFacility",         DNX_CFG_STRING,   &cfg.logFacility        },
-      {"auditWorkerJobs",     DNX_CFG_STRING,   &cfg.auditWorkerJobs    },
-      {"debug",               DNX_CFG_UNSIGNED, &cfg.debug              },
-   };
    int ret;
 
-   // set configuration defaults - don't forget to allocate strings
-   memset(&cfg, 0, sizeof cfg);
-   cfg.logFacility         = xstrdup(DNX_DEFAULT_LOG_FACILITY);
-   cfg.maxNodeRequests     = DNX_DEFAULT_MAX_NODE_REQUESTS;
-   cfg.minServiceSlots     = DNX_DEFAULT_MIN_SERVICE_SLOTS;
-   cfg.expirePollInterval  = DNX_DEFAULT_EXPIRE_POLL_INT;
-
-   if ((ret = dnxCfgParserCreate(ConfigFile, 
-         dict, elemcount(dict), 0, 0, &cfgParser)) != 0)
-      return ret;
-
-   if ((ret = dnxCfgParserParse(cfgParser)) == 0)
+   // parse configuration file; pass defaults
+   if ((ret = dnxParseCfgFile(ConfigFile, cfgdefs, dict, ppvals)) == 0)
    {
       int err;
+
+      // clear the regex string, as we may write into it
+      memset(&regEx, 0, sizeof regEx);
 
       // validate configuration items in context
       ret = DNX_ERR_INVALID;
@@ -220,15 +236,21 @@ static int initConfig(char * ConfigFile)
    }
 
    if (ret != DNX_OK)
-      dnxCfgParserDestroy(cfgParser);
+      dnxFreeCfgValues(dict, ppvals);
    
    return ret;
 }
 
 //----------------------------------------------------------------------------
 
-/** Release the configuration parser object. */
-void releaseConfig(void) { dnxCfgParserDestroy(cfgParser); }
+/** Cleanup the config file parser. */
+void releaseConfig(void) 
+{
+   if (cfg.localCheckPattern)
+      regfree(&regEx);
+
+   dnxFreeCfgValues(dict, ppvals);
+}
 
 //----------------------------------------------------------------------------
 
@@ -501,9 +523,6 @@ static int dnxServerDeInit(void)
    if (joblist)
       dnxJobListDestroy(joblist);
 
-   if (cfg.localCheckPattern)
-      regfree(&regEx);
-
    // it doesn't matter if we haven't initialized the
    // channel map - it can figure that out for itself
    dnxChanMapRelease();
@@ -768,11 +787,9 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
                          "Defaulting to %s", args);
    }
 
-   verifyFacility(DNX_DEFAULT_LOG_FACILITY, &dnxLogFacility);
+   // temporarily set defaults so initConfig has somewhere to write
+   dnxLogFacility = LOG_LOCAL7;
    auditLogFacility = 0;
-
-   memset(&regEx, 0, sizeof regEx);
-
    if ((ret = initConfig(args)) != 0)
    {
       dnxSyslog(LOG_ERR, "dnxServer: Failed to load configuration: %d", ret);
@@ -780,7 +797,7 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
    }
 
    // set configured debug level and syslog log facility code
-   initLogging(&cfg.debug, &dnxLogFacility);
+   initLogging(&cfg.debugLevel, &dnxLogFacility);
 
    // subscribe to PROCESS_DATA call-backs in order to defer initialization
    //    until after Nagios validates its configuration and environment.

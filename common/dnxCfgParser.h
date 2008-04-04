@@ -30,97 +30,103 @@
 
 #include <stddef.h>
 
-/** An enumeration of data types that the config parser understands. 
+/** An enumeration of data types that the configuration parser understands. 
  * 
  * The comment after each type in the enumeration describes the data type
- * that should be passed in the void * data element of the DnxCfgDictionary
- * array passed by the user. The address of an object of the specified type
- * should be passed in the data element of the structure. Some of these 
- * variables are allocated, and others are simple direct storage. If the 
- * type is defined as the address of a pointer type, the space is allocated
- * by the configuration system. If the type is defined as the address of 
- * an object, then the object is not allocated.
+ * that should be passed as a void pointer in the corresponding element of 
+ * the @em ppvals parameters of the functions defined below.
  * 
- * Strings and string arrays are null-terminated. The first element of 
- * integer arrays indicates the size of the array following.
+ * The syntax is clearly not strictly conformant to C language syntax. For
+ * example (&char*) indicates that the address of a character pointer should
+ * be passed. Strict C language syntax would be more like (char**), but this 
+ * syntax is ambiguous. It could mean that a variable defined as char ** is
+ * passed by value, or that a variable of type char * is passed by address.
  * 
- * Allocated memory is freed when the DnxCfgParser object is deleted.
+ * The addresses of pointer types (eg., &char*) are returned as references to 
+ * allocated heap blocks, while the addresses of integral types are returned 
+ * by value as objects.
+ * 
+ * Strings, string arrays and pointer arrays are null-terminated. The first 
+ * element of integer arrays is the size of the remaining array of values.
+ * 
+ * Allocated memory may be freed by calling dnxCfgFreeValues.
  */
 typedef enum DnxCfgType
 {
-   DNX_CFG_STRING = 0,        /*!< Text string - data: &char* */
-   DNX_CFG_INT,               /*!< Signed integer - data: &int */
-   DNX_CFG_INT_ARRAY,         /*!< Comma-delimited array - data: &int* */
-   DNX_CFG_UNSIGNED,          /*!< Unsigned integer - data: &unsigned */
-   DNX_CFG_UNSIGNED_ARRAY,    /*!< Comma-delimited array - data: &unsigned* */
-   DNX_CFG_ADDR,              /*!< Address or DNS name - data: &struct sockaddr* */
-   DNX_CFG_ADDR_ARRAY,        /*!< Comma-delimited array - data: &struct sockaddr** */
-   DNX_CFG_URL,               /*!< URL - data: &char* */
-   DNX_CFG_FSPATH,            /*!< File system path - data: &char* */
+   DNX_CFG_STRING,            //!< Text string (&char*).
+   DNX_CFG_STRING_ARRAY,      //!< String array; comma-delimited (&char**).
+   DNX_CFG_INT,               //!< Signed integer (&int).
+   DNX_CFG_INT_ARRAY,         //!< Comma-delimited array (&int*).
+   DNX_CFG_UNSIGNED,          //!< Unsigned integer (&unsigned).
+   DNX_CFG_UNSIGNED_ARRAY,    //!< Comma-delimited array (&unsigned*).
+   DNX_CFG_ADDR,              //!< Address or DNS name (&struct sockaddr*).
+   DNX_CFG_ADDR_ARRAY,        //!< Comma-delimited array (&struct sockaddr**).
+   DNX_CFG_URL,               //!< URL (&char*).
+   DNX_CFG_FSPATH,            //!< File system path (&char*).
 } DnxCfgType;
 
-/** An array of these structures defines a users configuration database. */
-typedef struct DnxCfgDictionary
+/** An array of these structures defines a user's configuration variables. */
+typedef struct DnxCfgDict
 {
-   char * varname;            /*!< The string name of the variable. */
-   DnxCfgType type;           /*!< The type of the variable. */
-   void * data;               /*!< The address of storage for the parsed value. */
-} DnxCfgDictionary;
+   char * varname;            //!< The string name of the variable.
+   DnxCfgType type;           //!< The type of the variable.
+} DnxCfgDict;
 
-/** An opaque type for the DNX configuration parser object. */
-typedef struct { int unused; } DnxCfgParser;
-
-/** Create and initialize a DNX configuration parser object.
+/** Parse a configuration file into a value array.
  * 
- * A configuration parser object is used to read and parse a specified 
- * configuration file, using a user-provided configuration variable dictionary
- * to validate and convert the string values into true data types.
+ * A configuration parser is used to read and parse a specified configuration 
+ * file using a user-provided configuration variable dictionary to validate 
+ * and convert the string values into usable data values.
  * 
- * The user-supplied @p errhandler function is called for all parse and 
- * validation errors. The @p errhandler routine takes four parameters; an 
- * integer error code, an integer line number, a context buffer, and a caller-
- * specific opaque data pointer. The line number and buffer represent the 
- * problem location and some context in @p cfgfile.
+ * A null-terminated array of pointers to configuration strings containing 
+ * default values may optionally be passed in the @p cfgdefs parameter. The 
+ * @p cfgdefs array strings contain configuration file entries that should be 
+ * parsed before the actual file is parsed. Thus, configuration file entries 
+ * override default array entries.
  * 
- * The @p errhandler parameter is optional; the caller may pass NULL. If this 
- * parameter is omitted, the parser will stop at the first parse or validation
- * error. If it is NOT omitted, the parser will attempt to recover and continue
- * parsing and calling the @p errhandler routine for each additional error
- * discovered.
+ * Depending on the type of the data value, the @p ppvals array will either
+ * return the value, or the address of allocated storage containing the value.
+ * If the internal type of the value (defined in the comment following the 
+ * dnx config value type enumeration entry) is, for example, &int, then the 
+ * config value is set by value; if the type is, say &char*, then, the config
+ * value is allocated and returned by reference.
  * 
  * @param[in] cfgfile - the path name of the config file to be parsed.
- * @param[in] dict - a static array of DnxCfgDictionary objects, each of which 
- *    defines a valid configuration variable name and type for this parser,
- *    as well as storage for either the parsed value or a pointer to allocated
- *    storage for the parsed value.
- * @param[in] dictsz - the number of elements in the @p dict array.
- * @param[in] errhandler - the error handler routine called on parse and
- *    validation errors. This parameter is optional - the caller may pass NULL.
- * @param[in] data - an opaque pointer passed through to the client error 
- *    handler routine.
- * @param[out] pcp - the address of storage for the returned config parser.
+ * @param[in] cfgdefs - an array of pointers to default config file entries.
+ *    Elements of @p ppvals are initialized to these defaults before @p cfgfile
+ *    is parsed. The format of the strings in @cfgdefs is identical to that 
+ *    of the configuration file itself. The pointer array must be null-
+ *    terminated. This parameter is optional and may be passed as NULL.
+ * @param[in] dict - an array of DnxCfgDict objects, each of which defines a 
+ *    valid configuration variable name and type for this parser. The @p dict
+ *    array should be terminated with NULL field values (a NULL pointer in the 
+ *    @em varname field, and DNX_CFG_NULL in the @em type field).
+ * @param[out] ppvals - an array of opaque pointers to storage locations for 
+ *    the values parsed from @p cfgfile. Each element of the array is the 
+ *    address of storage for either the actual value or the address of 
+ *    allocated storage for the string or array value. The fields in @p ppvals 
+ *    are typed by the corresponding type fields in the @p dict array. This
+ *    array need not be terminated, but must be as large as the number of 
+ *    valid entries in the @p dict array (minus the null-terminator entry).
  * 
- * @return Zero on success, or a non-zero error value.
+ * @return Zero on success, or a non-zero error value. Possible error 
+ * values include DNX_OK (on success), DNX_ERR_ACCESS, DNX_ERR_NOTFOUND, 
+ * DNX_ERR_SYNTAX or DNX_ERR_MEMORY.
  */
-int dnxCfgParserCreate(char * cfgfile, DnxCfgDictionary * dict, size_t dictsz,
-      void (*errhandler)(int err, int line, char * buf, void * data),
-      void * data, DnxCfgParser ** pcp);
+int dnxParseCfgFile(char * cfgfile, char * cfgdefs[], DnxCfgDict * dict,
+      void * ppvals[]);
 
-/** Parse or reparse the config file associated with an existing config parser.
+/** Free memory in all pointer types in a value array; zero addresses.
  * 
- * @param[in] cp - the DNX configuration parser whose file should be reparsed.
- * 
- * @return Zero on success, or a non-zero error value.
+ * @param[in] dict - the dictionary to be cleared. The @p dict array should
+ *    be terminated with NULL field values (a NULL pointer in the @em varname 
+ *    field, and DNX_CFG_NULL in the @em type field).
+ * @param[in] ppvals - an array of opaque pointers to value storage addresses,
+ *    each of which contains either the address of a stored object, or the 
+ *    address of allocated storage. The fields in @p ppvals are typed by the
+ *    corresponding type fields in the @p dict array.
  */
-int dnxCfgParserParse(DnxCfgParser * cp);
-
-/** Destroy an existing configuration object.
- * 
- * Frees memory associated with the configuration parser object.
- * 
- * @param[in] cp - the DNX configuration parser object to be destroyed.
- */
-void dnxCfgParserDestroy(DnxCfgParser * cp);
+void dnxFreeCfgValues(DnxCfgDict * dict, void * ppvals[]);
 
 #endif   /* _DXCFGPARSER_H_ */
 
