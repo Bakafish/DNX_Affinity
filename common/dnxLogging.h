@@ -30,9 +30,30 @@
 
 #include <syslog.h>
 
+/** Log a parameterized message to the dnx system log file.
+ * 
+ * @param[in] priority - a priority value for the log message.
+ * @param[in] fmt - a format specifier string similar to that of printf.
+ */
 void dnxSyslog(int priority, char * fmt, ... );
+
+/** Log a parameterized message to the dnx DEBUG log.
+ * 
+ * This routine logs a debug message if the current global (configured) 
+ * debug level is greater than or equal the value of @p level.
+ * 
+ * @param[in] level - the debug level at which to log the message.
+ * @param[in] fmt - a format specifier string similar to that of printf.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
 void dnxDebug(int level, char * fmt, ... );
 
+/** Initialize logging functionality.
+ * 
+ * @param[in] debug - a pointer to the global debug level.
+ * @param[in] logFacility - a pointer to the global log facility.
+ */
 void initLogging(int * pDebug, int * pLogFacility);
 
 #endif   /* _DNXLOGGING_H_ */

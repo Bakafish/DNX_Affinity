@@ -43,11 +43,6 @@
 #include "dnxRegistrar.h"
 #include "dnxJobList.h"
 
-//#include "dnxProtocol.h"
-//#include "dnxTransport.h"
-//#include "dnxXml.h"
-//#include "dnxQueue.h"
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #else
@@ -97,16 +92,16 @@ static DnxCollector * collector;    // The job list results collector.
 static time_t start_time;           // The module start time
 static void * myHandle;             // Private NEB module handle
 static regex_t regEx;               // Compiled regular expression structure
+static DnxServerCfg cfg;            // The server configuration parameters
+static DnxCfgParser * cfgParser;    // The configuration file parser. 
 
 /** @todo These should be combined into config data. */
 static int dnxLogFacility;          // DNX syslog facility
 static int auditLogFacility;        // Worker audit syslog facility
 
-// module GLOBAL data
-static DnxServerCfg cfg;            // The server configuration parameters
-static DnxCfgParser * cfgParser;    // The configuration file parser. 
-
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                              IMPLEMENTATION
+  --------------------------------------------------------------------------*/
 
 /** Returns the syslog facility code matching a specified facility string.
  * 
@@ -128,7 +123,7 @@ static int verifyFacility(char * szFacility, int * nFacility)
       { "LOG_LOCAL5",   LOG_LOCAL5 },
       { "LOG_LOCAL6",   LOG_LOCAL6 },
       { "LOG_LOCAL7",   LOG_LOCAL7 },
-      { NULL, -1 }
+      { 0, -1 }
    };
 
    struct FacCode * p;
@@ -360,9 +355,9 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
 
    // Obtain a pointer to the Nagios service definition structure
 #ifdef DNX_EMBEDDED_SVC_OBJECT
-   if ((svc = (service *)(ds->object)) == NULL)
+   if ((svc = (service *)(ds->object)) == 0)
 #else
-   if ((svc = find_service(ds->host_name, ds->service_description)) == NULL)
+   if ((svc = find_service(ds->host_name, ds->service_description)) == 0)
 #endif
    {
       // ERROR - This should never happen here: The service was not found.
@@ -395,67 +390,6 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
 
 //----------------------------------------------------------------------------
 
-int dnxJobCleanup(DnxNewJob * pJob)
-{
-   if (pJob)
-   {
-      // Free the Pending Job command string
-      if (pJob->cmd)
-      {
-         xfree(pJob->cmd);
-         pJob->cmd = NULL;
-      }
-
-      // Free the node request message
-      if (pJob->pNode)
-      {
-         xfree(pJob->pNode);
-         pJob->pNode = NULL;
-      }
-   }
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-int dnxAuditJob(DnxNewJob * pJob, char * action)
-{
-   struct sockaddr_in src_addr;
-   in_addr_t addr;
-
-   if (cfg.auditWorkerJobs)
-   {
-      // Convert opaque Worker Node address to IPv4 address
-
-      /** @todo This conversion should take place in the dnxUdpRead function
-       * and the resultant address string stored in the DnxNewJob
-       * structure. This would have two benefits:
-       * 
-       *    1. Encapsulates conversion at the protocol level.
-       *    2. Saves some time during logging.
-       */
-      memcpy(&src_addr, pJob->pNode->address, sizeof(src_addr));
-      addr = ntohl(src_addr.sin_addr.s_addr);
-
-      syslog(auditLogFacility | LOG_INFO,
-         "%s: Job %lu: Worker %u.%u.%u.%u-%lx: %s",
-         action,
-         pJob->xid.objSerial,
-         (unsigned)((addr >> 24) & 0xff),
-         (unsigned)((addr >> 16) & 0xff),
-         (unsigned)((addr >>  8) & 0xff),
-         (unsigned)( addr        & 0xff),
-         pJob->pNode->xid.objSlot,
-         pJob->cmd
-         );
-   }
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
 /** Service Check Event Handler.
  * 
  * @param[in] event_type - the event type for which we're being called.
@@ -478,7 +412,7 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;  // Ignore all non-service-check events
 
    // Sanity-check our data structure
-   if (svcdata == NULL)
+   if (svcdata == 0)
    {
       dnxSyslog(LOG_ERR, "dnxServer: ehSvcCheck: Received NULL service data structure");
       return ERROR;  // Should not happen - internal Nagios error
@@ -496,7 +430,7 @@ static int ehSvcCheck(int event_type, void * data)
    // matches the regular-expression specified in the localCheckPattern
    // directive in the Server configuration file.
    //
-   if (regexec(&regEx, svcdata->command_line, 0, NULL, 0) == 0)
+   if (regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
    {
       dnxDebug(1, "dnxServer: ehSvcCheck: Job will execute locally: %s", 
             svcdata->command_line);
@@ -507,7 +441,7 @@ static int ehSvcCheck(int event_type, void * data)
    // If not, execute check locally.
 
    dnxDebug(1, "dnxServer: ehSvcCheck: Received Job %lu at %lu (%lu)",
-         serial, (unsigned long)time(NULL), (unsigned long)(svcdata->start_time.tv_sec));
+         serial, (unsigned long)time(0), (unsigned long)(svcdata->start_time.tv_sec));
 
    // Locate the next available worker node from the Request Queue
    if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
@@ -715,6 +649,69 @@ static int ehProcessData(int event_type, void * data)
          dnxServerDeInit();
    }
    return OK;
+}
+
+/*--------------------------------------------------------------------------
+                                 INTERFACE
+  --------------------------------------------------------------------------*/
+
+int dnxJobCleanup(DnxNewJob * pJob)
+{
+   if (pJob)
+   {
+      // Free the Pending Job command string
+      if (pJob->cmd)
+      {
+         xfree(pJob->cmd);
+         pJob->cmd = 0;
+      }
+
+      // Free the node request message
+      if (pJob->pNode)
+      {
+         xfree(pJob->pNode);
+         pJob->pNode = 0;
+      }
+   }
+
+   return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
+int dnxAuditJob(DnxNewJob * pJob, char * action)
+{
+   struct sockaddr_in src_addr;
+   in_addr_t addr;
+
+   if (cfg.auditWorkerJobs)
+   {
+      // Convert opaque Worker Node address to IPv4 address
+
+      /** @todo This conversion should take place in the dnxUdpRead function
+       * and the resultant address string stored in the DnxNewJob
+       * structure. This would have two benefits:
+       * 
+       *    1. Encapsulates conversion at the protocol level.
+       *    2. Saves some time during logging.
+       */
+      memcpy(&src_addr, pJob->pNode->address, sizeof(src_addr));
+      addr = ntohl(src_addr.sin_addr.s_addr);
+
+      syslog(auditLogFacility | LOG_INFO,
+         "%s: Job %lu: Worker %u.%u.%u.%u-%lx: %s",
+         action,
+         pJob->xid.objSerial,
+         (unsigned)((addr >> 24) & 0xff),
+         (unsigned)((addr >> 16) & 0xff),
+         (unsigned)((addr >>  8) & 0xff),
+         (unsigned)( addr        & 0xff),
+         pJob->pNode->xid.objSlot,
+         pJob->cmd
+         );
+   }
+
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------

@@ -62,16 +62,21 @@ typedef struct iDnxTimer_
    int sleepms;            /*!< Milliseconds to sleep between passes. */
 } iDnxTimer;
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                              IMPLEMENTATION
+  --------------------------------------------------------------------------*/
 
 /** Timer thread clean-up routine.
  * 
  * @param[in] data - an opaque pointer to thread data for the dying thread.
+ * 
+ * @note Currently, this cleanup routine does nothing. It's here just in case 
+ * the timer code is modified to call cancelable kernel or pthread library 
+ * routines in the future.
  */
 static void dnxTimerCleanup(void * data)
 {
    iDnxTimer * itimer = (iDnxTimer *)data;
-
    assert(data);
 }
 
@@ -144,17 +149,10 @@ static void * dnxTimer(void * data)
    return 0;
 }
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                                 INTERFACE
+  --------------------------------------------------------------------------*/
 
-/** Create a new job list expiration timer object.
- * 
- * @param[in] joblist - the job list that should be expired by the timer.
- * @param[in] sleeptime - time between expiration checks, in milliseconds.
- * @param[out] ptimer - the address of storage for returning the new object
- *    reference.
- * 
- * @return Zero on success, or a non-zero error value.
- */
 int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer)
 {
    iDnxTimer * itimer;
@@ -190,10 +188,6 @@ int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer)
 
 //----------------------------------------------------------------------------
 
-/** Destroy an existing job list expiration timer object.
- * 
- * @param[in] timer - the timer object to be destroyed.
- */
 void dnxTimerDestroy(DnxTimer * timer)
 {
    iDnxTimer * itimer = (iDnxTimer *)timer;

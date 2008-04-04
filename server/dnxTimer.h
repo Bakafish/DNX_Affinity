@@ -39,7 +39,21 @@
 /** DNX job expiration timer abstract type. */
 typedef struct { int unused; } DnxTimer;
 
+/** Create a new job list expiration timer object.
+ * 
+ * @param[in] joblist - the job list that should be expired by the timer.
+ * @param[in] sleeptime - time between expiration checks, in milliseconds.
+ * @param[out] ptimer - the address of storage for returning the new object
+ *    reference.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
 int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer);
+
+/** Destroy an existing job list expiration timer object.
+ * 
+ * @param[in] timer - the timer object to be destroyed.
+ */
 void dnxTimerDestroy(DnxTimer * timer);
 
 #endif   /* _DNXTIMER_H_ */

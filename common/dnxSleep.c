@@ -43,17 +43,10 @@
 # endif
 #endif
 
-/** A millisecond-resolution sleep routine that can be cancelled.
- * 
- * The pthreads specification indicates clearly that the sleep() system call
- * MUST be a cancellation point. However, it appears that sleep() on Linux 
- * calls a routine named _nanosleep_nocancel, which clearly is not a 
- * cancellation point. Oversight? Not even Google appears to know. It seems
- * that most Unix/Linux distros implement sleep in terms of SIGALRM. This
- * is the problem point for creating a cancelable form of sleep().
- *
- * @param[in] msecs - the number of milli-seconds to sleep.
- */
+/*--------------------------------------------------------------------------
+                                 INTERFACE
+  --------------------------------------------------------------------------*/
+
 void dnxCancelableSleep(int msecs)
 {
 #if HAVE_NANOSLEEP

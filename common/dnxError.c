@@ -40,38 +40,18 @@ static dnxError gLastError = DNX_OK;      /*!< Last known error code. */
 
 /** @todo Create a mechanism for preserving error stack details. */
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                                 INTERFACE
+  --------------------------------------------------------------------------*/
 
-/** Return the last error code stored in the global dnx error variable.
- *
- * @return The last error value stored.
- */
-dnxError dnxGetLastError(void)
-{
-   return gLastError;
-}
+dnxError dnxGetLastError(void) { return gLastError; }
 
 //----------------------------------------------------------------------------
 
-/** Set the global dnx error variable to some dnx error value.
- *
- * @param[in] eno - the value to be set.
- */
-void dnxSetLastError(dnxError eno)
-{
-   gLastError = eno;
-}
+void dnxSetLastError(dnxError eno) { gLastError = eno; }
 
 //----------------------------------------------------------------------------
 
-/** Return an error string that matches a specified dnx error code.
- * 
- * @param[in] eno - the error code for which a string representation is 
- *    desired.
- *
- * @return A pointer to a statically allocated string representation of the
- * error code specified in @p errno.
- */
 char * dnxErrorString(dnxError eno)
 {
    static char * errCatalog[] = 

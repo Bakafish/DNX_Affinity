@@ -34,14 +34,14 @@
 #include <assert.h>
 #include <pthread.h>
 
-#define PICKETSZ  8        /*!< Picket fence size in bytes. */
+#define PICKETSZ  8        //!< Picket fence size in bytes.
 
-#define PICKET1   0xAA     /*!< Overhead front picket fence fill value. */
-#define PICKET2   0xBB     /*!< Overhead rear picket fence fill value. */
-#define PICKET3   0xCC     /*!< User block footer picket fence fill value. */
-#define ALIGNED   0xDD     /*!< Rear alignment buffer fill value. */
-#define ALLOCED   0xEE     /*!< User space allocated fill value (malloc). */
-#define FREED     0xFF     /*!< User space freed memory fill value. */
+#define PICKET1   0xAA     //!< Overhead front picket fence fill value.
+#define PICKET2   0xBB     //!< Overhead rear picket fence fill value.
+#define PICKET3   0xCC     //!< User block footer picket fence fill value.
+#define ALIGNED   0xDD     //!< Rear alignment buffer fill value.
+#define ALLOCED   0xEE     //!< User space allocated fill value (malloc).
+#define FREED     0xFF     //!< User space freed memory fill value.
 
 /** Align a block to a paragraph boundary. 
  * Add 15 and AND the result with 0x...FFFFFFF0 to clear the bottom 4 bits.
@@ -52,19 +52,23 @@
 /** Debug heap block bookkeeping header structure. */
 typedef struct overhead_
 {
-   char picket1[PICKETSZ]; /*!< Overhead front picket fence. */
-   struct overhead_ * next;/*!< Linked-list link to next alloc'd block. */
-   size_t reqsz;           /*!< Requested size of heap block. */
-   size_t actualsz;        /*!< Allocated size of debug heap block. */
-   char * file;            /*!< File name wherein allocation occurred. */
-   int line;               /*!< Line number whereat allocation occurred. */
-   char picket2[PICKETSZ]; /*!< Overhead rear picket fence. */
+   char picket1[PICKETSZ]; //!< Overhead front picket fence.
+   struct overhead_ * next;//!< Linked-list link to next alloc'd block.
+   size_t reqsz;           //!< Requested size of heap block.
+   size_t actualsz;        //!< Allocated size of debug heap block.
+   char * file;            //!< File name wherein allocation occurred.
+   int line;               //!< Line number whereat allocation occurred.
+   char picket2[PICKETSZ]; //!< Overhead rear picket fence.
 } overhead;
 
-static overhead * head = 0;/*!< The head of the global heap block list. */
-static int blkcnt = 0;     /*!< The number of blocks in the global list. */
+static overhead * head = 0;//!< The head of the global heap block list.
+static int blkcnt = 0;     //!< The number of blocks in the global list.
 static pthread_mutex_t list_lock = PTHREAD_MUTEX_INITIALIZER;
-                           /*!< The global heap block list lock. */
+                           //!< The global heap block list lock.
+
+/*--------------------------------------------------------------------------
+                              IMPLEMENTATION
+  --------------------------------------------------------------------------*/
 
 /** Link a newly allocated block into the block list. 
  * 
@@ -79,6 +83,8 @@ static void link_block(overhead * ohp)
    pthread_mutex_unlock(&list_lock);
 }
 
+//----------------------------------------------------------------------------
+ 
 /** Locate and remove a block by address from the global block list.
  * 
  * @param[in] ohp - a pointer to the block to be located and removed.
@@ -102,6 +108,8 @@ static int unlink_block(overhead * ohp)
    return found;
 }
 
+//----------------------------------------------------------------------------
+ 
 /** Format a number of bytes as a hexadecimal ascii dump into a text buffer.
  * 
  * @param[out] buf - a pointer to the text output buffer.
@@ -125,6 +133,8 @@ static size_t hex_dump(char * buf, void * p, size_t sz)
    return cp - buf;
 }
 
+//----------------------------------------------------------------------------
+ 
 /** Dump a memory block with an optional debug(1) message.
  * 
  * @param[in] ohp - a pointer to the block to be displayed.
@@ -159,6 +169,8 @@ static void dump_block(overhead * ohp, char * msg)
    dnxDebug(1, "%s", buf);
 }
 
+//----------------------------------------------------------------------------
+ 
 /** Scan a range of memory for the first non-recognized character.
  *
  * @param[in] p - a pointer to the buffer to be scanned.
@@ -176,6 +188,8 @@ static int memscan(void * p, unsigned char ch, size_t sz)
    return 0;
 }
 
+//----------------------------------------------------------------------------
+ 
 /** Check the integrity of a memory block.
  * 
  * @param[in] ohp - a pointer to the block to be checked.
@@ -198,18 +212,10 @@ static int check_block(overhead * ohp)
    return !rc1 && !rc2 && !rc3 ? 1 : 0;
 }
 
-/** Allocate and track a new heap memory block.
- * 
- * malloc allows sz to be zero, in which case, it returns NULL. But there's 
- * really no reason to call malloc with a zero value unless the programmer
- * made a mistake, so this routine asserts that @p sz is non-zero.
- * 
- * @param[in] sz - the size in bytes of the block to be allocated.
- * @param[in] file - the file name from where this function was called.
- * @param[in] line - the line number from where this function was called.
- * 
- * @return A pointer to the new memory block, or NULL on allocation failure.
- */
+/*--------------------------------------------------------------------------
+                                 INTERFACE
+  --------------------------------------------------------------------------*/
+
 void * dnxMalloc(size_t sz, char * file, int line)
 {
    overhead * ohp;
@@ -242,20 +248,8 @@ void * dnxMalloc(size_t sz, char * file, int line)
    return &ohp[1];
 }
 
-/** Allocate, zero and track a new heap memory block.
- * 
- * Calloc is sort of a strange bird - it @em should be the same as @em malloc
- * with the addition of zeroing the block before returning, but K&R must have
- * decided that the X x Y block allocation strategry had some value for heap
- * blocks that need to be cleared...
- * 
- * @param[in] n - the number of blocks of @p sz bytes to be allocated.
- * @param[in] sz - the size of each of the @p n blocks to be allocated.
- * @param[in] file - the file name from where this function was called.
- * @param[in] line - the line number from where this function was called.
- * 
- * @return A pointer to the new memory block, or NULL on allocation failure.
- */
+//----------------------------------------------------------------------------
+ 
 void * dnxCalloc(size_t n, size_t sz, char * file, int line)
 {
    size_t blksz = n * sz;
@@ -271,22 +265,8 @@ void * dnxCalloc(size_t n, size_t sz, char * file, int line)
    return p;
 }
 
-/** Reallocate (and track) an existing heap memory block.
- * 
- * Realloc - the all-in-one heap management function. If @p p is NULL, 
- * realloc acts like malloc, if @p sz is zero, realloc acts like free.
- * 
- * Since there's no reason except programmer error that would have both @p p
- * and @p sz be zero at the same time, this routine asserts one or the other
- * is non-zero.
- * 
- * @param[in] p - a pointer to the block to be reallocated/resized.
- * @param[in] sz - the new size of the block.
- * @param[in] file - the file name from where this function was called.
- * @param[in] line - the line number from where this function was called.
- * 
- * @return A pointer to the new memory block, or NULL on allocation failure.
- */
+//----------------------------------------------------------------------------
+ 
 void * dnxRealloc(void * p, size_t sz, char * file, int line)
 {
    assert(p || sz);
@@ -307,14 +287,8 @@ void * dnxRealloc(void * p, size_t sz, char * file, int line)
    return p;
 }
 
-/** Duplicate and track a string from the heap.
- * 
- * @param[in] str - a pointer to the zero-terminated string to be duplicated.
- * @param[in] file - the file name from where this function was called.
- * @param[in] line - the line number from where this function was called.
- * 
- * @return A pointer to the new memory block, or NULL on allocation failure.
- */
+//----------------------------------------------------------------------------
+ 
 char * dnxStrdup(char * str, char * file, int line)
 {
    char * s;
@@ -332,13 +306,8 @@ char * dnxStrdup(char * str, char * file, int line)
    return s;
 }
 
-/** Free and previously allocated (and tracked) heap memory block.
- * 
- * Note that there are serveral good programming-practice reasons to call 
- * free with a @p p argument value of null. This debug routine allows it.
- * 
- * @param[in] p - a pointer to the debug heap block to be freed.
- */
+//----------------------------------------------------------------------------
+ 
 void dnxFree(void * p)
 {
    if (p)
@@ -358,10 +327,8 @@ void dnxFree(void * p)
    }
 }
 
-/** Check the heap and display any unfreed blocks on the global list.
- * 
- * @return Zero on success, or a non-zero error code.
- */
+//----------------------------------------------------------------------------
+ 
 int dnxCheckHeap(void)
 {
    overhead * cp;

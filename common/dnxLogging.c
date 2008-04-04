@@ -34,21 +34,18 @@
 #include <syslog.h>
 #include <assert.h>
 
-#define MAX_LOG_LINE 1023
+#define MAX_LOG_LINE 1023                    //!< Maximum log line length
 
-static int defDebug = 0;
-static int defLogFacility = LOG_LOCAL7;
+static int defDebug = 0;                     //!< The default debug level
+static int defLogFacility = LOG_LOCAL7;      //!< The default log facility
 
-static int * pDebug = &defDebug;
-static int * pLogFacility = &defLogFacility;
+static int * pDebug = &defDebug;             //!< A pointer to the debug level
+static int * pLogFacility = &defLogFacility; //!< A pointer to the log facility
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                                 INTERFACE
+  --------------------------------------------------------------------------*/
 
-/** Log a parameterized message to the dnx system log file.
- * 
- * @param[in] priority - a priority value for the log message.
- * @param[in] fmt - a format specifier string similar to that of printf.
- */
 void dnxSyslog(int priority, char * fmt, ...)
 {
    char sbuf[MAX_LOG_LINE + 1];
@@ -73,16 +70,6 @@ void dnxSyslog(int priority, char * fmt, ...)
 
 //----------------------------------------------------------------------------
 
-/** Log a parameterized message to the dnx DEBUG log.
- * 
- * This routine logs a debug message if the current global (configured) 
- * debug level is greater than or equal the value of @p level.
- * 
- * @param[in] level - the debug level at which to log the message.
- * @param[in] fmt - a format specifier string similar to that of printf.
- * 
- * @return Zero on success, or a non-zero error code.
- */
 void dnxDebug(int level, char * fmt, ...)
 {
    char sbuf[MAX_LOG_LINE + 1];
@@ -109,11 +96,6 @@ void dnxDebug(int level, char * fmt, ...)
 
 //----------------------------------------------------------------------------
 
-/** Initialize logging functionality.
- * 
- * @param[in] debug - a pointer to the global debug level.
- * @param[in] logFacility - a pointer to the global log facility.
- */
 void initLogging(int * debug, int * logFacility)
 {
    pDebug = debug;
