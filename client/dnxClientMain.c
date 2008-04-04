@@ -409,7 +409,7 @@ static int releaseClientThreads (DnxGlobalData *gData)
       sleep(100);
 
    // Destroy the thread data mutex
-   DNX_PT_MUTEX_DESTROY(&gdata->threadMutex);
+   DNX_PT_MUTEX_DESTROY(&gData->threadMutex);
 
    // Unlock the job data mutex
    DNX_PT_MUTEX_UNLOCK(&gData->jobMutex);
