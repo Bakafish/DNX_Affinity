@@ -190,8 +190,6 @@ static int verifyFacility(char * szFacility, int * nFacility)
 
 /** Read and parse the dnxClient configuration file.
  * 
- * @param[in] cfg - the configuration data structure. 
- * 
  * @return Zero on success, or a non-zero error value.
  */
 static int initConfig(void)

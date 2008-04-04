@@ -23,14 +23,14 @@
  * 
  * cfg-file = cfg-line [, cfg-line]
  * cfg-line = cfg-var '=' cfg-val '\n'
- * cfg-var  = <any alpha numeric text>
- * cfg-val  = <any alpha numeric text>
+ * cfg-var  = (any alpha numeric text)
+ * cfg-val  = (any alpha numeric text)
  * 
  * In addition, these rules must be followed:
  * 
  * 1. White space may be found anywhere within the file.
  * 2. cfg-line constructs may not contain line breaks.
- * 3. Line comments of the form '#' <text> may be found anywhere.
+ * 3. Line comments of the form '#' (any text) may be found anywhere.
  * 4. cfg-var constructs may not contain '=' characters.
  * 
  * @file dnxCfgParser.c
@@ -112,7 +112,7 @@ static int validateFSPath(char * path) { return 0; }
 
 /** Validate an address for correctness, and convert to sockaddr_storage.
  * 
- * @param[in] url - the URL to be validated.
+ * @param[in] addr - the URL to be validated.
  * @param[out] ss - the address of storage for the converted address.
  * 
  * @return Zero on success, or a non-zero error value.
@@ -303,7 +303,7 @@ static int validate(DnxCfgDictionary * dict, size_t dictsz,
  
 /** Trim trailing white space from a string buffer.
  * 
- * @param[in/out] buf - the buffer to be trimmed.
+ * @param[in,out] buf - the buffer to be trimmed.
  * 
  * @return - the new length of @p buf.
  */

@@ -93,7 +93,7 @@ typedef struct { int unused; } DnxCfgParser;
  *    defines a valid configuration variable name and type for this parser,
  *    as well as storage for either the parsed value or a pointer to allocated
  *    storage for the parsed value.
- * @param[in] cvcnt - the number of elements in the @p dict array.
+ * @param[in] dictsz - the number of elements in the @p dict array.
  * @param[in] errhandler - the error handler routine called on parse and
  *    validation errors. This parameter is optional - the caller may pass NULL.
  * @param[in] data - an opaque pointer passed through to the client error 

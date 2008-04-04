@@ -100,7 +100,7 @@ typedef struct iDnxWlm
 } iDnxWlm;
 
 /*--------------------------------------------------------------------------
-                                 WORKER
+                           WORKER IMPLEMENTATION
   --------------------------------------------------------------------------*/
 
 /** Increment or decrement the active job count on the specified WLM. 
@@ -283,10 +283,6 @@ static void * dnxWorker(void * data)
             dnxSyslog(LOG_INFO, "Worker[%lx]: Exiting - max retries exceeded", tid);
             break;
          }
-
-         // sleep a little on non-timeout errors
-         if (ret != DNX_ERR_TIMEOUT)
-            dnxCancelableSleep(ws->iwlm->cfg.reqTimeout * 1000);
       }
       else
          retries = 0;
@@ -296,7 +292,7 @@ static void * dnxWorker(void * data)
 }
 
 /*--------------------------------------------------------------------------
-                           Work Load Manager
+                     WORK LOAD MANAGER IMPLEMENTATION
   --------------------------------------------------------------------------*/
 
 /** Initialize worker thread communication resources.
@@ -367,6 +363,7 @@ static void releaseWorkerComm(DnxWorkerStatus * ws)
 
 /** Create a new worker thread.
  *
+ * @param[in] iwlm - the WLM object whose thread pool is being updated.
  * @param[in] pws - the address of storage for the address of the newly 
  *    allocated and configured worker status structure.
  * 
@@ -417,7 +414,6 @@ static int workerCreate(iDnxWlm * iwlm, DnxWorkerStatus ** pws)
  * 
  * @param[in] iwlm - a reference to the work load manager whose thread 
  *    pool size is to be increased.
- * @param[in] active - the current number of active pool threads. 
  * 
  * @return Zero on success, or a non-zero error value.
  */
@@ -485,7 +481,7 @@ static void cleanThreadPool(iDnxWlm * iwlm)
 
 /** Stop all worker threads and delete all worker thread resources.
  * 
- * @param[in] wlm - the global data structure containing information about 
+ * @param[in] iwlm - the WLM data structure containing information about 
  *    the thread pool to be deleted.
  */
 static void shutdownThreadPool(iDnxWlm * iwlm)
@@ -584,15 +580,10 @@ static void * dnxWlm(void * data)
    return 0;
 }
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                        WORK LOAD MANAGER INTERFACE
+  --------------------------------------------------------------------------*/
 
-/** Return the active thread count on the specified Work Load Manager.
- * 
- * @param[in] wlm - the Work Load Manager whose active thread count should be
- *    returned.
- * 
- * @return The active thread count on @p wlm.
- */
 int dnxWlmGetActiveThreads(DnxWlm * wlm)
 {
    int active;
@@ -606,13 +597,6 @@ int dnxWlmGetActiveThreads(DnxWlm * wlm)
 
 //----------------------------------------------------------------------------
 
-/** Return the active job count on the specified Work Load Manager.
- * 
- * @param[in] wlm - the Work Load Manager whose active job count should be
- *    returned.
- * 
- * @return The active job count on @p wlm.
- */
 int dnxWlmGetActiveJobs(DnxWlm * wlm)
 {
    int active;
@@ -626,39 +610,32 @@ int dnxWlmGetActiveJobs(DnxWlm * wlm)
 
 //----------------------------------------------------------------------------
 
-/** Reconfigure an existing Work Load Manager object.
- * 
- * @param[in] wlm - the work load manager object to be reconfigured.
- * @param[in] pcfg - the new configuration parameters.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int dnxWlmReconfigure(DnxWlm * wlm, DnxWlmCfgData * pcfg)
+int dnxWlmReconfigure(DnxWlm * wlm, DnxWlmCfgData * cfg)
 {
    iDnxWlm * iwlm = (iDnxWlm *)wlm;
    DnxWorkerStatus ** pool;
    int ret = 0;
 
-   assert(wlm && pcfg);
-   assert(pcfg->poolMin > 0);
-   assert(pcfg->poolMax >= pcfg->poolMin);
-   assert(pcfg->poolInitial >= pcfg->poolMin);
-   assert(pcfg->poolInitial <= pcfg->poolMax);
+   assert(wlm && cfg);
+   assert(cfg->poolMin > 0);
+   assert(cfg->poolMax >= cfg->poolMin);
+   assert(cfg->poolInitial >= cfg->poolMin);
+   assert(cfg->poolInitial <= cfg->poolMax);
 
    DNX_PT_MUTEX_LOCK(&iwlm->mutex);
 
    // dynamic reconfiguration of dispatcher/collector URL's is not allowed
 
-   iwlm->cfg.reqTimeout = pcfg->reqTimeout;
-   iwlm->cfg.ttlBackoff = pcfg->ttlBackoff;
-   iwlm->cfg.maxRetries = pcfg->maxRetries;
-   iwlm->cfg.poolMin = pcfg->poolMin;
-   iwlm->cfg.poolInitial = pcfg->poolInitial;
-   iwlm->cfg.poolMax = pcfg->poolMax;
-   iwlm->cfg.poolGrow = pcfg->poolGrow;
-   iwlm->cfg.pollInterval = pcfg->pollInterval;
-   iwlm->cfg.shutdownGrace = pcfg->shutdownGrace;
-   iwlm->cfg.maxResults = pcfg->maxResults;
+   iwlm->cfg.reqTimeout = cfg->reqTimeout;
+   iwlm->cfg.ttlBackoff = cfg->ttlBackoff;
+   iwlm->cfg.maxRetries = cfg->maxRetries;
+   iwlm->cfg.poolMin = cfg->poolMin;
+   iwlm->cfg.poolInitial = cfg->poolInitial;
+   iwlm->cfg.poolMax = cfg->poolMax;
+   iwlm->cfg.poolGrow = cfg->poolGrow;
+   iwlm->cfg.pollInterval = cfg->pollInterval;
+   iwlm->cfg.shutdownGrace = cfg->shutdownGrace;
+   iwlm->cfg.maxResults = cfg->maxResults;
 
    // we can't reduce the poolsz until the number of threads
    //    drops below the new maximum
@@ -686,29 +663,22 @@ int dnxWlmReconfigure(DnxWlm * wlm, DnxWlmCfgData * pcfg)
 
 //----------------------------------------------------------------------------
 
-/** Creates a new Work Load Manager object.
- * 
- * @param[in] pcfg - a reference to the WLM configuration data structure.
- * @param[out] pwlm - the address of storage for the returned WLM object.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int dnxWlmCreate(DnxWlmCfgData * pcfg, DnxWlm ** pwlm)
+int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
 {
    iDnxWlm * iwlm;
    int rc;
 
-   assert(pcfg && pwlm);
-   assert(pcfg->poolMin > 0);
-   assert(pcfg->poolMax >= pcfg->poolMin);
-   assert(pcfg->poolInitial >= pcfg->poolMin);
-   assert(pcfg->poolInitial <= pcfg->poolMax);
+   assert(cfg && pwlm);
+   assert(cfg->poolMin > 0);
+   assert(cfg->poolMax >= cfg->poolMin);
+   assert(cfg->poolInitial >= cfg->poolMin);
+   assert(cfg->poolInitial <= cfg->poolMax);
 
    if ((iwlm = (iDnxWlm *)xmalloc(sizeof *iwlm)) == 0)
       return DNX_ERR_MEMORY;
 
    memset(iwlm, 0, sizeof *iwlm);
-   iwlm->cfg = *pcfg;
+   iwlm->cfg = *cfg;
    iwlm->cfg.dispatcher = xstrdup(iwlm->cfg.dispatcher);
    iwlm->cfg.collector = xstrdup(iwlm->cfg.collector);
    iwlm->poolsz = iwlm->cfg.poolMax;
@@ -746,10 +716,6 @@ int dnxWlmCreate(DnxWlmCfgData * pcfg, DnxWlm ** pwlm)
 
 //----------------------------------------------------------------------------
 
-/** The main thread routine for the work load manager.
- * 
- * @param[in] wlm - the work load manager object to be destroyed.
- */
 void dnxWlmDestroy(DnxWlm * wlm)
 {
    iDnxWlm * iwlm = (iDnxWlm *)wlm;

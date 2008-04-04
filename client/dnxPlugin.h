@@ -30,66 +30,147 @@
 
 #include <stdio.h>
 
-#define DNX_PLUGIN_RESULT_OK        0
-#define DNX_PLUGIN_RESULT_WARNING   1
-#define DNX_PLUGIN_RESULT_CRITICAL  2
-#define DNX_PLUGIN_RESULT_UNKNOWN   3
+#define DNX_PLUGIN_RESULT_OK        0  /*!< DNX plugin result: success. */
+#define DNX_PLUGIN_RESULT_WARNING   1  /*!< DNX plugin result: warning. */
+#define DNX_PLUGIN_RESULT_CRITICAL  2  /*!< DNX plugin result: critical. */
+#define DNX_PLUGIN_RESULT_UNKNOWN   3  /*!< DNX plugin result: unknown. */
 
-typedef struct _DnxModule_ 
-{
-   char * path;
-   void * handle;
-   int (* init)(void);
-   int (* deinit)(void);
-   struct _DnxModule_ * next;
-   struct _DnxModule_ * prev;
-} DNX_MODULE;
+/** An abstract data type for a DNX plugin object. */
+typedef struct { int unused; } DnxPlugin;
 
-typedef struct _DnxPlugin_ 
-{
-   char * name;
-   int (* func)(int argc, char ** argv);
-   DNX_MODULE * parent;
-   struct _DnxPlugin_ * next;
-   struct _DnxPlugin_ * prev;
-} DNX_PLUGIN;
+/** An abstract data type for a DNX module object. */
+typedef struct { int unused; } DnxModule;
 
-// Initializes the plugin utility library
-int dnxPluginInit(char * pluginPath);
-
-// Releases the plugin utility library
-int dnxPluginRelease(void);
-
-// Registers a plugin with entry points
+/** Register a dnx plugin with entry points.
+ * 
+ * @param[in] szPlugin - the name of the plugin to be registered.
+ * @param[in] szErrMsg - an error message to be displayed if the plugin
+ *    could not be registered.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
 int dnxPluginRegister(char * szPlugin, char * szErrMsg);
 
-// Loads/Unloads plugin module into memory
-int dnxPluginLoad(DNX_MODULE * module);
-int dnxPluginUnload(DNX_MODULE * module);
+/** Load a dnx plugin module into memory.
+ * 
+ * @param[in] module - the name of the module to be loaded.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginLoad(DnxModule * module);
 
-// Finds and executes the plugin
+/** Unload a dnx plugin module from memory.
+ * 
+ * @param[in] module - the name of the module to be unloaded.
+ */
+void dnxPluginUnload(DnxModule * module);
+
+/** Find an appropriate dnx plugin and use it to execute a commmand.
+ * 
+ * @param[in] command - the command to be executed by the plugin.
+ * @param[out] resCode - the address of storage for the command's result code.
+ * @param[out] resData - the address of storage for the command's stdout text.
+ * @param[in] maxData - the maximum size of the @p resData buffer.
+ * @param[in] timeout - the maximum number of seconds to wait for @p command 
+ *    to complete before returning a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
 int dnxPluginExecute(char * command, int * resCode, char * resData, 
       int maxData, int timeout);
 
-// Searches for a plugin in the plugin chain
-int dnxPluginLocate(char * name, DNX_PLUGIN ** plugin);
+/** Search for a plugin in the plugin chain.
+ * 
+ * @param[in] command - the command to be executed.
+ * @param[out] plugin - the address of storage for the located plugin to 
+ *    be returned.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginLocate(char * command, DnxPlugin ** plugin);
 
-// Isolate base name of a plugin command
+/** Isolate the base name of a plugin command.
+ * 
+ * @param[in] command - the command for which to have the base name isolated.
+ * @param[out] baseName - the address of storage for the returned base name.
+ * @param[in] maxData - the maximum size of the @p baseName buffer.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
 int dnxPluginBaseName(char * command, char * baseName, int maxData);
 
-// Executes an internal plugin module
-int dnxPluginInternal(DNX_PLUGIN * plugin, char * command, int * resCode, 
+/** Executes an internal plugin module.
+ * 
+ * @param[in] plugin - the plugin module to execute against @p command.
+ * @param[in] command - the command to have @p plugin execute.
+ * @param[out] resCode - the address of storage for the result code returned
+ *    by @p plugin.
+ * @param[out] resData - the resulting STDOUT text from the execution 
+ *    of @p command by @p plugin.
+ * @param[in] maxData - the maximum size of the @p resData buffer.
+ * @param[in] timeout - the maximum number of seconds to wait for @p plugin
+ *    to complete execution of @p command before returning a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginInternal(DnxPlugin * plugin, char * command, int * resCode, 
       char * resData, int maxData, int timeout);
 
-// Executes an external plugin module
+/** Execute an external command line.
+ * 
+ * @param[in] command - the command to be executed.
+ * @param[out] resCode - the address of storage for the result code returned
+ *    by @p command.
+ * @param[out] resData - the resulting STDOUT text from the execution 
+ *    of @p command.
+ * @param[in] maxData - the maximum size of the @p resData buffer.
+ * @param[in] timeout - the maximum number of seconds to wait for @p command 
+ *    to complete before returning a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
 int dnxPluginExternal(char * command, int * resCode, char * resData, 
       int maxData, int timeout);
 
-// Performs time sensitive fgets
+/** Perform a time sensitive fgets.
+ * 
+ * @param[out] data - the address of storage for returning data from @p fp.
+ * @param[in] size - the maximum size of @p data in bytes.
+ * @param[in] fp - the file pointer to be read.
+ * @param[in] timeout - the maximum number of seconds to wait for data to be
+ *    returned before failing with a timeout error.
+ * 
+ * @return The address of @p data on success, or NULL on error.
+ */
 char * dnxFgets(char * data, int size, FILE * fp, int timeout);
 
-// Converts plugin string to vector array
+/** Convert a dnx plugin string to a vector array.
+ * 
+ * The @p command buffer is modified such that each command argument is 
+ * null-terminated on return.
+ * 
+ * @param[in] command - the string to be converted.
+ * @param[out] argc - the address of storage for the number of elements 
+ *    actually returned in @p argv.
+ * @param[out] argv - the address of storage for returning a null-terminated 
+ *    array of pointers to white-space-separated arguments in @p command.
+ * @param[in] maxargs - the maximum number of entries in the @p argv array.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
 int dnxPluginVector(char * command, int * argc, char ** argv, int maxargs);
+
+/** Initialize the dnx client plugin utility library.
+ *
+ * @param[in] pluginPath - the file system path where plugin libraries are
+ *    to be found.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPluginInit(char * pluginPath);
+
+/** Clean up the dnx plugin utility library. */
+void dnxPluginRelease(void);
 
 #endif   /* _DNXPLUGIN_H_ */
 
