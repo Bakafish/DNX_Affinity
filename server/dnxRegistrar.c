@@ -33,11 +33,12 @@
  * @ingroup DNX_SERVER_IMPL
  */
 
+#include "dnxRegistrar.h"
+
 #include "dnxNebMain.h"
 #include "dnxError.h"
 #include "dnxQueue.h"
 #include "dnxProtocol.h"
-#include "dnxRegistrar.h"
 #include "dnxLogging.h"
 
 #include <assert.h>

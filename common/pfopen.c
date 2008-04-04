@@ -25,6 +25,8 @@
  * @ingroup DNX_COMMON_IMPL
  */
 
+#include "pfopen.h"
+
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,8 +36,6 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/wait.h>
-
-#include "pfopen.h"
 
 #if 0
 # define PF_IN(pf)   ((pf)->fp[0])

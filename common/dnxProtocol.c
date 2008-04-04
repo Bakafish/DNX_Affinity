@@ -36,17 +36,18 @@
  * @ingroup DNX_COMMON_IMPL
  */
 
+#include "dnxProtocol.h"
+
+#include "dnxError.h"
+#include "dnxTransport.h"
+#include "dnxXml.h"
+#include "dnxLogging.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <syslog.h>
-
-#include "dnxError.h"
-#include "dnxTransport.h"
-#include "dnxXml.h"
-#include "dnxProtocol.h"
-#include "dnxLogging.h"
 
 //----------------------------------------------------------------------------
 // CLIENT: Use to register with Registrar

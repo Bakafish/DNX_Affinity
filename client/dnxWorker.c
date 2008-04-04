@@ -32,6 +32,14 @@
  * @ingroup DNX_CLIENT_IMPL
  */
 
+#include "dnxWorker.h"
+
+#include "dnxClientMain.h"
+#include "dnxTransport.h"
+#include "dnxProtocol.h"
+#include "dnxXml.h"
+#include "dnxPlugin.h"
+
 #include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,13 +49,6 @@
 #include <assert.h>
 #include <syslog.h>
 #include <errno.h>
-
-#include "dnxClientMain.h"
-#include "dnxTransport.h"
-#include "dnxProtocol.h"
-#include "dnxXml.h"
-#include "dnxWorker.h"
-#include "dnxPlugin.h"
 
 /** @todo Dynamically allocate based upon config file maxResultBuffer setting */
 #define MAX_RESULT_DATA 1024

@@ -25,11 +25,12 @@
  * @ingroup DNX_SERVER_IMPL
  */
 
-#include <stdarg.h>
+#include "dnxLogging.h"
 
 #include "dnxNebMain.h"
 #include "dnxError.h"
-#include "dnxLogging.h"
+
+#include <stdarg.h>
 
 #define MAX_LOG_LINE 1023
 

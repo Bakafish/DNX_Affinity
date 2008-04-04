@@ -46,7 +46,6 @@ typedef struct _DnxQueueEntry_
    struct _DnxQueueEntry_ * next;   // Pointer to next entry, NULL if none
 } DnxQueueEntry;
 
-
 // Queue Structure
 typedef struct _DnxQueue_ 
 {

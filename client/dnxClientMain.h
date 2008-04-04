@@ -32,9 +32,6 @@
 #include <sys/time.h>
 #include <pthread.h>
 
-#include "dnxError.h"
-#include "dnxChannel.h"
-
 #define DNX_NODE_CONFIG "dnxNode.cfg"
 
 typedef enum _DnxThreadState_ 

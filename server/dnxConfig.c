@@ -25,16 +25,17 @@
  * @ingroup DNX_SERVER_IMPL
  */
 
+#include "dnxConfig.h"
+
+#include "dnxError.h"
+#include "dnxChannel.h"
+#include "dnxNebMain.h"
+#include "dnxLogging.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
-#include "dnxError.h"
-#include "dnxChannel.h"
-#include "dnxConfig.h"
-#include "dnxNebMain.h"
-#include "dnxLogging.h"
 
 #define DNX_MAX_CFG_LINE   2048
 

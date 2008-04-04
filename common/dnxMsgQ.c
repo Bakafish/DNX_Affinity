@@ -25,6 +25,10 @@
  * @ingroup DNX_COMMON_IMPL
  */
 
+#include "dnxMsgQ.h"
+
+#include "dnxError.h"
+
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
@@ -32,9 +36,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
-#include "dnxError.h"
-#include "dnxMsgQ.h"
 
 #define DNX_MSGQ_STANDARD  1  // Message type
 

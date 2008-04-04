@@ -36,6 +36,8 @@
 #ifndef _DNXREGISTRAR_H_
 #define _DNXREGISTRAR_H_
 
+#include "dnxNebMain.h"
+
 void * dnxRegistrar(void * data);
 int dnxGetNodeRequest(DnxGlobalData * gData, DnxNodeRequest ** ppNode);
 int dnxProcessNodeRequest(DnxGlobalData * gData);

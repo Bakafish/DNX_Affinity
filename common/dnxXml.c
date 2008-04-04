@@ -25,15 +25,16 @@
  * @ingroup DNX_COMMON_IMPL
  */
 
+#include "dnxXml.h"
+
+#include "dnxError.h"
+#include "dnxLogging.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <syslog.h>
-
-#include "dnxError.h"
-#include "dnxXml.h"
-#include "dnxLogging.h"
 
 #define DNX_XML_MIN_HEADER 32
 

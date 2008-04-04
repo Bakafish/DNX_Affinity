@@ -166,6 +166,11 @@
  * @ingroup DNX_COMMON_IMPL
  */
  
+#include "dnxTransport.h"
+
+#include "dnxError.h"
+#include "dnxLogging.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -173,12 +178,6 @@
 #include <pthread.h>
 #include <syslog.h>
 #include <errno.h>
-
-#include "dnxError.h"
-#include "dnxTransport.h"
-#include "dnxLogging.h"
-//#include "dnxTcp.h"
-//#include "dnxMsgQ.h"
 
 typedef struct _urlTypeMap_ 
 {

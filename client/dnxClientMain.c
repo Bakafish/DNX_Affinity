@@ -29,6 +29,16 @@
  * @defgroup DNX_CLIENT_IFC  DNX Client Interface
  */
 
+#include "dnxClientMain.h"
+
+#include "dnxError.h"
+#include "dnxTransport.h"
+#include "dnxProtocol.h"
+#include "dnxConfig.h"
+#include "dnxWLM.h"
+#include "dnxPlugin.h"
+#include "dnxLogging.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -42,15 +52,6 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <errno.h>
-
-#include "dnxError.h"
-#include "dnxTransport.h"
-#include "dnxProtocol.h"
-#include "dnxClientMain.h"
-#include "dnxConfig.h"
-#include "dnxWLM.h"
-#include "dnxPlugin.h"
-#include "dnxLogging.h"
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>

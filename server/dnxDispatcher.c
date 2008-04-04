@@ -32,7 +32,7 @@
  * @ingroup DNX_SERVER_IMPL
  */
 
-#include <assert.h>
+#include "dnxDispatcher.h"
 
 #include "dnxError.h"
 #include "dnxProtocol.h"
@@ -41,6 +41,8 @@
 #include "dnxRegistrar.h"
 #include "dnxJobList.h"
 #include "dnxLogging.h"
+
+#include <assert.h>
 
 static void dnxDispatcherCleanup (void *data);
 static int dnxDispatchJob (DnxGlobalData *gData, DnxNewJob *pSvcReq);

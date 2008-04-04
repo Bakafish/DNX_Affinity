@@ -28,6 +28,8 @@
 #ifndef _DNXPLUGIN_H_
 #define _DNXPLUGIN_H_
 
+#include <stdio.h>
+
 #define DNX_PLUGIN_RESULT_OK        0
 #define DNX_PLUGIN_RESULT_WARNING   1
 #define DNX_PLUGIN_RESULT_CRITICAL  2
@@ -87,7 +89,7 @@ int dnxPluginExternal(char * command, int * resCode, char * resData,
 char * dnxFgets(char * data, int size, FILE * fp, int timeout);
 
 // Converts plugin string to vector array
-int dnxPluginVector(char * command, int * argc, char ** argv, int max);
+int dnxPluginVector(char * command, int * argc, char ** argv, int maxargs);
 
 #endif   /* _DNXPLUGIN_H_ */
 

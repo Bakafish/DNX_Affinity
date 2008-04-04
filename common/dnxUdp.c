@@ -25,6 +25,11 @@
  * @ingroup DNX_COMMON_IMPL
  */
 
+#include "dnxUdp.h"
+
+#include "dnxError.h"
+#include "dnxLogging.h"
+
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
@@ -38,10 +43,6 @@
 #include <pthread.h>
 #include <syslog.h>
 #include <errno.h>
-
-#include "dnxError.h"
-#include "dnxUdp.h"
-#include "dnxLogging.h"
 
 static pthread_mutex_t udpMutex;
 static pthread_mutexattr_t udpMutexAttr;

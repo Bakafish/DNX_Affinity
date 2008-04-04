@@ -28,6 +28,11 @@
 #ifndef _DNXNEBMAIN_H_
 #define _DNXNEBMAIN_H_
 
+#include "dnxError.h"
+#include "dnxTransport.h"
+#include "dnxProtocol.h"
+#include "dnxQueue.h"   // For dnxQueue definition
+
 #ifndef NSCORE
 # define NSCORE
 #endif
@@ -47,12 +52,9 @@
 #include "nagios.h"
 #include "objects.h"
 
+#include <time.h>
 #include <regex.h>
-
-#include "dnxError.h"
-#include "dnxTransport.h"
-#include "dnxProtocol.h"
-#include "dnxQueue.h"   // For dnxQueue definition
+#include <pthread.h>
 
 #define DNX_DISPATH_PORT   12480
 #define DNX_COLLECT_PORT   12481

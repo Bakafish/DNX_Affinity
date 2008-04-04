@@ -25,13 +25,14 @@
  * @ingroup DNX_SERVER_IMPL
  */
 
+#include "dnxQueue.h"
+
+#include "dnxError.h"
+#include "dnxLogging.h"
+
 #include <stdlib.h>     // malloc() and free()
 #include <assert.h>     // assert()
 #include <syslog.h>
-
-#include "dnxError.h"
-#include "dnxQueue.h"   // dnxQueue definitions and prototypes
-#include "dnxLogging.h"
 
 //----------------------------------------------------------------------------
 

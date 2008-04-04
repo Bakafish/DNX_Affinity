@@ -32,6 +32,11 @@
  * @ingroup DNX_CLIENT_IMPL
  */
 
+#include "dnxWLM.h"
+
+#include "dnxClientMain.h"
+#include "dnxWorker.h"
+
 #include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,10 +46,6 @@
 #include <assert.h>
 #include <syslog.h>
 #include <errno.h>
-
-#include "dnxClientMain.h"
-#include "dnxWLM.h"
-#include "dnxWorker.h"
 
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 

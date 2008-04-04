@@ -25,14 +25,15 @@
  * @ingroup DNX_CLIENT_IMPL
  */
 
+#include "dnxLogging.h"
+
+#include "dnxClientMain.h"
+#include "dnxError.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
-
-#include "dnxClientMain.h"
-#include "dnxError.h"
-#include "dnxLogging.h"
 
 #define MAX_LOG_LINE 1023
 

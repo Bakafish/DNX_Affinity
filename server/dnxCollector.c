@@ -31,11 +31,12 @@
  * @ingroup DNX_SERVER_IMPL
  */
 
+#include "dnxCollector.h"
+
 #include "dnxNebMain.h"
 #include "dnxError.h"
 #include "dnxQueue.h"
 #include "dnxProtocol.h"
-#include "dnxCollector.h"
 #include "dnxJobList.h"
 #include "dnxLogging.h"
 

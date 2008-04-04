@@ -26,6 +26,7 @@
  */
 
 #include "dnxJobList.h"
+
 #include "dnxLogging.h"
 
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);

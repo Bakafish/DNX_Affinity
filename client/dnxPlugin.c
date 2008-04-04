@@ -25,6 +25,11 @@
  * @ingroup DNX_CLIENT_IMPL
  */
 
+#include "dnxPlugin.h"
+
+#include "dnxError.h"
+#include "pfopen.h"
+
 #include <sys/types.h>
 #include <time.h>
 #include <stdio.h>
@@ -34,10 +39,6 @@
 #include <signal.h>
 #include <syslog.h>
 #include <errno.h>
-
-#include "dnxError.h"
-#include "dnxPlugin.h"
-#include "pfopen.h"
 
 #define MAX_PLUGIN_PREFIX  1024
 #define MAX_PLUGIN_PATH    2048

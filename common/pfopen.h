@@ -48,6 +48,9 @@
 #ifndef _PFOPEN_H_
 #define _PFOPEN_H_
 
+#include <unistd.h>
+#include <stdio.h>
+
 #define PF_IN(pf)    ((pf)->fp[0])
 #define PF_OUT(pf)   ((pf)->fp[1])
 #define PF_ERR(pf)   ((pf)->fp[2])

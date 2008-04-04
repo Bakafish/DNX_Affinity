@@ -72,46 +72,46 @@ typedef struct _DnxGuid_
 
 typedef struct _DnxNodeRequest_ 
 {
-   DnxGuid guid;           // Worker Node GUID
-   DnxReqType reqType;     // Request type
-   unsigned int jobCap;    // Job capacity
-   unsigned int ttl;       // Request Time-To-Live (in seconds)
-   time_t expires;         // Job expiration time (not transmitted)
+   DnxGuid guid;                    // Worker Node GUID
+   DnxReqType reqType;              // Request type
+   unsigned int jobCap;             // Job capacity
+   unsigned int ttl;                // Request Time-To-Live (in seconds)
+   time_t expires;                  // Job expiration time (not transmitted)
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxNodeRequest;
 
 typedef struct _DnxJob_ 
 {
-   DnxGuid guid;           // Job GUID
-   DnxJobState state;      // Job state
-   int priority;           // Execution Priority
-   int timeout;            // Max job execution time
-   char * cmd;             // Contains command plus arguments
+   DnxGuid guid;                    // Job GUID
+   DnxJobState state;               // Job state
+   int priority;                    // Execution Priority
+   int timeout;                     // Max job execution time
+   char * cmd;                      // Contains command plus arguments
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxJob;
 
 typedef struct _DnxResult_ 
 {
-   DnxGuid guid;           // Job GUID
-   DnxJobState state;      // Job state
-   unsigned int delta;     // Job execution time delta
-   int resCode;            // Job result code
-   char * resData;         // Job result data
+   DnxGuid guid;                    // Job GUID
+   DnxJobState state;               // Job state
+   unsigned int delta;              // Job execution time delta
+   int resCode;                     // Job result code
+   char * resData;                  // Job result data
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxResult;
 
 typedef struct _DnxMgmtRequest_ 
 {
-   DnxGuid guid;           // Manager GUID
-   char * action;          // Request: SHUTDOWN, RELOAD, STATUS
+   DnxGuid guid;                    // Manager GUID
+   char * action;                   // Request: SHUTDOWN, RELOAD, STATUS
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxMgmtRequest;
 
 typedef struct _DnxMgmtReply_ 
 {
-   DnxGuid guid;           // Client GUID
-   DnxReqType status;      // Request status: ACK or NAK
-   char * reply;           // Reply data (only valid for STATUS request)
+   DnxGuid guid;                    // Client GUID
+   DnxReqType status;               // Request status: ACK or NAK
+   char * reply;                    // Reply data (only valid for STATUS request)
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxMgmtReply;
 
