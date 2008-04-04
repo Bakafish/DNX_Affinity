@@ -24,6 +24,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+
 #include "dsnebmain.h"
 
 #include "dsqueue.h"
@@ -31,8 +32,8 @@
 #include "dsdispatcher.h"
 #include "dstimer.h"
 #include "dsjoblist.h"
+#include "dsconfig.h"
 
-#include "dnxConfig.h"
 #include "dnxProtocol.h"
 #include "dnxTransport.h"
 #include "dnxXml.h"

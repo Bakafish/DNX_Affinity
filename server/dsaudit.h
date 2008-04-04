@@ -24,6 +24,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+
 #ifndef _DSAUDIT_H_
 #define _DSAUDIT_H_
 

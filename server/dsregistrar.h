@@ -32,6 +32,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+
 #ifndef _DSREGISTRAR_H_
 #define _DSREGISTRAR_H_
 

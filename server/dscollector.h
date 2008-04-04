@@ -30,6 +30,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+
 #ifndef _DSCOLLECTOR_H_
 #define _DSCOLLECTOR_H_
 

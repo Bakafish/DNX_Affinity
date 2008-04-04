@@ -24,6 +24,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+
 #ifndef _DSNEBMAIN_H_
 #define _DSNEBMAIN_H_
 

@@ -17,19 +17,19 @@
  
   --------------------------------------------------------------------------*/
 
-/** Parses DNX Worker Node config file.
+/** Definitions and prototypes for managing DNX server config file.
  *
- * @file dnxConfig.h
+ * @file dsconfig.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
 
-#ifndef _DNXCONFIG_H_
-#define _DNXCONFIG_H_
+#ifndef _DSCONFIG_H_
+#define _DSCONFIG_H_
 
-void initGlobals (void);
-int parseFile (char *szFile);
+void initGlobals(void);
+int parseFile(char * szFile);
 
-#endif   /* _DNXCONFIG_H_ */
+#endif   /* _DSCONFIG_H_ */
 

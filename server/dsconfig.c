@@ -24,7 +24,8 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
-#include "dnxConfig.h"
+
+#include "dsconfig.h"
 
 #include "dnxError.h"
 #include "dnxChannel.h"

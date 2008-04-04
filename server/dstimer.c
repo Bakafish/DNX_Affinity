@@ -30,6 +30,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+
 #include "dstimer.h"
 
 #include "dsjoblist.h"

@@ -31,6 +31,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+
 #ifndef _DSDISPATCHER_H_
 #define _DSDISPATCHER_H_
 

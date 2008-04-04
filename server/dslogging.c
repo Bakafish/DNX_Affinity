@@ -24,6 +24,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+
 #include "dnxLogging.h"
 
 #include "dsnebmain.h"

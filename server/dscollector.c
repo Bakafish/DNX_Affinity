@@ -30,6 +30,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+
 #include "dscollector.h"
 
 #include "dsnebmain.h"

@@ -24,6 +24,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+
 #include "dsqueue.h"    // dnx server queue definitions and prototypes
 
 #include "dnxError.h"
