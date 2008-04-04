@@ -52,15 +52,15 @@ int dnxQueueGet(DnxQueue * queue, void ** ppPayload);
 DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload, 
       DnxQueueResult (*Compare)(void * pLeft, void * pRight));
 
+/* Find a queue item without removing it */
+DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, 
+      DnxQueueResult (*Compare)(void * pLeft, void * pRight));
+
 /* Wait for, and then get the first pending request from the requests list */
 //int dnxQueueGetWait(DnxQueue * queue, void ** ppPayload);
 
 /* Advance queue's circular buffer pointer */
 //int dnxQueueNext(DnxQueue * queue, void ** ppPayload);
-
-/* Find a queue item without removing it */
-//DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, 
-//      DnxQueueResult (*Compare)(void * pLeft, void * pRight));
 
 /* Get the number of requests in the list */
 //int dnxQueueSize(DnxQueue * queue);

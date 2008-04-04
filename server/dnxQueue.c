@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <syslog.h>
 #include <assert.h>
+#include <pthread.h>
 
 /** Queue entry wrapper structure - wraps user payload. */
 typedef struct iDnxQueueEntry_ 
@@ -63,6 +64,8 @@ typedef struct iDnxQueue_
  * @param[in] pPayload - the data to be added to @p queue.
  * 
  * @return Zero on success, or a non-zero error value.
+ * 
+ * @note Cancellation safe.
  */
 int dnxQueuePut(DnxQueue * queue, void * pPayload)
 {
@@ -74,12 +77,12 @@ int dnxQueuePut(DnxQueue * queue, void * pPayload)
    // create structure with new request
    if ((item = (iDnxQueueEntry *)xmalloc(sizeof *item)) == 0)
       return DNX_ERR_MEMORY;
-   
+
    item->pPayload = pPayload;
    item->next = 0;
    
    DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-   
+
    // add new request to end of list, updating list pointers as required
    if (iqueue->size == 0) // special case - list is empty
       iqueue->head = iqueue->tail = iqueue->current = item;
@@ -132,6 +135,8 @@ int dnxQueuePut(DnxQueue * queue, void * pPayload)
  *    first pending queue item, if found.
  * 
  * @return Zero if found, or DNX_ERR_NOTFOUND if not found.
+ * 
+ * @note Cancellation safe.
  */
 int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
 {
@@ -158,7 +163,7 @@ int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
    }
    
    DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-   
+
    // return the payload to the caller, free queue item
    if (item) 
    {
@@ -184,6 +189,8 @@ int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
  * @return A DnxQueueResult code - DNX_QRES_FOUND (1) if found, or
  * DNX_QRES_CONTINUE (0) if not found. This is essentially a boolean value
  * as the value of DNX_QRES_CONTINUE is zero.
+ * 
+ * @note Cancellation safe.
  */
 DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload, 
       DnxQueueResult (*Compare)(void * pLeft, void * pRight))
@@ -235,6 +242,49 @@ DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload,
 
 //----------------------------------------------------------------------------
 
+/** Find a node matching a specified payload in a queue.
+ * 
+ * @param[in] queue - the queue to be queried for a matching payload.
+ * @param[in,out] ppPayload - on entry contains the payload to be matched;
+ *    on exit, returns the located matching payload.
+ * @param[in] Compare - a node comparison routine; accepts two void pointers
+ *    to payload objects, and returns a DnxQueueResult code.
+ * 
+ * @return A DnxQueueResult code; DNX_QRES_FOUND (1) if the requested item
+ * payload was found in the queue, or DNX_QRES_CONTINUE of not. This is 
+ * essentially a boolean return value, as the value of DNX_QRES_CONTINUE is 
+ * zero.
+ * 
+ * @note Cancellation safe.
+ */
+DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, 
+      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
+{
+   DnxQueueResult bFound = DNX_QRES_CONTINUE;
+   iDnxQueue * iqueue = (iDnxQueue *)queue;
+   iDnxQueueEntry * item;
+
+   assert(queue && ppPayload && Compare);
+
+   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
+
+   for (item = iqueue->head; item; item = item->next)
+   {
+      if ((bFound = Compare(*ppPayload, item->pPayload)) != DNX_QRES_CONTINUE)
+      {
+         if (bFound == DNX_QRES_FOUND)
+            *ppPayload = item->pPayload;
+         break;
+      }
+   }
+
+   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
+
+   return bFound;
+}
+
+//----------------------------------------------------------------------------
+
 /** Waits and returns the first pending item payload from a queue.
  * 
  * Suspends the calling thread if the queue is empty. The returned payload 
@@ -247,6 +297,8 @@ DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload,
  * @return Zero on success, or DNX_ERR_NOTFOUND if not found.
  * 
  * @note Not currently used (or exported by the dnxQueue.h header file).
+ * 
+ * @note Cancellation safe.
  */
 int dnxQueueGetWait(DnxQueue * queue, void ** ppPayload)
 {
@@ -305,6 +357,8 @@ int dnxQueueGetWait(DnxQueue * queue, void ** ppPayload)
  * @return Zero on success, or DNX_ERR_NOTFOUND if there is no next node.
  * 
  * @note Not currently used (or exported by the dnxQueue.h header file).
+ * 
+ * @note Cancellation safe.
  */
 int dnxQueueNext(DnxQueue * queue, void ** ppPayload)
 {
@@ -335,49 +389,6 @@ int dnxQueueNext(DnxQueue * queue, void ** ppPayload)
 
 //----------------------------------------------------------------------------
 
-/** Find a node matching a specified payload in a queue.
- * 
- * @param[in] queue - the queue to be queried for a matching payload.
- * @param[in,out] ppPayload - on entry contains the payload to be matched;
- *    on exit, returns the located matching payload.
- * @param[in] Compare - a node comparison routine; accepts two void pointers
- *    to payload objects, and returns a DnxQueueResult code.
- * 
- * @return A DnxQueueResult code; DNX_QRES_FOUND (1) if the requested item
- * payload was found in the queue, or DNX_QRES_CONTINUE of not. This is 
- * essentially a boolean return value, as the value of DNX_QRES_CONTINUE is 
- * zero.
- * 
- * @note Not currently used (or exported by the dnxQueue.h header file).
- */
-DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, 
-      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
-{
-   DnxQueueResult bFound = DNX_QRES_CONTINUE;
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item;
-
-   assert(queue && ppPayload && Compare);
-
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-
-   for (item = iqueue->head; item; item = item->next)
-   {
-      if ((bFound = Compare(*ppPayload, item->pPayload)) != DNX_QRES_CONTINUE)
-      {
-         if (bFound == DNX_QRES_FOUND)
-            *ppPayload = item->pPayload;
-         break;
-      }
-   }
-
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-
-   return bFound;
-}
-
-//----------------------------------------------------------------------------
-
 /** Return the number of items in the queue.
  * 
  * @param[in] queue - the queue to be queried for item count.
@@ -386,6 +397,8 @@ DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload,
  * @return The count of items in the queue.
  * 
  * @note Not currently used (or exported by the dnxQueue.h header file).
+ * 
+ * @note Cancellation safe.
  */
 int dnxQueueSize(DnxQueue * queue)
 {
@@ -414,6 +427,8 @@ int dnxQueueSize(DnxQueue * queue)
  *    queue object.
  * 
  * @return Zero on success, or a non-zero error value.
+ * 
+ * @note Cancellation safe.
  */
 int dnxQueueCreate(int maxsz, void (*pldtor)(void *), DnxQueue ** pqueue)
 {
@@ -503,6 +518,7 @@ do {                                                                          \
             #expr, __FILE__, __LINE__, ret, dnxErrorString(ret));             \
       exit(1);                                                                \
    }                                                                          \
+/* printf("SUCCESS: '%s'\n", #expr); */                                       \
 } while (0)
 #define CHECK_TRUE(expr)                                                      \
 do {                                                                          \
@@ -512,6 +528,7 @@ do {                                                                          \
             #expr, __FILE__, __LINE__);                                       \
       exit(1);                                                                \
    }                                                                          \
+/* printf("SUCCESS: '%s'\n", #expr); */                                       \
 } while (0)
 #define CHECK_NONZERO(expr)   CHECK_ZERO(!(expr))
 #define CHECK_FALSE(expr)     CHECK_TRUE(expr)
@@ -535,7 +552,9 @@ int main(int argc, char ** argv)
    DnxQueue * queue;
    iDnxQueue * iqueue;
    DnxQueueResult qres;
-   char * msg2_static = "message 100";
+   char * msg100_static = "message 100";
+   char * msg25_static = "message 25";
+   char * msg250_static = "message 250";
    char * msgs[101];
    char * msg2;
    int i;
@@ -558,7 +577,7 @@ int main(int argc, char ** argv)
    {
       char buf[32];
       sprintf(buf, "message %d", i);
-      msgs[i] = strdup(buf);
+      CHECK_NONZERO(msgs[i] = strdup(buf));
       CHECK_ZERO(dnxQueuePut(queue, msgs[i]));
    }
 
@@ -572,11 +591,21 @@ int main(int argc, char ** argv)
    free(msg2);
 
    // find and remove item 100 from the queue - we'll own it on success
-   msg2 = msg2_static;
+   msg2 = msg100_static;
    CHECK_TRUE(dnxQueueRemove(queue, (void **)&msg2, qtcmp) == DNX_QRES_FOUND);
    CHECK_NONZERO(msg2);
-   CHECK_TRUE(msg2 != msg2_static);
+   CHECK_TRUE(msg2 != msg100_static);
    free(msg2);
+
+   // attempt to find an existing item
+   msg2 = msg25_static;
+   CHECK_TRUE(dnxQueueFind(queue, (void **)&msg2, qtcmp) == DNX_QRES_FOUND);
+   CHECK_TRUE(msg2 != msg25_static);
+   CHECK_TRUE(strcmp(msg2, msgs[25]) == 0);
+
+   // attempt to find a non-existent item
+   msg2 = msg250_static;
+   CHECK_TRUE(dnxQueueFind(queue, (void **)&msg2, qtcmp) == DNX_QRES_CONTINUE);
 
    // remove remaining entries
    for (i = 3; i < elemcount(msgs); i++)
