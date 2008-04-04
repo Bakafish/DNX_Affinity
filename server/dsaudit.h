@@ -27,6 +27,8 @@
 #ifndef _DSAUDIT_H_
 #define _DSAUDIT_H_
 
+#include "dsjoblist.h"
+
 void dsEnableAuditing(int enable);
 int dsAuditJob(DnxNewJob * pJob, char * action);
 

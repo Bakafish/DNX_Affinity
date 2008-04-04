@@ -34,7 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
+#include <syslog.h>
 
 #define DNX_MAX_CFG_LINE   2048
 
@@ -63,8 +63,6 @@ typedef struct _DnxVarMap_
    DnxVarType varType;
    void * varStorage;
 } DnxVarMap;
-
-extern DnxGlobalData dnxGlobalData;
 
 static DnxVarMap DnxVarDictionary[] = 
 {

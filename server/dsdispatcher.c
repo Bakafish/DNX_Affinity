@@ -37,11 +37,11 @@
 #include "dsnebmain.h"
 #include "dsjoblist.h"
 #include "dsaudit.h"
+#include "dsregistrar.h"
 
 #include "dnxError.h"
 #include "dnxProtocol.h"
 #include "dnxXml.h"
-#include "dnxRegistrar.h"
 #include "dnxLogging.h"
 
 #include <assert.h>

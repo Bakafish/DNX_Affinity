@@ -31,6 +31,8 @@
 
 #include "dsjoblist.h"
 
+#include "dnxError.h"
+
 #include <syslog.h>
 #include <netinet/in.h>
 
