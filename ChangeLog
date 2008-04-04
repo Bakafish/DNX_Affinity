@@ -8,6 +8,57 @@ blank lines and include the date, developer's name, and change description.
 
 *** Revision xx: Released dnx-0.15: dd-mmm-yy jcalcote
 
+* Revision: 156-155: 19-JAN-08 jcalcote 
+Updated ChangeLog.  Renamed nagios 2.x patch so it's obvious that it works 
+against nagios 2.8, 9 and 10; updated the nagios read me file.  
+
+* Revision: 154: 18-JAN-08 jcalcote 
+Added conditional code to make dnx compile and work under nagios 3.x 
+
+* Revision: 153: 17-JAN-08 jcalcote 
+Modified nagios directory structure; only require one set of Nagios 2.x 
+header files and 2 patch files for all Nagios 2.x releases.  
+
+* Revision: 152-149: 16-JAN-08 jcalcote 
+Added code to log individual configuration changes.  Removed prefix from 
+/etc reference in dnxcld.init.in Repointed PID file at /var/run - this IS 
+the global state directory for all running instances.  Added mkdir for 
+process state directory in case prefix is /usr/local.  
+
+* Revision: 148-147: 14-JAN-08 jcalcote 
+Fixed debug format string in dnxClientMain.c.  Added some startup messages 
+to the client - config file, various important parameters; fix local 
+interface lookup code in the WLM.  Fixed a few minor issues in the example 
+config files.  
+
+* Revision: 146: 12-JAN-08 jcalcote 
+Reworked the configuration parser to deal with default parameters cleanly; 
+reworked reconfiguration of the client such that nothing is overwritten if 
+any portion of the reconfig process fails; changed some text in the 
+example configuration files; changed the name of the debug parameter to 
+debugLevel in both client and server; changed the name of the maxTimeouts 
+parameter to maxRetries.  
+
+* Revision: 145-144: 10-JAN-08 jcalcote 
+Now return better errors from config parser; added code to log config 
+changes in WLM.  Ran dos2unix on dnx*.cfg files in etc.  
+
+* Revision: 143-140: 09-JAN-08 jcalcote 
+Added configured sysconfdir to client and server for default configuration 
+file paths.  Fix a few rpm spec file and init script errors.  Fix memcmp 
+of XID's in dnxJobList.c - XID fields are padded on 64-bit machines making 
+memcmp a bad way to compare XID's.  Added rpm/ to location of spec file in 
+Makefile.am for rpm build.  
+
+* Revision: 139: 08-JAN-08 jcalcote 
+Added code to configure.ac and Makefile.am to get rpm build working from 
+make.  
+
+* Revision: 138: 07-JAN-08 jcalcote 
+Fixed lookup bug in XID management of node requests and registrar; Fixed 
+job syslog and debug messages throughout; added code to cache proper local 
+ip node address in both binary and string format.  
+
 * Revision: 137-136: 04-JAN-08 jcalcote 
 Updated ChangeLog.  Removed work load manager thread; pushed all pool 
 management onto workers.  Changed debug levels for most dnxDebug messages 
