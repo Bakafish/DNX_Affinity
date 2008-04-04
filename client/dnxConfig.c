@@ -75,60 +75,6 @@ static DnxVarMap DnxVarDictionary[] =
 
 //----------------------------------------------------------------------------
 
-/** Parse a single line from a dnx configuration file.
- * 
- * @param[in] szFile - the name of the file being parsed.
- * @param[in] lineNo - the line number currently being parsed.
- * @param[in] szLine - a buffer containing the text of the line being parsed.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int parseLine(char * szFile, int lineNo, char * szLine)
-{
-   char * szVar, * szVal;
-   char * cp;
-
-   // Strip comments
-   if ((cp = strchr(szLine, '#')) != NULL)
-      *cp = '\0';
-
-   // Strip trailing whitespace
-   strTrim(szLine);
-
-   // Check for blank lines
-   if (!*szLine)
-      return 0;
-
-   // Look for equivalence delimiter
-   if ((cp = strchr(szLine, '=')) == NULL)
-   {
-      fprintf(stderr, "parseLine: Missing '=' equivalence operator\n");
-      return 1;   // Parse error: no delimiter
-   }
-   *cp++ = '\0';
-
-   for (szVar = szLine; *szVar && *szVar <= ' '; szVar++);
-   if (strTrim(szVar) < 1)
-   {
-      fprintf(stderr, "%s: Line %d: Missing or invalid variable\n", 
-            szFile, lineNo);
-      return 1;
-   }
-
-   for (szVal = cp; *szVal && *szVal <= ' '; szVal++);
-   if (strTrim(szVal) < 1)
-   {
-      fprintf(stderr, "%s: Line %d: Missing or invalid assignment value\n", 
-            szFile, lineNo);
-      return 1;
-   }
-
-   // Validate the variable and its value
-   return validateVariable(szVar, szVal);
-}
-
-//----------------------------------------------------------------------------
-
 /** Validate the format of a single variable with its value.
  * 
  * This routine also parses the value of a variable into its proper type in 
@@ -211,6 +157,60 @@ static int strTrim(char * szLine)
       *cp = 0;
 
    return strlen(szLine);
+}
+
+//----------------------------------------------------------------------------
+
+/** Parse a single line from a dnx configuration file.
+ * 
+ * @param[in] szFile - the name of the file being parsed.
+ * @param[in] lineNo - the line number currently being parsed.
+ * @param[in] szLine - a buffer containing the text of the line being parsed.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int parseLine(char * szFile, int lineNo, char * szLine)
+{
+   char * szVar, * szVal;
+   char * cp;
+
+   // Strip comments
+   if ((cp = strchr(szLine, '#')) != NULL)
+      *cp = '\0';
+
+   // Strip trailing whitespace
+   strTrim(szLine);
+
+   // Check for blank lines
+   if (!*szLine)
+      return 0;
+
+   // Look for equivalence delimiter
+   if ((cp = strchr(szLine, '=')) == NULL)
+   {
+      fprintf(stderr, "parseLine: Missing '=' equivalence operator\n");
+      return 1;   // Parse error: no delimiter
+   }
+   *cp++ = '\0';
+
+   for (szVar = szLine; *szVar && *szVar <= ' '; szVar++);
+   if (strTrim(szVar) < 1)
+   {
+      fprintf(stderr, "%s: Line %d: Missing or invalid variable\n", 
+            szFile, lineNo);
+      return 1;
+   }
+
+   for (szVal = cp; *szVal && *szVal <= ' '; szVal++);
+   if (strTrim(szVal) < 1)
+   {
+      fprintf(stderr, "%s: Line %d: Missing or invalid assignment value\n", 
+            szFile, lineNo);
+      return 1;
+   }
+
+   // Validate the variable and its value
+   return validateVariable(szVar, szVal);
 }
 
 //----------------------------------------------------------------------------
