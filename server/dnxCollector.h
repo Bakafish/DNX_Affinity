@@ -35,12 +35,36 @@
 #define _DNXCOLLECTOR_H_
 
 #include "dnxJobList.h"
+#include "dnxChannel.h"
 
 /** Abstract data type for the DNX job results collector. */
 typedef struct { int unused; } DnxCollector;
 
-int dnxCollectorCreate(long * debug, char * chname, char * collurl,
-      DnxJobList * joblist, DnxCollector ** pcoll);
+/** Return a reference to the collector channel object.
+ * 
+ * @param[in] coll - the collector whose dispatch channel should be returned.
+ * 
+ * @return A pointer to the collector channel object.
+ */
+DnxChannel * dnxCollectorGetChannel(DnxCollector * coll);
+
+/** Create a new collector object.
+ * 
+ * @param[in] chname - the name of the collect channel.
+ * @param[in] collurl - the collect channel URL.
+ * @param[in] joblist - a pointer to the global job list object.
+ * @param[out] pcoll - the address of storage for the return of the new
+ *    collector object.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxCollectorCreate(char * chname, char * collurl, DnxJobList * joblist, 
+      DnxCollector ** pcoll);
+
+/** Destroy an existing collector object.
+ * 
+ * @param[in] coll - a pointer to the collector object to be destroyed.
+ */
 void dnxCollectorDestroy(DnxCollector * coll);
 
 #endif   /* _DNXCOLLECTOR_H_ */

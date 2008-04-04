@@ -13,7 +13,6 @@ noinst_HEADERS =\
 
 dnxServer_la_SOURCES =\
  dnxCollector.c\
- dnxConfig.c\
  dnxDispatcher.c\
  dnxJobList.c\
  dnxNebMain.c\

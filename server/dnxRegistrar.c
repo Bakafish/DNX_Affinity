@@ -55,10 +55,11 @@ typedef struct iDnxRegistrar_
    DnxChannel * dispchan;  /*!< The dispatch communications channel. */
    DnxQueue * rqueue;      /*!< The registered worker node requests queue. */
    pthread_t tid;          /*!< The registrar thread id. */
-   long * debug;           /*!< A pointer to the global debug level. */
 } iDnxRegistrar;
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                              IMPLEMENTATION
+  --------------------------------------------------------------------------*/
 
 /** Compare two node "request for work" requests for equality.
  * 
@@ -250,9 +251,6 @@ static void * dnxRegistrar(void * data)
    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
    pthread_cleanup_push(dnxRegistrarCleanup, ireg->rqueue);
 
-   if (ireg->debug)
-      dnxChannelDebug(ireg->dispchan, 1);
-
    dnxSyslog(LOG_INFO, "dnxRegistrar[%lx]: Awaiting worker node requests", 
          pthread_self());
 
@@ -272,16 +270,10 @@ static void * dnxRegistrar(void * data)
    return 0;
 }
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                                 INTERFACE
+  --------------------------------------------------------------------------*/
 
-/** Return an available node "request for work" object pointer.
- * 
- * @param[in] reg - the registrar from which a node request should be returned.
- * @param[out] ppNode - the address of storage in which to return the located
- *    request node.
- * 
- * @return Zero on success, or a non-zero error value.
- */
 int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)reg;
@@ -325,29 +317,18 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 
 //----------------------------------------------------------------------------
 
-/** Create a new registrar object.
- * 
- * @param[in] debug - a pointer to the global debug level.
- * @param[in] queuesz - the size of the queue to create in this registrar.
- * @param[in] dispchan - a pointer to the dispatcher channel.
- * @param[out] preg - the address of storage in which to return the newly
- *    created registrar.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int dnxRegistrarCreate(long * debug, int queuesz, 
-      DnxChannel * dispchan, DnxRegistrar ** preg)
+int dnxRegistrarCreate(unsigned queuesz, DnxChannel * dispchan, 
+      DnxRegistrar ** preg)
 {
    iDnxRegistrar * ireg;
    int ret;
 
-   assert(debug && dispchan && preg);
+   assert(queuesz && dispchan && preg);
 
    if ((ireg = (iDnxRegistrar *)xmalloc(sizeof *ireg)) == 0)
       return DNX_ERR_MEMORY;
 
    memset(ireg, 0, sizeof *ireg);
-   ireg->debug = debug;
    ireg->dispchan = dispchan;
 
    if ((ret = dnxQueueCreate(queuesz, xfree, &ireg->rqueue)) != 0)
@@ -370,13 +351,8 @@ int dnxRegistrarCreate(long * debug, int queuesz,
    return DNX_OK;
 }
 
-/** Destroy a previously created registrar object.
- * 
- * Signals the registrar thread, waits for it to stop, and frees allocated 
- * resources.
- * 
- * @param[in] reg - the registrar to be destroyed.
- */
+//----------------------------------------------------------------------------
+
 void dnxRegistrarDestroy(DnxRegistrar * reg)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)reg;

@@ -40,12 +40,38 @@
 #include "dnxChannel.h"
 #include "dnxProtocol.h"
 
+/** An abstraction data type for the DNX registrar object. */
 typedef struct { int unused; } DnxRegistrar;
 
+/** Return an available node "request for work" object pointer.
+ * 
+ * @param[in] reg - the registrar from which a node request should be returned.
+ * @param[out] ppNode - the address of storage in which to return the located
+ *    request node.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
 int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode);
 
-int dnxRegistrarCreate(long * debug, int queuesz, 
-      DnxChannel * dispchan, DnxRegistrar ** preg);
+/** Create a new registrar object.
+ * 
+ * @param[in] queuesz - the size of the queue to create in this registrar.
+ * @param[in] dispchan - a pointer to the dispatcher channel.
+ * @param[out] preg - the address of storage in which to return the newly
+ *    created registrar.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxRegistrarCreate(unsigned queuesz, DnxChannel * dispchan, 
+      DnxRegistrar ** preg);
+
+/** Destroy a previously created registrar object.
+ * 
+ * Signals the registrar thread, waits for it to stop, and frees allocated 
+ * resources.
+ * 
+ * @param[in] reg - the registrar to be destroyed.
+ */
 void dnxRegistrarDestroy(DnxRegistrar * reg);
 
 #endif   /* _DNXREGISTRAR_H_ */

@@ -53,7 +53,7 @@
 #include <errno.h>
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+# include "config.h"
 #else
 # define VERSION "<unknown>"
 #endif

@@ -50,240 +50,15 @@ typedef struct iDnxQueue_
    iDnxQueueEntry * tail;           /*!< Pointer to last list item. */
    iDnxQueueEntry * current;        /*!< Circular buffer pointer. */
    void (*freepayload)(void *);     /*!< Payload destructor (optional). */
-   int size;                        /*!< Number of items in queue. */
-   int maxsz;                       /*!< Maximum number of requests allowed in queue (zero = unlimited). */
+   unsigned size;                   /*!< Number of items in queue. */
+   unsigned maxsz;                  /*!< Maximum number of requests allowed in queue (zero = unlimited). */
    pthread_mutex_t mutex;           /*!< Queue's mutex. */
    pthread_cond_t cv;               /*!< Queue's condition variable. */
 } iDnxQueue;
 
-//----------------------------------------------------------------------------
-
-/** Add an opaque payload to a queue.
- * 
- * @param[in] queue - the queue to which @p pPayload should be added.
- * @param[in] pPayload - the data to be added to @p queue.
- * 
- * @return Zero on success, or a non-zero error value.
- * 
- * @note Cancellation safe.
- */
-int dnxQueuePut(DnxQueue * queue, void * pPayload)
-{
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item;
-   
-   assert(queue);
-   
-   // create structure with new request
-   if ((item = (iDnxQueueEntry *)xmalloc(sizeof *item)) == 0)
-      return DNX_ERR_MEMORY;
-
-   item->pPayload = pPayload;
-   item->next = 0;
-   
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-
-   // add new request to end of list, updating list pointers as required
-   if (iqueue->size == 0) // special case - list is empty
-      iqueue->head = iqueue->tail = iqueue->current = item;
-   else 
-   {
-      iqueue->tail->next = item;
-      iqueue->tail = item;
-   }
-   
-   iqueue->size++;
-   
-   // check for queue overflow if this queue was created with a maximum size
-   if (iqueue->maxsz > 0 && iqueue->size > iqueue->maxsz)
-   {
-      // remove the oldest entry at the queue head
-      item = iqueue->head;
-      iqueue->head = item->next;
-      if (iqueue->current == item)
-         iqueue->current = item->next;
-
-      // adjust tail if queue is now empty
-      if (iqueue->head == 0)
-         iqueue->tail = 0;
-      
-      iqueue->size--;
-
-      // call item payload destructor, if one was supplied
-      if (iqueue->freepayload)
-         iqueue->freepayload(item->pPayload);
-
-      xfree(item);
-   }
-   
-   // signal any waiters - there's a new item in the queue
-   pthread_cond_signal(&iqueue->cv);
-   
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-   
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Returns the first entry from the queue.
- * 
- * The returned payload needs to be destroyed/freed by the caller.
- * 
- * @param[in] queue - the queue from which to get the next pending queue item.
- * @param[out] ppPayload - the address of storage in which to return the 
- *    first pending queue item, if found.
- * 
- * @return Zero if found, or DNX_ERR_NOTFOUND if not found.
- * 
- * @note Cancellation safe.
- */
-int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
-{
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item = 0;
-   
-   assert(queue && ppPayload);
-   
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-   
-   if (iqueue->size > 0) 
-   {
-      // remove the 'head' item from the queue
-      item = iqueue->head;
-      iqueue->head = item->next;
-      if (iqueue->current == item)
-         iqueue->current = item->next;
-
-      // adjust tail pointer if queue is now empty
-      if (iqueue->head == 0)
-         iqueue->tail = 0;
-   
-      iqueue->size--;
-   }
-   
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-
-   // return the payload to the caller, free queue item
-   if (item) 
-   {
-      *ppPayload = item->pPayload;
-      xfree(item);
-      return DNX_OK;
-   }
-
-   return DNX_ERR_NOTFOUND;
-}
-
-//----------------------------------------------------------------------------
-
-/** Remove a matching payload from a queue.
- * 
- * @param[in] queue - the queue to be queried for a matching payload.
- * @param[in,out] ppPayload - on entry contains the payload to be located; 
- *    on exit returns the located payload.
- * @param[in] Compare - a comparison function used to location an item whose
- *    payload matches @p ppPayload; accepts two void pointers to user payload 
- *    objects, and returns a DnxQueueResult code.
- * 
- * @return A DnxQueueResult code - DNX_QRES_FOUND (1) if found, or
- * DNX_QRES_CONTINUE (0) if not found. This is essentially a boolean value
- * as the value of DNX_QRES_CONTINUE is zero.
- * 
- * @note Cancellation safe.
- */
-DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload, 
-      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
-{
-   DnxQueueResult bFound = DNX_QRES_CONTINUE;
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item, * prev;
-
-   assert(queue && ppPayload && Compare);
-
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-
-   prev = 0;
-   for (item = iqueue->head; item; item = item->next)
-   {
-      if ((bFound = Compare(*ppPayload, item->pPayload)) != DNX_QRES_CONTINUE)
-      {
-         if (bFound == DNX_QRES_FOUND)
-         {
-            *ppPayload = item->pPayload;
-
-            // cross-link previous to next and free current
-            if (prev)
-               prev->next = item->next;
-            else                          // removing the head item
-               iqueue->head = item->next;
-
-            if (item->next == 0)          // removing the tail item
-               iqueue->tail = prev;
-
-            if (iqueue->current == item)  // advance circular pointer
-               if ((iqueue->current = item->next) == 0)
-                  iqueue->current = iqueue->head;
-
-            iqueue->size--;
-         }
-         break;
-      }
-      prev = item;
-   }
-
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-
-   if (bFound == DNX_QRES_FOUND)
-      xfree(item);       // free the queue entry wrapper object
-
-   return bFound;
-}
-
-//----------------------------------------------------------------------------
-
-/** Find a node matching a specified payload in a queue.
- * 
- * @param[in] queue - the queue to be queried for a matching payload.
- * @param[in,out] ppPayload - on entry contains the payload to be matched;
- *    on exit, returns the located matching payload.
- * @param[in] Compare - a node comparison routine; accepts two void pointers
- *    to payload objects, and returns a DnxQueueResult code.
- * 
- * @return A DnxQueueResult code; DNX_QRES_FOUND (1) if the requested item
- * payload was found in the queue, or DNX_QRES_CONTINUE of not. This is 
- * essentially a boolean return value, as the value of DNX_QRES_CONTINUE is 
- * zero.
- * 
- * @note Cancellation safe.
- */
-DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, 
-      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
-{
-   DnxQueueResult bFound = DNX_QRES_CONTINUE;
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item;
-
-   assert(queue && ppPayload && Compare);
-
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-
-   for (item = iqueue->head; item; item = item->next)
-   {
-      if ((bFound = Compare(*ppPayload, item->pPayload)) != DNX_QRES_CONTINUE)
-      {
-         if (bFound == DNX_QRES_FOUND)
-            *ppPayload = item->pPayload;
-         break;
-      }
-   }
-
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-
-   return bFound;
-}
-
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                     NON-EXPORTED INTERFACE (not used yet)
+  --------------------------------------------------------------------------*/
 
 /** Waits and returns the first pending item payload from a queue.
  * 
@@ -408,28 +183,194 @@ int dnxQueueSize(DnxQueue * queue)
    
    DNX_PT_MUTEX_LOCK(&iqueue->mutex);
    
-   count = iqueue->size;
+   count = (int)iqueue->size;
    
    DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
    
    return count;
 }
 
+/*--------------------------------------------------------------------------
+                                 INTERFACE
+  --------------------------------------------------------------------------*/
+
+int dnxQueuePut(DnxQueue * queue, void * pPayload)
+{
+   iDnxQueue * iqueue = (iDnxQueue *)queue;
+   iDnxQueueEntry * item;
+   
+   assert(queue);
+   
+   // create structure with new request
+   if ((item = (iDnxQueueEntry *)xmalloc(sizeof *item)) == 0)
+      return DNX_ERR_MEMORY;
+
+   item->pPayload = pPayload;
+   item->next = 0;
+   
+   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
+
+   // add new request to end of list, updating list pointers as required
+   if (iqueue->size == 0) // special case - list is empty
+      iqueue->head = iqueue->tail = iqueue->current = item;
+   else 
+   {
+      iqueue->tail->next = item;
+      iqueue->tail = item;
+   }
+   
+   iqueue->size++;
+   
+   // check for queue overflow if this queue was created with a maximum size
+   if (iqueue->maxsz > 0 && iqueue->size > iqueue->maxsz)
+   {
+      // remove the oldest entry at the queue head
+      item = iqueue->head;
+      iqueue->head = item->next;
+      if (iqueue->current == item)
+         iqueue->current = item->next;
+
+      // adjust tail if queue is now empty
+      if (iqueue->head == 0)
+         iqueue->tail = 0;
+      
+      iqueue->size--;
+
+      // call item payload destructor, if one was supplied
+      if (iqueue->freepayload)
+         iqueue->freepayload(item->pPayload);
+
+      xfree(item);
+   }
+   
+   // signal any waiters - there's a new item in the queue
+   pthread_cond_signal(&iqueue->cv);
+   
+   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
+   
+   return DNX_OK;
+}
+
 //----------------------------------------------------------------------------
 
-/** Create a new queue object.
- * 
- * @param[in] maxsz - the maximum size of the queue - zero means unlimited.
- * @param[in] pldtor - a function that is called when the queue
- *    needs to delete a queue item payload. Optional; may be passed as 0.
- * @param[out] pqueue - the address of storage in which to return the new
- *    queue object.
- * 
- * @return Zero on success, or a non-zero error value.
- * 
- * @note Cancellation safe.
- */
-int dnxQueueCreate(int maxsz, void (*pldtor)(void *), DnxQueue ** pqueue)
+int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
+{
+   iDnxQueue * iqueue = (iDnxQueue *)queue;
+   iDnxQueueEntry * item = 0;
+   
+   assert(queue && ppPayload);
+   
+   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
+   
+   if (iqueue->size > 0) 
+   {
+      // remove the 'head' item from the queue
+      item = iqueue->head;
+      iqueue->head = item->next;
+      if (iqueue->current == item)
+         iqueue->current = item->next;
+
+      // adjust tail pointer if queue is now empty
+      if (iqueue->head == 0)
+         iqueue->tail = 0;
+   
+      iqueue->size--;
+   }
+   
+   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
+
+   // return the payload to the caller, free queue item
+   if (item) 
+   {
+      *ppPayload = item->pPayload;
+      xfree(item);
+      return DNX_OK;
+   }
+
+   return DNX_ERR_NOTFOUND;
+}
+
+//----------------------------------------------------------------------------
+
+DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload, 
+      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
+{
+   DnxQueueResult bFound = DNX_QRES_CONTINUE;
+   iDnxQueue * iqueue = (iDnxQueue *)queue;
+   iDnxQueueEntry * item, * prev;
+
+   assert(queue && ppPayload && Compare);
+
+   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
+
+   prev = 0;
+   for (item = iqueue->head; item; item = item->next)
+   {
+      if ((bFound = Compare(*ppPayload, item->pPayload)) != DNX_QRES_CONTINUE)
+      {
+         if (bFound == DNX_QRES_FOUND)
+         {
+            *ppPayload = item->pPayload;
+
+            // cross-link previous to next and free current
+            if (prev)
+               prev->next = item->next;
+            else                          // removing the head item
+               iqueue->head = item->next;
+
+            if (item->next == 0)          // removing the tail item
+               iqueue->tail = prev;
+
+            if (iqueue->current == item)  // advance circular pointer
+               if ((iqueue->current = item->next) == 0)
+                  iqueue->current = iqueue->head;
+
+            iqueue->size--;
+         }
+         break;
+      }
+      prev = item;
+   }
+
+   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
+
+   if (bFound == DNX_QRES_FOUND)
+      xfree(item);       // free the queue entry wrapper object
+
+   return bFound;
+}
+
+//----------------------------------------------------------------------------
+
+DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, 
+      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
+{
+   DnxQueueResult bFound = DNX_QRES_CONTINUE;
+   iDnxQueue * iqueue = (iDnxQueue *)queue;
+   iDnxQueueEntry * item;
+
+   assert(queue && ppPayload && Compare);
+
+   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
+
+   for (item = iqueue->head; item; item = item->next)
+   {
+      if ((bFound = Compare(*ppPayload, item->pPayload)) != DNX_QRES_CONTINUE)
+      {
+         if (bFound == DNX_QRES_FOUND)
+            *ppPayload = item->pPayload;
+         break;
+      }
+   }
+
+   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
+
+   return bFound;
+}
+
+//----------------------------------------------------------------------------
+
+int dnxQueueCreate(unsigned maxsz, void (*pldtor)(void *), DnxQueue ** pqueue)
 {
    iDnxQueue * iqueue;
 
@@ -454,12 +395,6 @@ int dnxQueueCreate(int maxsz, void (*pldtor)(void *), DnxQueue ** pqueue)
 
 //----------------------------------------------------------------------------
 
-/** Delete a requests queue.
- * 
- * Delete a request queue structure, and free all memory it uses.
- * 
- * @param[in] queue - the requests queue to be deleted.
- */
 void dnxQueueDestroy(DnxQueue * queue)
 {
    iDnxQueue * iqueue = (iDnxQueue *)queue;

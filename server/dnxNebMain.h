@@ -28,63 +28,52 @@
 #ifndef _DNXNEBMAIN_H_
 #define _DNXNEBMAIN_H_
 
-#include "dnxTimer.h"
-#include "dnxError.h"
-#include "dnxTransport.h"
-#include "dnxProtocol.h"
-#include "dnxRegistrar.h"
-#include "dnxDispatcher.h"
-#include "dnxCollector.h"
+#include "dnxJobList.h"
 
 #ifndef NSCORE
 # define NSCORE
 #endif
-
-/* include (minimum required) event broker header files */
-#include "nebmodules.h"
-#include "nebcallbacks.h"
-
-/* include other event broker header files that we need for our work */
-#include "nebstructs.h"
-#include "neberrors.h"
-#include "broker.h"
-
-/* include some Nagios stuff as well */
-#include "config.h"
-#include "common.h"
-#include "nagios.h"
-#include "objects.h"
+#include "nagios.h"     // for STATE_* definitions
+#include "objects.h"    // for nagios service data type
 
 #include <time.h>
-#include <regex.h>
-#include <pthread.h>
 
 #define DNX_DISPATH_PORT   12480
 #define DNX_COLLECT_PORT   12481
 #define DNX_TCP_LISTEN     5
 
-typedef struct DnxServerCfg_
-{
-   char * channelDispatcher;
-   char * channelCollector;
-   char * authWorkerNodes;
-   long  maxNodeRequests;  // Maximum number of node requests we will accept
-   long  minServiceSlots;
-   long  expirePollInterval;
-   char * localCheckPattern;
-   char * syncScript;
-   char * logFacility;
-   char * auditWorkerJobs;
-   long debug;
-} DnxServerCfg;
-
-int nebmodule_init(int flags, char * args, nebmodule * handle);
-int nebmodule_deinit(int flags, int reason);
-int dnxJobCleanup(DnxNewJob * pJob);
-int dnxAuditJob(DnxNewJob * pJob, char * action);
-
+/** Post a completed service request to the Nagios service result buffer.
+ * 
+ * @param[in] svc - the nagios service object from which results are taken.
+ * @param[in] start_time - the nagios service object start time.
+ * @param[in] early_timeout - boolean; true means the job DID time out.
+ * @param[in] res_code - the result code of this job.
+ * @param[in] res_data - the resulting STDOUT output text of this job.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ * 
+ * @todo This routine should be in nagios code. Add it to the dnx patch files
+ * for nagios 2.7 and 2.9, and export it from nagios so we can call it.
+ */
 int nagiosPostResult(service * svc, time_t start_time, 
       int early_timeout, int res_code, char * res_data);
+
+/** Release all resources associated with a job object.
+ * 
+ * @param[in] pJob - the job to be freed.
+ * 
+ * @return Always returns zero.
+ */
+int dnxJobCleanup(DnxNewJob * pJob);
+
+/** Send an audit message to the dnx server audit log.
+ * 
+ * @param[in] pJob - the job to be audited.
+ * @param[in] action - the audit action that we're logging.
+ * 
+ * @return Always returns zero.
+ */
+int dnxAuditJob(DnxNewJob * pJob, char * action);
 
 #endif   /* _DNXNEBMAIN_H_ */
 

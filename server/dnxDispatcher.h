@@ -36,14 +36,36 @@
 #define _DNXDISPATCHER_H_
 
 #include "dnxJobList.h"
+#include "dnxChannel.h"
 
 /** Abstract data type for the DNX job dispatcher. */
 typedef struct { int unused; } DnxDispatcher;
 
+/** Return a reference to the dispatcher channel object.
+ * 
+ * @param[in] disp - the dispatcher whose dispatch channel should be returned.
+ * 
+ * @return A pointer to the dispatcher channel object.
+ */
 DnxChannel * dnxDispatcherGetChannel(DnxDispatcher * disp);
 
-int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
-      DnxJobList * joblist, DnxDispatcher ** pdisp);
+/** Create a new dispatcher object.
+ * 
+ * @param[in] chname - the name of the dispatch channel.
+ * @param[in] dispurl - the dispatcher channel URL.
+ * @param[in] joblist - a pointer to the global job list object.
+ * @param[out] pdisp - the address of storage for the return of the new
+ *    dispatcher object.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxDispatcherCreate(char * chname, char * dispurl, DnxJobList * joblist, 
+      DnxDispatcher ** pdisp);
+
+/** Destroy an existing dispatcher object.
+ * 
+ * @param[in] disp - a pointer to the dispatcher object to be destroyed.
+ */
 void dnxDispatcherDestroy(DnxDispatcher * disp);
 
 #endif   /* _DNXDISPATCHER_H_ */

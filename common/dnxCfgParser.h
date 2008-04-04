@@ -53,8 +53,8 @@ typedef enum DnxCfgType
    DNX_CFG_INT_ARRAY,         /*!< Comma-delimited array - data: &int* */
    DNX_CFG_UNSIGNED,          /*!< Unsigned integer - data: &unsigned */
    DNX_CFG_UNSIGNED_ARRAY,    /*!< Comma-delimited array - data: &unsigned* */
-   DNX_CFG_IP_ADDR,           /*!< IP address or DNS name - data: &struct sockaddr* */
-   DNX_CFG_IP_ADDR_ARRAY,     /*!< Comma-delimited array - data: &struct sockaddr** */
+   DNX_CFG_ADDR,              /*!< Address or DNS name - data: &struct sockaddr* */
+   DNX_CFG_ADDR_ARRAY,        /*!< Comma-delimited array - data: &struct sockaddr** */
    DNX_CFG_URL,               /*!< URL - data: &char* */
    DNX_CFG_FSPATH,            /*!< File system path - data: &char* */
 } DnxCfgType;

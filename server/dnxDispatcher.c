@@ -48,7 +48,6 @@
 /** The implementation data structure for a dispatcher object. */
 typedef struct iDnxDispatcher_
 {
-   long * debug;           /*!< A pointer to the global debug level. */
    char * chname;          /*!< The dispatcher channel name. */
    char * url;             /*!< The dispatcher channel URL. */
    DnxJobList * joblist;   /*!< The job list we're dispatching from. */
@@ -56,7 +55,9 @@ typedef struct iDnxDispatcher_
    pthread_t tid;          /*!< The dispatcher thread id. */
 } iDnxDispatcher;
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                              IMPLEMENTATION
+  --------------------------------------------------------------------------*/
 
 /** Send a job to a designated client node.
  * 
@@ -171,32 +172,17 @@ static void * dnxDispatcher(void * data)
    return 0;
 }
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                                 INTERFACE
+  --------------------------------------------------------------------------*/
 
-/** Return a reference to the dispatcher channel object.
- * 
- * @param[in] disp - the dispatcher whose dispatch channel should be returned.
- * 
- * @return A pointer to the dispatcher channel object.
- */
 DnxChannel * dnxDispatcherGetChannel(DnxDispatcher * disp)
       { return ((iDnxDispatcher *)disp)->channel; }
 
 //----------------------------------------------------------------------------
 
-/** Create a new dispatcher object.
- * 
- * @param[in] debug - a pointer to the global debug level.
- * @param[in] chname - the name of the dispatch channel.
- * @param[in] dispurl - the dispatcher channel URL.
- * @param[in] joblist - a pointer to the global job list object.
- * @param[out] pdisp - the address of storage for the return of the new
- *    dispatcher object.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
-      DnxJobList * joblist, DnxDispatcher ** pdisp)
+int dnxDispatcherCreate(char * chname, char * dispurl, DnxJobList * joblist, 
+      DnxDispatcher ** pdisp)
 {
    iDnxDispatcher * idisp;
    int ret;
@@ -208,7 +194,6 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
    idisp->chname = xstrdup(chname);
    idisp->url = xstrdup(dispurl);
    idisp->joblist = joblist;
-   idisp->debug = debug;
 
    if (!idisp->url || !idisp->chname)
    {
@@ -227,9 +212,6 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
                          "with %d: %s", chname, ret, dnxErrorString(ret));
       goto e2;
    }
-
-   if (*debug)
-      dnxChannelDebug(idisp->channel, *debug);
 
    // create the dispatcher thread
    if ((ret = pthread_create(&idisp->tid, NULL, dnxDispatcher, idisp)) != 0)
@@ -257,10 +239,6 @@ e1:xfree(idisp->url);
 
 //----------------------------------------------------------------------------
 
-/** Destroy an existing dispatcher object.
- * 
- * @param[in] disp - a pointer to the dispatcher object to be destroyed.
- */
 void dnxDispatcherDestroy(DnxDispatcher * disp)
 {
    iDnxDispatcher * idisp = (iDnxDispatcher *)disp;

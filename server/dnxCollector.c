@@ -49,7 +49,6 @@
 /** The implementation data structure for a collector object. */
 typedef struct iDnxCollector_
 {
-   long * debug;           /*!< A pointer to the global debug level. */
    char * chname;          /*!< The collector channel name. */
    char * url;             /*!< The collector channel URL. */
    DnxJobList * joblist;   /*!< The job list we're collecting for. */
@@ -57,7 +56,9 @@ typedef struct iDnxCollector_
    pthread_t tid;          /*!< The collector thread id. */
 } iDnxCollector;
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                              IMPLEMENTATION
+  --------------------------------------------------------------------------*/
 
 /** The collector thread main entry point procedure.
  * 
@@ -128,21 +129,17 @@ static void * dnxCollector(void * data)
    return 0;
 }
 
+/*--------------------------------------------------------------------------
+                                 INTERFACE
+  --------------------------------------------------------------------------*/
+
+DnxChannel * dnxCollectorGetChannel(DnxCollector * coll)
+      { return ((iDnxCollector *)coll)->channel; }
+
 //----------------------------------------------------------------------------
 
-/** Create a new collector object.
- * 
- * @param[in] debug - a pointer to the global debug level.
- * @param[in] chname - the name of the collect channel.
- * @param[in] collurl - the collect channel URL.
- * @param[in] joblist - a pointer to the global job list object.
- * @param[out] pcoll - the address of storage for the return of the new
- *    collector object.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int dnxCollectorCreate(long * debug, char * chname, char * collurl,
-      DnxJobList * joblist, DnxCollector ** pcoll)
+int dnxCollectorCreate(char * chname, char * collurl, DnxJobList * joblist, 
+      DnxCollector ** pcoll)
 {
    iDnxCollector * icoll;
    int ret;
@@ -154,7 +151,6 @@ int dnxCollectorCreate(long * debug, char * chname, char * collurl,
    icoll->chname = xstrdup(chname);
    icoll->url = xstrdup(collurl);
    icoll->joblist = joblist;
-   icoll->debug = debug;
 
    if (!icoll->url || !icoll->chname)
    {
@@ -176,11 +172,8 @@ int dnxCollectorCreate(long * debug, char * chname, char * collurl,
       goto e2;
    }
 
-   if (*debug)
-      dnxChannelDebug(icoll->channel, *debug);
-
    // create the collector thread
-   if ((ret = pthread_create(&icoll->tid, NULL, dnxCollector, icoll)) != 0)
+   if ((ret = pthread_create(&icoll->tid, 0, dnxCollector, icoll)) != 0)
    {
       dnxSyslog(LOG_ERR, 
             "dnxCollectorCreate: thread creation failed with %d: %s", 
@@ -206,10 +199,6 @@ e1:xfree(icoll->url);
 
 //----------------------------------------------------------------------------
 
-/** Destroy an existing collector object.
- * 
- * @param[in] coll - a pointer to the collector object to be destroyed.
- */
 void dnxCollectorDestroy(DnxCollector  * coll)
 {
    iDnxCollector * icoll = (iDnxCollector *)coll;

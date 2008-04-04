@@ -79,7 +79,7 @@ typedef struct iDnxCfgParser
 
 /** A static array of allocated configuration file types. */
 static DnxCfgType ptrtypes[] = { DNX_CFG_STRING, DNX_CFG_INT_ARRAY, 
-      DNX_CFG_UNSIGNED_ARRAY, DNX_CFG_IP_ADDR, DNX_CFG_IP_ADDR_ARRAY, 
+      DNX_CFG_UNSIGNED_ARRAY, DNX_CFG_ADDR, DNX_CFG_ADDR_ARRAY, 
       DNX_CFG_URL, DNX_CFG_FSPATH };
 
 /*--------------------------------------------------------------------------
@@ -228,7 +228,7 @@ static int validate(DnxCfgDictionary * dict, size_t dictsz,
                *(int **)dict[i].data = array;
                break;
             }
-            case DNX_CFG_IP_ADDR:
+            case DNX_CFG_ADDR:
             {
                int ret;
                struct sockaddr_storage * ss;
@@ -243,7 +243,7 @@ static int validate(DnxCfgDictionary * dict, size_t dictsz,
                *(struct sockaddr_storage **)dict[i].data = ss;
                break;
             }
-            case DNX_CFG_IP_ADDR_ARRAY:
+            case DNX_CFG_ADDR_ARRAY:
             {
                struct sockaddr_storage ** array, * sp;
                char * bp, * p;
@@ -563,8 +563,8 @@ int main(int argc, char ** argv)
       {"testCfgIntArray",     DNX_CFG_INT_ARRAY,      &testCfgIntArray     },
       {"testCfgUnsigned",     DNX_CFG_UNSIGNED,       &testCfgUnsigned     },
       {"testCfgUnsignedArray",DNX_CFG_UNSIGNED_ARRAY, &testCfgUnsignedArray},
-      {"testCfgIpAddr",       DNX_CFG_IP_ADDR,        &testCfgIpAddr       },
-      {"testCfgIpAddrArray",  DNX_CFG_IP_ADDR_ARRAY,  &testCfgIpAddrArray  },
+      {"testCfgIpAddr",       DNX_CFG_ADDR,           &testCfgIpAddr       },
+      {"testCfgIpAddrArray",  DNX_CFG_ADDR_ARRAY,     &testCfgIpAddrArray  },
       {"testCfgUrl",          DNX_CFG_URL,            &testCfgUrl          },
       {"testCfgFSPath",       DNX_CFG_FSPATH,         &testCfgFSPath       },
    };

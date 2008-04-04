@@ -36,7 +36,7 @@
 #include <time.h>
 
 #if HAVE_CONFIG_H
-# include <config.h>
+# include "config.h"
 # ifndef HAVE_NANOSLEEP
 #  include <sys/time.h>
 #  include <pthread.h>

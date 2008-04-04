@@ -34,24 +34,37 @@
 
 #include "dnxNebMain.h"
 
-#include "dnxConfig.h"
+#include "dnxCfgParser.h"
+#include "dnxError.h"
 #include "dnxDebug.h"
-#include "dnxProtocol.h"
-#include "dnxTransport.h"
-#include "dnxXml.h"
-#include "dnxQueue.h"
+#include "dnxLogging.h"
 #include "dnxCollector.h"
 #include "dnxDispatcher.h"
 #include "dnxRegistrar.h"
-#include "dnxTimer.h"
 #include "dnxJobList.h"
-#include "dnxLogging.h"
+
+//#include "dnxProtocol.h"
+//#include "dnxTransport.h"
+//#include "dnxXml.h"
+//#include "dnxQueue.h"
 
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+# include "config.h"
 #else
 # define VERSION "<unknown>"
 #endif
+
+#ifndef NSCORE
+# define NSCORE
+#endif
+#include "nagios.h"
+#include "nebmodules.h"
+#include "nebstructs.h"
+#include "nebcallbacks.h"
+#include "neberrors.h"
+#include "broker.h"
+
+#define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
 #define DNX_VERSION              VERSION
 #define DNX_EMBEDDED_SVC_OBJECT  1
@@ -59,6 +72,22 @@
 
 // specify event broker API version (required)
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);
+
+/** The internal server module configuration data structure. */
+typedef struct DnxServerCfg
+{
+   char * dispatcherUrl;
+   char * collectorUrl;
+   char * authWorkerNodes;
+   unsigned maxNodeRequests;  // Maximum number of node requests we will accept
+   unsigned minServiceSlots;
+   unsigned expirePollInterval;
+   char * localCheckPattern;
+   char * syncScript;
+   char * logFacility;
+   char * auditWorkerJobs;
+   unsigned debug;
+} DnxServerCfg;
 
 // module static data
 static DnxJobList * joblist;        // The master job list
@@ -74,7 +103,8 @@ static int dnxLogFacility;          // DNX syslog facility
 static int auditLogFacility;        // Worker audit syslog facility
 
 // module GLOBAL data
-DnxServerCfg cfg;                   // The GLOBAL server config parameters
+static DnxServerCfg cfg;            // The server configuration parameters
+static DnxCfgParser * cfgParser;    // The configuration file parser. 
 
 //----------------------------------------------------------------------------
 
@@ -116,66 +146,82 @@ static int verifyFacility(char * szFacility, int * nFacility)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxLoadConfig(char * ConfigFile)
+static int initConfig(char * ConfigFile)
 {
-   int ret, err_no;
+   static DnxCfgDictionary dict[] = 
+   {
+      {"channelDispatcher",   DNX_CFG_URL,      &cfg.dispatcherUrl      },
+      {"channelCollector",    DNX_CFG_URL,      &cfg.collectorUrl       },
+      {"authWorkerNodes",     DNX_CFG_STRING,   &cfg.authWorkerNodes    },
+      {"maxNodeRequests",     DNX_CFG_UNSIGNED, &cfg.maxNodeRequests    },
+      {"minServiceSlots",     DNX_CFG_UNSIGNED, &cfg.minServiceSlots    },
+      {"expirePollInterval",  DNX_CFG_UNSIGNED, &cfg.expirePollInterval },
+      {"localCheckPattern",   DNX_CFG_STRING,   &cfg.localCheckPattern  },
+      {"syncScript",          DNX_CFG_FSPATH,   &cfg.syncScript         },
+      {"logFacility",         DNX_CFG_STRING,   &cfg.logFacility        },
+      {"auditWorkerJobs",     DNX_CFG_STRING,   &cfg.auditWorkerJobs    },
+      {"debug",               DNX_CFG_UNSIGNED, &cfg.debug              },
+   };
+   int ret;
 
-   // clear GLOBAL server configuration data structure
-   memset(&cfg, 0, sizeof cfg);
-
-   // Set default max concurrent number for node requests we will accept
+   // set configuration defaults 
+   dnxLogFacility = LOG_LOCAL7;
    cfg.maxNodeRequests = DNX_MAX_NODE_REQUESTS;
    cfg.minServiceSlots = 1024;
    cfg.expirePollInterval = 5;
 
-   // Initialize configuration sub-system global data
-   initGlobals();
-
-   // Parse config file
-   if ((ret = parseFile(ConfigFile)) != 0)
-   {
-      dnxSyslog(LOG_ERR, "getConfig: Failed to parse config file with %d: %s", 
-            ret, dnxErrorString(ret));
+   if ((ret = dnxCfgParserCreate(ConfigFile, 
+         dict, elemcount(dict), 0, 0, &cfgParser)) != 0)
       return ret;
-   }
 
-   // Validate configuration items
-   ret = DNX_ERR_INVALID;
-   if (!cfg.channelDispatcher)
-      dnxSyslog(LOG_ERR, "getConfig: Missing channelDispatcher parameter");
-   else if (!cfg.channelCollector)
-      dnxSyslog(LOG_ERR, "getConfig: Missing channelCollector parameter");
-   else if (cfg.maxNodeRequests < 1)
-      dnxSyslog(LOG_ERR, "getConfig: Missing or invalid maxNodeRequests parameter");
-   else if (cfg.minServiceSlots < 1)
-      dnxSyslog(LOG_ERR, "getConfig: Missing or invalid minServiceSlots parameter");
-   else if (cfg.expirePollInterval < 1)
-      dnxSyslog(LOG_ERR, "getConfig: Missing or invalid expirePollInterval parameter");
-   else if (cfg.localCheckPattern   /* If the localCheckPattern is defined, then */
-         && (err_no = regcomp(&regEx, cfg.localCheckPattern, 
-            (REG_EXTENDED | REG_NOSUB))) != 0) /* Compile the regex */
+   if ((ret = dnxCfgParserParse(cfgParser)) == 0)
    {
-      char buffer[128];
-      regerror(err_no, &regEx, buffer, sizeof(buffer));
-      dnxSyslog(LOG_ERR, 
-            "getConfig: Failed to compile localCheckPattern (\"%s\"): %s", 
-            cfg.localCheckPattern, buffer);
-      regfree(&regEx);
-   }
-   else if (cfg.logFacility &&   /* If logFacility is defined, then */
-         verifyFacility(cfg.logFacility, &dnxLogFacility) == -1)
-      dnxSyslog(LOG_ERR, "getConfig: Invalid syslog facility for logFacility: %s", 
-            cfg.logFacility);
-   else if (cfg.auditWorkerJobs &&  /* If auditWorkerJobs is defined, then */
-         verifyFacility(cfg.auditWorkerJobs, &auditLogFacility) == -1)
-      dnxSyslog(LOG_ERR, 
-            "getConfig: Invalid syslog facility for auditWorkerJobs: %s", 
-            cfg.auditWorkerJobs);
-   else
-      ret = DNX_OK;
+      int err;
 
+      // validate configuration items
+      ret = DNX_ERR_INVALID;
+      if (!cfg.dispatcherUrl)
+         dnxSyslog(LOG_ERR, "config: Missing channelDispatcher parameter");
+      else if (!cfg.collectorUrl)
+         dnxSyslog(LOG_ERR, "config: Missing channelCollector parameter");
+      else if (cfg.maxNodeRequests < 1)
+         dnxSyslog(LOG_ERR, "config: Missing or invalid maxNodeRequests parameter");
+      else if (cfg.minServiceSlots < 1)
+         dnxSyslog(LOG_ERR, "config: Missing or invalid minServiceSlots parameter");
+      else if (cfg.expirePollInterval < 1)
+         dnxSyslog(LOG_ERR, "config: Missing or invalid expirePollInterval parameter");
+      else if (cfg.localCheckPattern   // if the localCheckPattern is defined, then
+            && (err = regcomp(&regEx, cfg.localCheckPattern, 
+                  REG_EXTENDED | REG_NOSUB)) != 0) // compile the regex
+      {
+         char buffer[128];
+         regerror(err, &regEx, buffer, sizeof(buffer));
+         dnxSyslog(LOG_ERR, "config: Failed to compile localCheckPattern (\"%s\"): %s", 
+               cfg.localCheckPattern, buffer);
+         regfree(&regEx);
+      }
+      else if (cfg.logFacility &&      // if logFacility is defined, then
+            verifyFacility(cfg.logFacility, &dnxLogFacility) == -1)
+         dnxSyslog(LOG_ERR, "config: Invalid syslog facility for logFacility: %s", 
+               cfg.logFacility);
+      else if (cfg.auditWorkerJobs &&  // if auditWorkerJobs is defined, then
+            verifyFacility(cfg.auditWorkerJobs, &auditLogFacility) == -1)
+         dnxSyslog(LOG_ERR, "config: Invalid syslog facility for auditWorkerJobs: %s", 
+               cfg.auditWorkerJobs);
+      else
+         ret = DNX_OK;
+   }
+
+   if (ret != DNX_OK)
+      dnxCfgParserDestroy(cfgParser);
+   
    return ret;
 }
+
+//----------------------------------------------------------------------------
+
+/** Release the configuration parser object. */
+void releaseConfig(void) { dnxCfgParserDestroy(cfgParser); }
 
 //----------------------------------------------------------------------------
 
@@ -203,19 +249,6 @@ static int nagiosGetServiceCount(void)
 
 //----------------------------------------------------------------------------
 
-/** Post a completed service request to the Nagios service result buffer.
- * 
- * @param[in] svc - the nagios service object from which results are taken.
- * @param[in] start_time - the nagios service object start time.
- * @param[in] early_timeout - boolean; true means the job DID time out.
- * @param[in] res_code - the result code of this job.
- * @param[in] res_data - the resulting STDOUT output text of this job.
- * 
- * @return Zero on success, or a non-zero error code.
- * 
- * @todo This routine should be in nagios code. Add it to the dnx patch files
- * for nagios 2.7 and 2.9, and export it from nagios so we can call it.
- */
 int nagiosPostResult(service * svc, time_t start_time, 
       int early_timeout, int res_code, char * res_data)
 {
@@ -362,12 +395,6 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
 
 //----------------------------------------------------------------------------
 
-/** Release all resources associated with a job object.
- * 
- * @param[in] pJob - the job to be freed.
- * 
- * @return Always returns zero.
- */
 int dnxJobCleanup(DnxNewJob * pJob)
 {
    if (pJob)
@@ -392,13 +419,6 @@ int dnxJobCleanup(DnxNewJob * pJob)
 
 //----------------------------------------------------------------------------
 
-/** Send an audit message to the dnx server audit log.
- * 
- * @param[in] pJob - the job to be audited.
- * @param[in] action - the audit action that we're logging.
- * 
- * @return Always returns zero.
- */
 int dnxAuditJob(DnxNewJob * pJob, char * action)
 {
    struct sockaddr_in src_addr;
@@ -546,6 +566,8 @@ static int dnxServerDeInit(void)
    // channel map - it can figure that out for itself
    dnxChanMapRelease();
 
+   releaseConfig();
+
    return OK;
 }
 
@@ -558,6 +580,7 @@ static int dnxServerDeInit(void)
 static int dnxServerInit(void)
 {
    int ret, joblistsz;
+   DnxChannel * channel;
 
    // clear globals so we know what to "undo" as we back out
    joblist = 0;
@@ -586,16 +609,24 @@ static int dnxServerInit(void)
       return ret;
    }
 
-   if ((ret = dnxCollectorCreate(&cfg.debug, "Collect", 
-         cfg.channelCollector, joblist, &collector)) != 0)
+   // create and configure collector
+   if ((ret = dnxCollectorCreate("Collect", cfg.collectorUrl, 
+         joblist, &collector)) != 0)
       return ret;
 
-   if ((ret = dnxDispatcherCreate(&cfg.debug, "Dispatch", 
-         cfg.channelDispatcher, joblist, &dispatcher)) != 0)
+   channel = dnxCollectorGetChannel(collector);
+   if (cfg.debug) dnxChannelDebug(channel, cfg.debug);
+
+   // create and configure dispatcher
+   if ((ret = dnxDispatcherCreate("Dispatch", cfg.dispatcherUrl, 
+         joblist, &dispatcher)) != 0)
       return ret;
 
-   if ((ret = dnxRegistrarCreate(&cfg.debug, joblistsz,
-         dnxDispatcherGetChannel(dispatcher), &registrar)) != 0)
+   channel = dnxDispatcherGetChannel(dispatcher);
+   if (cfg.debug) dnxChannelDebug(channel, cfg.debug);
+
+   // create worker node registrar
+   if ((ret = dnxRegistrarCreate(joblistsz, channel, &registrar)) != 0)
       return ret;
 
    // registration for this event starts everything rolling
@@ -744,7 +775,7 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
 
    memset(&regEx, 0, sizeof regEx);
 
-   if ((ret = dnxLoadConfig(args)) != 0)
+   if ((ret = initConfig(args)) != 0)
    {
       dnxSyslog(LOG_ERR, "dnxServer: Failed to load configuration: %d", ret);
       return ERROR;
@@ -761,6 +792,7 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
       dnxSyslog(LOG_ERR, 
             "dnxServer: PROCESS_DATA event registration failed with %d: %s", 
             ret, dnxErrorString(ret));
+      releaseConfig();
       return ERROR;
    }
 
