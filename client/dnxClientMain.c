@@ -634,7 +634,7 @@ int main(int argc, char ** argv)
    dnxSyslog(LOG_INFO, "Dispatcher: %s", s_cfg.wlm.dispatcher);
    dnxSyslog(LOG_INFO, "Collector: %s", s_cfg.wlm.collector);
    if (s_cfg.debugLevel)
-      dnxSyslog(LOG_INFO, "Debug Level: %s", s_cfg.debugLevel);
+      dnxSyslog(LOG_INFO, "Debug Level: %d", s_cfg.debugLevel);
 
    // load dynamic plugin modules (e.g., nrpe, snmp, etc.)
    if ((ret = dnxPluginInit(s_cfg.pluginPath)) != DNX_OK)
