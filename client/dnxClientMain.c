@@ -500,6 +500,37 @@ static void daemonize(void)
       exit(1);
 }
 
+/** Log changes between old and new global configuration data sets.
+ * 
+ * Dynamic reconfiguration of dispatcher and collector URL's is not allowed
+ * so we don't need to check differences in those string values.
+ * 
+ * @param[in] ocp - a reference to the old configuration data set.
+ * @param[in] ncp - a reference to the new configuration data set.
+ */
+static void logGblConfigChanges(DnxCfgData * ocp, DnxCfgData * ncp)
+{
+   if (strcmp(ocp->channelAgent, ncp->channelAgent) != 0)
+      dnxSyslog(LOG_INFO, 
+            "Agent URL changed from %s to %s. "
+            "NOTE: Changing the agent URL requires a restart", 
+            ocp->channelAgent, ncp->channelAgent);
+
+   if (strcmp(ocp->logFacility, ncp->logFacility) != 0)
+      dnxSyslog(LOG_INFO, 
+            "logFacility changed from %s to %s. "
+            "NOTE: Changing the syslog facility code requires a restart", 
+            ocp->logFacility, ncp->logFacility);
+
+   if (strcmp(ocp->pluginPath, ncp->pluginPath) != 0)
+      dnxSyslog(LOG_INFO, "pluginPath changed from %s to %s. ",
+            ocp->pluginPath, ncp->pluginPath);
+
+   if (ocp->debugLevel != ncp->debugLevel)
+      dnxSyslog(LOG_INFO, "debugLevel changed from %u to %u", 
+            ocp->debugLevel, ncp->debugLevel);
+}
+
 //----------------------------------------------------------------------------
 
 /** The main event loop for the dnxClient process.
@@ -564,6 +595,9 @@ static int processCommands(void)
          {
             // reconfigure completed successfully - 
             //    free old values and reassign to new values.
+
+            logGblConfigChanges(&s_cfg, &tmp_cfg);
+
             dnxFreeCfgValues(s_dict, s_ppvals);
             s_cfg = tmp_cfg;
             s_logFacility = logfac;

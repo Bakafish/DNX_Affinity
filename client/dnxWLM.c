@@ -124,6 +124,18 @@ static void * dnxWorker(void * data);
  */
 static void logConfigChanges(DnxWlmCfgData * ocp, DnxWlmCfgData * ncp)
 {
+   if (strcmp(ocp->dispatcher, ncp->dispatcher) != 0)
+      dnxSyslog(LOG_INFO, 
+            "WLM: Dispatcher URL changed from %s to %s. "
+            "NOTE: Changing the dispatcher URL requires a restart", 
+            ocp->dispatcher, ncp->dispatcher);
+
+   if (strcmp(ocp->collector, ncp->collector) != 0)
+      dnxSyslog(LOG_INFO, 
+            "WLM: Collector URL changed from %s to %s. "
+            "NOTE: Changing the collector URL requires a restart", 
+            ocp->collector, ncp->collector);
+
    if (ocp->reqTimeout != ncp->reqTimeout)
       dnxSyslog(LOG_INFO, "WLM: threadRequestTimeout changed from %u to %u", 
             ocp->reqTimeout, ncp->reqTimeout);
