@@ -36,7 +36,8 @@ int dnxWLMGetActiveJobs(DnxWLM * wlm);
 void dnxWLMSetActiveJobs(DnxWLM * wlm, int value);
 
 int dnxWLMCreate(unsigned minsz, unsigned initsz, unsigned maxsz, 
-      unsigned incrsz, unsigned term_grace, unsigned * pdebug, DnxWLM ** pwlm);
+      unsigned incrsz, unsigned pollint, unsigned termgrace, 
+      unsigned * pdebug, DnxWLM ** pwlm);
 void dnxWLMDestroy(DnxWLM * wlm);
 
 #endif   /* _DNXWLM_H_ */

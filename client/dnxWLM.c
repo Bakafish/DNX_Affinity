@@ -37,6 +37,7 @@
 #include "dnxError.h"
 #include "dnxDebug.h"
 #include "dnxWorker.h"
+#include "dnxChannel.h"
 
 #include <sys/time.h>
 #include <stdio.h>
@@ -142,7 +143,7 @@ static void deleteThreadPool(iDnxWLM * iwlm)
          if (*iwlm->pdebug)
             syslog(LOG_DEBUG, "WLM: Waiting to join worker thread %lx", 
                   iwlm->pool[i].tid);
-         if (pthread_join(gData->tPool[i].tid, NULL) != 0)
+         if (pthread_join(iwlm->pool[i].tid, 0) != 0)
             syslog(LOG_ERR, "WLM: Failed to join worker thread %lx: %d", 
                   iwlm->pool[i].tid, errno);
 
@@ -186,7 +187,7 @@ static int growThreadPool(iDnxWLM * iwlm, int active)
          memset(&iwlm->pool[i], 0, sizeof *iwlm->pool);
 
          iwlm->pool[i].state = DNX_THREAD_RUNNING; // set thread state to active
-         iwlm->pool[i].data = iwlm;                // allow thread access to wlm
+         iwlm->pool[i].iwlm = iwlm;                // allow thread access to wlm
 
          // create a worker thread
          if ((ret = pthread_create(
@@ -334,7 +335,7 @@ static void * dnxWLM(void * data)
       gettimeofday(&now, 0);
 
       // timeval uses micro-seconds, timespec uses nano-seconds.
-      timeout.tv_sec = now.tv_sec + gData->wlmPollInterval;
+      timeout.tv_sec = now.tv_sec + iwlm->poll_int;
       timeout.tv_nsec = now.tv_usec * 1000;
 
       // sleep for the specified time
@@ -369,7 +370,7 @@ static void * dnxWLM(void * data)
          gThreads = dnxGetThreadsActive();
          gJobs = dnxGetJobsActive();
          if (iwlm->active_jobs == iwlm->active_threads || gThreads < iwlm->pool_init)
-            growThreadPool(gData, gThreads);
+            growThreadPool(iwlm, gThreads);
       }
 
       // scan the thread pool for zombie threads to cleanup
@@ -483,7 +484,8 @@ void dnxWLMSetActiveJobs(DnxWLM * wlm, int value)
  * @param[in] initsz - the initial thread count (must be >= minsz, <= maxsz).
  * @param[in] maxsz - the maximum number of threads (must be >= minsz).
  * @param[in] incrsz - the number of threads by which to grow, when necessary.
- * @param[in] term_grace - the grace period in seconds we're giving the work
+ * @param[in] pollint - the WLM poll interval in seconds.
+ * @param[in] termgrace - the grace period in seconds we're giving the work
  *    load manager to have all worker threads stopped.
  * @param[in] pdebug - a reference to the global debug flag.
  * @param[out] pwlm - the address of storage for the returned WLM object.
@@ -491,7 +493,8 @@ void dnxWLMSetActiveJobs(DnxWLM * wlm, int value)
  * @return Zero on success, or a non-zero error value.
  */
 int dnxWLMCreate(unsigned minsz, unsigned initsz, unsigned maxsz, 
-      unsigned incrsz, unsigned term_grace, unsigned * pdebug, DnxWLM ** pwlm)
+      unsigned incrsz, unsigned pollint, unsigned termgrace, 
+      unsigned * pdebug, DnxWLM ** pwlm)
 {
    iDnxWLM * iwlm;
    int rc;
@@ -505,11 +508,12 @@ int dnxWLMCreate(unsigned minsz, unsigned initsz, unsigned maxsz,
       return DNX_ERR_MEMORY;
 
    memset(iwlm, 0, sizeof *iwlm);
-   iwlm->term_expires = term_grace;
+   iwlm->term_expires = termgrace;
    iwlm->pool_min = minsz;
    iwlm->pool_init = initsz;
    iwlm->pool_max = maxsz;
    iwlm->pool_incr = incrsz;
+   iwlm->poll_int = pollint;
    iwlm->pdebug = pdebug;
 
    DNX_PT_MUTEX_INIT(&iwlm->mutex);
@@ -521,7 +525,7 @@ int dnxWLMCreate(unsigned minsz, unsigned initsz, unsigned maxsz,
                       "Work Load Manager thread, %d: %s", 
             rc, dnxErrorString(rc));
       DNX_PT_COND_DESTROY(&iwlm->cond);
-      DNX_PT_MUTEX_DESTROY(&iwlm->mut);
+      DNX_PT_MUTEX_DESTROY(&iwlm->mutex);
       xfree(iwlm);
       return DNX_ERR_THREAD;
    }

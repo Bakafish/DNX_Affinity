@@ -576,8 +576,8 @@ int main(int argc, char ** argv)
    }
 
    if ((ret = dnxWLMCreate(dnxCfgData.poolMin, dnxCfgData.poolInitial, 
-         dnxCfgData.poolMax, dnxCfgData.poolGrow, dnxCfgData.wlmShutdownGrace, 
-         &dnxCfgData.debug, &wlm)) != 0)
+         dnxCfgData.poolMax, dnxCfgData.poolGrow, dnxCfgData.wlmPollInterval, 
+         dnxCfgData.wlmShutdownGrace, &dnxCfgData.debug, &wlm)) != 0)
    {
       syslog(LOG_ERR, "dnxMain: Failed to create work load manager, %d: %s", 
             ret, dnxErrorString(ret));

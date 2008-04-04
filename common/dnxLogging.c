@@ -35,7 +35,7 @@
 
 #define MAX_LOG_LINE 1023
 
-static long defDebug = 0;
+static int defDebug = 0;
 static int defLogFacility = LOG_LOCAL7;
 
 static int * pDebug = &defDebug;
