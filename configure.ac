@@ -68,6 +68,7 @@ AC_CONFIG_FILES([Makefile
 		 rpm/dnx.spec
                  deb/dnx.dsc
                  deb/debian.changelog
+		 deb/Makefile
 		 doc/Makefile
 		 doc/doxyfile
 		 etc/Makefile

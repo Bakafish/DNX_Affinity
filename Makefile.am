@@ -4,7 +4,7 @@ if DO_DOXYGEN
   OPT_DOXYGEN = doc
 endif
 
-SUBDIRS = etc common server client stats $(OPT_DOXYGEN)
+SUBDIRS = etc deb common server client stats $(OPT_DOXYGEN)
 
 doxygen:
 	cd doc && $(MAKE) $(AM_MAKEFLAGS) $@
