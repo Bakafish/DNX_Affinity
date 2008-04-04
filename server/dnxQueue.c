@@ -411,7 +411,7 @@ int dnxQueueSize(DnxQueue * queue, int * pSize)
  * Creates a request queue structure, initialize with given parameters.
  * 
  * @param[in] max_size - the maximum size of the queue.
- * @param[out] ppQueue - the address of storage in which to return the new
+ * @param[out] pqueue - the address of storage in which to return the new
  *    queue object.
  * 
  * @return Zero on success, or a non-zero error value.

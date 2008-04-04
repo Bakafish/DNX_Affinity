@@ -211,6 +211,7 @@ static void * dnxTimer(void * data)
 
 /** Create a new job list expiration timer object.
  * 
+ * @param[in] joblist - the job list that should be expired by the timer.
  * @param[out] ptimer - the address of storage for returning the new object
  *    reference.
  * 
