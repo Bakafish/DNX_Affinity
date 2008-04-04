@@ -27,455 +27,332 @@
 
 #include "dnxJobList.h"
 #include "dnxLogging.h"
+#include "dnxError.h"
+#include "dnxDebug.h"
 
-extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 
-
-//----------------------------------------------------------------------------
-// This routine is invoked by the DNX NEB module's initialization routine
-// to create the DNX Job List.
-//
-// The Job List contains a time-ordered list of service check requests
-// (i.e., "jobs") that are either:
-//
-//	1. Waiting to be dispatched to a worker node for execution (state = Waiting) or,
-//
-//	2. Are already executing on a worker node and are pending the service
-//	   check result from the worker node (state = Pending).
-//
-
-int dnxJobListInit (DnxJobList **ppJobList, unsigned long size)
+/** Add a new job to a job list.
+ *
+ * This routine is invoked by the DNX NEB module's Service Check handler
+ * to add new service check requests (i.e., a "job") to the Job List.
+ * 
+ * Jobs are marked as Waiting to be dispatched to worker nodes (via the
+ * Dispatcher thread.)
+ * 
+ * @param[in] pJobList - the job list to which a new job should be added.
+ * @param[in] pJob - the new job to be added to @p pJobList.
+ *
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
 {
-	// Validate parameters
-	if (!ppJobList || size < 1)
-		return DNX_ERR_INVALID;
+   unsigned long tail;
+   int ret = DNX_OK;
 
-	// Create the job list structure
-	if ((*ppJobList = (DnxJobList *)malloc(sizeof(DnxJobList))) == NULL)
-		return DNX_ERR_MEMORY;
+   assert(pJobList && pJob);
 
-	//dnxDebug(10, "dnxJobListInit: Malloc(*ppJobList=%p)", *ppJobList);
+   DNX_PT_MUTEX_LOCK(&pJobList->mut);
 
-	// Initialize the job list
-	memset(*ppJobList, 0, sizeof(DnxJobList));
+   tail = pJobList->tail;
+   if (pJobList->pList[tail].state && (tail = (tail + 1) % pJobList->size) == pJobList->head)
+   {
+      dnxSyslog(LOG_ERR, "dnxJobListAdd: Out of job slots (max=%lu): %s", pJobList->size, pJob->cmd);
+      ret = DNX_ERR_CAPACITY;
+   }
+   else
+   {
+      // Add the slot identifier to the Job's GUID
+      pJob->guid.objSlot = tail;
+      pJob->state = DNX_JOB_PENDING;
 
-	// Create the array of job structures
-	if (((*ppJobList)->pList = (DnxNewJob *)malloc(sizeof(DnxNewJob) * size)) == NULL)
-	{
-		//dnxDebug(10, "dnxJobListInit: Free(*ppJobList=%p)", *ppJobList);
-		free(*ppJobList);
-		*ppJobList = NULL;
-		return DNX_ERR_MEMORY;
-	}
+      // Add this job to the job list
+      memcpy(&pJobList->pList[tail], pJob, sizeof pJobList->pList[tail]);
 
-	//dnxDebug(10, "dnxJobListInit: Malloc((*ppJobList)->pList=%p)", (*ppJobList)->pList);
+      // Update dispatch head index
+      if (pJobList->pList[pJobList->tail].state != DNX_JOB_PENDING)
+         pJobList->dhead = tail;
 
-	// Set all slots to null
-	memset((*ppJobList)->pList, 0, (sizeof(DnxNewJob) * size));
+      // Update the tail index
+      pJobList->tail = tail;
 
-	// Store array size
-	(*ppJobList)->size = size;
+      // dnxDebug(8, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", pJob->guid.objSerial, pJob->guid.objSlot, pJobList->head, pJobList->dhead, pJobList->tail);
 
-	// Initialize the mutex and condition variable
-	pthread_mutexattr_init(&((*ppJobList)->mut_attr));
-#ifdef PTHREAD_MUTEX_ERRORCHECK_NP
-	pthread_mutexattr_settype(&((*ppJobList)->mut_attr), PTHREAD_MUTEX_ERRORCHECK_NP);
-#endif
-	pthread_mutex_init(&((*ppJobList)->mut), &((*ppJobList)->mut_attr));
-	pthread_cond_init(&((*ppJobList)->cond), NULL);
+      // Signal the condition variable to indicate that a new job is available
+      pthread_cond_signal(&pJobList->cond);
+   }
 
-	return DNX_OK;
+   DNX_PT_MUTEX_UNLOCK(&pJobList->mut);
+
+   return ret;
 }
 
-//----------------------------------------------------------------------------
-// This routine is invoked by the DNX NEB module's de-initialization routine
-// to release and remove the DNX Job List.
-//
 
-int dnxJobListWhack (DnxJobList **ppJobList)
+/** Remove jobs older than job expiration time.
+ *
+ * This routine is invoked by the Timer thread to dequeue all jobs whose
+ * timeout has occurred.
+ * 
+ * Note that this routine walks the *entire* Job List and can remove jobs
+ * that are either InProgress (awaiting a result) or Pending (awaiting dispatch.)
+ * 
+ * Jobs that are deemed to have expired are passed to the Timer thread
+ * via a call back mechanism (for efficiency.)
+ * 
+ * @param[in] pJobList - the list to be scanned for expired jobs.
+ * @param[out] pExpiredJobs - the address of storage for expired jobs.
+ * @param[in/out] totalJobs - on entry, contains the size of @p pExpiredJobs;
+ *    returns the number of slots used in @p pExpiredJobs.
+ *
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs)
 {
-	// Validate parameters
-	if (!ppJobList)
-		return DNX_ERR_INVALID;
+   unsigned long current;
+   DnxNewJob * pJob;
+   int jobCount = 0;
+   time_t now;
 
-	// Destroy the mutex
-	if (pthread_mutex_destroy(&((*ppJobList)->mut)) != 0)
-	{
-		dnxSyslog(LOG_ERR, "dnxJobListWhack: Unable to destroy mutex: mutex is in use!");
-		return DNX_ERR_BUSY;
-	}
-	pthread_mutexattr_destroy(&((*ppJobList)->mut_attr));
+   // validate parameters
+   assert(pJobList && pExpiredJobs && totalJobs && *totalJobs > 0);
 
-	// Destroy the condition variable
-	if (pthread_cond_destroy(&((*ppJobList)->cond)) != 0)
-	{
-		dnxSyslog(LOG_ERR, "dnxJobListWhack: Unable to destroy condition-variable: condition-variable is in use!");
-		return DNX_ERR_BUSY;
-	}
+   DNX_PT_MUTEX_LOCK(&pJobList->mut);
 
-	// Free the job list array
-	if ((*ppJobList)->pList && (*ppJobList)->size > 0)
-	{
-		//dnxDebug(10, "dnxJobListWhack: Free((*ppJobList)->pList=%p)", (*ppJobList)->pList);
-		free((*ppJobList)->pList);
-	}
+   // Get the current time (After we acquire the lock! In case we had to wait to acquire it...)
+   now = time(0);
 
-	// Free the job list
-	//dnxDebug(10, "dnxJobListWhack: Free(*ppJobList=%p)", *ppJobList);
-	free(*ppJobList);
+   // Walk the entire job list: both InProgress and dispatch-Pending jobs (in that order)
+   current = pJobList->head;
+   while (jobCount < *totalJobs)
+   {
+      // Only examine jobs that are either awaiting dispatch or results
+      if ((pJob = &pJobList->pList[current])->state == DNX_JOB_INPROGRESS || pJob->state == DNX_JOB_PENDING)
+      {
+         /** @todo Do we really want to break out here? If we do, we'll never return
+          * any expired jobs as long as we find an unexpired one first. 
+          */
 
-	*ppJobList = NULL;
+         if (pJob->expires > now)
+            break;   // Bail-out: this job hasn't expired yet
 
-	return DNX_OK;
+         // Job has expired - add it to the expired job list
+         memcpy(&pExpiredJobs[jobCount], pJob, sizeof(DnxNewJob));
+
+         pJob->state = DNX_JOB_NULL; // And dequeue it
+
+         jobCount++;    // Increment expired job list index
+      }
+
+      // Bail-out if this was the job list tail
+      if (current == pJobList->tail)
+         break;
+
+      // Increment the job list index
+      current = (current + 1) % pJobList->size;
+   }
+
+   // Update the head indices
+   pJobList->head = current;
+   if (pJobList->pList[current].state != DNX_JOB_INPROGRESS)
+      pJobList->dhead = current;
+
+   *totalJobs = jobCount;
+
+   DNX_PT_MUTEX_UNLOCK(&pJobList->mut);
+
+   return DNX_OK;
 }
 
-//----------------------------------------------------------------------------
-// This routine is invoked by the DNX NEB module's Service Check handler
-// to add new service check requests (i.e., a "job") to the Job List.
-//
-// Jobs are marked as Waiting to be dispatched to worker nodes (via the
-// Dispatcher thread.)
-//
 
-int dnxJobListAdd (DnxJobList *pJobList, DnxNewJob *pJob)
+/** Selects the next available job to be dispatched.
+ *
+ * This routine is invoked by the Dispatcher thread to select the next job 
+ * waiting to be dispatched to a worker node.
+ * 
+ * The job is *not* removed from the Job List, but is marked as InProgress;
+ * that is, it is waiting for the results from the service check.
+ * 
+ * @param[in] pJobList - the list to be scanned for jobs to be dispatched.
+ * @param[out] pJob - the address of storage for the returned job.
+ *
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 {
-	unsigned long tail;
-	int ret = DNX_OK;
+   unsigned long current;
 
-	// Validate parameters
-	if (!pJobList || !pJob)
-		return DNX_ERR_INVALID;
+   assert(pJobList && pJob);
 
-	// Acquire the lock on the job list
-	if (pthread_mutex_lock(&(pJobList->mut)) != 0)
-	{
-		switch (errno)
-		{
-		case EINVAL:	// mutex not initialized
-			dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_lock: mutex has not been initialized");
-			break;
-		case EDEADLK:	// mutex already locked by this thread
-			dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_lock: deadlock condition: mutex already locked by this thread!");
-			break;
-		default:		// Unknown condition
-			dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-		}
-		return DNX_ERR_THREAD;
-	}
+   DNX_PT_MUTEX_LOCK(&pJobList->mut);
 
-	tail = pJobList->tail;
+   // Wait on the condition variable if there are no pending jobs
 
-	// Verify space in the job list
-	if (pJobList->pList[tail].state && (tail = ((tail + 1) % pJobList->size)) == pJobList->head)
-	{
-		dnxSyslog(LOG_ERR, "dnxJobListAdd: Out of job slots (max=%lu): %s", pJobList->size, pJob->cmd);
-		ret = DNX_ERR_CAPACITY;
-		goto abend;
-	}
+   /** @todo Do we need to track total number of Pending jobs in the JobList 
+    * structure OR simply just check to see if the dhead index points to a
+    * valid Pending job?
+    */
 
-	// Add the slot identifier to the Job's GUID
-	pJob->guid.objSlot = tail;
-	pJob->state = DNX_JOB_PENDING;
+   // Scan for a Pending job from the current dispatch head
+   current = pJobList->dhead;
+   while (pJobList->pList[current].state != DNX_JOB_PENDING)
+   {
+      // dnxDebug(8, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu", pJobList->head, pJobList->dhead, pJobList->tail);
+      pthread_cond_wait(&pJobList->cond, &pJobList->mut);
+      current = pJobList->dhead;
+   }
 
-	// Add this job to the job list
-	memcpy(&(pJobList->pList[tail]), pJob, sizeof(DnxNewJob));;
+   // Transition this job's state to InProgress
+   pJobList->pList[current].state = DNX_JOB_INPROGRESS;
 
-	// Update dispatch head index
-	if (pJobList->pList[pJobList->tail].state != DNX_JOB_PENDING)
-		pJobList->dhead = tail;
+   // Make a copy for the Dispatcher
+   memcpy(pJob, &pJobList->pList[current], sizeof pJobList->pList[current]);
+   // pJob->cmd = strdup(pJob->cmd); // BUG: This causes a memory leak!
 
-	// Update the tail index
-	pJobList->tail = tail;
+   // Update the dispatch head
+   if (pJobList->dhead != pJobList->tail)
+      pJobList->dhead = (current + 1) % pJobList->size;
 
-	//dnxDebug(8, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", pJob->guid.objSerial, pJob->guid.objSlot, pJobList->head, pJobList->dhead, pJobList->tail);
+   // dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", pJob->guid.objSerial, pJob->guid.objSlot, pJobList->head, pJobList->dhead, pJobList->tail);
 
-	// Signal the condition variable to indicate that a new job is available
-	pthread_cond_signal(&(pJobList->cond));
+   DNX_PT_MUTEX_UNLOCK(&pJobList->mut);
 
-abend:
-	// Release the lock on the job list
-	if (pthread_mutex_unlock(&(pJobList->mut)) != 0)
-	{
-		switch (errno)
-		{
-		case EINVAL:	// mutex not initialized
-			dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_unlock: mutex has not been initialized");
-			break;
-		case EPERM:		// mutex not locked by this thread
-			dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_unlock: mutex not locked by this thread!");
-			break;
-		default:		// Unknown condition
-			dnxSyslog(LOG_ERR, "dnxJobListAdd: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-		}
-		ret = DNX_ERR_THREAD;
-	}
-
-	return ret;
+   return DNX_OK;
 }
 
-//----------------------------------------------------------------------------
-// This routine is invoked by the Timer thread to dequeue all jobs whose
-// timeout has occurred.
-//
-// Note that this routine walks the *entire* Job List and can remove jobs
-// that are either InProgress (awaiting a result) or Pending (awaiting dispatch.)
-//
-// Jobs that are deemed to have expired are passed to the Timer thread
-// via a call back mechanism (for efficiency.)
-//
 
-int dnxJobListExpire (DnxJobList *pJobList, DnxNewJob *pExpiredJobs, int *totalJobs)
+/** Matches pending jobs to job results from dnxClient.
+ *
+ * This routine is invoked by the Collector thread to dequeue a job from
+ * the Job List when its service check result has been posted by a worker
+ * node.
+ * 
+ * The job *is* removed from the the Job List.
+ *
+ * @param[in] pJobList - the list to be searched.
+ * @param[in] pGuid - the transaction id we're looking for.
+ * @param[out] pJob - the address of storage for the matching job.
+ *
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob)
 {
-	unsigned long current;
-	DnxNewJob *pJob;
-	int jobCount;
-	time_t now;
+   unsigned long current;
+   int ret = DNX_OK;
 
-	// Validate parameters
-	if (!pJobList || !pExpiredJobs || !totalJobs || *totalJobs < 1)
-		return DNX_ERR_INVALID;
+   assert(pJobList && pGuid && pJob);
 
-	// Acquire the lock on the job list
-	if (pthread_mutex_lock(&(pJobList->mut)) != 0)
-	{
-		switch (errno)
-		{
-		case EINVAL:	// mutex not initialized
-			dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_lock: mutex has not been initialized");
-			break;
-		case EDEADLK:	// mutex already locked by this thread
-			dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_lock: deadlock condition: mutex already locked by this thread!");
-			break;
-		default:		// Unknown condition
-			dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-		}
-		return DNX_ERR_THREAD;
-	}
+   current = pGuid->objSlot;
 
-	// Get the current time (After we acquire the lock! In case we had to wait to acquire it...)
-	now = time(NULL);
+   assert(current < pJobList->size);
 
-	// Walk the entire job list: both InProgress and dispatch-Pending jobs (in that order)
-	current = pJobList->head;
-	jobCount = 0;
-	while (jobCount < *totalJobs)
-	{
-		// Only examine jobs that are either awaiting dispatch or results
-		if ((pJob = &(pJobList->pList[current]))->state == DNX_JOB_INPROGRESS || pJob->state == DNX_JOB_PENDING)
-		{
-			// Check the job's expiration stamp
-			if (pJob->expires > now)
-				break;	// Bail-out: this job hasn't expired yet
+   DNX_PT_MUTEX_LOCK(&pJobList->mut);
 
-			// Job has expired - add it to the expired job list
-			memcpy(&(pExpiredJobs[jobCount]), pJob, sizeof(DnxNewJob));
+   // dnxDebug(8, "dnxJobListCollect: Compare [%lu,%lu] to [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", pGuid->objSerial, pGuid->objSlot,
+   //       pJobList->pList[current].guid.objSerial, pJobList->pList[current].guid.objSlot, pJobList->head, pJobList->dhead, pJobList->tail);
 
-			// And dequeue it.
-			pJob->state = DNX_JOB_NULL;
+   // verify the GUID of this result matches that of the service check
+   if (memcmp(pGuid, &(pJobList->pList[current].guid), sizeof(DnxGuid)) != 0 || pJobList->pList[current].state == DNX_JOB_NULL)
+      ret = DNX_ERR_NOTFOUND; // the job expired and was removed by the Timer thread
+   else
+   {
+      // make a copy for the Collector
+      memcpy(pJob, &pJobList->pList[current], sizeof pJobList->pList[current]);
+      pJob->state = DNX_JOB_COMPLETE;
 
-			jobCount++;		// Increment expired job list index
-		}
+      // dequeue the job
+      pJobList->pList[current].state = DNX_JOB_NULL;
+      if (current == pJobList->head && current != pJobList->tail)
+         pJobList->head = (current + 1) % pJobList->size;
+   }
 
-		// Bail-out if this was the job list tail
-		if (current == pJobList->tail)
-			break;
+   DNX_PT_MUTEX_UNLOCK(&pJobList->mut);
 
-		// Increment the job list index
-		current = ((current + 1) % pJobList->size);
-	}
-
-	// Update the head index
-	pJobList->head = current;
-
-	// If this job is awaiting dispatch, then it is the new dispatch head
-	if (pJobList->pList[current].state != DNX_JOB_INPROGRESS)
-		pJobList->dhead = current;
-
-	// Update the total jobs in the expired job list
-	*totalJobs = jobCount;
-
-	// Release the lock on the job list
-	if (pthread_mutex_unlock(&(pJobList->mut)) != 0)
-	{
-		switch (errno)
-		{
-		case EINVAL:	// mutex not initialized
-			dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_unlock: mutex has not been initialized");
-			break;
-		case EPERM:		// mutex not locked by this thread
-			dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_unlock: mutex not locked by this thread!");
-			break;
-		default:		// Unknown condition
-			dnxSyslog(LOG_ERR, "dnxJobListExpire: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-		}
-		return DNX_ERR_THREAD;
-	}
-
-	return DNX_OK;
+   return ret;
 }
 
-//----------------------------------------------------------------------------
-// This routine is invoked by the Dispatcher thread to select the next
-// job waiting to be dispatched to a worker node.
-//
-// The job is *not* removed from the Job List, but is marked as InProgress;
-// that is, it is waiting for the results from the service check.
-//
 
-int dnxJobListDispatch (DnxJobList *pJobList, DnxNewJob *pJob)
+/** Initialize a new JobList object.
+ *
+ * This routine is invoked by the DNX NEB module's initialization routine to 
+ * create the DNX Job List.
+ *
+ * The Job List contains a time-ordered list of service check requests
+ * (i.e., "jobs") that are either:
+ * 
+ * 1. Waiting to be dispatched to a worker node for execution (state = Waiting) or,
+ *
+ * 2. Are already executing on a worker node and are pending the service
+ *    check result from the worker node (state = Pending).
+ *
+ * @param[out] ppJobList - the address of storage for the returned job list.
+ * @param[in] size - the size of the job list.
+ *
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxJobListInit(DnxJobList ** ppJobList, unsigned long size)
 {
-	unsigned long current;
+   DnxJobList * joblist;
 
-	// Validate parameters
-	if (!pJobList || !pJob)
-		return DNX_ERR_INVALID;
+   assert(ppJobList && size);
 
-	// Acquire the lock on the job list
-	if (pthread_mutex_lock(&(pJobList->mut)) != 0)
-	{
-		switch (errno)
-		{
-		case EINVAL:	// mutex not initialized
-			dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_lock: mutex has not been initialized");
-			break;
-		case EDEADLK:	// mutex already locked by this thread
-			dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_lock: deadlock condition: mutex already locked by this thread!");
-			break;
-		default:		// Unknown condition
-			dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-		}
-		return DNX_ERR_THREAD;
-	}
+   // create the job list structure
+   if ((joblist = (DnxJobList *)malloc(sizeof *joblist)) == NULL)
+      return DNX_ERR_MEMORY;
 
-	// Wait on the condition variable if there are no pending jobs
-	//
-	// TODO: Need to track total number of Pending jobs in the JobList structure?
-	//       OR simply just check to see if the dhead index points to a valid
-	//       Pending job?
+   // dnxDebug(10, "dnxJobListInit: Malloc(joblist=%p)", *joblist);
 
-	// Start at current dispatch head
-	current = pJobList->dhead;
+   memset(joblist, 0, sizeof *joblist);
 
-	// See if we have a Pending job
-	while (pJobList->pList[current].state != DNX_JOB_PENDING)
-	{
-		//dnxDebug(8, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu", pJobList->head, pJobList->dhead, pJobList->tail);
-		pthread_cond_wait(&(pJobList->cond), &(pJobList->mut));
-		current = pJobList->dhead;
-	}
+   // create the array of job structures of the specified size
+   if ((joblist->pList = (DnxNewJob *)malloc(sizeof *joblist->pList * size)) == NULL)
+   {
+      // dnxDebug(10, "dnxJobListInit: Free(*ppJobList=%p)", *ppJobList);
+      free(joblist);
+      return DNX_ERR_MEMORY;
+   }
 
-	// Transition this job's state to InProgress
-	pJobList->pList[current].state = DNX_JOB_INPROGRESS;
+   // dnxDebug(10, "dnxJobListInit: Malloc((*ppJobList)->pList=%p)", (*ppJobList)->pList);
 
-	// Make a copy for the Dispatcher
-	memcpy(pJob, &(pJobList->pList[current]), sizeof(DnxNewJob));
-	//pJob->cmd = strdup(pJob->cmd); // BUG: This causes a memory leak!
+   memset(joblist->pList, 0, sizeof *joblist->pList * size);
 
-	// Update the dispatch head
-	if (pJobList->dhead != pJobList->tail)
-		pJobList->dhead = ((current + 1) % pJobList->size);
+   joblist->size = size;
 
-	//dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", pJob->guid.objSerial, pJob->guid.objSlot, pJobList->head, pJobList->dhead, pJobList->tail);
+   DNX_PT_MUTEX_INIT(&joblist->mut);
+   pthread_cond_init(&joblist->cond, 0);
 
-	// Release the lock on the job list
-	if (pthread_mutex_unlock(&(pJobList->mut)) != 0)
-	{
-		switch (errno)
-		{
-		case EINVAL:	// mutex not initialized
-			dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_unlock: mutex has not been initialized");
-			break;
-		case EPERM:		// mutex not locked by this thread
-			dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_unlock: mutex not locked by this thread!");
-			break;
-		default:		// Unknown condition
-			dnxSyslog(LOG_ERR, "dnxJobListDispatch: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-		}
-		return DNX_ERR_THREAD;
-	}
+   *ppJobList = joblist;
 
-	return DNX_OK;
+   return DNX_OK;
 }
 
-//----------------------------------------------------------------------------
-// This routine is invoked by the Collector thread to dequeue a job from
-// the Job List when its service check result has been posted by a worker
-// node.
-//
-// The job *is* removed from the the Job List.
-//
 
-int dnxJobListCollect (DnxJobList *pJobList, DnxGuid *pGuid, DnxNewJob *pJob)
+/** Destroy a job list object created by dnxJobListInit.
+ *
+ * This routine is invoked by the DNX NEB module's de-initialization routine
+ * to release and remove the DNX Job List.
+ *
+ * @param[in/out] ppJobList - the address of the job list to be destroyed.
+ */
+void dnxJobListExit(DnxJobList ** ppJobList)
 {
-	unsigned long current;
-	int ret = DNX_OK;
+   DnxJobList * joblist;
 
-	// Validate parameters
-	if (!pJobList || !pGuid || !pJob)
-		return DNX_ERR_INVALID;
+   assert(ppJobList && *ppJobList);
 
-	// Validate the slot identifier in the GUID
-	if ((current = pGuid->objSlot) >= pJobList->size)
-		return DNX_ERR_INVALID;
+   joblist = *ppJobList;
 
-	// Acquire the lock on the job list
-	if (pthread_mutex_lock(&(pJobList->mut)) != 0)
-	{
-		switch (errno)
-		{
-		case EINVAL:	// mutex not initialized
-			dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_lock: mutex has not been initialized");
-			break;
-		case EDEADLK:	// mutex already locked by this thread
-			dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_lock: deadlock condition: mutex already locked by this thread!");
-			break;
-		default:		// Unknown condition
-			dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_lock: unknown error %d: %s", errno, strerror(errno));
-		}
-		return DNX_ERR_THREAD;
-	}
+   DNX_PT_MUTEX_DESTROY(&joblist->mut);
+   DNX_PT_COND_DESTROY(&joblist->cond);
 
-	//dnxDebug(8, "dnxJobListCollect: Compare [%lu,%lu] to [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", pGuid->objSerial, pGuid->objSlot,
-	//	pJobList->pList[current].guid.objSerial, pJobList->pList[current].guid.objSlot, pJobList->head, pJobList->dhead, pJobList->tail);
+   assert(joblist->pList && joblist->size > 0);
 
-	// Verify that the GUID of this result matches the GUID of the service check
-	if (memcmp(pGuid, &(pJobList->pList[current].guid), sizeof(DnxGuid)) != 0 || pJobList->pList[current].state == DNX_JOB_NULL)
-	{
-		// Most likely, this job expired and was removed from the Job List by the Timer thread
-		ret = DNX_ERR_NOTFOUND;
-		goto abend;
-	}
+   // dnxDebug(10, "dnxJobListExit: free((*ppJobList)->pList=%p)", joblist->pList);
+   free((*ppJobList)->pList);
 
-	// Make a copy for the Collector
-	memcpy(pJob, &(pJobList->pList[current]), sizeof(DnxNewJob));
-	pJob->state = DNX_JOB_COMPLETE;
+   // dnxDebug(10, "dnxJobListExit: free(*ppJobList=%p)", joblist);
+   free(joblist);
 
-	// Dequeue this job
-	pJobList->pList[current].state = DNX_JOB_NULL;
-
-	// Update the job list head
-	if (current == pJobList->head && current != pJobList->tail)
-		pJobList->head = ((current + 1) % pJobList->size);
-
-abend:
-	// Release the lock on the job list
-	if (pthread_mutex_unlock(&(pJobList->mut)) != 0)
-	{
-		switch (errno)
-		{
-		case EINVAL:	// mutex not initialized
-			dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_unlock: mutex has not been initialized");
-			break;
-		case EPERM:		// mutex not locked by this thread
-			dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_unlock: mutex not locked by this thread!");
-			break;
-		default:		// Unknown condition
-			dnxSyslog(LOG_ERR, "dnxJobListCollect: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
-		}
-		ret = DNX_ERR_THREAD;
-	}
-
-	return ret;
+   *ppJobList = NULL;
 }
+
 
 //----------------------------------------------------------------------------

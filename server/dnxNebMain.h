@@ -50,6 +50,7 @@
 #include <regex.h>
 
 #include "dnxError.h"
+#include "dnxJobList.h"
 #include "dnxTransport.h"
 #include "dnxProtocol.h"
 #include "dnxQueue.h"	// For dnxQueue definition
@@ -59,31 +60,6 @@
 #define DNX_TCP_LISTEN		5
 
 #define DNX_MAX_NODE_REQUESTS	1024
-
-typedef struct _DnxNewJob_ {
-	DnxJobState state;		// Job state
-	DnxGuid  guid;			// Service Request Serial No.
-	char    *cmd;			// Processed check command
-	time_t   start_time;	// Service check start time
-	int      timeout;		// Service check timeout in seconds
-	time_t   expires;		// Expiration time
-	service *svc;			// Service check structure
-	DnxNodeRequest *pNode;	// Worker Request that will handle this Job
-	// service_message msg;
-} DnxNewJob;
-
-typedef struct _DnxJobList_ {
-	DnxNewJob *pList;	// Array of Job Structures
-	unsigned long size;	// Number of elements
-	unsigned long head;	// List head
-	unsigned long tail;	// List tail
-	unsigned long dhead;	// Head of waiting jobs
-
-	// pthread mutex and condition-variable for Job List access
-	pthread_mutex_t mut;
-	pthread_mutexattr_t mut_attr;
-	pthread_cond_t  cond;
-} DnxJobList;
 
 typedef struct _DnxGlobalData_ {
 	unsigned long serialNo;	// Number of service checks processed
@@ -102,7 +78,6 @@ typedef struct _DnxGlobalData_ {
 	pthread_t tDispatcher;	// Dispatcher thread ID
 	pthread_t tRegistrar;	// Registrar thread ID
 	pthread_t tCollector;	// Collector thread ID
-	pthread_t tTimer;		// Timer thread ID
 
 	dnxChannel *pDispatch;	// Dispatch communications channel
 	dnxChannel *pCollect;	// Collector communications channel
