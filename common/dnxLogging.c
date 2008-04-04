@@ -158,9 +158,9 @@ int dnxLogInit(char * logFile, char * debugFile, char * auditFile,
 
    // open log file - default to stdout (global default)
    s_logFile = s_debugFile = stdout;
-   if (logFile && *logFile && strcmp(logFile, "stdout") != 0)
+   if (logFile && *logFile && strcmp(logFile, "STDOUT") != 0)
    {
-      if (strcmp(logFile, "stderr") == 0)
+      if (strcmp(logFile, "STDERR") == 0)
          s_logFile = stderr;
       else
       {
@@ -178,9 +178,9 @@ int dnxLogInit(char * logFile, char * debugFile, char * auditFile,
    }
 
    // open debug file
-   if (debugFile && *debugFile || strcmp(debugFile, "stdout") != 0)
+   if (debugFile && *debugFile || strcmp(debugFile, "STDOUT") != 0)
    {
-      if (strcmp(debugFile, "stderr") == 0)
+      if (strcmp(debugFile, "STDERR") == 0)
          s_debugFile = stderr;
       else
       {
@@ -200,9 +200,9 @@ int dnxLogInit(char * logFile, char * debugFile, char * auditFile,
    // open audit log
    if (auditFile && *auditFile)
    {
-      if (strcmp(auditFile, "stdout") == 0)
+      if (strcmp(auditFile, "STDOUT") == 0)
          s_auditFile = stdout;
-      else if (strcmp(debugFile, "stderr") == 0)
+      else if (strcmp(debugFile, "STDERR") == 0)
          s_auditFile = stderr;
       else
       {

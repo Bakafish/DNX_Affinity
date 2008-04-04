@@ -325,8 +325,6 @@ void dnxDisconnect(DnxChannel * channel)
 
    if (icp->txClose(icp) == DNX_OK)
       icp->txDelete(icp);
-
-   xfree(icp);
 }
 
 //----------------------------------------------------------------------------
