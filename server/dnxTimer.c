@@ -50,21 +50,20 @@
 #include <error.h>
 #include <assert.h>
 
-#define DNX_DEF_TIMER_SLEEP   5  /*!< Default timer sleep interval. */
-#define MAX_EXPIRED           10 /*!< Maximum expired jobs during interval. */
+#define DNX_DEF_TIMER_SLEEP   5000  /*!< Default timer sleep interval. */
+#define MAX_EXPIRED           10    /*!< Maximum expired jobs during interval. */
 
 /** DNX job expiration timer implementation structure. */
 typedef struct iDnxTimer_
 {
    DnxJobList * joblist;   /*!< Job list to be expired. */
    pthread_t tid;          /*!< Timer thread ID. */
-   int sleeptime;          /*!< Seconds to sleep between passes. */
-   int running;            /*!< Running flag - as opposed to cancellation. */
+   int sleepms;            /*!< Milliseconds to sleep between passes. */
 } iDnxTimer;
 
 //----------------------------------------------------------------------------
 
-/** A sleep routine that can be cancelled.
+/** A millisecond-resolution sleep routine that can be cancelled.
  * 
  * The pthreads specification indicates clearly that the sleep() system call
  * MUST be a cancellation point. However, it appears that sleep() on Linux 
@@ -73,33 +72,33 @@ typedef struct iDnxTimer_
  * that most Unix/Linux distros implement sleep in terms of SIGALRM. This
  * is the problem point for creating a cancelable form of sleep().
  *
- * @param[in] sleep - the number of seconds to sleep.
+ * @param[in] msecs - the number of milli-seconds to sleep.
  */
-static void dnxCancelableSleep(int seconds)
+static void dnxCancelableSleep(int msecs)
 {
 #if HAVE_NANOSLEEP
    struct timespec rqt;
-   rqt.tv_sec = seconds;
-   rqt.tv_nsec = 0L;
+   rqt.tv_sec = msecs / 1000;
+   rqt.tv_nsec = (msecs % 1000) * 1000L * 1000L;
    while (nanosleep(&rqt, &rqt) == -1 && errno == EINTR)
       ;
 #else
-   pthread_mutex_t timerMutex = PTHREAD_MUTEX_INITIALIZER;
-   pthread_cond_t timerCond  = PTHREAD_COND_INITIALIZER;
+   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+   pthread_cond_t cv  = PTHREAD_COND_INITIALIZER;
    struct timeval now;              // time when we started waiting
    struct timespec timeout;         // timeout value for the wait function
 
-   pthread_mutex_lock(&timerMutex);
+   pthread_mutex_lock(&mutex);
 
    gettimeofday(&now, 0);
 
    // timeval uses micro-seconds; timespec uses nano-seconds; 1us == 1000ns.
-   timeout.tv_sec = now.tv_sec + seconds;
-   timeout.tv_nsec = now.tv_usec * 1000;
+   timeout.tv_sec = now.tv_sec + (msecs / 1000);
+   timeout.tv_nsec = (now.tv_usec + (msecs % 1000) * 1000L) * 1000L;
 
-   pthread_cond_timedwait(&timerCond, &timerMutex, &timeout);
+   pthread_cond_timedwait(&cv, &mutex, &timeout);
 
-   pthread_mutex_unlock(&timerMutex);
+   pthread_mutex_unlock(&mutex);
 #endif
 }
 
@@ -141,9 +140,9 @@ static void * dnxTimer(void * data)
    dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Watching for expired jobs...", 
          pthread_self());
 
-   while (itimer->running)
+   while (1)
    {
-      dnxCancelableSleep(itimer->sleeptime);
+      dnxCancelableSleep(itimer->sleepms);
 
       // search for expired jobs in the pending queue
       totalExpired = MAX_EXPIRED;
@@ -188,7 +187,7 @@ static void * dnxTimer(void * data)
 /** Create a new job list expiration timer object.
  * 
  * @param[in] joblist - the job list that should be expired by the timer.
- * @param[in] sleeptime - time between expiration checks, in seconds.
+ * @param[in] sleeptime - time between expiration checks, in milliseconds.
  * @param[out] ptimer - the address of storage for returning the new object
  *    reference.
  * 
@@ -201,8 +200,8 @@ int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer)
 
    assert(joblist && ptimer);
 
-   // don't allow sleep times outside the range 1 sec to 5 minutes
-   if (sleeptime < 1 || sleeptime > 300)
+   // don't allow sleep times outside the range 1/10th sec to 5 minutes
+   if (sleeptime < 100 || sleeptime > 300000)
       sleeptime = DNX_DEF_TIMER_SLEEP;
 
    if ((itimer = (iDnxTimer *)xmalloc(sizeof *itimer)) == 0)
@@ -211,8 +210,7 @@ int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer)
    // initialize the itimer
    memset(itimer, 0, sizeof *itimer);
    itimer->joblist = joblist;
-   itimer->sleeptime = sleeptime;
-   itimer->running = 1;
+   itimer->sleepms = sleeptime;
 
    // create the timer thread
    if ((ret = pthread_create(&itimer->tid, 0, dnxTimer, itimer)) != 0)
@@ -238,8 +236,7 @@ void dnxTimerDestroy(DnxTimer * timer)
 {
    iDnxTimer * itimer = (iDnxTimer *)timer;
 
-   itimer->running = 0;
-// pthread_cancel(itimer->tid);
+   pthread_cancel(itimer->tid);
    pthread_join(itimer->tid, 0);
 
    xfree(itimer);
@@ -363,18 +360,17 @@ int main(int argc, char ** argv)
    entered_dnxJobListExpire = 0;
 
    // create a short timer and reference it as a concrete object for testing
-   CHECK_ZERO(dnxTimerCreate(&fakejoblist, 1, &timer));
+   CHECK_ZERO(dnxTimerCreate(&fakejoblist, 100, &timer));
    itimer = (iDnxTimer *)timer;
 
    // check internal state
    CHECK_TRUE(itimer->joblist == &fakejoblist);
    CHECK_TRUE(itimer->tid != 0);
-   CHECK_TRUE(itimer->sleeptime == 1);
-   CHECK_TRUE(itimer->running != 0);
+   CHECK_TRUE(itimer->sleepms == 100);
 
    // wait for timer to have made one pass though timer thread loop
    while (!entered_dnxJobListExpire)
-      dnxCancelableSleep(1);
+      dnxCancelableSleep(10);
 
    // shut down
    dnxTimerDestroy(timer);

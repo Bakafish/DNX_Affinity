@@ -34,8 +34,8 @@
 
 #include <sys/time.h>
 
-#define DNX_JOBLIST_TIMEOUT   5  /*!< Wake up to see if we're shutting down. */
-#define DNX_TIMER_SLEEP       5  /*!< JobList timer sleep interval. */
+#define DNX_JOBLIST_TIMEOUT   5     /*!< Wake up to see if we're shutting down. */
+#define DNX_TIMER_SLEEP       5000  /*!< Timer sleep interval, in milliseconds */
 
 /** The JobList implementation data structure. */
 typedef struct iDnxJobList_ 
@@ -135,6 +135,13 @@ abend:
  *
  * @return Zero on success, or a non-zero error value. (Currently always
  *    returns zero.)
+ * 
+ * @note This routine is called from dnxTimer, which is a deferred cancellation
+ * thread start procedure. If new code is added in the future, which calls any
+ * pthread or system cancellation points then appropriate cleanup routines
+ * should be pushed as well. As it currently stands, the only place we could
+ * be cancelled is while waiting for the list mutex. If we are cancelled 
+ * during this time, no resources will be lost.
  */
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, 
       int * totalJobs)
@@ -378,8 +385,8 @@ int dnxJobListCreate(unsigned size, DnxJobList ** ppJobList)
    DNX_PT_MUTEX_INIT(&ilist->mut);
    pthread_cond_init(&ilist->cond, 0);
 
-   if ((ret = dnxTimerCreate((DnxJobList *)ilist, 
-         DNX_TIMER_SLEEP, &ilist->timer)) != 0)
+   if ((ret = dnxTimerCreate((DnxJobList *)ilist, DNX_TIMER_SLEEP, 
+         &ilist->timer)) != 0)
    {
       DNX_PT_COND_DESTROY(&ilist->cond);
       DNX_PT_MUTEX_DESTROY(&ilist->mut);
