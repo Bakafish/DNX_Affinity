@@ -178,7 +178,7 @@ int dnxLogInit(char * logFile, char * debugFile, char * auditFile,
    }
 
    // open debug file
-   if (debugFile && *debugFile || strcmp(debugFile, "STDOUT") != 0)
+   if (debugFile && *debugFile && strcmp(debugFile, "STDOUT") != 0)
    {
       if (strcmp(debugFile, "STDERR") == 0)
          s_debugFile = stderr;

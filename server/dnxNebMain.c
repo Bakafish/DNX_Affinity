@@ -158,11 +158,11 @@ static void releaseConfig(void)
 
 /** Read and parse the dnxServer configuration file.
  * 
- * @param[in] ConfigFile - the configuration file to be read.
+ * @param[in] cfgfile - the configuration file to be read.
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int initConfig(char * ConfigFile)
+static int initConfig(char * cfgfile)
 {
    static DnxCfgDict dict[] = 
    {
@@ -191,7 +191,7 @@ static int initConfig(char * ConfigFile)
    int ret;
 
    // create global configuration parser object
-   if ((ret = dnxCfgParserCreate(cfgdefs, ConfigFile, 0, dict, &parser)) != 0)
+   if ((ret = dnxCfgParserCreate(cfgdefs, cfgfile, 0, dict, &parser)) != 0)
       return ret;
 
    // parse configuration file; pass defaults
