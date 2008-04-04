@@ -51,12 +51,16 @@
 #include "dnxPlugin.h"
 #include "dnxLogging.h"
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#else
+# define VERSION	"0.20"
+#endif
 
 //
 //	Constants
 //
 
-#define VERSION		"0.13"
 
 #define MAX_CMD_BUFF	2048
 
