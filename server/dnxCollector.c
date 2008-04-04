@@ -113,8 +113,8 @@ static void * dnxCollector(void * data)
          if (dnxJobListCollect(icoll->joblist, &sResult.guid, &Job) == DNX_OK)
          {
             // post the results to the Nagios service request buffer
-            ret = nagiosPostResult(Job.svc, Job.start_time, FALSE, 
-                  sResult.resCode, sResult.resData);
+            ret = nagiosPostResult((service *)Job.payload, Job.start_time, 
+                  FALSE, sResult.resCode, sResult.resData);
 
             /** @todo Wrapper release DnxResult structure. */
 

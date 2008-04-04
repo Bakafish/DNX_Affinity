@@ -30,7 +30,7 @@
 
 #include "dnxProtocol.h"
 
-#include "nagios.h"
+#include <time.h>
 
 typedef struct _DnxNewJob_ 
 {
@@ -40,7 +40,7 @@ typedef struct _DnxNewJob_
    time_t start_time;      // Service check start time
    int timeout;            // Service check timeout in seconds
    time_t expires;         // Expiration time
-   service * svc;          // Service check structure
+   void * payload;         // job payload (service check structure)
    DnxNodeRequest * pNode; // Worker Request that will handle this Job
 } DnxNewJob;
 
@@ -52,7 +52,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
 int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob);
 int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob);
 
-int dnxJobListCreate(DnxJobList ** ppJobList, unsigned long size);
+int dnxJobListCreate(unsigned size, DnxJobList ** ppJobList);
 void dnxJobListDestroy(DnxJobList * pJobList);
 
 #endif   /* _DNXJOBLIST_H_ */

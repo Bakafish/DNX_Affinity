@@ -28,6 +28,8 @@
 #ifndef _DNXLOGGING_H_
 #define _DNXLOGGING_H_
 
+#include <syslog.h>
+
 int dnxSyslog(int priority, char * fmt, ...);
 int dnxDebug(int level, char * fmt, ...);
 

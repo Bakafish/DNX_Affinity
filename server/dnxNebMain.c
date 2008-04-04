@@ -203,6 +203,77 @@ static int nagiosGetServiceCount(void)
 
 //----------------------------------------------------------------------------
 
+/** Post a completed service request to the Nagios service result buffer.
+ * 
+ * @param[in] svc - the nagios service object from which results are taken.
+ * @param[in] start_time - the nagios service object start time.
+ * @param[in] early_timeout - boolean; true means the job DID time out.
+ * @param[in] res_code - the result code of this job.
+ * @param[in] res_data - the resulting STDOUT output text of this job.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ * 
+ * @todo This routine should be in nagios code. Add it to the dnx patch files
+ * for nagios 2.7 and 2.9, and export it from nagios so we can call it.
+ */
+int nagiosPostResult(service * svc, time_t start_time, 
+      int early_timeout, int res_code, char * res_data)
+{
+   extern circular_buffer service_result_buffer;
+   extern int check_result_buffer_slots;
+
+   service_message * new_message;
+
+   // note that we're using malloc, not xmalloc - nagios takes ownership
+   if ((new_message = (service_message *)malloc(sizeof *new_message)) == 0)
+      return DNX_ERR_MEMORY;
+
+   gettimeofday(&new_message->finish_time, 0);
+   strncpy(new_message->host_name, svc->host_name, 
+         sizeof(new_message->host_name) - 1);
+   new_message->host_name[sizeof(new_message->host_name) - 1] = 0;
+   strncpy(new_message->description, svc->description, 
+         sizeof(new_message->description) - 1);
+   new_message->description[sizeof(new_message->description) - 1] = 0;
+   new_message->return_code = res_code;
+   new_message->exited_ok = TRUE;
+   new_message->check_type = SERVICE_CHECK_ACTIVE;
+   new_message->parallelized = svc->parallelize;
+   new_message->start_time.tv_sec = start_time;
+   new_message->start_time.tv_usec = 0L;
+   new_message->early_timeout = early_timeout;
+   strncpy(new_message->output, res_data, sizeof(new_message->output) - 1);
+   new_message->output[sizeof(new_message->output) - 1] = 0;
+
+   pthread_mutex_lock(&service_result_buffer.buffer_lock);
+
+   // handle overflow conditions
+   if (service_result_buffer.items == check_result_buffer_slots)
+   {
+      service_result_buffer.overflow++;
+      service_result_buffer.tail = (service_result_buffer.tail + 1) 
+            % check_result_buffer_slots;
+   }
+
+   // save the data to the buffer
+   ((service_message **)service_result_buffer.buffer)
+         [service_result_buffer.head] = new_message;
+
+   // increment the head counter and items
+   service_result_buffer.head = (service_result_buffer.head + 1) 
+         % check_result_buffer_slots;
+   if (service_result_buffer.items < check_result_buffer_slots)
+      service_result_buffer.items++;
+   if (service_result_buffer.items > service_result_buffer.high)
+      service_result_buffer.high = service_result_buffer.items;
+
+   pthread_mutex_unlock(&service_result_buffer.buffer_lock);
+
+   return 0;
+}
+
+//----------------------------------------------------------------------------
+
 /** Calculate the optimal size of the job list.
  *
  * Assumes the caller will actually use the returned value to allocate the 
@@ -269,7 +340,7 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
 
    // Fill-in the job structure with the necessary information
    dnxMakeGuid(&Job.guid, DNX_OBJ_JOB, serial, 0);
-   Job.svc        = svc;
+   Job.payload    = svc;
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
@@ -378,7 +449,7 @@ static int ehSvcCheck(int event_type, void * data)
 {
    static unsigned long serial = 0; // the number of service checks processed
 
-   nebstruct_service_check_data *svcdata = (nebstruct_service_check_data *)data;
+   nebstruct_service_check_data * svcdata = (nebstruct_service_check_data *)data;
    DnxNodeRequest *pNode;
    int ret;
 
@@ -507,7 +578,7 @@ static int dnxServerInit(void)
          "dnxServerInit: Allocating %d service request slots in the DNX job list", 
          joblistsz);
 
-   if ((ret = dnxJobListCreate(&joblist, joblistsz)) != 0)
+   if ((ret = dnxJobListCreate(joblistsz, &joblist)) != 0)
    {
       dnxSyslog(LOG_ERR, 
             "dnxServerInit: Failed to initialize DNX job list with %d slots", 
@@ -698,77 +769,6 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
    start_time = time(0);
 
    return OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Post a completed service request to the Nagios service result buffer.
- * 
- * @param[in] svc - the nagios service object from which results are taken.
- * @param[in] start_time - the nagios service object start time.
- * @param[in] early_timeout - boolean; true means the job DID time out.
- * @param[in] res_code - the result code of this job.
- * @param[in] res_data - the resulting STDOUT output text of this job.
- * 
- * @return Zero on success, or a non-zero error code.
- * 
- * @todo This routine should be in nagios code. Add it to the dnx patch files
- * for nagios 2.7 and 2.9, and export it from nagios so we can call it.
- */
-int nagiosPostResult(service * svc, time_t start_time, 
-      int early_timeout, int res_code, char * res_data)
-{
-   extern circular_buffer service_result_buffer;
-   extern int check_result_buffer_slots;
-
-   service_message * new_message;
-
-   // note that we're using malloc, not xmalloc - nagios takes ownership
-   if ((new_message = (service_message *)malloc(sizeof *new_message)) == 0)
-      return DNX_ERR_MEMORY;
-
-   gettimeofday(&new_message->finish_time, 0);
-   strncpy(new_message->host_name, svc->host_name, 
-         sizeof(new_message->host_name) - 1);
-   new_message->host_name[sizeof(new_message->host_name) - 1] = 0;
-   strncpy(new_message->description, svc->description, 
-         sizeof(new_message->description) - 1);
-   new_message->description[sizeof(new_message->description) - 1] = 0;
-   new_message->return_code = res_code;
-   new_message->exited_ok = TRUE;
-   new_message->check_type = SERVICE_CHECK_ACTIVE;
-   new_message->parallelized = svc->parallelize;
-   new_message->start_time.tv_sec = start_time;
-   new_message->start_time.tv_usec = 0L;
-   new_message->early_timeout = early_timeout;
-   strncpy(new_message->output, res_data, sizeof(new_message->output) - 1);
-   new_message->output[sizeof(new_message->output) - 1] = 0;
-
-   pthread_mutex_lock(&service_result_buffer.buffer_lock);
-
-   // handle overflow conditions
-   if (service_result_buffer.items == check_result_buffer_slots)
-   {
-      service_result_buffer.overflow++;
-      service_result_buffer.tail = (service_result_buffer.tail + 1) 
-            % check_result_buffer_slots;
-   }
-
-   // save the data to the buffer
-   ((service_message **)service_result_buffer.buffer)
-         [service_result_buffer.head] = new_message;
-
-   // increment the head counter and items
-   service_result_buffer.head = (service_result_buffer.head + 1) 
-         % check_result_buffer_slots;
-   if (service_result_buffer.items < check_result_buffer_slots)
-      service_result_buffer.items++;
-   if (service_result_buffer.items > service_result_buffer.high)
-      service_result_buffer.high = service_result_buffer.items;
-
-   pthread_mutex_unlock(&service_result_buffer.buffer_lock);
-
-   return 0;
 }
 
 /*--------------------------------------------------------------------------*/

@@ -32,12 +32,14 @@
 #include "dnxLogging.h"
 #include "dnxTimer.h"
 
+#include <sys/time.h>
+
 #define DNX_JOBLIST_TIMEOUT 5
 
 /** The JobList implementation data structure. */
 typedef struct iDnxJobList_ 
 {
-   DnxNewJob * pList;      /*!< Array of Job Structures. */
+   DnxNewJob * list;       /*!< Array of Job Structures. */
    unsigned long size;     /*!< Number of elements. */
    unsigned long head;     /*!< List head. */
    unsigned long tail;     /*!< List tail. */
@@ -75,7 +77,7 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    tail = ilist->tail;
 
    // verify space in the job list
-   if (ilist->pList[tail].state 
+   if (ilist->list[tail].state 
          && (tail = (tail + 1) % ilist->size) == ilist->head)
    {
       dnxSyslog(LOG_ERR, "dnxJobListAdd: Out of job slots (max=%lu): %s", 
@@ -89,10 +91,10 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    pJob->state = DNX_JOB_PENDING;
 
    // add this job to the job list
-   memcpy(&ilist->pList[tail], pJob, sizeof(DnxNewJob));
+   memcpy(&ilist->list[tail], pJob, sizeof(DnxNewJob));
 
    // update dispatch head index
-   if (ilist->pList[ilist->tail].state != DNX_JOB_PENDING)
+   if (ilist->list[ilist->tail].state != DNX_JOB_PENDING)
       ilist->dhead = tail;
 
    ilist->tail = tail;
@@ -130,7 +132,8 @@ abend:
  *    array pointed to by pExpiredJobs; on exit, contains the number of jobs
  *    stored in the pExpiredJobs array.
  *
- * @return Zero on success, or a non-zero error value.
+ * @return Zero on success, or a non-zero error value. (Currently always
+ *    returns zero.)
  */
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, 
       int * totalJobs)
@@ -154,7 +157,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
    while (jobCount < *totalJobs)
    {
       // only examine jobs that are either awaiting dispatch or results
-      if ((pJob = &ilist->pList[current])->state == DNX_JOB_INPROGRESS 
+      if ((pJob = &ilist->list[current])->state == DNX_JOB_INPROGRESS 
             || pJob->state == DNX_JOB_PENDING)
       {
          // check the job's expiration stamp
@@ -180,7 +183,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
    ilist->head = current;
 
    // if this job is awaiting dispatch, then it is the new dispatch head
-   if (ilist->pList[current].state != DNX_JOB_INPROGRESS)
+   if (ilist->list[current].state != DNX_JOB_INPROGRESS)
       ilist->dhead = current;
 
    // update the total jobs in the expired job list
@@ -228,8 +231,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    // start at current dispatch head
    current = ilist->dhead;
 
-   // see if we have a Pending job
-   while (ilist->pList[current].state != DNX_JOB_PENDING)
+   // see if we have a pending job
+   while (ilist->list[current].state != DNX_JOB_PENDING)
    {
       struct timeval now;
       struct timespec timeout;
@@ -251,11 +254,10 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    if (ret == 0)
    {
       // transition this job's state to InProgress
-      ilist->pList[current].state = DNX_JOB_INPROGRESS;
+      ilist->list[current].state = DNX_JOB_INPROGRESS;
    
       // make a copy for the Dispatcher
-      memcpy(pJob, &ilist->pList[current], sizeof(DnxNewJob));
-      //pJob->cmd = xstrdup(pJob->cmd); // BUG: This causes a memory leak!
+      memcpy(pJob, &ilist->list[current], sizeof(DnxNewJob));
    
       // update the dispatch head
       if (ilist->dhead != ilist->tail)
@@ -307,30 +309,26 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob)
 
    dnxDebug(8, "dnxJobListCollect: Compare [%lu,%lu] to "
                "[%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", 
-      pGuid->objSerial, pGuid->objSlot, ilist->pList[current].guid.objSerial, 
-      ilist->pList[current].guid.objSlot, ilist->head, ilist->dhead, ilist->tail);
+      pGuid->objSerial, pGuid->objSlot, ilist->list[current].guid.objSerial, 
+      ilist->list[current].guid.objSlot, ilist->head, ilist->dhead, ilist->tail);
 
    // verify that the GUID of this result matches the GUID of the service check
-   if (ilist->pList[current].state == DNX_JOB_NULL 
-         || memcmp(pGuid, &ilist->pList[current].guid, sizeof(DnxGuid)) != 0)
+   if (ilist->list[current].state == DNX_JOB_NULL 
+         || memcmp(pGuid, &ilist->list[current].guid, sizeof(DnxGuid)) != 0)
+      ret = DNX_ERR_NOTFOUND;    // job expired and was removed by the timer
+   else
    {
-      // most likely, this job expired and was removed by the Timer thread
-      ret = DNX_ERR_NOTFOUND;
-      goto abend;
+      // make a copy for the Collector
+      memcpy(pJob, &ilist->list[current], sizeof(DnxNewJob));
+      pJob->state = DNX_JOB_COMPLETE;
+   
+      // dequeue this job
+      ilist->list[current].state = DNX_JOB_NULL;
+   
+      // update the job list head
+      if (current == ilist->head && current != ilist->tail)
+         ilist->head = ((current + 1) % ilist->size);
    }
-
-   // make a copy for the Collector
-   memcpy(pJob, &ilist->pList[current], sizeof(DnxNewJob));
-   pJob->state = DNX_JOB_COMPLETE;
-
-   // dequeue this job
-   ilist->pList[current].state = DNX_JOB_NULL;
-
-   // update the job list head
-   if (current == ilist->head && current != ilist->tail)
-      ilist->head = ((current + 1) % ilist->size);
-
-abend:
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
 
@@ -350,13 +348,13 @@ abend:
  * and are pending the service check result from the worker node (state = 
  * Pending).
  * 
+ * @param[in] size - the initial size of the job list to be created.
  * @param[out] ppJobList - the address of storage for returning a new job
  *    list object pointer.
- * @param[in] size - the initial size of the job list to be created.
  *
  * @return Zero on success, or a non-zero error value.
  */
-int dnxJobListCreate(DnxJobList ** ppJobList, unsigned long size)
+int dnxJobListCreate(unsigned size, DnxJobList ** ppJobList)
 {
    iDnxJobList * ilist;
    int ret;
@@ -367,12 +365,12 @@ int dnxJobListCreate(DnxJobList ** ppJobList, unsigned long size)
       return DNX_ERR_MEMORY;
    memset(ilist, 0, sizeof *ilist);
 
-   if ((ilist->pList = (DnxNewJob *)xmalloc(sizeof *ilist->pList * size)) == 0)
+   if ((ilist->list = (DnxNewJob *)xmalloc(sizeof *ilist->list * size)) == 0)
    {
       xfree(ilist);
       return DNX_ERR_MEMORY;
    }
-   memset(ilist->pList, 0, sizeof *ilist->pList * size);
+   memset(ilist->list, 0, sizeof *ilist->list * size);
 
    ilist->size = size;
 
@@ -383,7 +381,7 @@ int dnxJobListCreate(DnxJobList ** ppJobList, unsigned long size)
    {
       DNX_PT_COND_DESTROY(&ilist->cond);
       DNX_PT_MUTEX_DESTROY(&ilist->mut);
-      xfree(ilist->pList);
+      xfree(ilist->list);
       xfree(ilist);
       return ret;
    }
@@ -413,9 +411,158 @@ void dnxJobListDestroy(DnxJobList * pJobList)
    DNX_PT_COND_DESTROY(&ilist->cond);
    DNX_PT_MUTEX_DESTROY(&ilist->mut);
 
-   xfree(ilist->pList);
+   xfree(ilist->list);
    xfree(ilist);
 }
+
+/*--------------------------------------------------------------------------
+                                 UNIT TEST
+
+   From within dnx/server, compile with GNU tools using this command line:
+    
+      gcc -DDEBUG -DDNX_JOBLIST_TEST -g -O0 -I../common dnxJobList.c \
+         ../common/dnxError.c -lpthread -lgcc_s -lrt -o dnxJobListTest
+
+  --------------------------------------------------------------------------*/
+
+#ifdef DNX_JOBLIST_TEST
+
+#include <time.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <assert.h>
+
+#define elemcount(x) (sizeof(x)/sizeof(*(x)))
+
+/* test-bed helper macros */
+#define CHECK_ZERO(expr)                                                      \
+do {                                                                          \
+   int ret;                                                                   \
+   if ((ret = (expr)) != 0)                                                   \
+   {                                                                          \
+      fprintf(stderr, "FAILED: '%s'\n  at %s(%d).\n  error %d: %s\n",         \
+            #expr, __FILE__, __LINE__, ret, dnxErrorString(ret));             \
+      exit(1);                                                                \
+   }                                                                          \
+} while (0)
+#define CHECK_TRUE(expr)                                                      \
+do {                                                                          \
+   if (!(expr))                                                               \
+   {                                                                          \
+      fprintf(stderr, "FAILED: Boolean(%s)\n  at %s(%d).\n",                  \
+            #expr, __FILE__, __LINE__);                                       \
+      exit(1);                                                                \
+   }                                                                          \
+} while (0)
+#define CHECK_NONZERO(expr)   CHECK_ZERO(!(expr))
+#define CHECK_FALSE(expr)     CHECK_TRUE(expr)
+
+/* command-line verbose flag */
+static int verbose;
+
+/* functional stubs */
+int dnxTimerCreate(DnxJobList * jl, DnxTimer ** pt) { *pt = 0; return 0; }
+void dnxTimerDestroy(DnxTimer * t) { }
+int dnxSyslog(int p, char * f, ... )
+{
+   if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
+   return 0;
+}
+int dnxDebug(int l, char * f, ... )
+{
+   if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
+   return 0;
+}
+int dnxMakeGuid(DnxGuid * g, DnxObjType t, unsigned long s, unsigned long l)
+      { g->objType = t; g->objSerial = s; g->objSlot = l; return DNX_OK; }
+
+/* test main */
+int main(int argc, char ** argv)
+{
+   DnxJobList * jobs;
+   DnxNodeRequest n1[101];
+   DnxNewJob j1[101];
+   DnxNewJob xl[10];
+   DnxNewJob jtmp;
+   DnxGuid guid;
+   int xlsz, serial, expcount;
+   iDnxJobList * ijobs;
+
+   verbose = argc > 1;
+
+   // create a new job list and get a concrete reference to it for testing
+   CHECK_ZERO(dnxJobListCreate(100, &jobs));
+   ijobs = (iDnxJobList *)jobs;
+
+   // test that we CAN add 100 jobs to the 100-job list
+   for (serial = 0; serial < elemcount(j1); serial++)
+   {
+      // configure request node
+      dnxMakeGuid(&n1[serial].guid, DNX_OBJ_WORKER, serial, 0);
+      n1[serial].reqType      = DNX_REQ_REGISTER;
+      n1[serial].jobCap       = 1;     // jobs
+      n1[serial].ttl          = 5;     // seconds
+      n1[serial].expires      = 5;     // seconds
+      strcpy(n1[serial].address, "localhost");
+
+      // configure job
+      dnxMakeGuid(&j1[serial].guid, DNX_OBJ_JOB, serial, 0);
+      j1[serial].cmd          = "some command line";
+      j1[serial].start_time   = time(0);
+      j1[serial].timeout      = serial < 50? 0: 5;  // 50 expire immediately
+      j1[serial].expires      = j1[serial].start_time + j1[serial].timeout;
+      j1[serial].payload      = 0;     // no payload for tests
+      j1[serial].pNode        = &n1[serial];
+
+      if (serial < 100)
+         CHECK_ZERO(dnxJobListAdd(jobs, &j1[serial]));
+      else  // test that we CAN'T add 101 jobs
+         CHECK_NONZERO(dnxJobListAdd(jobs, &j1[serial]));
+   }
+
+   // test job expiration - ensure first 50 jobs have already expired
+   expcount = 0;
+   do
+   {
+      xlsz = elemcount(xl);
+      CHECK_ZERO(dnxJobListExpire(jobs, xl, &xlsz));
+      expcount += xlsz;
+   } while (xlsz != 0);
+   CHECK_TRUE(expcount == 50);
+
+   // dispatch 49 of the remaining 50 jobs
+   for (serial = 50; serial < elemcount(j1) - 2; serial++)
+      CHECK_ZERO(dnxJobListDispatch(jobs, &jtmp));
+
+   // ensure the dispatch head is valid and not in progress
+   CHECK_TRUE(ijobs->dhead != 0);
+   CHECK_TRUE(ijobs->list[ijobs->dhead].state != DNX_JOB_INPROGRESS);
+   CHECK_TRUE(ijobs->list[ijobs->head].state == DNX_JOB_INPROGRESS);
+
+   // ensure dispatch head points to last item in list
+   CHECK_TRUE(ijobs->dhead == 99);
+
+   // collect all pending jobs
+   for (serial = 50; serial < elemcount(j1) - 2; serial++)
+   {
+      dnxMakeGuid(&guid, DNX_OBJ_JOB, serial, serial);
+      CHECK_ZERO(dnxJobListCollect(jobs, &guid, &jtmp));
+   }
+
+   // ensure there's one left
+   CHECK_TRUE(ijobs->head == ijobs->tail);
+   CHECK_TRUE(ijobs->head != 0);
+
+   // ensure head, tail and dhead all point to the last element (99)
+   CHECK_TRUE(ijobs->head == 99);
+   CHECK_TRUE(ijobs->tail == 99);
+   CHECK_TRUE(ijobs->dhead == 99);
+
+   dnxJobListDestroy(jobs);
+}
+
+#endif   /* DNX_JOBLIST_TEST */
 
 /*--------------------------------------------------------------------------*/
 

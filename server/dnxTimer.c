@@ -70,7 +70,9 @@ typedef struct iDnxTimer_
  * The pthreads specification indicates clearly that the sleep() system call
  * MUST be a cancellation point. However, it appears that sleep() on Linux 
  * calls a routine named _nanosleep_nocancel, which clearly is not a 
- * cancellation point. Oversight? Not even Google appears to know...
+ * cancellation point. Oversight? Not even Google appears to know. It seems
+ * that most Unix/Linux distros implement sleep in terms of SIGALRM. This
+ * is the problem point for creating a cancelable form of sleep().
  *
  * @param[in] sleep - the number of seconds to sleep.
  */
@@ -120,7 +122,7 @@ static void dnxTimerCleanup(void * data)
  * @param[in] data - an opaque pointer to thread data for the timer thread.
  *    This is actually the dnx server global data object.
  * 
- * @return Always returns NULL.
+ * @return Always returns 0.
  */
 static void * dnxTimer(void * data)
 {
@@ -131,8 +133,8 @@ static void * dnxTimer(void * data)
 
    assert(data);
 
-   pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-   pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+   pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
+   pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
    pthread_cleanup_push(dnxTimerCleanup, data);
 
    dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Watching for expired jobs...", 
@@ -161,8 +163,8 @@ static void * dnxTimer(void * data)
                   job->pNode->address);
 
             // report the expired job to Nagios
-            ret = nagiosPostResult(job->svc, job->start_time, TRUE, 
-                  STATE_UNKNOWN, msg);
+            ret = nagiosPostResult((service *)job->payload, job->start_time, 
+                  TRUE, STATE_UNKNOWN, msg);
 
             dnxJobCleanup(job);
          }
@@ -203,7 +205,7 @@ int dnxTimerCreate(DnxJobList * joblist, DnxTimer ** ptimer)
    itimer->joblist = joblist;
    itimer->running = 1;
 
-   if ((ret = pthread_create(&itimer->tid, NULL, dnxTimer, itimer)) != 0)
+   if ((ret = pthread_create(&itimer->tid, 0, dnxTimer, itimer)) != 0)
    {
       dnxSyslog(LOG_ERR, "Timer: thread creation failed with %d: %s", 
             ret, dnxErrorString(ret));
@@ -228,7 +230,7 @@ void dnxTimerDestroy(DnxTimer * timer)
 
    itimer->running = 0;
 // pthread_cancel(itimer->tid);
-   pthread_join(itimer->tid, NULL);
+   pthread_join(itimer->tid, 0);
 
    xfree(itimer);
 }
