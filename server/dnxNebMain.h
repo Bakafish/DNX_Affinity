@@ -34,6 +34,7 @@
 #include "dnxProtocol.h"
 #include "dnxQueue.h"   // For dnxQueue definition
 #include "dnxRegistrar.h"
+#include "dnxDispatcher.h"
 
 #ifndef NSCORE
 # define NSCORE
@@ -76,11 +77,9 @@ typedef struct _DnxGlobalData_
    DnxJobList * JobList;   // Master Job List
    DnxRegistrar * reg;     // The client node registrar.
    DnxTimer * timer;       // The job list expiration timer.
+   DnxDispatcher * disp;   // The job list dispatcher.
 
-   pthread_t tDispatcher;  // Dispatcher thread ID
    pthread_t tCollector;   // Collector thread ID
-
-   dnxChannel * pDispatch; // Dispatch communications channel
    dnxChannel * pCollect;  // Collector communications channel
 
    regex_t regEx;          // Compiled Regular Expression structure

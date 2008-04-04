@@ -212,31 +212,12 @@ static int releaseThreads(void)
    int ret;
 
    // Cancel all threads
-   if (dnxGlobalData.tDispatcher && (ret = pthread_cancel(dnxGlobalData.tDispatcher)) != 0)
-      dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tDispatcher) failed with ret = %d", ret);
    if (dnxGlobalData.tCollector && (ret = pthread_cancel(dnxGlobalData.tCollector)) != 0)
       dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tCollector) failed with ret = %d", ret);
 
    // Wait for all threads to exit
-   if (dnxGlobalData.tDispatcher && (ret = pthread_join(dnxGlobalData.tDispatcher, NULL)) != 0)
-      dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tDispatcher) failed with ret = %d", ret);
    if (dnxGlobalData.tCollector && (ret = pthread_join(dnxGlobalData.tCollector, NULL)) != 0)
       dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tCollector) failed with ret = %d", ret);
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Free resources associated with the dnxServer request queues.
- * 
- * @return Always returns zero.
- */
-static int releaseQueues(void)
-{
-   dnxTimerDestroy(dnxGlobalData.timer);
-   dnxRegistrarDestroy(dnxGlobalData.reg);
-   dnxJobListWhack(&dnxGlobalData.JobList);
 
    return DNX_OK;
 }
@@ -251,6 +232,8 @@ static int releaseComm(void)
 {
    int ret;
 
+   dnxDispatcherDestroy(&dnxGlobalData.disp);
+
    // Close the Collector channel
    if ((ret = dnxDisconnect(dnxGlobalData.pCollect)) != DNX_OK)
       dnxSyslog(LOG_ERR, "releaseComm: Failed to disconnect "
@@ -262,21 +245,14 @@ static int releaseComm(void)
       dnxSyslog(LOG_ERR, "releaseComm: Failed to delete "
                          "Collector channel: %d", ret);
 
-   // Close the Dispatcher channel
-   if ((ret = dnxDisconnect(dnxGlobalData.pDispatch)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "releaseComm: Failed to disconnect "
-                         "Dispatcher channel: %d", ret);
-   dnxGlobalData.pDispatch = NULL;
-
-   // Delete the Dispatcher channel
-   if ((ret = dnxChanMapDelete("Dispatch")) != DNX_OK)
-      dnxSyslog(LOG_ERR, "releaseComm: Failed to delete "
-                         "Dispatcher channel: %d", ret);
-
    // Release the DNX comm stack
    if ((ret = dnxChanMapRelease()) != DNX_OK)
       dnxSyslog(LOG_ERR, "releaseComm: Failed to release "
                          "DNX comm stack: %d", ret);
+
+   dnxTimerDestroy(dnxGlobalData.timer);
+   dnxRegistrarDestroy(dnxGlobalData.reg);
+   dnxJobListWhack(&dnxGlobalData.JobList);
 
    return DNX_OK;
 }
@@ -299,7 +275,6 @@ static int dnxServerDeInit(void)
    // Remove all of our objects: Threads, sockets and Queues
    releaseThreads();
    releaseComm();
-   releaseQueues();
 
    // If the localCheckPattern is defined, then release regex structure
    if (dnxGlobalData.localCheckPattern)
@@ -336,16 +311,6 @@ static int initThreads(void)
       
    }
 
-   // Create the Dispatcher thread
-   if ((ret = pthread_create(&dnxGlobalData.tDispatcher, NULL, dnxDispatcher, (void *)&dnxGlobalData)) != 0)
-   {
-      dnxGlobalData.isActive = 0;   // Init failure
-      dnxSyslog(LOG_ERR, "initThreads: Failed to create Dispatcher thread: %d", ret);
-      releaseThreads();    // Cancel prior threads
-      return DNX_ERR_THREAD;
-      
-   }
-
    // Set the ShowStart flag
    dnxGlobalData.isGo = 1;
 
@@ -367,11 +332,11 @@ static int initThreads(void)
 
 //----------------------------------------------------------------------------
 
-/** Initialize the dnxServer queues.
+/** Initialize the dnxServer communications sub-system.
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int initQueues(void)
+static int initComm(void)
 {
    extern service * service_list;      // Nagios service list
 
@@ -388,55 +353,30 @@ static int initQueues(void)
    if (total_services < 1)
    {
       total_services = 100;
-      dnxSyslog(LOG_WARNING, "initQueues: No services defined!  Defaulting to 100 slots in the DNX Job Queue");
+      dnxSyslog(LOG_WARNING, "initComm: No services defined!  Defaulting to 100 slots in the DNX Job Queue");
    }
 
    // Check for configuration maxNodeRequests override
    if (total_services < dnxGlobalData.maxNodeRequests)
    {
-      dnxSyslog(LOG_WARNING, "initQueues: Overriding automatic service check slot count. Was %d, now is %d", total_services, dnxGlobalData.maxNodeRequests);
+      dnxSyslog(LOG_WARNING, "initComm: Overriding automatic service check slot count. Was %d, now is %d", total_services, dnxGlobalData.maxNodeRequests);
       total_services = dnxGlobalData.maxNodeRequests;
    }
 
-   dnxSyslog(LOG_INFO, "initQueues: Allocating %d service request slots in the DNX Job Queue", total_services);
+   dnxSyslog(LOG_INFO, "initComm: Allocating %d service request slots in the DNX Job Queue", total_services);
 
    dnxDebug(2, "DnxNebMain: Initializing Job List and Client Node Registrar");
 
    // Create the DNX Job List (Contains Pending and InProgress jobs)
    if ((ret = dnxJobListInit(&(dnxGlobalData.JobList), total_services)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "initQueues: Failed to initialize DNX Job List with %d slots", total_services);
+      dnxSyslog(LOG_ERR, "initComm: Failed to initialize DNX Job List with %d slots", total_services);
       return DNX_ERR_MEMORY;
    }
 
-   // create the registrar
-   if ((ret = dnxRegistrarCreate(&dnxGlobalData.debug, total_services,
-         dnxGlobalData.pDispatch, &dnxGlobalData.reg)) != DNX_OK)
-      return ret;
-
-   // create job list expiration timer
-   if ((ret = dnxTimerCreate(&dnxGlobalData.JobList, &dnxGlobalData.timer)) != 0)
-   {
-      dnxRegistrarDestroy(dnxGlobalData.reg);
-      return ret;
-   }
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Initialize the dnxServer communications sub-system.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int initComm(void)
-{
-   int ret;
-
    dnxDebug(2, "DnxNebMain: Creating Dispatch and Collector channels");
 
-   dnxGlobalData.pDispatch = dnxGlobalData.pCollect = NULL;
+   dnxGlobalData.pCollect = NULL;
 
    // Initialize the DNX comm stack
    if ((ret = dnxChanMapInit(NULL)) != DNX_OK)
@@ -445,24 +385,24 @@ static int initComm(void)
       return ret;
    }
 
-   // Create Dispatcher channel
-   if ((ret = dnxChanMapAdd("Dispatch", dnxGlobalData.channelDispatcher)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "initComm: dnxChanMapInit(Dispatch) failed: %d", ret);
+   if ((ret = dnxDispatcherCreate(&dnxGlobalData.debug, "Dispatch", 
+         dnxGlobalData.channelDispatcher, dnxGlobalData.JobList, 
+         &dnxGlobalData.disp)) != 0)
       return ret;
-   }
+
+   // create the registrar
+   if ((ret = dnxRegistrarCreate(&dnxGlobalData.debug, total_services,
+         dnxDispatcherGetChannel(dnxGlobalData.disp), &dnxGlobalData.reg)) != 0)
+      return ret;
+
+   // create job list expiration timer
+   if ((ret = dnxTimerCreate(dnxGlobalData.JobList, &dnxGlobalData.timer)) != 0)
+      return ret;
 
    // Create Collector channel
-   if ((ret = dnxChanMapAdd("Collect", dnxGlobalData.channelCollector)) != DNX_OK)
+   if ((ret = dnxChanMapAdd("Collect", dnxGlobalData.channelCollector)) != 0)
    {
       dnxSyslog(LOG_ERR, "initComm: dnxChanMapInit(Collect) failed: %d", ret);
-      return ret;
-   }
-   
-   // Attempt to open the Dispatcher channel
-   if ((ret = dnxConnect("Dispatch", &(dnxGlobalData.pDispatch), DNX_CHAN_PASSIVE)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "initComm: dnxConnect(Dispatch) failed: %d", ret);
       return ret;
    }
    
@@ -474,10 +414,7 @@ static int initComm(void)
    }
 
    if (dnxGlobalData.debug)
-   {
-      dnxChannelDebug(dnxGlobalData.pDispatch, dnxGlobalData.debug);
       dnxChannelDebug(dnxGlobalData.pCollect, dnxGlobalData.debug);
-   }
 
    return DNX_OK;
 }
@@ -492,19 +429,11 @@ static int dnxServerInit(void)
 {
    int ret;
 
-   // Initialize the Job, Request and Pending Queues
-   if ((ret = initQueues()) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxServerInit: Failed to initialize queues: %d", ret);
-      return ERROR;
-   }
-
    // Initialize the communications stack
    if ((ret = initComm()) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "dnxServerInit: Failed to "
                          "initialize communications: %d", ret);
-      releaseQueues();
       return ERROR;
    }
 
@@ -514,7 +443,6 @@ static int dnxServerInit(void)
       dnxSyslog(LOG_ERR, "dnxServerInit: Failed to "
                          "initialize threads: %d", ret);
       releaseComm();
-      releaseQueues();
       return ERROR;
    }
 

@@ -35,7 +35,16 @@
 #ifndef _DNXDISPATCHER_H_
 #define _DNXDISPATCHER_H_
 
-void * dnxDispatcher(void * data);
+#include "dnxJobList.h"
+
+/** Abstract data type for the DNX job dispatcher. */
+typedef void DnxDispatcher;
+
+DnxChannel * dnxDispatcherGetChannel(DnxDispatcher * disp);
+
+int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
+      DnxJobList * joblist, DnxDispatcher ** pdisp);
+void dnxDispatcherDestroy(DnxDispatcher * disp);
 
 #endif   /* _DNXDISPATCHER_H_ */
 

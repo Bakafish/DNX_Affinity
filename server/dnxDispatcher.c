@@ -45,37 +45,29 @@
 
 #include <assert.h>
 
-//----------------------------------------------------------------------------
-
-/** Dispatcher thread clean-up routine.
- * 
- * @param[in] data - an opaque pointer to the dispatcher thread data 
- *    structure. This is actually a pointer to the global data structure.
- */
-static void dnxDispatcherCleanup(void * data)
+/** The implementation data structure for a dispatcher object. */
+typedef struct iDnxDispatcher_
 {
-   DnxGlobalData * gData = (DnxGlobalData *)data;
-
-   assert(data);
-
-   // Unlock the Go signal mutex
-   /** @todo Fix this - we should always know the state of our mutexes. */
-   if (&gData->tmGo)
-      pthread_mutex_unlock(&gData->tmGo);
-}
+   long * debug;           /*!< A pointer to the global debug level. */
+   char * chname;          /*!< The dispatcher channel name. */
+   char * url;             /*!< The dispatcher channel URL. */
+   DnxJobList * joblist;   /*!< The job list we're dispatching from. */
+   dnxChannel * dchannel;  /*!< Dispatcher communications channel. */
+   pthread_t tid;          /*!< The dispatcher thread id. */
+} iDnxDispatcher;
 
 //----------------------------------------------------------------------------
 
 /** Send a job to a designated client node.
  * 
- * @param[in] gData - the global data structure.
+ * @param[in] idisp - the dispatcher object.
  * @param[in] pSvcReq - the service request block belonging to the client 
  *    node we're targeting.
  * @param[in] pNode - the dnx request node to be sent.
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxSendJob(DnxGlobalData * gData, DnxNewJob * pSvcReq, 
+static int dnxSendJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, 
       DnxNodeRequest * pNode)
 {
    DnxJob job;
@@ -95,7 +87,7 @@ static int dnxSendJob(DnxGlobalData * gData, DnxNewJob * pSvcReq,
    job.cmd      = pSvcReq->cmd;
 
    // Transmit the job
-   if ((ret = dnxPutJob(gData->pDispatch, &job, pNode->address)) != DNX_OK)
+   if ((ret = dnxPutJob(idisp->dchannel, &job, pNode->address)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxSendJob: Unable to "
                          "send job %lu to worker node (%d): %s",
             pthread_self(), pSvcReq->guid.objSerial, ret, pSvcReq->cmd);
@@ -107,12 +99,12 @@ static int dnxSendJob(DnxGlobalData * gData, DnxNewJob * pSvcReq,
 
 /** Send a service request to the appropriate worker node.
  * 
- * @param[in] gData - the global data structure.
+ * @param[in] idisp - the dispatcher object.
  * @param[in] pSvcReq - the service request to be dispatched.
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxDispatchJob(DnxGlobalData * gData, DnxNewJob * pSvcReq)
+static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
 {
    DnxNodeRequest * pNode;
    int ret;
@@ -121,7 +113,7 @@ static int dnxDispatchJob(DnxGlobalData * gData, DnxNewJob * pSvcReq)
    pNode = pSvcReq->pNode;
 
    // Send this job to the selected worker node
-   if ((ret = dnxSendJob(gData, pSvcReq, pNode)) != DNX_OK)
+   if ((ret = dnxSendJob(idisp, pSvcReq, pNode)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxDispatchJob: "
                          "dnxSendJob failed: %d", 
             pthread_self(), ret);
@@ -135,15 +127,29 @@ static int dnxDispatchJob(DnxGlobalData * gData, DnxNewJob * pSvcReq)
 
 //----------------------------------------------------------------------------
 
+/** Dispatcher thread clean-up routine.
+ * 
+ * @param[in] data - an opaque pointer to the dispatcher thread data 
+ *    structure. This is actually a pointer to the global data structure.
+ */
+static void dnxDispatcherCleanup(void * data)
+{
+   iDnxDispatcher * idisp = (iDnxDispatcher *)data;
+   assert(data);
+}
+
+//----------------------------------------------------------------------------
+
 /** The dispatcher thread entry point.
  * 
- * @param[in] data - an opaque pointer to the dispatcher thread data structure.
+ * @param[in] data - an opaque pointer to the dispatcher object.
  * 
  * @return Always returns NULL.
  */
-void * dnxDispatcher(void * data)
+static void * dnxDispatcher(void * data)
 {
-   DnxGlobalData *gData = (DnxGlobalData *)data;
+   iDnxDispatcher * idisp = (iDnxDispatcher *)data;
+
    DnxNewJob SvcReq;
    int ret = 0;
 
@@ -156,25 +162,6 @@ void * dnxDispatcher(void * data)
    // Set thread cleanup handler
    pthread_cleanup_push(dnxDispatcherCleanup, data);
 
-   dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Waiting on the Go signal...", pthread_self());
-
-   // Wait for Go signal from dnxNebMain
-   DNX_PT_MUTEX_LOCK(&gData->tmGo);
-
-   // See if the go signal has already been broadcast
-   if (gData->isGo == 0)
-   {
-      // Nope.  Wait for the synchronization signal
-      if (pthread_cond_wait(&(gData->tcGo), &(gData->tmGo)) != 0)
-      {
-         // pthread_mutex_unlock(&(gData->tmGo));
-         pthread_exit(NULL);
-      }
-   }
-
-   // Release the lock
-   DNX_PT_MUTEX_UNLOCK(&gData->tmGo);
-
    dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Awaiting new jobs...", pthread_self());
 
    // Wait for new service checks or cancellation
@@ -184,10 +171,10 @@ void * dnxDispatcher(void * data)
       pthread_testcancel();
 
       // Wait for a new entry to be added to the Job Queue
-      if ((ret = dnxJobListDispatch(gData->JobList, &SvcReq)) == DNX_OK)
+      if ((ret = dnxJobListDispatch(idisp->joblist, &SvcReq)) == DNX_OK)
       {
          // Send the Job to the next Worker Node
-         if ((ret = dnxDispatchJob(gData, &SvcReq)) == DNX_OK)
+         if ((ret = dnxDispatchJob(idisp, &SvcReq)) == DNX_OK)
          {
             // Worker Audit Logging
             dnxAuditJob(&SvcReq, "DISPATCH");
@@ -207,6 +194,113 @@ void * dnxDispatcher(void * data)
    pthread_cleanup_pop(1);
 
    return 0;
+}
+
+//----------------------------------------------------------------------------
+
+/** Return a reference to the dispatcher channel object.
+ * 
+ * @param[in] disp - the dispatcher whose dispatch channel should be returned.
+ * 
+ * @return A pointer to the dispatcher channel object.
+ */
+DnxChannel * dnxDispatcherGetChannel(DnxDispatcher * disp)
+      { return ((iDnxDispatcher *)disp)->dchannel; }
+
+//----------------------------------------------------------------------------
+
+/** Create a new dispatcher object.
+ * 
+ * @param[in] debug - a pointer to the global debug level.
+ * @param[in] chname - the name of the dispatch channel.
+ * @param[in] dispurl - the dispatcher channel URL.
+ * @param[in] joblist - a pointer to the global job list object.
+ * @param[out] pdisp - the address of storage for the return of the new
+ *    dispatcher object.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
+      DnxJobList * joblist, DnxDispatcher ** pdisp)
+{
+   iDnxDispatcher * idisp;
+   int ret;
+
+   if ((idisp = (iDnxDispatcher *)malloc(sizeof *idisp)) == 0)
+      return DNX_ERR_MEMORY;
+
+   idisp->chname = strdup(chname);
+   idisp->url = strdup(dispurl);
+   idisp->joblist = joblist;
+   idisp->debug = debug;
+   idisp->dchannel = 0;
+   idisp->tid = 0;
+
+   if (!idisp->url || idisp->chname)
+   {
+      free(idisp);
+      return DNX_ERR_MEMORY;
+   }
+
+   if ((ret = dnxChanMapAdd("Dispatch", dispurl)) != DNX_OK)
+   {
+      dnxSyslog(LOG_ERR, "dnxDispatcherCreate: "
+                         "dnxChanMapAdd(Dispatch) failed: %d", ret);
+      goto e1;
+   }
+
+   if ((ret = dnxConnect("Dispatch", &idisp->dchannel, DNX_CHAN_PASSIVE)) != DNX_OK)
+   {
+      dnxSyslog(LOG_ERR, "dnxDispatcherCreate: "
+                         "dnxConnect(Dispatch) failed: %d", ret);
+      goto e2;
+   }
+
+   if (*debug)
+      dnxChannelDebug(idisp->dchannel, *debug);
+
+   // create the dispatcher thread
+   if ((ret = pthread_create(&idisp->tid, NULL, dnxDispatcher, idisp)) != 0)
+   {
+      dnxSyslog(LOG_ERR, 
+            "dnxDispatcherCreate: thread creation failed: (%d) %s", 
+            ret, strerror(ret));
+      ret = DNX_ERR_THREAD;
+      goto e3;
+   }
+
+   return DNX_OK;
+
+// error paths
+
+e3:dnxDisconnect(idisp->dchannel);
+e2:dnxChanMapDelete(idisp->chname);
+e1:free(idisp->url);
+   free(idisp->chname);
+   free(idisp);
+
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Destroy an existing dispatcher object.
+ * 
+ * @param[in] disp - a pointer to the dispatcher object to be destroyed.
+ */
+void dnxDispatcherDestroy(DnxDispatcher * disp)
+{
+   iDnxDispatcher * idisp = (iDnxDispatcher *)disp;
+
+   pthread_cancel(idisp->tid);
+   pthread_join(idisp->tid, NULL);
+
+   dnxDisconnect(idisp->dchannel);
+   dnxChanMapDelete("Dispatch");
+
+   free(idisp->url);
+   free(idisp->chname);
+   free(idisp);
 }
 
 /*--------------------------------------------------------------------------*/

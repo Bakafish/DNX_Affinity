@@ -176,17 +176,21 @@ static void * dnxTimer(void * data)
       {
          for (i = 0; i < totalExpired; i++)
          {
-            dnxDebug(1, "dnxTimer[%lx]: Expiring Job: %s", 
-                  pthread_self(), ExpiredList[i].cmd);
+            char msg[128];
+            DnxNewJob * job = &ExpiredList[i];
 
-            dnxAuditJob(&ExpiredList[i], "EXPIRE");
+            dnxDebug(1, "dnxTimer[%lx]: Expiring Job: %s", 
+                  pthread_self(), job->cmd);
+
+            dnxAuditJob(job, "EXPIRE");
+
+            sprintf(msg, "(DNX Service Check Timed Out - Node: %s)", 
+                  job->pNode->address);
 
             // report the expired job to Nagios
-            ret = nagiosExpireJob(ExpiredList[i].svc, 
-                  ExpiredList[i].start_time, 
-                  "(DNX Service Check Timed Out)");
+            ret = nagiosExpireJob(job->svc, job->start_time, msg);
 
-            dnxJobCleanup(&ExpiredList[i]);
+            dnxJobCleanup(job);
          }
       }
 
