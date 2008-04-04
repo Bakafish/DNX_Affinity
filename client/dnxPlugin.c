@@ -1,27 +1,29 @@
-//	dnxPlugin.c
-//
-//	Utility routines to support plugin loading and execution.
-//
-//	Copyright (c) 2006-2007 Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-//	First Written:   2006-09-09
-//	Last Modified:   2007-03-21
-//
-//	License:
-//
-//	This program is free software; you can redistribute it and/or modify
-//	it under the terms of the GNU General Public License version 2 as
-//	published by the Free Software Foundation.
-//
-//	This program is distributed in the hope that it will be useful,
-//	but WITHOUT ANY WARRANTY; without even the implied warranty of
-//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//	GNU General Public License for more details.
-//
-//	You should have received a copy of the GNU General Public License
-//	along with this program; if not, write to the Free Software
-//	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-//
+/*--------------------------------------------------------------------------
+ 
+   Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
+ 
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License version 2 as 
+   published by the Free Software Foundation.
+ 
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ 
+  --------------------------------------------------------------------------*/
+
+/** Utility routines to support plugin loading and execution.
+ *
+ * @file dnxPlugin.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX
+ */
 
 #include <sys/types.h>
 #include <time.h>
@@ -37,36 +39,16 @@
 #include "dnxPlugin.h"
 #include "pfopen.h"
 
-
-//
-//	Constants
-//
-
 #define MAX_PLUGIN_PREFIX	1024
 #define MAX_PLUGIN_PATH		2048
 #define DNX_MAX_ARGV		256
 #define MAX_INPUT_BUFFER	1024
 #define DNX_MAX_PLUGIN_NAME	255
 
-
-//
-//	Structures
-//
-
-
-//
-//	Globals
-//
-
 static DNX_MODULE *gModules;	// Module Chain
 static DNX_MODULE *gPlugins;	// Plugin Chain
 static char *gPluginPath;		// Plugin Path
 static int gInitialized = 0;	// Initialization flag
-
-
-//
-//	Prototypes
-//
 
 // HACK: The NRPE module is hardwired for now...
 #ifdef USE_NRPE_MODULE

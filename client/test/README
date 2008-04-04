@@ -1,4 +1,5 @@
-# This file includes various test harnesses that I've written while unit testing and debugging the DNX Client.
-#
-# They are probably of little interest to anyone except those who are developing DNX.
-#
+This file includes various test harnesses that I've written while unit testing
+and debugging the DNX Client.
+
+They are probably of little interest to anyone except those developing DNX.
+
