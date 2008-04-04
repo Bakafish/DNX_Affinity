@@ -1,6 +1,17 @@
+Version 0.16
+============
+- Fixed install bugs - mostly related to improper file system rights.
+- Debug output is now realistic - not pumping out droves of useless info.
+- Added new configure options for specifying log directory.
+- Fixed miscellaneous build system problems.
+- Fixed rpm build issue - getaddrinfo failing under OBS.
+- Fixed doxygen generation issues related to incorrect exclude dir list.
+- Added generic init script for non-SUSE platforms (thanks to 
+  Alberto Villegas!).
+
 Version 0.15.1:
 ===============
-- Bug fixes - mostly related to daemon startup, shutdown and timing
+- Bug fixes - mostly related to daemon startup, shutdown and timing.
 
 Version 0.15:
 =============
