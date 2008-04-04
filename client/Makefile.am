@@ -13,6 +13,9 @@ dnxClient_SOURCES =\
 
 dnxClient_CPPFLAGS =\
  -DSYSCONFDIR=\"$(sysconfdir)\"\
+ -DSYSRUNPATH=\"$(sysrunpath)\"\
+ -DDNXUSER=\"$(dnx_user)\"\
+ -DDNXGROUP=\"$(dnx_group)\"\
  -I$(top_srcdir)/common
 
 dnxClient_LDADD = ../common/libcmn.la

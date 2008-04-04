@@ -1,2 +1,2 @@
-EXTRA_DIST = README debian.control debian.rules
+EXTRA_DIST = README
 

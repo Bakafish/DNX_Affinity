@@ -22,6 +22,13 @@ Source:         %{name}-%{version}.tar.gz
 Requires:       %{name}-client = %{version}
 Requires:       %{name}-server = %{version}
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
+BuildRequires:  doxygen
+
+%define nagiosuser      nagios
+%define nagiosgroup     nagios
+%define dnxuser         %{nagiosuser}
+%define dnxgroup        %{nagiosgroup}
+%define dnxrundir       /var/run/%{name}
 
 %description
 The Distributed Nagios eXecutor (DNX) package provides a Nagios Event Broker
@@ -39,7 +46,6 @@ Authors:
 %package doc
 Summary:        Full DNX Documentation
 Group:          Documentation/Other
-# BuildRequires:  doxygen
 
 %description doc
 This package contains the OpenOffice and PDF documentation for the DNX package.
@@ -65,7 +71,6 @@ Authors:
 %package server
 Summary:        DNX Nagios Event Broker (NEB) module.
 Group:          System/Monitoring
-# BuildRequires:  nagios-devel
 Requires:       nagios
 
 %description server
@@ -86,34 +91,32 @@ Authors:
 
 %build
 CFLAGS="%{optflags}" ./configure \
+   --with-run-dir=%{dnxrundir} \
+   --with-nagios-user=%{nagiosuser} \
+   --with-nagios-group=%{nagiosgroup} \
+   --with-dnx-user=%{dnxuser} \
+   --with-dnx-group=%{dnxgroup} \
    --prefix=%{_prefix} \
+   --exec-prefix=%{_exec_prefix} \
+   --bindir=%{_bindir} \
+   --sbindir=%{_sbindir} \
+   --libexecdir=%{_libdir}/nagios/plugins \
+   --datadir=%{_prefix}/share/nagios \
+   --sysconfdir=/etc/nagios \
+   --with-init-dir=%{_initrddir} \
    --libdir=%{_libdir}/nagios/brokers \
-   --libexecdir=%{_libdir}/nagios/plugins  \
-   --datadir=%{_datadir}/nagios \
-   --sysconfdir=%{_sysconfdir}/nagios
+   --localstatedir=%{_var}/%{_lib}/nagios
 
-make
-# make docs
+%{__make} DESTDIR=%{buildroot} all
+%{__make} DESTDIR=%{buildroot} docs
 
 %check
-make check
+%{__make} DESTDIR=%{buildroot} check
 
 %install
-rm -rf %{buildroot}
-%makeinstall
-
-# Create output directories not created by %makeinstall
-mkdir -p %{buildroot}%{_sbindir}
-mkdir -p %{buildroot}%{_initrddir}
-mkdir -p %{buildroot}%{_sysconfdir}/nagios
-
-# Copy the init script and create the associated rc link in the sbin directory
-install -m 755 etc/dnxcld.init %{buildroot}%{_initrddir}/dnxcld
-ln -sf ../..%{_initrddir}/dnxcld %{buildroot}/usr/sbin/rcdnxcld
-
-# Copy configuration files
-install -m 644 etc/dnxClient.cfg %{buildroot}%{_sysconfdir}/nagios
-install -m 644 etc/dnxServer.cfg %{buildroot}%{_sysconfdir}/nagios
+%{__make} DESTDIR=%{buildroot} install
+%{__make} DESTDIR=%{buildroot} install-cfg
+%{__make} DESTDIR=%{buildroot} install-initscript
 
 %post client
 %{fillup_and_insserv -f dnxcld}
@@ -126,17 +129,17 @@ install -m 644 etc/dnxServer.cfg %{buildroot}%{_sysconfdir}/nagios
 %insserv_cleanup
 
 %clean
-rm -rf %{buildroot}
+%{__rm} -rf %{buildroot}
 
 %files doc
 %defattr(-,root,root)
 %doc AUTHORS COPYING ChangeLog NEWS README
 %doc doc/DNX_Workflow.pdf
-# %doc doc/%{name}-doxy-@VERSION@.tar.gz
+%doc doc/%{name}-doxy-%{version}.tar.gz
 
 %files server
 %defattr(-,root,root)
-%config(noreplace) %_sysconfdir/nagios/dnxServer.cfg
+%config(noreplace) /etc/nagios/dnxServer.cfg
 %{_libdir}/nagios/brokers/dnxServer.so
 %{_libdir}/nagios/plugins/sync_plugins.pl
 %defattr(755,root,root)
@@ -144,7 +147,7 @@ rm -rf %{buildroot}
 
 %files client
 %defattr(-,root,root)
-%config(noreplace) %{_sysconfdir}/nagios/dnxClient.cfg
+%config(noreplace) /etc/nagios/dnxClient.cfg
 %defattr(755,root,root)
 %{_initrddir}/dnxcld
 %{_sbindir}/dnxClient

@@ -1,10 +1,11 @@
 Format: 1.0
-Source: dnx
+Source: @PACKAGE@
 Version: @VERSION@-1
-Binary: dnx
+Binary: @PACKAGE@-doc, @PACKAGE@-client, @PACKAGE@-server
 Maintainer: John Calcote <john.calcote@gmail.com>
 Architecture: any
 Build-Depends: debhelper (>= 4.1.16), gcc
 Files: 
- d57283ebb8157ae919762c58419353c8 133282 dnx_@VERSION@.orig.tar.gz
- 2fecf324a32123b08cefc0f047bca5ee 63176 dnx_@VERSION@-1.diff.tar.gz
+ d57283ebb8157ae919762c58419353c8 133282 @PACKAGE@_@VERSION@.orig.tar.gz
+ 2fecf324a32123b08cefc0f047bca5ee 63176 @PACKAGE@_@VERSION@-1.diff.tar.gz
+

@@ -53,6 +53,8 @@
 #include <pthread.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <pwd.h>
+#include <grp.h>
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -67,18 +69,33 @@
 #endif
 
 #ifndef SYSCONFDIR
-# define SYSCONFDIR "/etc"
+# define SYSCONFDIR  "/etc"
 #endif
 
 #ifndef SYSRUNPATH
-# define SYSRUNPATH "/var/run"
+# define SYSRUNPATH  "/var/run/dnx"
 #endif
 
-#define DNX_DEFAULT_RUN_PATH SYSRUNPATH
+#ifndef DNXUSER
+# define DNXUSER     "nagios"
+#endif
+
+#ifndef DNXGROUP
+# define DNXGROUP    "nagios"
+#endif
+
+#ifndef COMPILE_FLAGS
+# define COMPILE_FLAGS "<unknown>"
+#endif
+
+// default configuration
+#define DNX_DEFAULT_NODE_CONFIG_FILE      SYSCONFDIR "/dnxClient.cfg"
+#define DNX_DEFAULT_RUN_PATH              SYSRUNPATH
+#define DNX_DEFAULT_USER                  DNXUSER
+#define DNX_DEFAULT_GROUP                 DNXGROUP
 
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
-#define DNX_DEFAULT_NODE_CONFIG_FILE   SYSCONFDIR "/dnxClient.cfg"
 
 typedef struct DnxCfgData
 {
@@ -86,6 +103,9 @@ typedef struct DnxCfgData
    char * logFilePath;           //!< The normal logging file path.
    char * debugFilePath;         //!< The debug logging file path.
    char * pluginPath;            //!< The file system plugin path.
+   char * user;                  //!< The system reduced privileges user.
+   char * group;                 //!< The system reduced privileges group.
+   char * runPath;               //!< The system lock/pid file path (no file).
    unsigned debugLevel;          //!< The system global debug level.
    DnxWlmCfgData wlm;            //!< WLM specific configuration data.
 } DnxCfgData;
@@ -97,13 +117,38 @@ static DnxWlm * s_wlm = 0;       //!< The system worker thread pool.
 static DnxChannel * s_agent;     //!< The agent management channel.
 static char * s_progname;        //!< The base program name.
 static char * s_cfgfile;         //!< The system configuration file name.
-static char * s_runpath = 0;     //!< The system pid/lock file path.
 static char * s_cmdover = 0;     //!< The command line overrides string.
 static int s_dbgflag = 0;        //!< The system debug flag.
 static int s_shutdown = 0;       //!< The shutdown signal flag.
 static int s_reconfig = 0;       //!< The reconfigure signal flag.
 static int s_debugsig = 0;       //!< The debug toggle signal flag.
 static int s_lockfd = -1;        //!< The system PID file descriptor.
+
+//----------------------------------------------------------------------------
+
+/** Display program version information to a specified stream. 
+ * 
+ * @param[in] fp - the stream to which version info should be printed.
+ * @param[in] base - the base file name of this program.
+ */
+static void version(FILE * fp, char * base)
+{
+   fprintf(fp, 
+      "\n"
+      "  %s, version " VERSION ".\n" 
+      "  Distributed Nagios eXecutor (DNX) Client Daemon.\n"
+      "  Please report bugs to <" PACKAGE_BUGREPORT ">.\n"
+      "\n"
+      "  Default configuration:\n"
+      "    Default config file: "      DNX_DEFAULT_NODE_CONFIG_FILE "\n"
+      "    Default system run path: "  DNX_DEFAULT_RUN_PATH "\n"
+      "    Default daemon user: "      DNX_DEFAULT_USER "\n"
+      "    Default daemon group: "     DNX_DEFAULT_GROUP "\n"
+//    "    Compile flags: "            COMPILE_FLAGS "\n"
+      "\n",
+      base
+   );
+}
 
 //----------------------------------------------------------------------------
 
@@ -121,6 +166,8 @@ static void usage(char * base)
 # define OL_DBGLEVEL ", --dbglevel"
 # define OL_DEBUG    ", --debug   "
 # define OL_RUNPATH  ", --runpath "
+# define OL_USER     ", --user    "
+# define OL_GROUP    ", --group   "
 # define OL_VERSION  ", --version "
 # define OL_HELP     ", --help    "
 #else
@@ -130,34 +177,30 @@ static void usage(char * base)
 # define OL_DBGLEVEL
 # define OL_DEBUG
 # define OL_RUNPATH
+# define OL_USER
+# define OL_GROUP
 # define OL_VERSION
 # define OL_HELP
 #endif
 
-   fprintf(stderr, "\nUsage: %s [options]", base);
-   fprintf(stderr, "\nWhere [options] are:\n");
-   fprintf(stderr, "   -c" OL_CFGFILE  " <file>   specify the file and path of the config file.\n");
-   fprintf(stderr, "   -l" OL_LOGFILE  " <file>   specify the file and path of the log file.\n");
-   fprintf(stderr, "   -D" OL_DBGFILE  " <file>   specify the file and path of the debug log file.\n");
-   fprintf(stderr, "   -g" OL_DBGLEVEL " <value>  specify the level of debugging output.\n");
-   fprintf(stderr, "   -d" OL_DEBUG    "          enable debug mode (will not become a daemon).\n");
-   fprintf(stderr, "   -r" OL_RUNPATH  " <path>   specify the path of the lock/pid file.\n");
-   fprintf(stderr, "   -v" OL_VERSION  "          display DNX client version and exit.\n");
-   fprintf(stderr, "   -h" OL_HELP     "          display this help screen and exit.\n\n");
+   version(stderr, base);
+   fprintf(stderr, 
+      "  Usage: %s [options]\n"
+      "    Where [options] are:\n"
+      "      -c" OL_CFGFILE  " <file>   specify the file and path of the config file.\n"
+      "      -l" OL_LOGFILE  " <file>   specify the file and path of the log file.\n"
+      "      -D" OL_DBGFILE  " <file>   specify the file and path of the debug log file.\n"
+      "      -g" OL_DBGLEVEL " <value>  specify the level of debugging output.\n"
+      "      -d" OL_DEBUG    "          enable debug mode (will not become a daemon).\n"
+      "      -r" OL_RUNPATH  " <path>   specify the path of the lock/pid file.\n"
+      "      -U" OL_USER     " <user>   specify the DNX client user name or id.\n"
+      "      -G" OL_GROUP    " <group>  specify the DNX client group name or id.\n"
+      "      -v" OL_VERSION  "          display DNX client version and exit.\n"
+      "      -h" OL_HELP     "          display this help screen and exit.\n"
+      "\n", 
+      base
+   );
    exit(-1);
-}
-
-//----------------------------------------------------------------------------
-
-/** Display program version information to STDOUT and exit successfully. 
- * 
- * @param[in] base - the base file name of this program.
- */
-static void version(char * base)
-{
-   printf("\n  %s version %s\n  Bug reports: %s.\n\n", 
-         base, VERSION, PACKAGE_BUGREPORT);
-   exit(0);
 }
 
 //----------------------------------------------------------------------------
@@ -212,7 +255,7 @@ static int getOptions(int argc, char ** argv)
    extern char * optarg;
    extern int opterr, optopt;
 
-   static char opts[] = "c:dr:g:l:D:vh";
+   static char opts[] = "c:dr:g:l:D:U:G:vh";
 
 #if HAVE_GETOPT_LONG
    static struct option longopts[] = 
@@ -224,6 +267,8 @@ static int getOptions(int argc, char ** argv)
       { "debug",    no_argument,       0, 'd' },
       { "runpath",  required_argument, 0, 'r' },
       { "version",  no_argument,       0, 'v' },
+      { "user",     required_argument, 0, 'U' },
+      { "group",    required_argument, 0, 'G' },
       { "help",     no_argument,       0, 'h' },
       { 0, 0, 0, 0 },
    };
@@ -234,6 +279,10 @@ static int getOptions(int argc, char ** argv)
    char * logfile = 0;
    char * dbgfile = 0;
    char * dbglvl = 0;
+   char * user = 0;
+   char * group = 0;
+   char * runpath = 0;
+   size_t rplen;
 
    // set program base name
    s_progname = (char *)((cp = strrchr(argv[0], '/')) != 0 ? (cp + 1) : argv[0]);
@@ -250,11 +299,13 @@ static int getOptions(int argc, char ** argv)
       {
          case 'c': s_cfgfile = optarg; break;
          case 'd': s_dbgflag = 1;      break;
-         case 'r': s_runpath = optarg; break;
+         case 'r': runpath   = optarg; break;
+         case 'U': user      = optarg; break;
+         case 'G': group     = optarg; break;
          case 'g': dbglvl    = optarg; break;
          case 'l': logfile   = optarg; break;
          case 'D': dbgfile   = optarg; break;
-         case 'v': version(s_progname);
+         case 'v': version(stdout, s_progname); exit(0);
          case 'h':
          default : usage(s_progname);
       }
@@ -263,8 +314,9 @@ static int getOptions(int argc, char ** argv)
    if (!s_cfgfile)
       s_cfgfile = DNX_DEFAULT_NODE_CONFIG_FILE;
 
-   if (!s_runpath)
-      s_runpath = DNX_DEFAULT_RUN_PATH;
+   rplen = strlen(runpath);
+   if (rplen && runpath[rplen - 1] == '/')
+      runpath[rplen - 1] = 0;
 
    if (s_dbgflag)
       appendString(&s_cmdover, "logFile=STDOUT\ndebugFile=STDOUT\n");
@@ -277,6 +329,15 @@ static int getOptions(int argc, char ** argv)
 
    if (dbglvl)
       appendString(&s_cmdover, "debugLevel=%s\n", dbglvl);
+
+   if (user)
+      appendString(&s_cmdover, "user=%s\n", user);
+
+   if (group)
+      appendString(&s_cmdover, "group=%s\n", group);
+
+   if (runpath)
+      appendString(&s_cmdover, "runPath=%s\n", runpath);
 
    return 0;
 }
@@ -300,23 +361,27 @@ static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
    DnxCfgData cfg;
 
    // setup data structure so we can use the same functionality we had before
-   cfg.channelAgent      = (char *)vptrs[ 0];
-   cfg.logFilePath       = (char *)vptrs[ 1];
-   cfg.debugFilePath     = (char *)vptrs[ 2];
-   cfg.pluginPath        = (char *)vptrs[ 3];
+   // NOTE: The order of the vptrs is defined by the order of the dictionary.
+   cfg.channelAgent      = (char *)            vptrs[ 0];
+   cfg.logFilePath       = (char *)            vptrs[ 1];
+   cfg.debugFilePath     = (char *)            vptrs[ 2];
+   cfg.pluginPath        = (char *)            vptrs[ 3];
    cfg.debugLevel        = (unsigned)(intptr_t)vptrs[ 4];
-   cfg.wlm.dispatcher    = (char *)vptrs[ 5];
-   cfg.wlm.collector     = (char *)vptrs[ 6];
-   cfg.wlm.poolInitial   = (unsigned)(intptr_t)vptrs[ 7];
-   cfg.wlm.poolMin       = (unsigned)(intptr_t)vptrs[ 8];
-   cfg.wlm.poolMax       = (unsigned)(intptr_t)vptrs[ 9];
-   cfg.wlm.poolGrow      = (unsigned)(intptr_t)vptrs[10];
-   cfg.wlm.pollInterval  = (unsigned)(intptr_t)vptrs[11];
-   cfg.wlm.shutdownGrace = (unsigned)(intptr_t)vptrs[12];
-   cfg.wlm.reqTimeout    = (unsigned)(intptr_t)vptrs[13];
-   cfg.wlm.maxRetries    = (unsigned)(intptr_t)vptrs[14];
-   cfg.wlm.ttlBackoff    = (unsigned)(intptr_t)vptrs[15];
-   cfg.wlm.maxResults    = (unsigned)(intptr_t)vptrs[16];
+   cfg.user              = (char *)            vptrs[ 5];
+   cfg.group             = (char *)            vptrs[ 6];
+   cfg.runPath           = (char *)            vptrs[ 7];
+   cfg.wlm.dispatcher    = (char *)            vptrs[ 8];
+   cfg.wlm.collector     = (char *)            vptrs[ 9];
+   cfg.wlm.poolInitial   = (unsigned)(intptr_t)vptrs[10];
+   cfg.wlm.poolMin       = (unsigned)(intptr_t)vptrs[11];
+   cfg.wlm.poolMax       = (unsigned)(intptr_t)vptrs[12];
+   cfg.wlm.poolGrow      = (unsigned)(intptr_t)vptrs[13];
+   cfg.wlm.pollInterval  = (unsigned)(intptr_t)vptrs[14];
+   cfg.wlm.shutdownGrace = (unsigned)(intptr_t)vptrs[15];
+   cfg.wlm.reqTimeout    = (unsigned)(intptr_t)vptrs[16];
+   cfg.wlm.maxRetries    = (unsigned)(intptr_t)vptrs[17];
+   cfg.wlm.ttlBackoff    = (unsigned)(intptr_t)vptrs[18];
+   cfg.wlm.maxResults    = (unsigned)(intptr_t)vptrs[19];
 
    if (!cfg.wlm.dispatcher)
       dnxLog("config: Missing channelDispatcher parameter.");
@@ -369,6 +434,9 @@ static int initConfig(char * cfgfile)
       { "debugFile",              DNX_CFG_FSPATH,   &s_cfg.debugFilePath     },
       { "pluginPath",             DNX_CFG_FSPATH,   &s_cfg.pluginPath        },
       { "debugLevel",             DNX_CFG_UNSIGNED, &s_cfg.debugLevel        },
+      { "user",                   DNX_CFG_STRING,   &s_cfg.user              },
+      { "group",                  DNX_CFG_STRING,   &s_cfg.group             },
+      { "runPath",                DNX_CFG_FSPATH,   &s_cfg.runPath           },
       { "channelDispatcher",      DNX_CFG_URL,      &s_cfg.wlm.dispatcher    },
       { "channelCollector",       DNX_CFG_URL,      &s_cfg.wlm.collector     },
       { "poolInitial",            DNX_CFG_UNSIGNED, &s_cfg.wlm.poolInitial   },
@@ -396,7 +464,10 @@ static int initConfig(char * cfgfile)
       "threadTtlBackoff = 1\n"
       "maxResultBuffer = 1024\n"
       "logFile = /var/log/dnxcld.log\n"
-      "debugFile = /var/log/dnxcld.debug.log";
+      "debugFile = /var/log/dnxcld.debug.log\n"
+      "user = " DNX_DEFAULT_USER "\n"
+      "group = " DNX_DEFAULT_GROUP "\n"
+      "runPath = " DNX_DEFAULT_RUN_PATH "\n";
 
    int ret;
 
@@ -491,7 +562,7 @@ static int createPidFile(char * base)
    char szPid[32];
 
    // create lock-file name
-   sprintf(lockFile, "%s/%s.pid", s_runpath, base);
+   sprintf(lockFile, "%s/%s.pid", s_cfg.runPath, base);
 
    // open the lock file
    if ((s_lockfd = open(lockFile, O_RDWR | O_CREAT, 0644)) < 0)
@@ -533,7 +604,7 @@ static void removePidFile(char * base)
    char lockFile[1024];
 
    // create lock-file name
-   sprintf(lockFile, "%s/%s.pid", s_runpath, base);
+   sprintf(lockFile, "%s/%s.pid", s_cfg.runPath, base);
 
    // remove the lock file - we do this before closing it in order to prevent
    //    race conditions between the closing and removing operations.
@@ -588,7 +659,64 @@ static int daemonize(char * base)
    dup2(fd, 1);
    dup2(fd, 2);
 
-   // create pid file
+   // drop privileges if running as root
+   if (getuid() == 0)
+   {
+      struct passwd * pwd;
+      struct group * grp;
+      uid_t uid;
+      gid_t gid;
+
+      dnxLog("Running as root; attempting to drop privileges...");
+
+      if ((pwd = getpwnam(s_cfg.user)) != 0)
+         uid = pwd->pw_uid;
+      else
+      {
+         char * ep;
+         uid = (uid_t)strtoul(s_cfg.user, &ep, 10);
+         if (s_cfg.user + strlen(s_cfg.user) > ep)
+         {
+            dnxLog("Invalid user name or id specified: %s.", s_cfg.user);
+            return -1;
+         }
+      }
+
+      if ((grp = getgrnam(s_cfg.group)) != 0)
+         gid = grp->gr_gid;
+      else
+      {
+         char * ep;
+         gid = (gid_t)strtoul(s_cfg.group, &ep, 10);
+         if (s_cfg.group + strlen(s_cfg.group) > ep)
+         {
+            dnxLog("Invalid group name or id specified: %s.", s_cfg.group);
+            return -1;
+         }
+      }
+
+      // drop privileges if root user not requested
+      if (uid != 0)
+      {
+         int ret;
+         if ((ret = setgid(gid)) == -1 || (ret = setuid(uid)) == -1)
+         {
+            dnxLog("Failed to drop privileges: %s. Terminating.", strerror(errno));
+            return -1;
+         }
+
+         grp = getgrgid(getgid());
+         pwd = getpwuid(getuid());
+
+         assert(grp && pwd);
+
+         dnxLog("Privileges dropped to %s:%s.", pwd->pw_name, grp->gr_name);
+      }
+      else
+         dnxLog("Root user requested; oh well...");
+   }
+
+   // create pid file (at the current privilege level)
    if (createPidFile(base) != 0)
       return -1;
 
