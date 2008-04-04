@@ -11,11 +11,14 @@ Installation:
 
 1. Untar Nagios 2.7 source
 
-2. Untar DNX source
+2. Untar DNX source on the Nagios server, and on each client node.
 
-3. cd into the Nagios source directory and patch it with the DNX-specific 
-   patches found in the dnx/nagios/nagios-2.7/nagios-2.7-dnx.patch file. This
-   will patch six Nagios source files:
+3. On the Nagios server, cd into one of the Nagios 2.7, 2.8, 2.9, 2.10, or 
+   3.0rc2 source directories and patch it with the appropriate DNX-specific 
+   patches found in the dnx/nagios/nagios-*/nagios-*.patch files.
+
+   The 2.x versions of these patches with patch six Nagios 2.x source
+   files:
 
    - nagios-2.7/base/broker.c
    - nagios-2.7/base/nebmods.c
@@ -24,21 +27,21 @@ Installation:
    - nagios-2.7/include/neberrors.h
    - nagios-2.7/include/nebstructs.h
 
-4. Build and install the patched Nagios 2.7 as usual:
+   Most of the dnx patches have been accepted by the Nagios development
+   team into the main Nagios code base, however there are still a few 
+   issues we're hoping to work out before the final release of Nagios
+   3.0. The 3.x patch will patch the following file:
 
-   - ./configure --enable-event-broker [additional site-specific options]
-   - make all
-   - sudo make install
+   - nagios-3.0rc2/base/checks.c
 
-5. Cd into the DNX source directory and perform the following steps:
+4. Build and install the patched Nagios package as usual:
 
-   - ./configure
-   - make
-   - sudo make install
+   $ ./configure --enable-event-broker [additional site-specific options]
+   $ make all
+   $ sudo make install
 
-NOTE: For more detailed information on using Autotools build systems, see 
-the section below entitled "Standard Autotools Install Instructions".
-
+   Entering 'make' with no targets will display additional installation 
+   targets for Nagios in which you may or may not be interested.
 
 Building From SVN Checkout
 --------------------------
@@ -49,32 +52,74 @@ the autotools required to generate the configure script and Makefile.in
 files. From there, you may simply refer to the section above entitled, 
 "Building DNX".
 
+For more detailed information on using Autotools build systems, see 
+the section below entitled "Standard Autotools Install Instructions".
 
-Installing/Configuring DNX
---------------------------
+Building/Installing/Configuring DNX
+-----------------------------------
 
 NAGIOS SERVER
 
-   - Copy dnxServer.so to your nagios plugin directory
-     (eg., /usr/local/nagios/modules)
-   - Copy dnxServer.cfg to your nagios etc directory 
-     (eg., /usr/local/nagios/etc)
+   Perform the following commands from the dnx package directory:
+
+   $ ./configure [--with-nagios3x]
+   $ make
+   $ sudo make install-server install-servercfg
+
+   Note the optional use of the --with-nagios3x configuration option.
+   This option should be used if you're targeting Nagios 3.0rc2 or
+   higher.
+
+   By default, the install command will install the following relevant files:
+   
+   /usr/local/nagios/lib/dnxServer.so
+   /usr/local/nagios/libexec/sync_plugins.pl
+   /usr/local/nagios/etc/dnxServer.cfg
+   /usr/local/nagios/bin/dnxstats
+   
    - Edit dnxServer.cfg as needed for your setup.
    - Edit nagios.cfg to include the broker module by adding the following
-     line at the end of the file:
+     line (hint: search for 'broker_module' for sample syntax):
      
-         broker_module=.../modules/dnxServer.so .../etc/dnxServer.cfg
+        broker_module=/usr/local/nagios/lib/dnxServer.so \
+           /usr/local/nagios/etc/dnxServer.cfg
 
    - Restart Nagios.
 
 CLIENT NODES
 
-   - Copy dnxClient to where ever you deem logical (/usr/local/nagios/bin comes to mind)
-   - Copy dnxClient.cfg to where ever you deem logical (/usr/local/nagios/etc comes to mind)
+   Perform the following commands from the dnx build directory on each 
+   client node:
+
+   $ ./configure
+   $ make
+   $ sudo make install-client install-clientcfg [install-initscript]
+
+   By default, this will install the following relevant files:
+
+   /usr/local/nagios/sbin/dnxClient
+   /usr/local/nagios/etc/dnxClient.cfg
+
+   and optionally (via install-initscript):
+
+   /usr/local/nagios/etc/init.d/dnxcld
+   /usr/local/nagios/sbin/rcdnxcld --> /usr/local/nagios/etc/init.d/dnxcld
+
+   NOTE: The init script and its corresponding rc link should be moved into
+   their proper system-dependent locations. For example, on Linux the 
+   following commands will move them to their proper locations:
+
+   $ sudo mv /usr/local/nagios/etc/init.d/dnxcld /etc/init.d
+   $ sudo mv /usr/local/nagios/sbin/rcdnxcld /sbin
+
    - Edit dnxClient.cfg as needed for you setup.
-   - Add the initscript (dnxinit) to /etc/init.d/ and make it start up automatically with your prefered method (I use chkconfig).
-   - Make sure that the init script is looking in the right place for dnxClient.cfg
-   - Start dnxClient (probably with the init script).
+   - Configure your system to start the dnxcld init script automatically.
+   - Manually start the dnxClient daemon as follows:
+
+   $ sudo rcdnxcld start
+
+   For further installation instructions, read the section entitled, 
+   'Installing/Configuring DNX' below.
 
 
 Standard Autotools Install Instructions

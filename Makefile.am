@@ -2,11 +2,20 @@ EXTRA_DIST = LEGAL TODO nagios
 
 SUBDIRS = etc obs common server client stats doc
 
+# Additional root-level targets - mostly installation and docs
 docs install-docs:
 	cd doc && $(MAKE) $(AM_MAKEFLAGS) $@	
 
-install-cfg install-initscript:
+install-cfg install-clientcfg install-servercfg install-initscript:
 	cd etc && $(MAKE) $(AM_MAKEFLAGS) $@
+
+install-client:
+	cd client && $(MAKE) $(AM_MAKEFLAGS) install
+
+install-server:
+	cd common && $(MAKE) $(AM_MAKEFLAGS) install
+	cd server && $(MAKE) $(AM_MAKEFLAGS) install
+	cd stats && $(MAKE) $(AM_MAKEFLAGS) install
 
 dist-hook:
 	rm -rf `find $(distdir) -name .svn`

@@ -11,15 +11,28 @@ edit = sed \
 
 all: dnxClient.cfg dnxServer.cfg dnxcld.init
 
+# The link from rcdnxcld to dnxcld needs to be a relative reference because 
+# we can't link by name to a file in $DESTDIR, and a hard link won't work 
+# across file systems. We'll just assume we're talking about the real /etc.
+
+# Install init script and soft link to it from sbin directory
 install-initscript: dnxcld.init
 	$(mkdir_p) $(DESTDIR)@initrddir@
 	$(INSTALL_SCRIPT) dnxcld.init $(DESTDIR)@initrddir@/dnxcld
-	ln $(DESTDIR)@initrddir@/dnxcld $(DESTDIR)@sbindir@/rcdnxcld
+	$(LN_S) -f @initrddir@/dnxcld $(DESTDIR)@sbindir@/rcdnxcld
 
-install-cfg: dnxClient.cfg dnxServer.cfg
+# Install sample config files
+install-cfg: install-clientcfg install-servercfg
+
+install-clientcfg: dnxClient.cfg
 	$(mkdir_p) $(DESTDIR)@sysconfdir@
-	$(INSTALL_DATA) dnxClient.cfg $(DESTDIR)@sysconfdir@
-	$(INSTALL_DATA) dnxServer.cfg $(DESTDIR)@sysconfdir@
+	$(INSTALL_DATA) --owner=@dnx_user@ --group=@dnx_group@ \
+           dnxClient.cfg $(DESTDIR)@sysconfdir@
+
+install-servercfg: dnxServer.cfg
+	$(mkdir_p) $(DESTDIR)@sysconfdir@
+	$(INSTALL_DATA) --owner=@nagios_user@ --group=@nagios_group@ \
+           dnxServer.cfg $(DESTDIR)@sysconfdir@
 
 # Build executable scripts
 dnxcld.init: Makefile

@@ -30,6 +30,8 @@ BuildRequires:  doxygen
 %define dnxgroup        %{nagiosgroup}
 %define dnxrundir       /var/run/%{name}
 
+%define nnmmsg          logger -t %{name}/rpm
+
 %description
 The Distributed Nagios eXecutor (DNX) package provides a Nagios Event Broker
 (NEB) module and a client daemon process. DNX distributes the work of Nagios
@@ -107,26 +109,41 @@ CFLAGS="%{optflags}" ./configure \
    --libdir=%{_libdir}/nagios/brokers \
    --localstatedir=%{_var}/%{_lib}/nagios
 
-%{__make} DESTDIR=%{buildroot} all
-%{__make} DESTDIR=%{buildroot} docs
+%{__make} DESTDIR=%{buildroot} all docs
 
 %check
 %{__make} DESTDIR=%{buildroot} check
 
 %install
-%{__make} DESTDIR=%{buildroot} install
-%{__make} DESTDIR=%{buildroot} install-cfg
-%{__make} DESTDIR=%{buildroot} install-initscript
+%{__make} DESTDIR=%{buildroot} install install-cfg install-initscript
+
+%pre client
+# Create dnx client group if necessary
+if getent group %{dnxgroup} >/dev/null;
+then : OK group %{dnxgroup} already present;
+else
+   groupadd -r %{dnxgroup} 2>/dev/null \
+      && %nnmmsg "Added group %{dnxgroup} for package %{name}";
+fi
+
+# Create dnx client user if necessary
+if id %{dnxuser} > /dev/null 2>&1;
+then : OK user %{dnxuser} already present;
+else
+   useradd  -r -o -g %{dnxuser} -s /bin/false \
+      -c "User for %{name}" -d /var/lib/%{name} %{dnxuser} 2> /dev/null \
+      && %nnmmsg "Added user %{dnxuser} for package %{name}";
+fi
 
 %post client
 %{fillup_and_insserv -f dnxcld}
 
 %preun client
-%stop_on_removal dnxcld
+%{stop_on_removal dnxcld}
 
 %postun client
-%restart_on_update dnxcld
-%insserv_cleanup
+%{restart_on_update dnxcld}
+%{insserv_cleanup}
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -138,17 +155,17 @@ CFLAGS="%{optflags}" ./configure \
 %doc doc/%{name}-doxy-%{version}.tar.gz
 
 %files server
-%defattr(-,root,root)
+%defattr(0644,%{nagiosusr},%{nagiosgroup})
 %config(noreplace) /etc/nagios/dnxServer.cfg
 %{_libdir}/nagios/brokers/dnxServer.so
 %{_libdir}/nagios/plugins/sync_plugins.pl
-%defattr(755,root,root)
+%defattr(0755,root,root)
 %{_prefix}/bin/dnxstats
 
 %files client
-%defattr(-,root,root)
+%defattr(0644,%{dnxuser},%{dnxgroup})
 %config(noreplace) /etc/nagios/dnxClient.cfg
-%defattr(755,root,root)
+%defattr(0755,root,root)
 %{_initrddir}/dnxcld
 %{_sbindir}/dnxClient
 %{_sbindir}/rcdnxcld

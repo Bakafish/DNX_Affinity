@@ -32,6 +32,10 @@ dnxServer_la_LIBADD = ../common/libcmn.la
 dnxServer_la_LDFLAGS = -module -avoid-version
 
 install-exec-hook:
+	chown @nagios_user@:@nagios_group@ $(DESTDIR)$(libdir)
+	chown @nagios_user@:@nagios_group@ $(DESTDIR)$(libexecdir)
+	chown @nagios_user@:@nagios_group@ $(DESTDIR)$(libdir)/dnxServer.so
+	chown @nagios_user@:@nagios_group@ $(DESTDIR)$(libexecdir)/sync_plugins.pl
 	rm $(DESTDIR)$(libdir)/dnxServer.a
 	rm $(DESTDIR)$(libdir)/dnxServer.la
 
