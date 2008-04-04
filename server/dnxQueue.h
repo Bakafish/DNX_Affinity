@@ -63,12 +63,12 @@ DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload,
 //      DnxQueueResult (*Compare)(void * pLeft, void * pRight));
 
 /* Get the number of requests in the list */
-//int dnxQueueSize(DnxQueue * queue, int * pSize);
+//int dnxQueueSize(DnxQueue * queue);
 
 /* Create a requests queue. associate it with the given mutex
  * and condition variables.
  */
-int dnxQueueCreate(int max_size, DnxQueue ** pqueue);
+int dnxQueueCreate(int maxsz, void (*pldtor)(void *), DnxQueue ** pqueue);
 
 /* Free the resources taken by the given requests queue */
 void dnxQueueDestroy(DnxQueue * queue);

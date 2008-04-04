@@ -208,10 +208,13 @@ int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer)
    if ((itimer = (iDnxTimer *)xmalloc(sizeof *itimer)) == 0)
       return DNX_ERR_MEMORY;
 
+   // initialize the itimer
+   memset(itimer, 0, sizeof *itimer);
    itimer->joblist = joblist;
    itimer->sleeptime = sleeptime;
    itimer->running = 1;
 
+   // create the timer thread
    if ((ret = pthread_create(&itimer->tid, 0, dnxTimer, itimer)) != 0)
    {
       dnxSyslog(LOG_ERR, "Timer: thread creation failed with %d: %s", 
@@ -375,6 +378,8 @@ int main(int argc, char ** argv)
 
    // shut down
    dnxTimerDestroy(timer);
+
+   return 0;
 }
 
 #endif   /* DNX_TIMER_TEST */

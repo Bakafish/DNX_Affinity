@@ -334,6 +334,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    return ret;
 }
 
+//----------------------------------------------------------------------------
+
 /** Create a new registrar object.
  * 
  * @param[in] debug - a pointer to the global debug level.
@@ -359,13 +361,13 @@ int dnxRegistrarCreate(long * debug, int queuesz,
    ireg->dispchan = dispchan;
    ireg->running = 1;
 
-   if ((ret = dnxQueueCreate(queuesz, &ireg->rqueue)) != 0)
+   if ((ret = dnxQueueCreate(queuesz, xfree, &ireg->rqueue)) != 0)
    {
       xfree(ireg);
       return ret;
    }
 
-   if ((ret = pthread_create(&ireg->tid, NULL, dnxRegistrar, ireg)) != 0)
+   if ((ret = pthread_create(&ireg->tid, 0, dnxRegistrar, ireg)) != 0)
    {
       dnxSyslog(LOG_ERR, "Registrar: thread creation failed with %d: %s", 
             ret, strerror(ret));

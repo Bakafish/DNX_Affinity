@@ -562,6 +562,8 @@ int main(int argc, char ** argv)
    CHECK_TRUE(ijobs->dhead == 99);
 
    dnxJobListDestroy(jobs);
+
+   return 0;
 }
 
 #endif   /* DNX_JOBLIST_TEST */
