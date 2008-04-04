@@ -196,43 +196,35 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,
          ((char *)icp - offsetof(iDnxUdpChannel, ichan));
    struct sockaddr_in bit_bucket;
    socklen_t slen = sizeof bit_bucket;
-   struct timeval tv;
    int mlen;
-
-#ifndef linux
-   time_t expires = time(0) + timeout;
-#endif
 
    assert(icp && iucp->socket && buf && size && *size > 0);
 
-   // implement timeout logic, if timeout value is > 0
-   tv.tv_usec = 0L;
-   tv.tv_sec = timeout;
-
-   while (tv.tv_sec > 0)
+   // implement timeout logic, if timeout value is greater than zero
+   if (timeout > 0)
    {
+      struct timeval tv;
       fd_set fd_rds;
       int nsd;
 
       FD_ZERO(&fd_rds);
       FD_SET(iucp->socket, &fd_rds);
 
+      tv.tv_usec = 0L;
+      tv.tv_sec = timeout;
+
       if ((nsd = select(iucp->socket + 1, &fd_rds, 0, 0, &tv)) == 0)
          return DNX_ERR_TIMEOUT;
 
-      if (nsd > 0)
-         break;
-
-      if (errno != EINTR) 
+      if (nsd < 0)
       {
-         dnxLog("dnxUdpRead: select failed: %s.", strerror(errno));
-         return DNX_ERR_RECEIVE;
+         if (errno != EINTR) 
+         {
+            dnxLog("dnxUdpRead: select failed: %s.", strerror(errno));
+            return DNX_ERR_RECEIVE;
+         }
+         return DNX_ERR_TIMEOUT;
       }
-
-#ifndef linux
-      tv.tv_usec = 0L;
-      tv.tv_sec = timeout - (int)(expires - time(0));
-#endif
    }
 
    // read the incoming message
@@ -240,6 +232,10 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,
    if ((mlen = recvfrom(iucp->socket, buf, *size, 0, 
          (struct sockaddr *)src, &slen)) < 0)
    {
+      // on "connected" UDP sockets, if the server can't be reached -
+      //    ICMP returned ICMP_UNREACH - we could get notified here.
+      if (errno == ECONNREFUSED)
+         return DNX_ERR_TIMEOUT;
       dnxDebug(4, "recvfrom failed: %s.", strerror(errno));
       return DNX_ERR_RECEIVE;
    }
@@ -280,43 +276,35 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,
 {
    iDnxUdpChannel * iucp = (iDnxUdpChannel *)
          ((char *)icp - offsetof(iDnxUdpChannel, ichan));
-   struct timeval tv;
    int ret;
-
-#ifndef linux
-   time_t expires = time(0) + timeout;
-#endif
 
    assert(icp && iucp->socket && buf && size);
 
-   // implement timeout logic, if timeout value is > 0
-   tv.tv_usec = 0L;
-   tv.tv_sec = timeout;
-
-   while (tv.tv_sec > 0)   // signal interrupt management
+   // implement timeout logic, if timeout value is greater than zero
+   if (timeout > 0)
    {
+      struct timeval tv;
       fd_set fd_wrs;
       int nsd;
 
       FD_ZERO(&fd_wrs);
       FD_SET(iucp->socket, &fd_wrs);
 
+      tv.tv_usec = 0L;
+      tv.tv_sec = timeout;
+
       if ((nsd = select(iucp->socket + 1, 0, &fd_wrs, 0, &tv)) == 0)
          return DNX_ERR_TIMEOUT;
 
-      if (nsd > 0)
-         break;
-
-      if (errno != EINTR)
+      if (nsd < 0)
       {
-         dnxLog("dnxUdpWrite: select failed: %s.", strerror(errno));
-         return DNX_ERR_SEND;
+         if (errno != EINTR) 
+         {
+            dnxLog("dnxUdpWrite: select failed: %s.", strerror(errno));
+            return DNX_ERR_SEND;
+         }
+         return DNX_ERR_TIMEOUT;
       }
-
-#ifndef linux
-      tv.tv_usec = 0L;
-      tv.tv_sec = timeout - (int)(expires - time(0));
-#endif
    }
 
    // check for a destination address override

@@ -367,7 +367,7 @@ static void cleanThreadPool(iDnxWlm * iwlm)
 
 /** Dispatch thread clean-up routine
  * 
- * @param[in] data - an opaque pointer to a worker 's status data structure.
+ * @param[in] data - an opaque pointer to a worker's status data structure.
  */
 static void dnxWorkerCleanup(void * data)
 {
@@ -416,35 +416,12 @@ static void * dnxWorker(void * data)
 
       // request a job, and then wait for a job to come in...
       if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
-      {
-         switch (ret)
-         {
-            case DNX_ERR_SEND:
-            case DNX_ERR_TIMEOUT:
-               dnxLog("Worker[%lx]: Unable to contact server: %s.", 
-                     tid, dnxErrorString(ret));
-               break;
-            default:
-               dnxLog("Worker[%lx]: dnxWantJob failed: %s.", 
-                     tid, dnxErrorString(ret));
-         }
-      }
+         dnxLog("Worker[%lx]: Error sending node request: %s.", 
+               tid, dnxErrorString(ret));
       else if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
-            iwlm->cfg.reqTimeout)) != DNX_OK)
-      {
-         switch (ret)
-         {
-            case DNX_ERR_TIMEOUT:  
-               break;                  // Timeout is OK here
-            case DNX_ERR_RECEIVE:
-               dnxLog("Worker[%lx]: Unable to contact server: %s.", 
-                     tid, dnxErrorString(ret));
-               break;
-            default:
-               dnxLog("Worker[%lx]: dnxGetJob failed: %s.", 
-                     tid, dnxErrorString(ret));
-         }
-      }
+            iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
+         dnxLog("Worker[%lx]: Error receiving job: %s.", 
+               tid, dnxErrorString(ret));
 
       // check for transmission error, or execute the job and reset retry count
       if (ret != DNX_OK)
@@ -555,6 +532,7 @@ static void * dnxWorker(void * data)
       }
    }
    pthread_cleanup_pop(1);
+   cleanThreadPool(ws->iwlm);
    return 0;
 }
 
@@ -736,7 +714,7 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
                   "continuing with smaller initial pool.", dnxErrorString(ret));
          else
          {
-            dnxLog("WLM: Error creating ANY worker threads: %s; "
+            dnxLog("WLM: Unable to create ANY worker threads: %s; "
                   "terminating.", dnxErrorString(ret));
             DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
             DNX_PT_MUTEX_DESTROY(&iwlm->mutex);

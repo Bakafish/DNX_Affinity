@@ -198,42 +198,34 @@ static int dnxTcpRead(iDnxChannel * icp, char * buf, int * size,
          ((char *)icp - offsetof(iDnxTcpChannel, ichan));
    char mbuf[DNX_MAX_MSG];
    unsigned short mlen;
-   struct timeval tv;
-
-#ifndef linux
-   time_t expires = time(0) + timeout;
-#endif
 
    assert(icp && itcp->socket && buf && size && *size > 0);
 
-   // implement timeout logic, if timeout value is > 0
-   tv.tv_usec = 0L;
-   tv.tv_sec = timeout;
-
-   while (tv.tv_sec > 0)
+   // implement timeout logic, if timeout value is greater than zero
+   if (timeout > 0)
    {
+      struct timeval tv;
       fd_set fd_rds;
       int nsd;
 
       FD_ZERO(&fd_rds);
       FD_SET(itcp->socket, &fd_rds);
 
+      tv.tv_usec = 0L;
+      tv.tv_sec = timeout;
+
       if ((nsd = select(itcp->socket + 1, &fd_rds, 0, 0, &tv)) == 0)
          return DNX_ERR_TIMEOUT;
 
-      if (nsd > 0)
-         break;
-
-      if (errno != EINTR) 
+      if (nsd < 0)
       {
-         dnxLog("dnxTcpRead: select failed: %s.", strerror(errno));
-         return DNX_ERR_RECEIVE;
+         if (errno != EINTR) 
+         {
+            dnxLog("dnxTcpRead: select failed: %s.", strerror(errno));
+            return DNX_ERR_RECEIVE;
+         }
+         return DNX_ERR_TIMEOUT;
       }
-
-#ifndef linux
-      tv.tv_usec = 0L;
-      tv.tv_sec = timeout - (int)(expires - time(0));
-#endif
    }
 
    // read the incoming message length
@@ -297,45 +289,35 @@ static int dnxTcpWrite(iDnxChannel * icp, char * buf, int size,
 {
    iDnxTcpChannel * itcp = (iDnxTcpChannel *)
          ((char *)icp - offsetof(iDnxTcpChannel, ichan));
-   struct timeval tv;
    unsigned short mlen;
-
-#ifndef linux
-   time_t expires = time(0) + timeout;
-#endif
 
    assert(icp && itcp->socket && buf && size);
 
-   // implement timeout logic, if timeout value is > 0
-   tv.tv_usec = 0L;
-   tv.tv_sec = timeout;
-
-   while (tv.tv_sec > 0)   // signal interrupt management
+   // implement timeout logic, if timeout value is greater than zero
+   if (timeout > 0)
    {
+      struct timeval tv;
       fd_set fd_wrs;
       int nsd;
 
       FD_ZERO(&fd_wrs);
       FD_SET(itcp->socket, &fd_wrs);
 
-      tv.tv_sec = (long)timeout;
       tv.tv_usec = 0L;
+      tv.tv_sec = timeout;
+
       if ((nsd = select(itcp->socket + 1, 0, &fd_wrs, 0, &tv)) == 0)
          return DNX_ERR_TIMEOUT;
 
-      if (nsd > 0)
-         break;
-
-      if (errno != EINTR)
+      if (nsd < 0)
       {
-         dnxLog("dnxTcpWrite: select failed: %s.", strerror(errno));
-         return DNX_ERR_SEND;
+         if (errno != EINTR)
+         {
+            dnxLog("dnxTcpWrite: select failed: %s.", strerror(errno));
+            return DNX_ERR_SEND;
+         }
+         return DNX_ERR_TIMEOUT;
       }
-
-#ifndef linux
-      tv.tv_usec = 0L;
-      tv.tv_sec = timeout - (int)(expires - time(0));
-#endif
    }
 
    // convert the size into a network ushort

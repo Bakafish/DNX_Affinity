@@ -907,8 +907,8 @@ static int processCommands(void)
 
    while (1)
    {
-      // wait 5 seconds for a request; process the request, if valid
-      if ((ret = dnxWaitForMgmtRequest(s_agent, &Msg, Msg.address, 5)) == DNX_OK)
+      // wait 1 second for a request; process the request, if valid
+      if ((ret = dnxWaitForMgmtRequest(s_agent, &Msg, Msg.address, 1)) == DNX_OK)
       {
          DnxMgmtReply Rsp;
 
