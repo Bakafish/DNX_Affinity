@@ -8,9 +8,59 @@ blank lines and include the date, developer's name, and change description.
 
 *** Revision xx: Released dnx-0.15: dd-mmm-yy jcalcote
 
+* Revision: 117-111: 12-DEC-07 jcalcote 
+Updated ChangeLog. Changed dnxExecuteJob to display local node address 
+rather than remote job source address in DNX results messages. Add node 
+address to (DNX: *) results output by the DNX client. Added a debug 
+message about job completion status to dnxExecuteJob. Fixed segfault in 
+dnxPlugin; was due to recent changes in dnxPlugin.c. Converted neb module 
+to new config parser. Cleaned up doxygen comments in neb module source 
+files. Cleaned up dnxPlugin; fixed doxygen errors throughout. 
+
+* Revision: 110: 11-DEC-07 jcalcote
+Finished client rework; reorganized work load manager and worker thread 
+pool. Added new config parser; added reconfig logic (via SIGHUP). 
+
+* Revision: 109-107: 10-DEC-07 jcalcote
+WLM changes complete. Intermediate commit; Change dnxChannel to 
+DnxChannel; cleaned up client main code; objectized the work load manager. 
+Generisized logging functionality - commit in preparation for move to 
+common directory. 
+
+* Revision: 106: 07-DEC-07 jcalcote
+Changed all references to "GUID/Guid/guid" to "XID/xid" (except for xml 
+wire buffer attribute names - that would break client/server compatibility 
+- we'll do it at the last minute before the release.) Cleaned up a few 
+doxygen issues. Fixed a logging/return value error in the registrar. 
+
+* Revision: 105-100: 06-DEC-07 jcalcote
+Fixed a few cancellation issues in the 4 server threads. Added 
+cancelability back into dispatcher and collector threads. Added 
+cancelability back to registrar thread. Added cancelability back into 
+timer thread. Changed timer resolution to milliseconds (mostly for 
+testing). Added nagios 2.10 to the nagios target list - configure 
+--with-nagios-2_10. Added dnxQueue.c unit tests. 
+
+* Revision: 99-95: 05-DEC-07 jcalcote
+Added unit tests for dnxTimer.c; incorporated them into build system check 
+target. Completely abstracted DnxJobList away from nagios by replacing 
+the service member of the DnxNewJob structure with a void * payload 
+member. Added DnxJobList unit tests to dnxJobList.c and added appropriate 
+autotools infrastructure to build and run the test. Temporarily removed 
+thread cancellation logic; replaced with shutdown flags in thread 
+procedure loops. Ensured all kernel waits were timed so these flags would 
+take effect. Debugged shutdown logic; ensured that all threads and 
+objects were cleaning up properly on shutdown. Fixed memory leak in xml 
+buffer code. Commonized nagiosPostResults functions found in timer and 
+collector. Moved common version into dnxNebMain.c in preparation for 
+moving it into the dnx nagios patch. 
+
+* Revision: 96: 03-DEC-07 jcalcote
+Added debug heap; enable with -DDEBUG_HEAP on the compiler command line. 
+
 * Revision: 95-91: 30-NOV-07 jcalcote 
-Updated ChangeLog. Forgot to add new Makefile.am. Fixed a few issues with 
-distcheck target; fixed a few runtime issues due to code churn. 
+Updated ChangeLog. Forgot to add new Makefile.am. Fixed a few issues 
+with distcheck target; fixed a few runtime issues due to code churn. 
 Instrumented code for debug heap. Cleanup DnxJobList object. Moved timer 
 into job list as an aggragated sub-component. Cleaned up nebmain a bit 
 more - ensured that cleanup was done in opposite order of init. 
@@ -18,12 +68,12 @@ more - ensured that cleanup was done in opposite order of init.
 * Revision: 90-84: 29-NOV-07 jcalcote
 Fixed a few doxygen comment headers to reflect parameter changes. 
 Objectized collector. Cleaned up dnxNebMain.c. Got rid of most of the 
-globals. Objectized the dispatcher service. Also added node address to DNX 
-Service Check Timeout message in dnxTimer.c. Objectized job expiration 
-timer. Enhanced rpm.spec.in file. Objectized DnxQueue. Abstracted the 
-queue data type by hiding the implementation. Registrar is the only object 
-to use the queue, so moved queue management completely under registrar. 
-Added rpm directory to root Makefile.am as extra dist. 
+globals. Objectized the dispatcher service. Also added node address to 
+DNX Service Check Timeout message in dnxTimer.c. Objectized job 
+expiration timer. Enhanced rpm.spec.in file. Objectized DnxQueue. 
+Abstracted the queue data type by hiding the implementation. Registrar is 
+the only object to use the queue, so moved queue management completely 
+under registrar. Added rpm directory to root Makefile.am as extra dist. 
 
 * Revision: 83-80: 28-NOV-07 jcalcote
 Updated dnxClient init script to be lsb compliant. Added code to build 
