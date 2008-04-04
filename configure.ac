@@ -7,11 +7,13 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([client/dnxWLM.c])
 AC_CONFIG_HEADER([config.h])
 AC_PREFIX_DEFAULT([/usr/local/nagios])
+AC_PREFIX_PROGRAM([nagios])
 
 # Checks for programs.
 AC_PROG_LIBTOOL
 AC_PROG_CC
 AC_PROG_MAKE_SET
+AM_PROG_CC_C_O
 
 # Checks for libraries.
 AC_CHECK_LIB([pthread], [pthread_create])
