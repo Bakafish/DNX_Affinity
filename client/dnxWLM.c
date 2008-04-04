@@ -677,7 +677,8 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
       struct ifaddrs * ifcur = ifa;
 
       // locate the first proper AF_NET address in our interface list
-      while (ifcur && (ifcur->ifa_addr->sa_family != AF_INET 
+      while (ifcur && (ifcur->ifa_addr == 0 
+            || ifcur->ifa_addr->sa_family != AF_INET 
             || (ifcur->ifa_flags & setflags) != setflags
             || (ifcur->ifa_flags & clrflags) != 0))
          ifcur = ifcur->ifa_next;
