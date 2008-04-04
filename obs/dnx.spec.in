@@ -29,6 +29,7 @@ BuildRequires:  doxygen
 %define dnxuser         %{nagiosuser}
 %define dnxgroup        %{nagiosgroup}
 %define dnxrundir       /var/run/%{name}
+%define dnxlogdir       /var/log
 
 %define nnmmsg          logger -t %{name}/rpm
 
@@ -94,6 +95,7 @@ Authors:
 %build
 CFLAGS="%{optflags}" ./configure \
    --with-run-dir=%{dnxrundir} \
+   --with-log-dir=%{dnxlogdir} \
    --with-nagios-user=%{nagiosuser} \
    --with-nagios-group=%{nagiosgroup} \
    --with-dnx-user=%{dnxuser} \
