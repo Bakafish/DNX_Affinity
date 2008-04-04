@@ -43,27 +43,32 @@ Installation:
    Entering 'make' with no targets will display additional installation 
    targets for Nagios in which you may or may not be interested.
 
-Building From SVN Checkout
---------------------------
 
-To build from an SVN repository work area, first run the dnx/autogen.sh 
-script from within the dnx project root directory. This script will run
+Building DNX From SVN Checkout
+------------------------------
+
+To build DNX from an SVN repository work area, first run the autogen.sh 
+script from within the work area dnx directory. This script will run
 the autotools required to generate the configure script and Makefile.in
-files. From there, you may simply refer to the section above entitled, 
-"Building DNX".
+files. From there, you may simply refer to the following section, as the 
+remaining steps are the same as if you'd unpacked dnx from a distribution
+tarball.
 
 For more detailed information on using Autotools build systems, see 
 the section below entitled "Standard Autotools Install Instructions".
+
 
 Building/Installing/Configuring DNX
 -----------------------------------
 
 NAGIOS SERVER
 
-   Perform the following commands from the dnx package directory:
+   Perform the following commands from the dnx distribution package root 
+   (dnx) directory:
 
    $ ./configure [--with-nagios3x]
    $ make
+   $ make check (optional)
    $ sudo make install-server install-servercfg
 
    Note the optional use of the --with-nagios3x configuration option.
@@ -88,11 +93,12 @@ NAGIOS SERVER
 
 CLIENT NODES
 
-   Perform the following commands from the dnx build directory on each 
-   client node:
+   Perform the following commands from the dnx distribution package root
+   directory on each client node:
 
    $ ./configure
    $ make
+   $ make check (optional)
    $ sudo make install-client install-clientcfg [install-initscript]
 
    By default, this will install the following relevant files:

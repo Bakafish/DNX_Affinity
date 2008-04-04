@@ -1,3 +1,7 @@
+Version 0.15.1:
+===============
+- Bug fixes - mostly related to daemon startup, shutdown and timing
+
 Version 0.15:
 =============
 - We're in SVN on sourceforge now!

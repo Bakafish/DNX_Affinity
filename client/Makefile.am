@@ -1,4 +1,4 @@
-EXTRA_DIST = test
+EXTRA_DIST = dnxClientTest.sh test
 
 sbin_PROGRAMS = dnxClient
 
@@ -20,3 +20,9 @@ dnxClient_CPPFLAGS =\
 
 dnxClient_LDADD = ../common/libcmn.la
 
+# DNX client unit tests
+
+# ---------------------------------------------------------------------------
+# client unit tests
+#
+TESTS = dnxClientTest.sh
