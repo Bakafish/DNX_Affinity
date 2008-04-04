@@ -43,6 +43,7 @@
 #include "dnxPlugin.h"
 
 #include <sys/time.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,13 +52,19 @@
 #include <assert.h>
 #include <errno.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <ifaddrs.h>
+
 /** @todo Dynamically allocate based on config file maxResultBuffer setting. */
 #define MAX_RESULT_DATA 1024
+
+#define MAX_IP_ADDRSZ   64
 
 struct iDnxWlm;               // forward declaration: circular reference
 
 /** A value that indicates that current state of a pool thread. */
-typedef enum DnxThreadState_ 
+typedef enum DnxThreadState
 {
    DNX_THREAD_DEAD = 0,
    DNX_THREAD_RUNNING,
@@ -97,6 +104,7 @@ typedef struct iDnxWlm
    pthread_t tid;             /*!< The Work Load Manager thread id. */
    pthread_mutex_t mutex;     /*!< The WLM thread sync mutex. */
    pthread_cond_t cond;       /*!< The WLM thread sync condition variable. */
+   char myaddr[MAX_IP_ADDRSZ];/*!< Cached local node address for presentation. */
 } iDnxWlm;
 
 /*--------------------------------------------------------------------------
@@ -155,8 +163,8 @@ static int dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result)
 
    time(&ws->jobstart);
 
-   ret = dnxPluginExecute(job->cmd, &result->resCode, 
-         resData, sizeof resData - 1, job->timeout, job->address);
+   ret = dnxPluginExecute(job->cmd, &result->resCode, resData, 
+         sizeof resData - 1, job->timeout, ws->iwlm->myaddr);
 
    result->delta = time(0) - ws->jobstart;
    ws->jobstart = 0;
@@ -670,6 +678,7 @@ int dnxWlmReconfigure(DnxWlm * wlm, DnxWlmCfgData * cfg)
 int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
 {
    iDnxWlm * iwlm;
+   struct ifaddrs * ifa;
    int rc;
 
    assert(cfg && pwlm);
@@ -695,6 +704,17 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
       xfree(iwlm->cfg.collector);
       xfree(iwlm);
       return DNX_ERR_MEMORY;
+   }
+
+   // cache our ip address (well, one of them anyway)
+   if (getifaddrs(&ifa) == 0)
+   {
+      /** @todo Use the "best" address. */
+
+      // just use the first address for now
+      inet_ntop(ifa->ifa_addr->sa_family, ifa->ifa_addr->sa_data, 
+            iwlm->myaddr, sizeof iwlm->myaddr);
+      freeifaddrs(ifa);
    }
 
    DNX_PT_MUTEX_INIT(&iwlm->mutex);
