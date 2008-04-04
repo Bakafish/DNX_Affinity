@@ -57,7 +57,7 @@ static void usage(char * base)
          "Where [options] are:\n"
          "  -s <host>    specify target host name (default: localhost).\n"
          "  -p <port>    specify target port number (default: 12480).\n"
-         "  -c <cmdstr>  send <cmdstr> to server.\n"
+         "  -c <cmdstr>  send <cmdstr> to server. (Hint: Try sending \"HELP\".)\n"
          "  -v           print version and exit.\n"
          "  -h           print this help and exit.\n\n", base);
    exit(-1);
