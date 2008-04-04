@@ -28,7 +28,34 @@
 #ifndef _DNXJOBLIST_H_
 #define _DNXJOBLIST_H_
 
-#include "dnxNebMain.h"
+#include "dnxProtocol.h"
+
+#include "nagios.h"
+
+typedef struct _DnxNewJob_ 
+{
+   DnxJobState state;      // Job state
+   DnxGuid guid;           // Service Request Serial No.
+   char * cmd;             // Processed check command
+   time_t start_time;      // Service check start time
+   int timeout;            // Service check timeout in seconds
+   time_t expires;         // Expiration time
+   service * svc;          // Service check structure
+   DnxNodeRequest * pNode; // Worker Request that will handle this Job
+} DnxNewJob;
+
+typedef struct _DnxJobList_ 
+{
+   DnxNewJob * pList;      // Array of Job Structures
+   unsigned long size;     // Number of elements
+   unsigned long head;     // List head
+   unsigned long tail;     // List tail
+   unsigned long dhead;    // Head of waiting jobs
+
+   // pthread mutex and condition-variable for Job List access
+   pthread_mutex_t mut;
+   pthread_cond_t cond;
+} DnxJobList;
 
 int dnxJobListInit(DnxJobList ** ppJobList, unsigned long size);
 int dnxJobListWhack(DnxJobList ** ppJobList);

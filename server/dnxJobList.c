@@ -27,6 +27,7 @@
 
 #include "dnxJobList.h"
 
+#include "dnxError.h"
 #include "dnxDebug.h"
 #include "dnxLogging.h"
 

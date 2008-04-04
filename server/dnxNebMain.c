@@ -211,21 +211,15 @@ static int releaseThreads(void)
 {
    int ret;
 
-   dnxRegistrarDestroy(dnxGlobalData.reg);
-
    // Cancel all threads
    if (dnxGlobalData.tDispatcher && (ret = pthread_cancel(dnxGlobalData.tDispatcher)) != 0)
       dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tDispatcher) failed with ret = %d", ret);
-   if (dnxGlobalData.tTimer && (ret = pthread_cancel(dnxGlobalData.tTimer)) != 0)
-      dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tTimer) failed with ret = %d", ret);
    if (dnxGlobalData.tCollector && (ret = pthread_cancel(dnxGlobalData.tCollector)) != 0)
       dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tCollector) failed with ret = %d", ret);
 
    // Wait for all threads to exit
    if (dnxGlobalData.tDispatcher && (ret = pthread_join(dnxGlobalData.tDispatcher, NULL)) != 0)
       dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tDispatcher) failed with ret = %d", ret);
-   if (dnxGlobalData.tTimer && (ret = pthread_join(dnxGlobalData.tTimer, NULL)) != 0)
-      dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tTimer) failed with ret = %d", ret);
    if (dnxGlobalData.tCollector && (ret = pthread_join(dnxGlobalData.tCollector, NULL)) != 0)
       dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tCollector) failed with ret = %d", ret);
 
@@ -240,7 +234,8 @@ static int releaseThreads(void)
  */
 static int releaseQueues(void)
 {
-   // Remove the Job List
+   dnxTimerDestroy(dnxGlobalData.timer);
+   dnxRegistrarDestroy(dnxGlobalData.reg);
    dnxJobListWhack(&dnxGlobalData.JobList);
 
    return DNX_OK;
@@ -351,16 +346,6 @@ static int initThreads(void)
       
    }
 
-   // Create the Service Check Timer thread
-   if ((ret = pthread_create(&dnxGlobalData.tTimer, NULL, dnxTimer, (void *)&dnxGlobalData)) != 0)
-   {
-      dnxGlobalData.isActive = 0;   // Init failure
-      dnxSyslog(LOG_ERR, "initThreads: Failed to create Timer thread: %d", ret);
-      releaseThreads();    // Cancel prior threads
-      return DNX_ERR_THREAD;
-      
-   }
-
    // Set the ShowStart flag
    dnxGlobalData.isGo = 1;
 
@@ -415,7 +400,7 @@ static int initQueues(void)
 
    dnxSyslog(LOG_INFO, "initQueues: Allocating %d service request slots in the DNX Job Queue", total_services);
 
-   dnxDebug(2, "DnxNebMain: Initializing Job List and Node Request Queue");
+   dnxDebug(2, "DnxNebMain: Initializing Job List and Client Node Registrar");
 
    // Create the DNX Job List (Contains Pending and InProgress jobs)
    if ((ret = dnxJobListInit(&(dnxGlobalData.JobList), total_services)) != DNX_OK)
@@ -428,6 +413,13 @@ static int initQueues(void)
    if ((ret = dnxRegistrarCreate(&dnxGlobalData.debug, total_services,
          dnxGlobalData.pDispatch, &dnxGlobalData.reg)) != DNX_OK)
       return ret;
+
+   // create job list expiration timer
+   if ((ret = dnxTimerCreate(&dnxGlobalData.JobList, &dnxGlobalData.timer)) != 0)
+   {
+      dnxRegistrarDestroy(dnxGlobalData.reg);
+      return ret;
+   }
 
    return DNX_OK;
 }

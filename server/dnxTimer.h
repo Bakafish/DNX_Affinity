@@ -34,10 +34,13 @@
 #ifndef _DNXTIMER_H_
 #define _DNXTIMER_H_
 
-#define DNX_TIMER_SLEEP    5
+#include "dnxJobList.h"
 
-void * dnxTimer(void * data);
-int dnxThreadSleep(int seconds);
+/** DNX job expiration timer abstract type. */
+typedef void DnxTimer;
+
+int dnxTimerCreate(DnxJobList * joblist, DnxTimer ** ptimer);
+void dnxTimerDestroy(DnxTimer * timer);
 
 #endif   /* _DNXTIMER_H_ */
 
