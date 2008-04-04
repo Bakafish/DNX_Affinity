@@ -298,46 +298,6 @@ static int workerCreate(iDnxWlm * iwlm, DnxWorkerStatus ** pws)
    return 0;
 }
 
-//----------------------------------------------------------------------------
-
-/** Grow the thread pool to the configured number of threads.
- * 
- * This routine calculates an appropriate growth factor. If the current
- * number of threads is less than the requestd initial pool size, then the 
- * pool is grown to the initial pool size. If the current number of threads
- * is near the maximum pool size, then only grow to the maximum. Otherwise it 
- * is grown by the configured pool growth number.
- * 
- * @param[in] iwlm - a reference to the work load manager whose thread 
- *    pool size is to be increased.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int growThreadPool(iDnxWlm * iwlm)
-{
-   unsigned i, add, growsz;
-   int ret;
-
-   // set additional thread count - keep us between the min and the max
-   if (iwlm->threads < iwlm->cfg.poolInitial)
-      growsz = iwlm->cfg.poolInitial - iwlm->threads;
-   else if (iwlm->threads + iwlm->cfg.poolGrow > iwlm->cfg.poolMax)
-      growsz = iwlm->cfg.poolMax - iwlm->threads;
-   else
-      growsz = iwlm->cfg.poolGrow;
-
-   // fill as many empty slots as we can or need to
-   for (i = iwlm->threads, add = growsz; i < iwlm->poolsz && add > 0; i++, add--)
-   {
-      if ((ret = workerCreate(iwlm, &iwlm->pool[i])) != 0)
-         break;
-      iwlm->threads++;
-      iwlm->tcreated++;
-   }
-   dnxLog("WLM: Increased thread pool by %d.", growsz - add);
-   return ret;
-}
-
 /** Clean up zombie threads and compact the thread pool.
  * 
  * @param[in] iwlm - a pointer to the work load manager data structure.
@@ -346,6 +306,8 @@ static void cleanThreadPool(iDnxWlm * iwlm)
 {
    unsigned i = 0;
    time_t now = time(0);
+
+   iwlm->lastclean = now;  // keep track of when we last cleaned
 
    // look for zombie threads to join
    while (i < iwlm->threads)
@@ -376,21 +338,59 @@ static void cleanThreadPool(iDnxWlm * iwlm)
 
 //----------------------------------------------------------------------------
 
+/** Grow the thread pool to the configured number of threads.
+ * 
+ * This routine calculates an appropriate growth factor. If the current
+ * number of threads is less than the requested initial pool size, then the 
+ * pool is grown to the initial pool size. If the current number of threads
+ * is near the maximum pool size, then only grow to the maximum. Otherwise it 
+ * is grown by the configured pool growth value.
+ * 
+ * @param[in] iwlm - a reference to the work load manager whose thread 
+ *    pool size is to be increased.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int growThreadPool(iDnxWlm * iwlm)
+{
+   unsigned i, add, growsz;
+   int ret;
+
+   // always clean first, in case the pool is full of zombies
+   cleanThreadPool(iwlm);
+
+   // set additional thread count - keep us between the min and the max
+   if (iwlm->threads < iwlm->cfg.poolInitial)
+      growsz = iwlm->cfg.poolInitial - iwlm->threads;
+   else if (iwlm->threads + iwlm->cfg.poolGrow > iwlm->cfg.poolMax)
+      growsz = iwlm->cfg.poolMax - iwlm->threads;
+   else
+      growsz = iwlm->cfg.poolGrow;
+
+   // fill as many empty slots as we can or need to
+   for (i = iwlm->threads, add = growsz; i < iwlm->poolsz && add > 0; i++, add--)
+   {
+      if ((ret = workerCreate(iwlm, &iwlm->pool[i])) != 0)
+         break;
+      iwlm->threads++;
+      iwlm->tcreated++;
+   }
+   dnxLog("WLM: Increased thread pool by %d.", growsz - add);
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
 /** Dispatch thread clean-up routine
  * 
  * @param[in] data - an opaque pointer to a worker's status data structure.
  */
 static void dnxWorkerCleanup(void * data)
 {
-   iDnxWlm * iwlm;
    DnxWorkerStatus * ws = (DnxWorkerStatus *)data;
    assert(data);
-   iwlm = ws->iwlm;
    dnxDebug(2, "Worker[%lx]: Terminating.", pthread_self());
    ws->state = DNX_THREAD_ZOMBIE;
-   DNX_PT_MUTEX_LOCK(&iwlm->mutex);
-   cleanThreadPool(iwlm);
-   DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 }
 
 //----------------------------------------------------------------------------
@@ -437,28 +437,24 @@ static void * dnxWorker(void * data)
       if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
          dnxLog("Worker[%lx]: Error sending node request: %s.", 
                tid, dnxErrorString(ret));
-      else if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
-            iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
-         dnxLog("Worker[%lx]: Error receiving job: %s.", 
-               tid, dnxErrorString(ret));
+      else 
+      {
+         DNX_PT_MUTEX_LOCK(&iwlm->mutex);
+         iwlm->reqsent++;
+         DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
+
+         if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
+               iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
+            dnxLog("Worker[%lx]: Error receiving job: %s.", 
+                  tid, dnxErrorString(ret));
+      }
 
       // check for transmission error, or execute the job and reset retry count
       if (ret != DNX_OK)
       {
-         int terminate = 0;
-
          // if exceeded max retries and above pool minimum...
-         if (++retries > iwlm->cfg.maxRetries)
-         {
-            DNX_PT_MUTEX_LOCK(&iwlm->mutex);
-            iwlm->reqsent++;
-            cleanThreadPool(iwlm);
-            iwlm->lastclean = time(0);
-            if (iwlm->threads > iwlm->cfg.poolMin)
-               terminate = 1;
-            DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
-         }
-         if (terminate)
+         if (++retries > iwlm->cfg.maxRetries 
+               && iwlm->threads > iwlm->cfg.poolMin)
          {
             dnxLog("Worker[%lx]: Exiting - max retries exceeded.", tid);
             break;
@@ -475,7 +471,6 @@ static void * dnxWorker(void * data)
          //    and we haven't reached our configured limit, then increase
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);
          {
-            iwlm->reqsent++;
             iwlm->jobsrcvd++;
             iwlm->active++;
             if (!iwlm->terminate 
@@ -485,7 +480,7 @@ static void * dnxWorker(void * data)
          }
          DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 
-         dnxDebug(2, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s.", 
+         dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
 
          // prepare result structure
@@ -507,7 +502,7 @@ static void * dnxWorker(void * data)
          // store allocated copy of the result string
          if (*resData) result.resData = xstrdup(resData);
 
-         dnxDebug(1, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s.", 
+         dnxDebug(2, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, result.delta, 
                result.resCode, result.resData);
 
@@ -516,16 +511,16 @@ static void * dnxWorker(void * data)
                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
 
          xfree(result.resData);
-         
+        
+         // die now if we shutdown during the job...
+         pthread_testcancel();
+ 
          // if we haven't cleaned up zombies in a while, then do it now
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);
          {
             time_t now = time(0);
             if (iwlm->lastclean + iwlm->cfg.pollInterval < now)
-            {
                cleanThreadPool(iwlm);
-               iwlm->lastclean = now;
-            }
 
             // track status
             if (result.resCode == DNX_PLUGIN_RESULT_OK) 
@@ -754,6 +749,7 @@ void dnxWlmDestroy(DnxWlm * wlm)
 {
    iDnxWlm * iwlm = (iDnxWlm *)wlm;
    time_t expires;
+   unsigned i;
 
    assert(wlm);
 
@@ -762,27 +758,35 @@ void dnxWlmDestroy(DnxWlm * wlm)
    // sleep till we can't stand it anymore, then kill everyone
    iwlm->terminate = 1;
    expires = iwlm->cfg.shutdownGrace + time(0);
-   while (iwlm->threads > 0 && time(0) < expires)
-      dnxCancelableSleep(100);
 
    DNX_PT_MUTEX_LOCK(&iwlm->mutex);
+   while (iwlm->threads > 0 && time(0) < expires)
    {
-      unsigned i;
-   
-      // cancel all remaining workers
-      for (i = 0; i < iwlm->threads; i++)
-         if (iwlm->pool[i]->state == DNX_THREAD_RUNNING)
-         {
-            dnxDebug(1, "WLMDestroy: Cancelling worker[%lx].", iwlm->pool[i]->tid);
-            pthread_cancel(iwlm->pool[i]->tid);
-         }
-
-      // join all zombies (should be everything left)
       cleanThreadPool(iwlm);
-      assert(iwlm->threads == 0);
-      xfree(iwlm->pool);
+      DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
+      dnxCancelableSleep(100);
+      DNX_PT_MUTEX_LOCK(&iwlm->mutex);
    }
+
+   // check for workers remaining after grace period
+   if (iwlm->threads)
+      dnxDebug(1, "WLM: Termination - %d workers remaining"
+            " after grace period.", iwlm->threads);
+      
+   // cancel all remaining workers
+   for (i = 0; i < iwlm->threads; i++)
+      if (iwlm->pool[i]->state == DNX_THREAD_RUNNING)
+      {
+         dnxDebug(1, "WLMDestroy: Cancelling worker[%lx].", iwlm->pool[i]->tid);
+         pthread_cancel(iwlm->pool[i]->tid);
+      }
+
+   // join all zombies (should be everything left)
+   cleanThreadPool(iwlm);
+   assert(iwlm->threads == 0);
+   xfree(iwlm->pool);
    DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
+
    DNX_PT_MUTEX_DESTROY(&iwlm->mutex);
 
    xfree(iwlm->cfg.dispatcher);

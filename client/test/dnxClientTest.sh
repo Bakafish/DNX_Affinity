@@ -7,16 +7,19 @@ mkdir testrun
 # Create a test configuration file using udp test ports 13480/1
 cat << END_CONFIG_FILE > $PWD/testrun/test.cfg
 channelAgent = udp://localhost:13480
-channelDispatcher = udp://localhost:13480
-channelCollector = udp://localhost:13481
+channelDispatcher = udp://localhost:13481
+channelCollector = udp://localhost:13482
+logFile = $PWD/testrun/test.log
+debugFile = $PWD/testrun/test.dbg
+debugLevel = 3
 END_CONFIG_FILE
 
 # Execute the dnx client as a daemon
-../dnxClient -c $PWD/testrun/test.cfg -r $PWD/testrun -l $PWD/testrun/test.log -D $PWD/testrun/test.dbg
+../dnxClient -c $PWD/testrun/test.cfg -r $PWD/testrun
 
 # Give it time to create its lock file
 count=0
-while ((count<15)) && [ ! -e $PWD/testrun/dnxClient.pid ]; do
+while ((count<30)) && [ ! -e $PWD/testrun/dnxClient.pid ]; do
 	sleep 1; let count++
 done
 
@@ -39,7 +42,7 @@ kill `cat $PWD/testrun/dnxClient.pid`
 
 # Give it time to remove its lock file
 count=0
-while ((count<15)) && [ -e $PWD/testrun/dnxClient.pid ]; do
+while ((count<60)) && [ -e $PWD/testrun/dnxClient.pid ]; do
 	sleep 1; let count++
 done
 
@@ -50,6 +53,6 @@ if [ -e $PWD/testrun/dnxClient.pid ]; then
 fi
 
 # Remove all daemon droppings
-rm -rf testrun
+# rm -rf testrun
 
 exit $status
