@@ -8,3 +8,5 @@ doxygen:
 
 CLEANFILES = doxywarn.txt html/*
 
+clean-local:
+	rm -rf html

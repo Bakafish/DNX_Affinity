@@ -346,13 +346,15 @@ int dnxJobListCreate(DnxJobList ** ppJobList, unsigned long size)
 
    assert(ppJobList && size);
 
-   if ((ilist = (iDnxJobList *)xmalloc(sizeof *ilist)) == 0
-         || (ilist->pList = (DnxNewJob *)xmalloc(sizeof *ilist->pList * size)) == 0)
+   if ((ilist = (iDnxJobList *)xmalloc(sizeof *ilist)) == 0)
+      return DNX_ERR_MEMORY;
+   memset(ilist, 0, sizeof *ilist);
+
+   if ((ilist->pList = (DnxNewJob *)xmalloc(sizeof *ilist->pList * size)) == 0)
    {
       xfree(ilist);
       return DNX_ERR_MEMORY;
    }
-   memset(ilist, 0, sizeof *ilist);
    memset(ilist->pList, 0, sizeof *ilist->pList * size);
 
    ilist->size = size;

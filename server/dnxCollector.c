@@ -226,15 +226,15 @@ static void * dnxCollector(void * data)
  * 
  * @param[in] debug - a pointer to the global debug level.
  * @param[in] chname - the name of the collect channel.
- * @param[in] dispurl - the collect channel URL.
+ * @param[in] collurl - the collect channel URL.
  * @param[in] joblist - a pointer to the global job list object.
- * @param[out] pdisp - the address of storage for the return of the new
+ * @param[out] pcoll - the address of storage for the return of the new
  *    collector object.
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxCollectorCreate(long * debug, char * chname, char * dispurl,
-      DnxJobList * joblist, DnxCollector ** pdisp)
+int dnxCollectorCreate(long * debug, char * chname, char * collurl,
+      DnxJobList * joblist, DnxCollector ** pcoll)
 {
    iDnxCollector * icoll;
    int ret;
@@ -243,19 +243,19 @@ int dnxCollectorCreate(long * debug, char * chname, char * dispurl,
       return DNX_ERR_MEMORY;
 
    icoll->chname = xstrdup(chname);
-   icoll->url = xstrdup(dispurl);
+   icoll->url = xstrdup(collurl);
    icoll->joblist = joblist;
    icoll->debug = debug;
    icoll->channel = 0;
    icoll->tid = 0;
 
-   if (!icoll->url || icoll->chname)
+   if (!icoll->url || !icoll->chname)
    {
       xfree(icoll);
       return DNX_ERR_MEMORY;
    }
 
-   if ((ret = dnxChanMapAdd(chname, dispurl)) != DNX_OK)
+   if ((ret = dnxChanMapAdd(chname, collurl)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "dnxCollectorCreate: "
                          "dnxChanMapAdd(%s) failed: %d", chname, ret);
@@ -282,6 +282,8 @@ int dnxCollectorCreate(long * debug, char * chname, char * dispurl,
       goto e3;
    }
 
+   *pcoll = (DnxCollector *)icoll;
+
    return DNX_OK;
 
 // error paths
@@ -290,7 +292,7 @@ e3:dnxDisconnect(icoll->channel);
 e2:dnxChanMapDelete(icoll->chname);
 e1:xfree(icoll->url);
    xfree(icoll->chname);
-   xxfree(icoll);
+   xfree(icoll);
 
    return ret;
 }

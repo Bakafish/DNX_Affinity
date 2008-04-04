@@ -1,10 +1,10 @@
-EXTRA_DIST = LEGAL TODO etc rpm nagios
+EXTRA_DIST = LEGAL TODO nagios
 
 if DO_DOXYGEN
   OPT_DOXYGEN = doc
 endif
 
-SUBDIRS = common server client $(OPT_DOXYGEN)
+SUBDIRS = etc common server client $(OPT_DOXYGEN)
 
 doxygen:
 	cd doc && $(MAKE) $(AM_MAKEFLAGS) $@

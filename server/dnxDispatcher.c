@@ -236,7 +236,7 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
    idisp->channel = 0;
    idisp->tid = 0;
 
-   if (!idisp->url || idisp->chname)
+   if (!idisp->url || !idisp->chname)
    {
       xfree(idisp);
       return DNX_ERR_MEMORY;
@@ -268,6 +268,8 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
       ret = DNX_ERR_THREAD;
       goto e3;
    }
+
+   *pdisp = (DnxDispatcher*)idisp;
 
    return DNX_OK;
 

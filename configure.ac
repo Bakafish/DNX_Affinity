@@ -48,8 +48,9 @@ AC_CHECK_FUNCS([dup2 gethostbyname gettimeofday memmove memset regcomp select so
 
 AC_CONFIG_FILES([Makefile
 		 rpm/dnx.spec
-		 doc/doxyfile
 		 doc/Makefile
+		 doc/doxyfile
+		 etc/Makefile
                  etc/dnxcld.init
                  common/Makefile
                  server/Makefile
