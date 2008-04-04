@@ -37,7 +37,7 @@
 #include "dnxJobList.h"
 
 /** Abstract data type for the DNX job results collector. */
-typedef void DnxCollector;
+typedef struct { int unused; } DnxCollector;
 
 int dnxCollectorCreate(long * debug, char * chname, char * collurl,
       DnxJobList * joblist, DnxCollector ** pcoll);

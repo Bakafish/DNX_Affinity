@@ -39,7 +39,8 @@ typedef enum DnxQueueResult_
    DNX_QRES_ERROR
 } DnxQueueResult;
 
-typedef void DnxQueue;
+/** An abstract data type for DnxQueue. */
+typedef struct { int unused; } DnxQueue;
 
 /* Add a request to the requests list */
 int dnxQueuePut(DnxQueue * queue, void * pPayload);

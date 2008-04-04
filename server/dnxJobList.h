@@ -44,8 +44,8 @@ typedef struct _DnxNewJob_
    DnxNodeRequest * pNode; // Worker Request that will handle this Job
 } DnxNewJob;
 
-/** Abstraction for a DNX Job List object. */
-typedef void DnxJobList;
+/** An abstract data type for a DNX Job List object. */
+typedef struct { int unused; } DnxJobList;
 
 int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob);
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs);

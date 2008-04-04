@@ -38,7 +38,7 @@
 #include "dnxJobList.h"
 
 /** Abstract data type for the DNX job dispatcher. */
-typedef void DnxDispatcher;
+typedef struct { int unused; } DnxDispatcher;
 
 DnxChannel * dnxDispatcherGetChannel(DnxDispatcher * disp);
 

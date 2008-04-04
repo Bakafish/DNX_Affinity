@@ -30,33 +30,33 @@
 
 #define MAX_ERR_STR           1023
 
-#define DNX_OK                0  // A-OK, Okey-Dokey, Rock-On
-                              
-#define DNX_ERR_INVALID       1  // Invalid arguments or parameters
-#define DNX_ERR_CAPACITY      2  // Out of channel slots or XML buffer space
-#define DNX_ERR_BADURL        3  // Invalid, malformed URL
-#define DNX_ERR_ALREADY       4  // Already init or deinit
-#define DNX_ERR_EXIST         5  // Channel already exists
-#define DNX_ERR_UNSUPPORTED   6  // Unsupported protocol
-#define DNX_ERR_MEMORY        7  // Out of memory
-#define DNX_ERR_OPEN          8  // Channel open error
-#define DNX_ERR_SIZE          9  // Message size is out of bounds
-#define DNX_ERR_SEND          10 // Message transmission failure
-#define DNX_ERR_RECEIVE       11 // Message reception failure
-#define DNX_ERR_ADDRESS       12 // Invalid communications address
-#define DNX_ERR_NOTFOUND      13 // Requested resource was not found
-#define DNX_ERR_SYNTAX        14 // Incorrect/invalid XML message
-#define DNX_ERR_THREAD        15 // Thread error
-#define DNX_ERR_TIMEOUT       16 // Timeout
-#define DNX_ERR_BUSY          17 // Resource is busy
+#define DNX_OK                0                    // A-OK, Okey-Dokey, Rock-On
 
-#define DNX_ERR_LASTERROR     17
+#define DNX_ERR_BASE          500
+                              
+#define DNX_ERR_INVALID       (DNX_ERR_BASE + 1 )  // Invalid arguments or parameters
+#define DNX_ERR_CAPACITY      (DNX_ERR_BASE + 2 )  // Out of channel slots or XML buffer space
+#define DNX_ERR_BADURL        (DNX_ERR_BASE + 3 )  // Invalid, malformed URL
+#define DNX_ERR_ALREADY       (DNX_ERR_BASE + 4 )  // Already init or deinit
+#define DNX_ERR_EXIST         (DNX_ERR_BASE + 5 )  // Channel already exists
+#define DNX_ERR_UNSUPPORTED   (DNX_ERR_BASE + 6 )  // Unsupported protocol
+#define DNX_ERR_MEMORY        (DNX_ERR_BASE + 7 )  // Out of memory
+#define DNX_ERR_OPEN          (DNX_ERR_BASE + 8 )  // Channel open error
+#define DNX_ERR_SIZE          (DNX_ERR_BASE + 9 )  // Message size is out of bounds
+#define DNX_ERR_SEND          (DNX_ERR_BASE + 10)  // Message transmission failure
+#define DNX_ERR_RECEIVE       (DNX_ERR_BASE + 11)  // Message reception failure
+#define DNX_ERR_ADDRESS       (DNX_ERR_BASE + 12)  // Invalid communications address
+#define DNX_ERR_NOTFOUND      (DNX_ERR_BASE + 13)  // Requested resource was not found
+#define DNX_ERR_SYNTAX        (DNX_ERR_BASE + 14)  // Incorrect/invalid XML message
+#define DNX_ERR_THREAD        (DNX_ERR_BASE + 15)  // Thread error
+#define DNX_ERR_TIMEOUT       (DNX_ERR_BASE + 16)  // Timeout
+#define DNX_ERR_BUSY          (DNX_ERR_BASE + 17)  // Resource is busy
 
 typedef int dnxError;
 
 dnxError dnxGetLastError(void);
-void dnxSetLastError(dnxError errno);
-char * dnxErrorString(dnxError errno);
+void dnxSetLastError(dnxError eno);
+char * dnxErrorString(dnxError eno);
 
 #endif   /* _DNXERROR_H_ */
 

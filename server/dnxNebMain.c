@@ -134,7 +134,8 @@ static int dnxLoadConfig(char * ConfigFile)
    // Parse config file
    if ((ret = parseFile(ConfigFile)) != 0)
    {
-      dnxSyslog(LOG_ERR, "getConfig: Failed to parse config file: %d", ret);
+      dnxSyslog(LOG_ERR, "getConfig: Failed to parse config file with %d: %s", 
+            ret, dnxErrorString(ret));
       return ret;
    }
 
@@ -156,8 +157,8 @@ static int dnxLoadConfig(char * ConfigFile)
    {
       char buffer[128];
       regerror(err_no, &regEx, buffer, sizeof(buffer));
-      dnxSyslog(LOG_ERR, "getConfig: Failed to compile "
-                         "localCheckPattern (\"%s\"): %s", 
+      dnxSyslog(LOG_ERR, 
+            "getConfig: Failed to compile localCheckPattern (\"%s\"): %s", 
             cfg.localCheckPattern, buffer);
       regfree(&regEx);
    }
@@ -167,8 +168,8 @@ static int dnxLoadConfig(char * ConfigFile)
             cfg.logFacility);
    else if (cfg.auditWorkerJobs &&  /* If auditWorkerJobs is defined, then */
          verifyFacility(cfg.auditWorkerJobs, &auditLogFacility) == -1)
-      dnxSyslog(LOG_ERR, "getConfig: Invalid syslog facility for "
-                         "auditWorkerJobs: %s", 
+      dnxSyslog(LOG_ERR, 
+            "getConfig: Invalid syslog facility for auditWorkerJobs: %s", 
             cfg.auditWorkerJobs);
    else
       ret = DNX_OK;
@@ -182,8 +183,8 @@ static int dnxLoadConfig(char * ConfigFile)
  *
  * @return The number of services configured in Nagios.
  * 
- * @todo This routine should become part of the nagios 2.7 and 2.7 patchs,
- *    and this routine should become part of Nagios and exported to DNX.
+ * @todo This routine should be in nagios code. Add it to the dnx patch files
+ * for nagios 2.7 and 2.9, and export it from nagios so we can call it.
  */
 static int nagiosGetServiceCount(void)
 {
@@ -225,8 +226,8 @@ static int dnxCalculateJobListSize(void)
    // check for configuration maxNodeRequests override
    if (size < cfg.maxNodeRequests)
    {
-      dnxSyslog(LOG_WARNING, "init: Overriding automatic service check slot "
-                             "count. Changing from %d to %d", 
+      dnxSyslog(LOG_WARNING, 
+         "init: Overriding automatic service check slot count. Changing from %d to %d", 
          size, cfg.maxNodeRequests);
       size = cfg.maxNodeRequests;
    }
@@ -279,7 +280,8 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
 
    // Post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "dnxPostNewJob: Failed to post Job \"%s\": %d", Job.cmd, ret);
+      dnxSyslog(LOG_ERR, "dnxPostNewJob: Failed to post Job \"%s\": %d", 
+            Job.cmd, ret);
 
    // Worker Audit Logging
    dnxAuditJob(&Job, "ASSIGN");
@@ -405,7 +407,8 @@ static int ehSvcCheck(int event_type, void * data)
    //
    if (regexec(&regEx, svcdata->command_line, 0, NULL, 0) == 0)
    {
-      dnxDebug(1, "dnxServer: ehSvcCheck: Job will execute locally: %s", svcdata->command_line);
+      dnxDebug(1, "dnxServer: ehSvcCheck: Job will execute locally: %s", 
+            svcdata->command_line);
       return OK;  // Ignore check that should be executed locally
    }
 
@@ -425,7 +428,9 @@ static int ehSvcCheck(int event_type, void * data)
    // Post this service check to the Job Queue
    if ((ret = dnxPostNewJob(joblist, serial, svcdata, pNode)) != 0)
    {
-      dnxSyslog(LOG_ERR, "dnxServer: ehSvcCheck: Failed to post new job: %d", ret);
+      dnxSyslog(LOG_ERR, 
+            "dnxServer: ehSvcCheck: Failed to post new job with %d: %s", 
+            ret, dnxErrorString(ret));
       return OK;  // Unable to handle this request - Have Nagios handle it
    }
 
@@ -455,10 +460,10 @@ static int dnxServerDeInit(void)
       dnxRegistrarDestroy(registrar);
 
    if (dispatcher)
-      dnxDispatcherDestroy(&dispatcher);
+      dnxDispatcherDestroy(dispatcher);
 
    if (collector)
-      dnxCollectorDestroy(&collector);
+      dnxCollectorDestroy(collector);
 
    if (joblist)
       dnxJobListDestroy(joblist);
@@ -491,19 +496,22 @@ static int dnxServerInit(void)
 
    if ((ret = dnxChanMapInit(0)) != 0)
    {
-      dnxSyslog(LOG_ERR, "dnxServerInit: dnxChanMapInit failed: %d", ret);
+      dnxSyslog(LOG_ERR, "dnxServerInit: dnxChanMapInit failed with %d: %s", 
+            ret, dnxErrorString(ret));
       return ret;
    }
 
    joblistsz = dnxCalculateJobListSize();
 
-   dnxSyslog(LOG_INFO, "dnxServerInit: Allocating %d service request "
-                       "slots in the DNX job list", joblistsz);
+   dnxSyslog(LOG_INFO, 
+         "dnxServerInit: Allocating %d service request slots in the DNX job list", 
+         joblistsz);
 
    if ((ret = dnxJobListCreate(&joblist, joblistsz)) != 0)
    {
-      dnxSyslog(LOG_ERR, "dnxServerInit: Failed to initialize DNX job "
-                         "list with %d slots", joblistsz);
+      dnxSyslog(LOG_ERR, 
+            "dnxServerInit: Failed to initialize DNX job list with %d slots", 
+            joblistsz);
       return ret;
    }
 
@@ -545,8 +553,8 @@ static int launchScript(char * script)
    // exec the script - system waits till child completes
    if ((ret = system(script)) == -1)
    {
-      dnxSyslog(LOG_ERR, "launchScript: Failed to exec script: %s", 
-            strerror(errno));
+      dnxSyslog(LOG_ERR, "launchScript: Failed to exec script with %d: %s", 
+            errno, strerror(errno));
       ret = DNX_ERR_INVALID;
    }
    else
@@ -621,10 +629,10 @@ static int ehProcessData(int event_type, void * data)
 int nebmodule_deinit(int flags, int reason)
 {
    dnxSyslog(LOG_INFO, "dnxServer: DNX Server shutdown initiated.");
-
    dnxServerDeInit();
-
    dnxSyslog(LOG_INFO, "dnxServer: DNX Server shutdown completed.");
+
+   xheapchk();
 
    return 0;
 }
@@ -678,8 +686,9 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
    if ((ret = neb_register_callback(NEBCALLBACK_PROCESS_DATA, 
          myHandle, 0, ehProcessData)) != OK)
    {
-      dnxSyslog(LOG_ERR, "dnxServer: PROCESS_DATA event "
-                         "registration failed: %d", ret);
+      dnxSyslog(LOG_ERR, 
+            "dnxServer: PROCESS_DATA event registration failed with %d: %s", 
+            ret, dnxErrorString(ret));
       return ERROR;
    }
 
@@ -689,6 +698,77 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
    start_time = time(0);
 
    return OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** Post a completed service request to the Nagios service result buffer.
+ * 
+ * @param[in] svc - the nagios service object from which results are taken.
+ * @param[in] start_time - the nagios service object start time.
+ * @param[in] early_timeout - boolean; true means the job DID time out.
+ * @param[in] res_code - the result code of this job.
+ * @param[in] res_data - the resulting STDOUT output text of this job.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ * 
+ * @todo This routine should be in nagios code. Add it to the dnx patch files
+ * for nagios 2.7 and 2.9, and export it from nagios so we can call it.
+ */
+int nagiosPostResult(service * svc, time_t start_time, 
+      int early_timeout, int res_code, char * res_data)
+{
+   extern circular_buffer service_result_buffer;
+   extern int check_result_buffer_slots;
+
+   service_message * new_message;
+
+   // note that we're using malloc, not xmalloc - nagios takes ownership
+   if ((new_message = (service_message *)malloc(sizeof *new_message)) == 0)
+      return DNX_ERR_MEMORY;
+
+   gettimeofday(&new_message->finish_time, 0);
+   strncpy(new_message->host_name, svc->host_name, 
+         sizeof(new_message->host_name) - 1);
+   new_message->host_name[sizeof(new_message->host_name) - 1] = 0;
+   strncpy(new_message->description, svc->description, 
+         sizeof(new_message->description) - 1);
+   new_message->description[sizeof(new_message->description) - 1] = 0;
+   new_message->return_code = res_code;
+   new_message->exited_ok = TRUE;
+   new_message->check_type = SERVICE_CHECK_ACTIVE;
+   new_message->parallelized = svc->parallelize;
+   new_message->start_time.tv_sec = start_time;
+   new_message->start_time.tv_usec = 0L;
+   new_message->early_timeout = early_timeout;
+   strncpy(new_message->output, res_data, sizeof(new_message->output) - 1);
+   new_message->output[sizeof(new_message->output) - 1] = 0;
+
+   pthread_mutex_lock(&service_result_buffer.buffer_lock);
+
+   // handle overflow conditions
+   if (service_result_buffer.items == check_result_buffer_slots)
+   {
+      service_result_buffer.overflow++;
+      service_result_buffer.tail = (service_result_buffer.tail + 1) 
+            % check_result_buffer_slots;
+   }
+
+   // save the data to the buffer
+   ((service_message **)service_result_buffer.buffer)
+         [service_result_buffer.head] = new_message;
+
+   // increment the head counter and items
+   service_result_buffer.head = (service_result_buffer.head + 1) 
+         % check_result_buffer_slots;
+   if (service_result_buffer.items < check_result_buffer_slots)
+      service_result_buffer.items++;
+   if (service_result_buffer.items > service_result_buffer.high)
+      service_result_buffer.high = service_result_buffer.items;
+
+   pthread_mutex_unlock(&service_result_buffer.buffer_lock);
+
+   return 0;
 }
 
 /*--------------------------------------------------------------------------*/

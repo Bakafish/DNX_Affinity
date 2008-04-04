@@ -83,5 +83,8 @@ int nebmodule_deinit(int flags, int reason);
 int dnxJobCleanup(DnxNewJob * pJob);
 int dnxAuditJob(DnxNewJob * pJob, char * action);
 
+int nagiosPostResult(service * svc, time_t start_time, 
+      int early_timeout, int res_code, char * res_data);
+
 #endif   /* _DNXNEBMAIN_H_ */
 

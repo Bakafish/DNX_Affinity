@@ -41,6 +41,7 @@
 #include "dnxJobList.h"
 #include "dnxLogging.h"
 
+#include <stdlib.h>
 #include <assert.h>
 
 #define DNX_COLLECTOR_TIMEOUT 30
@@ -54,87 +55,8 @@ typedef struct iDnxCollector_
    DnxJobList * joblist;   /*!< The job list we're collecting for. */
    dnxChannel * channel;   /*!< Collector communications channel. */
    pthread_t tid;          /*!< The collector thread id. */
+   int running;            /*!< Running flag - as opposed to cancellation. */
 } iDnxCollector;
-
-//----------------------------------------------------------------------------
-
-/** Post a completed service request to the Nagios service result buffer.
- * 
- * @param[in] icoll - the collector object.
- * @param[in] svc - the nagios service object.
- * @param[in] start_time - the nagios start time.
- * @param[in] res_code - the result code of this job.
- * @param[in] res_data - the resulting STDOUT output text of this job.
- * 
- * @return Zero on success, or a non-zero error code.
- * 
- * @todo This routine should be in nagios code. Add it to the dnx patch files
- * for nagios 2.7 and 2.9, and export it from nagios so we can call it.
- */
-static int nagiosPostResult(iDnxCollector * icoll, service * svc, 
-      time_t start_time, int res_code, char * res_data)
-{
-   extern circular_buffer service_result_buffer;
-   extern int check_result_buffer_slots;
-
-   service_message * new_message;
-
-   if ((new_message = (service_message *)xmalloc(sizeof(service_message))) == NULL)
-   {
-      dnxSyslog(LOG_ERR, "dnxCollector[%lx]: nagiosPostResult: "
-                         "Memory allocation failure", pthread_self());
-      return DNX_ERR_MEMORY;
-   }
-
-   gettimeofday(&new_message->finish_time, NULL);
-   strncpy(new_message->host_name, svc->host_name, 
-         sizeof(new_message->host_name) - 1);
-   new_message->host_name[sizeof(new_message->host_name) - 1] = 0;
-   strncpy(new_message->description, svc->description, 
-         sizeof(new_message->description) - 1);
-   new_message->description[sizeof(new_message->description) - 1] = 0;
-   new_message->return_code = res_code;
-   new_message->exited_ok = TRUE;
-   new_message->check_type = SERVICE_CHECK_ACTIVE;
-   new_message-> parallelized = svc->parallelize;
-   new_message->start_time.tv_sec = start_time;
-   new_message->start_time.tv_usec = 0L;
-   new_message->early_timeout = FALSE;
-   strncpy(new_message->output, res_data, sizeof(new_message->output) - 1);
-   new_message->output[sizeof(new_message->output) - 1] = 0;
-
-   pthread_mutex_lock(&service_result_buffer.buffer_lock);
-
-   // handle overflow conditions
-   if (service_result_buffer.items == check_result_buffer_slots)
-   {
-      service_result_buffer.overflow++;
-
-      // update tail pointer
-      service_result_buffer.tail = (service_result_buffer.tail + 1) 
-            % check_result_buffer_slots;
-
-      dnxSyslog(LOG_ERR, "dnxCollector[%lx]: nagiosPostResult: "
-                         "Service result buffer overflow = %lu", 
-            pthread_self(), service_result_buffer.overflow);
-   }
-
-   // Save the data to the buffer
-   ((service_message **)service_result_buffer.buffer)
-         [service_result_buffer.head] = new_message;
-
-   // Increment the head counter and items
-   service_result_buffer.head = (service_result_buffer.head + 1) 
-         % check_result_buffer_slots;
-   if (service_result_buffer.items < check_result_buffer_slots)
-      service_result_buffer.items++;
-   if (service_result_buffer.items > service_result_buffer.high)
-      service_result_buffer.high = service_result_buffer.items;
-
-   pthread_mutex_unlock(&service_result_buffer.buffer_lock);
-
-   return 0;
-}
 
 //----------------------------------------------------------------------------
 
@@ -175,7 +97,7 @@ static void * dnxCollector(void * data)
    dnxSyslog(LOG_INFO, "dnxCollector[%lx]: Awaiting service check results", 
          pthread_self());
 
-   while (1)
+   while (icoll->running)
    {
       pthread_testcancel();
 
@@ -191,29 +113,32 @@ static void * dnxCollector(void * data)
          if (dnxJobListCollect(icoll->joblist, &sResult.guid, &Job) == DNX_OK)
          {
             // post the results to the Nagios service request buffer
-            ret = nagiosPostResult(icoll, Job.svc, Job.start_time, 
+            ret = nagiosPostResult(Job.svc, Job.start_time, FALSE, 
                   sResult.resCode, sResult.resData);
 
-            // free result output memory (now that it's been copied into new_message)
             /** @todo Wrapper release DnxResult structure. */
+
+            // free result output memory (now that it's been copied into new_message)
             xfree(sResult.resData);
 
-            dnxDebug(1, "dnxCollector[%lx]: Posted result [%lu,%lu]: %d", 
+            dnxDebug(1, "dnxCollector[%lx]: Posted result [%lu,%lu]: %d: %s", 
                   pthread_self(), sResult.guid.objSerial, 
-                  sResult.guid.objSlot, ret);
+                  sResult.guid.objSlot, ret, dnxErrorString(ret));
 
             dnxAuditJob(&Job, "COLLECT");
 
             dnxJobCleanup(&Job);
          }
          else
-            dnxSyslog(LOG_WARNING, "dnxCollector[%lx]: Unable to dequeue "
-                                   "completed job: %d", pthread_self(), ret);
+            dnxSyslog(LOG_WARNING, 
+                  "dnxCollector[%lx]: Unable to dequeue completed job; failed "
+                  "with %d: %s", pthread_self(), ret, dnxErrorString(ret));
       }
       else if (ret != DNX_ERR_TIMEOUT)
-         dnxSyslog(LOG_ERR, "dnxCollector[%lx]: Failure to read result "
-                            "message from Collector channel: %d", 
-               pthread_self(), ret);
+         dnxSyslog(LOG_ERR, 
+               "dnxCollector[%lx]: Failure to read result message "
+               "from Collector channel; failed with %d: %s", 
+               pthread_self(), ret, dnxErrorString(ret));
    }
 
    pthread_cleanup_pop(1);
@@ -246,8 +171,7 @@ int dnxCollectorCreate(long * debug, char * chname, char * collurl,
    icoll->url = xstrdup(collurl);
    icoll->joblist = joblist;
    icoll->debug = debug;
-   icoll->channel = 0;
-   icoll->tid = 0;
+   icoll->running = 1;
 
    if (!icoll->url || !icoll->chname)
    {
@@ -257,15 +181,17 @@ int dnxCollectorCreate(long * debug, char * chname, char * collurl,
 
    if ((ret = dnxChanMapAdd(chname, collurl)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxCollectorCreate: "
-                         "dnxChanMapAdd(%s) failed: %d", chname, ret);
+      dnxSyslog(LOG_ERR, 
+            "dnxCollectorCreate: dnxChanMapAdd(%s) failed with %d: %s", 
+            chname, ret, dnxErrorString(ret));
       goto e1;
    }
 
    if ((ret = dnxConnect(chname, &icoll->channel, DNX_CHAN_PASSIVE)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxCollectorCreate: "
-                         "dnxConnect(%s) failed: %d", chname, ret);
+      dnxSyslog(LOG_ERR, 
+            "dnxCollectorCreate: dnxConnect(%s) failed with %d: %s", 
+            chname, ret, dnxErrorString(ret));
       goto e2;
    }
 
@@ -276,8 +202,8 @@ int dnxCollectorCreate(long * debug, char * chname, char * collurl,
    if ((ret = pthread_create(&icoll->tid, NULL, dnxCollector, icoll)) != 0)
    {
       dnxSyslog(LOG_ERR, 
-            "dnxCollectorCreate: thread creation failed: (%d) %s", 
-            ret, strerror(ret));
+            "dnxCollectorCreate: thread creation failed with %d: %s", 
+            ret, dnxErrorString(ret));
       ret = DNX_ERR_THREAD;
       goto e3;
    }
@@ -307,7 +233,8 @@ void dnxCollectorDestroy(DnxCollector  * coll)
 {
    iDnxCollector * icoll = (iDnxCollector *)coll;
 
-   pthread_cancel(icoll->tid);
+   icoll->running = 0;
+// pthread_cancel(icoll->tid);
    pthread_join(icoll->tid, NULL);
 
    dnxDisconnect(icoll->channel);

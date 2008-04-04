@@ -89,6 +89,7 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
 # define xrealloc(p,sz) dnxRealloc((p), (sz), __FILE__, __LINE__)
 # define xstrdup(str)   dnxStrdup((str), __FILE__, __LINE__)
 # define xfree          dnxFree
+# define xheapchk       dnxCheckHeap
 #else
 # include <stdlib.h>
 # include <string.h>
@@ -97,6 +98,7 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
 # define xrealloc       realloc
 # define xstrdup        strdup
 # define xfree          free
+# define xheapchk()
 #endif
 
 #endif   /* !?_DNXDEBUG_H_ */

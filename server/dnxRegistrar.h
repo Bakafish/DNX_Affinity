@@ -40,7 +40,7 @@
 #include "dnxChannel.h"
 #include "dnxProtocol.h"
 
-typedef void DnxRegistrar;
+typedef struct { int unused; } DnxRegistrar;
 
 int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode);
 

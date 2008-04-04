@@ -272,9 +272,7 @@ int dnxQueueGetWait(DnxQueue * queue, void ** ppPayload)
          iqueue->size--;
       }
       else     // queue is empty
-         while (pthread_cond_wait(&iqueue->cv, &iqueue->mutex) == EINTR 
-               || iqueue->size == 0)
-            ;
+         pthread_cond_wait(&iqueue->cv, &iqueue->mutex);
    }
    
    DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
@@ -304,7 +302,7 @@ int dnxQueueGetWait(DnxQueue * queue, void ** ppPayload)
  */
 int dnxQueueNext(DnxQueue * queue, void ** ppPayload)
 {
-   iDnxQueue * iqueue = (DnxQueue *)queue;
+   iDnxQueue * iqueue = (iDnxQueue *)queue;
    
    assert(queue && ppPayload);
    

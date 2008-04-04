@@ -54,6 +54,7 @@ typedef struct iDnxDispatcher_
    DnxJobList * joblist;   /*!< The job list we're dispatching from. */
    dnxChannel * channel;   /*!< Dispatcher communications channel. */
    pthread_t tid;          /*!< The dispatcher thread id. */
+   int running;            /*!< Running flag - as opposed to cancellation. */
 } iDnxDispatcher;
 
 //----------------------------------------------------------------------------
@@ -115,8 +116,8 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
    // Send this job to the selected worker node
    if ((ret = dnxSendJob(idisp, pSvcReq, pNode)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxDispatchJob: "
-                         "dnxSendJob failed: %d", 
-            pthread_self(), ret);
+                         "dnxSendJob failed with %d: %s", 
+            pthread_self(), ret, dnxErrorString(ret));
 
    /** @todo Implement the fork-error re-scheduling logic as 
     * found in run_service_check() in checks.c. 
@@ -149,50 +150,40 @@ static void dnxDispatcherCleanup(void * data)
 static void * dnxDispatcher(void * data)
 {
    iDnxDispatcher * idisp = (iDnxDispatcher *)data;
-
    DnxNewJob SvcReq;
    int ret = 0;
 
    assert(data);
 
-   // Set my cancel state to 'enabled', and cancel type to 'deferred'
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
-
-   // Set thread cleanup handler
    pthread_cleanup_push(dnxDispatcherCleanup, data);
 
    dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Awaiting new jobs...", pthread_self());
 
-   // Wait for new service checks or cancellation
-   while (1)
+   // wait for new service checks or cancellation
+   while (idisp->running)
    {
-      // Test for thread cancellation
       pthread_testcancel();
 
-      // Wait for a new entry to be added to the Job Queue
+      // wait for a new entry to be added to the Job Queue
       if ((ret = dnxJobListDispatch(idisp->joblist, &SvcReq)) == DNX_OK)
       {
-         // Send the Job to the next Worker Node
+         // send the Job to the next Worker Node
          if ((ret = dnxDispatchJob(idisp, &SvcReq)) == DNX_OK)
-         {
-            // Worker Audit Logging
             dnxAuditJob(&SvcReq, "DISPATCH");
-         }
          else
          {
-            dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxDispatchJob failed: %d", pthread_self(), ret);
+            dnxSyslog(LOG_ERR, 
+                  "dnxDispatcher[%lx]: dnxDispatchJob failed with %d: %s", 
+                  pthread_self(), ret, dnxErrorString(ret));
             dnxAuditJob(&SvcReq, "DISPATCH-FAIL");
          }
       }
    }
-
-   // Note that the Dispatcher thread is exiting
-   dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Exiting with ret code = %d", pthread_self(), ret);
-
-   // Remove thread cleanup handler
+   dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Exiting with error %d: %s", 
+         pthread_self(), ret, dnxErrorString(ret));
    pthread_cleanup_pop(1);
-
    return 0;
 }
 
@@ -233,8 +224,7 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
    idisp->url = xstrdup(dispurl);
    idisp->joblist = joblist;
    idisp->debug = debug;
-   idisp->channel = 0;
-   idisp->tid = 0;
+   idisp->running = 1;
 
    if (!idisp->url || !idisp->chname)
    {
@@ -244,15 +234,15 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
 
    if ((ret = dnxChanMapAdd(chname, dispurl)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxDispatcherCreate: "
-                         "dnxChanMapAdd(%s) failed: %d", chname, ret);
+      dnxSyslog(LOG_ERR, "dnxDispatcherCreate: dnxChanMapAdd(%s) failed "
+                         "with %d: %s", chname, ret, dnxErrorString(ret));
       goto e1;
    }
 
    if ((ret = dnxConnect(chname, &idisp->channel, DNX_CHAN_PASSIVE)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxDispatcherCreate: "
-                         "dnxConnect(%s) failed: %d", chname, ret);
+      dnxSyslog(LOG_ERR, "dnxDispatcherCreate: dnxConnect(%s) failed "
+                         "with %d: %s", chname, ret, dnxErrorString(ret));
       goto e2;
    }
 
@@ -262,9 +252,8 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
    // create the dispatcher thread
    if ((ret = pthread_create(&idisp->tid, NULL, dnxDispatcher, idisp)) != 0)
    {
-      dnxSyslog(LOG_ERR, 
-            "dnxDispatcherCreate: thread creation failed: (%d) %s", 
-            ret, strerror(ret));
+      dnxSyslog(LOG_ERR, "dnxDispatcherCreate: thread creation failed "
+                         "with %d: %s", ret, dnxErrorString(ret));
       ret = DNX_ERR_THREAD;
       goto e3;
    }
@@ -294,7 +283,8 @@ void dnxDispatcherDestroy(DnxDispatcher * disp)
 {
    iDnxDispatcher * idisp = (iDnxDispatcher *)disp;
 
-   pthread_cancel(idisp->tid);
+   idisp->running = 0;
+// pthread_cancel(idisp->tid);
    pthread_join(idisp->tid, NULL);
 
    dnxDisconnect(idisp->channel);

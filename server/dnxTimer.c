@@ -42,89 +42,62 @@
 #include "dnxJobList.h"
 #include "dnxLogging.h"
 
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <error.h>
 #include <assert.h>
 
-#define DNX_TIMER_SLEEP    5  /*!< Timer sleep interval. */
-#define MAX_EXPIRED        10 /*!< Maximum expired jobs during interval. */
+#define DNX_TIMER_SLEEP 5  /*!< Timer sleep interval. */
+#define MAX_EXPIRED     10 /*!< Maximum expired jobs during interval. */
 
 /** DNX job expiration timer implementation structure. */
 typedef struct iDnxTimer_
 {
-   DnxJobList * joblist;      /*!< Job list to be expired. */
-   pthread_t tid;             /*!< Timer thread ID. */
+   DnxJobList * joblist;   /*!< Job list to be expired. */
+   pthread_t tid;          /*!< Timer thread ID. */
+   int running;            /*!< Running flag - as opposed to cancellation. */
 } iDnxTimer;
 
 //----------------------------------------------------------------------------
 
-/** Post an expired service request to the Nagios service result buffer.
+/** A sleep routine that can be cancelled.
  * 
- * @param[in] svc - the service to be expired.
- * @param[in] start_time - the time the service was originally started.
- * @param[in] msg - the message string to associate with the expired reqeust.
- * 
- * @return Zero on success, or a non-zero error value.
- * 
- * @todo This code should be inside of Nagios. Move it there, export it, and 
- *    add it to the 2.7 and 2.9 dnx patches for Nagios.
+ * The pthreads specification indicates clearly that the sleep() system call
+ * MUST be a cancellation point. However, it appears that sleep() on Linux 
+ * calls a routine named _nanosleep_nocancel, which clearly is not a 
+ * cancellation point. Oversight? Not even Google appears to know...
+ *
+ * @param[in] sleep - the number of seconds to sleep.
  */
-static int nagiosExpireJob(service * svc, time_t start_time, char * msg)
+static void dnxCancelableSleep(int seconds)
 {
-   extern circular_buffer service_result_buffer;   // type from nagios.h
-   extern int check_result_buffer_slots;           // global from nagios
+#if HAVE_NANOSLEEP
+   struct timespec rqt = {seconds, 0};
+   while (nanosleep(&rqt, &rqt) != 0 && errno == EINTR)
+      ;
+#else
+   pthread_mutex_t timerMutex = PTHREAD_MUTEX_INITIALIZER;
+   pthread_cond_t timerCond  = PTHREAD_COND_INITIALIZER;
+   struct timeval now;              // time when we started waiting
+   struct timespec timeout;         // timeout value for the wait function
 
-   service_message * new_message;
+   pthread_mutex_lock(&timerMutex);
 
-   if ((new_message = (service_message *)xmalloc(sizeof *new_message)) == NULL)
-      return DNX_ERR_MEMORY;
+   gettimeofday(&now, 0);
 
-   // Copy the expired job's data to the message buffer
-   gettimeofday(&(new_message->finish_time), NULL);
-   strncpy(new_message->host_name, svc->host_name, 
-         sizeof(new_message->host_name)-1);
-   new_message->host_name[sizeof(new_message->host_name)-1] = '\0';
-   strncpy(new_message->description, svc->description, 
-         sizeof(new_message->description)-1);
-   new_message->description[sizeof(new_message->description)-1] = '\0';
-   new_message->return_code = STATE_UNKNOWN;
-   new_message->exited_ok = TRUE;
-   new_message->check_type = SERVICE_CHECK_ACTIVE;
-   new_message-> parallelized = svc->parallelize;
-   new_message->start_time.tv_sec = start_time;
-   new_message->start_time.tv_usec = 0L;
-   new_message->early_timeout = TRUE;
-   strcpy(new_message->output, msg);
+   // timeval uses micro-seconds; timespec uses nano-seconds; 1us == 1000ns.
+   timeout.tv_sec = now.tv_sec + seconds;
+   timeout.tv_nsec = now.tv_usec * 1000;
 
-   pthread_mutex_lock(&service_result_buffer.buffer_lock);
+   pthread_cond_timedwait(&timerCond, &timerMutex, &timeout);
 
-   // Handle overflow conditions
-   if (service_result_buffer.items == check_result_buffer_slots)
-   {
-      // Record overflow
-      service_result_buffer.overflow++;
-
-      // Update tail pointer
-      service_result_buffer.tail = (service_result_buffer.tail + 1) 
-            % check_result_buffer_slots;
-
-      dnxSyslog(LOG_ERR, "nagiosExpireJob: Service result buffer overflow = %lu", 
-            service_result_buffer.overflow);
-   }
-
-   // Save the data to the buffer
-   ((service_message **)service_result_buffer.buffer)
-         [service_result_buffer.head] = new_message;
-
-   // Increment the head counter and items
-   service_result_buffer.head = (service_result_buffer.head + 1) 
-         % check_result_buffer_slots;
-   if (service_result_buffer.items < check_result_buffer_slots)
-      service_result_buffer.items++;
-   if(service_result_buffer.items>service_result_buffer.high)
-      service_result_buffer.high=service_result_buffer.items;
-
-   pthread_mutex_unlock(&service_result_buffer.buffer_lock);
-
-   return DNX_OK;
+   pthread_mutex_unlock(&timerMutex);
+#endif
 }
 
 //----------------------------------------------------------------------------
@@ -165,11 +138,11 @@ static void * dnxTimer(void * data)
    dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Watching for expired jobs...", 
          pthread_self());
 
-   while (1)
+   while (itimer->running)
    {
-      sleep(DNX_TIMER_SLEEP);
+      dnxCancelableSleep(DNX_TIMER_SLEEP);
 
-      // Search for expired jobs in the Pending Queue
+      // search for expired jobs in the pending queue
       totalExpired = MAX_EXPIRED;
       if ((ret = dnxJobListExpire(itimer->joblist, ExpiredList, 
             &totalExpired)) == DNX_OK && totalExpired > 0)
@@ -188,22 +161,22 @@ static void * dnxTimer(void * data)
                   job->pNode->address);
 
             // report the expired job to Nagios
-            ret = nagiosExpireJob(job->svc, job->start_time, msg);
+            ret = nagiosPostResult(job->svc, job->start_time, TRUE, 
+                  STATE_UNKNOWN, msg);
 
             dnxJobCleanup(job);
          }
       }
 
       if (totalExpired > 0 || ret != DNX_OK)
-         dnxDebug(1, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d", 
-               pthread_self(), totalExpired, ret);
+         dnxDebug(1, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d: %s", 
+               pthread_self(), totalExpired, ret, dnxErrorString(ret));
    }
 
-   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Exiting with ret code = %d", 
-         pthread_self(), ret);
+   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Exiting with ret code %d: %s", 
+         pthread_self(), ret, dnxErrorString(ret));
 
    pthread_cleanup_pop(1);
-
    return 0;
 }
 
@@ -228,11 +201,12 @@ int dnxTimerCreate(DnxJobList * joblist, DnxTimer ** ptimer)
       return DNX_ERR_MEMORY;
 
    itimer->joblist = joblist;
-   itimer->tid = 0;
+   itimer->running = 1;
 
    if ((ret = pthread_create(&itimer->tid, NULL, dnxTimer, itimer)) != 0)
    {
-      dnxSyslog(LOG_ERR, "Timer: thread creation failed: %d", ret);
+      dnxSyslog(LOG_ERR, "Timer: thread creation failed with %d: %s", 
+            ret, dnxErrorString(ret));
       xfree(itimer);
       return DNX_ERR_THREAD;
    }
@@ -252,7 +226,8 @@ void dnxTimerDestroy(DnxTimer * timer)
 {
    iDnxTimer * itimer = (iDnxTimer *)timer;
 
-   pthread_cancel(itimer->tid);
+   itimer->running = 0;
+// pthread_cancel(itimer->tid);
    pthread_join(itimer->tid, NULL);
 
    xfree(itimer);

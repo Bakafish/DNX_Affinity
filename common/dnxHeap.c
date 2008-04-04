@@ -61,11 +61,10 @@ typedef struct overhead_
    char picket2[PICKETSZ]; /*!< Overhead rear picket fence. */
 } overhead;
 
-/** The head of the global heap block list. */
-static overhead * head = 0;
-
-/** The global heap block list lock. */
+static overhead * head = 0;/*!< The head of the global heap block list. */
+static int blkcnt = 0;     /*!< The number of blocks in the global list. */
 static pthread_mutex_t list_lock = PTHREAD_MUTEX_INITIALIZER;
+                           /*!< The global heap block list lock. */
 
 /** Link a newly allocated block into the block list. 
  * 
@@ -76,6 +75,7 @@ static void link_block(overhead * ohp)
    pthread_mutex_lock(&list_lock);
    ohp->next = head;
    head = ohp;
+   blkcnt++;
    pthread_mutex_unlock(&list_lock);
 }
 
@@ -87,16 +87,19 @@ static void link_block(overhead * ohp)
  */
 static int unlink_block(overhead * ohp)
 {
+   int found = 0;
    overhead ** cpp;
    pthread_mutex_lock(&list_lock);
    for (cpp = &head; *cpp; cpp = &(*cpp)->next)
       if (*cpp == ohp)
       {
          *cpp = ohp->next;
+         blkcnt--;
+         found = 1;
          break;
       }
    pthread_mutex_unlock(&list_lock);
-   return *cpp? 1: 0;
+   return found;
 }
 
 /** Format a number of bytes as a hexadecimal ascii dump into a text buffer.
@@ -132,27 +135,27 @@ static void dump_block(overhead * ohp, char * msg)
    char buf[512];
    char * p = buf;
 
-   // format heap block
-   p +=  sprintf(p, "dnxHeap: Block of size %d allocated at %s(%d)", 
+   // format heap block...
+   p +=  sprintf(p, "dnxHeap:");
+   if (msg) p += sprintf(p, " %s -", msg);
+   p+= sprintf(p, " %d bytes allocated at %s(%d): ", 
          ohp->reqsz, ohp->file, ohp->line);
-   p +=  sprintf(p, "\ndnxHeap: PICKET1: ");
    p += hex_dump(p, ohp->picket1, sizeof ohp->picket1);
-   p +=  sprintf(p, "\ndnxHeap: PICKET2: ");
+   p +=  sprintf(p, " |");
    p += hex_dump(p, ohp->picket2, sizeof ohp->picket2);
-   p +=  sprintf(p, "\ndnxHeap: USERBLK: ");
-   if (ohp->reqsz <= 32)
+   p +=  sprintf(p, " |");
+   if (ohp->reqsz <= 16)
       p += hex_dump(p, &ohp[1], ohp->reqsz);
-   else  
+   else  // for blocks > 16 bytes, display only first and last 8 bytes
    {
-      p += hex_dump(p, &ohp[1], 16);
-      p += sprintf (p, "...");
-      p += hex_dump(p, (char *)&ohp[1] + ohp->reqsz - 16, 16);
+      p += hex_dump(p, &ohp[1], 8);
+      p += sprintf (p, " ...");
+      p += hex_dump(p, (char *)&ohp[1] + ohp->reqsz - 8, 8);
    }
-   p +=  sprintf(p, "\ndnxHeap: PICKET3: ");
+   p +=  sprintf(p, " |");
    p += hex_dump(p, (char *)&ohp[1] + ohp->reqsz, PICKETSZ);
 
-   // now display optional message and heap block to debug log
-   if (msg) dnxDebug(1, "dnxHeap: free(%p) - %s", &ohp[1], msg);
+   // ...and display it
    dnxDebug(1, "%s", buf);
 }
 
@@ -169,8 +172,30 @@ static int memscan(void * p, unsigned char ch, size_t sz)
 {
    unsigned char * bp = (unsigned char *)p;
    unsigned char * ep = bp + sz;
-   while (bp < ep) if (*bp != ch) return -1;
+   while (bp < ep) if (*bp++ != ch) return -1;
    return 0;
+}
+
+/** Check the integrity of a memory block.
+ * 
+ * @param[in] ohp - a pointer to the block to be checked.
+ * 
+ * @return Boolean: true (1) if block is okay, false (0) if not.
+ */
+static int check_block(overhead * ohp)
+{
+   int rc1, rc2, rc3;
+
+   if ((rc1 = memscan(ohp->picket1, PICKET1, sizeof ohp->picket1)) != 0)
+      dump_block(ohp, "corrupt pre-header fence");
+   if ((rc2 = memscan(ohp->picket2, PICKET2, sizeof ohp->picket2)) != 0)
+      dump_block(ohp, "corrupt post-header fence");
+   if ((rc3 = memscan((char *)&ohp[1] + ohp->reqsz, PICKET3, PICKETSZ)) != 0)
+      dump_block(ohp, "corrupt pre-user fence");
+
+   assert(!rc1 && !rc2 && !rc3);
+
+   return !rc1 && !rc2 && !rc3 ? 1 : 0;
 }
 
 /** Allocate and track a new heap memory block.
@@ -188,13 +213,11 @@ static int memscan(void * p, unsigned char ch, size_t sz)
 void * dnxMalloc(size_t sz, char * file, int line)
 {
    overhead * ohp;
-   size_t blksz = sizeof *ohp + sz + PICKETSZ;
-   size_t alignsz = ALIGNSZ(blksz);
+   size_t blksz = ALIGNSZ(sizeof *ohp + sz + PICKETSZ);
 
    assert(sz);
    assert(file && line);
 
-   blksz += alignsz;
    ohp = malloc(blksz);
    assert(ohp);
    if (!ohp) return NULL;
@@ -209,7 +232,8 @@ void * dnxMalloc(size_t sz, char * file, int line)
 
    memset(&ohp[1], ALLOCED, sz);
    memset((char *)&ohp[1] + sz, PICKET3, PICKETSZ);
-   memset((char *)&ohp[1] + sz + PICKETSZ, ALIGNED, alignsz);
+   memset((char *)&ohp[1] + sz + PICKETSZ, ALIGNED, 
+         blksz - (sizeof *ohp + sz + PICKETSZ));
 
    link_block(ohp);
 
@@ -319,24 +343,15 @@ void dnxFree(void * p)
 {
    if (p)
    {
-      int rc1, rc2, rc3;
       overhead * ohp = &((overhead *)p)[-1];
-
       if (!unlink_block(ohp))
       {
          dnxDebug(1, "dnxHeap: free(%p) - attempt to free non-heap address", p);
          assert(0);
          return;
       }
-      if ((rc1 = memscan(ohp->picket1, PICKET1, sizeof ohp->picket1)) != 0)
-         dump_block(ohp, "corrupt pre-header fence");
-      if ((rc2 = memscan(ohp->picket2, PICKET2, sizeof ohp->picket2)) != 0)
-         dump_block(ohp, "corrupt post-header fence");
-      if ((rc3 = memscan(&ohp[1] + ohp->reqsz, PICKET3, PICKETSZ)) != 0)
-         dump_block(ohp, "corrupt pre-user fence");
-
-      assert(!rc1 && !rc2 && !rc3);
-
+      if (!check_block(ohp))
+         return;
       free(ohp->file);
       free(ohp);
       dnxDebug(10, "dnxHeap: free(%p)", p);
@@ -351,10 +366,15 @@ int dnxCheckHeap(void)
 {
    overhead * cp;
    pthread_mutex_lock(&list_lock);
+   dnxDebug(1, "dnxCheckHeap: %d unfreed blocks remaining...", blkcnt);
    for (cp = head; cp; cp = cp->next)
+   {
       dump_block(cp, "unfreed memory block");
+      if (!check_block(cp))
+         break;
+   }
    pthread_mutex_unlock(&list_lock);
-   return head? -1: 0;
+   return blkcnt? -1: 0;
 }
 
 /*--------------------------------------------------------------------------*/

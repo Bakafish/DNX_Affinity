@@ -136,65 +136,63 @@ int dnxWaitForNodeRequest(dnxChannel * channel, DnxNodeRequest * pReg,
    char * msg = NULL;
    int ret;
 
-   // Validate parameters
-   if (!channel || !pReg)
-      return DNX_ERR_INVALID;
+   assert(channel && pReg);
 
-   // Initialize the node request structure
    memset(pReg, 0, sizeof(DnxNodeRequest));
 
-   // Await a message from the specified channel
+   // await a message from the specified channel
    xbuf.size = DNX_MAX_MSG;
-   if ((ret = dnxGet(channel, xbuf.buf, &(xbuf.size), timeout, address)) != DNX_OK)
+   if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
       return ret;
 
-   // Decode the XML message:
-   xbuf.buf[xbuf.size] = '\0';
+   // decode the XML message:
+   xbuf.buf[xbuf.size] = 0;
    dnxDebug(2, "dnxWaitForNodeRequest: XML Msg(%d)=%s", xbuf.size, xbuf.buf);
 
-   // Verify this is a "Job" message
+   // verify this is a "NodeRequest" message
    if ((ret = dnxXmlGet(&xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
       return ret;
-   if (strcmp(msg, "NodeRequest"))
+
+   if (strcmp(msg, "NodeRequest") != 0)
    {
       dnxSyslog(LOG_ERR, "dnxWaitForNodeRequest: Unrecognized Request=%s", msg);
-      ret = DNX_ERR_SYNTAX;
-      goto abend;
-   }
-
-   // Decode the worker node's GUID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &(pReg->guid))) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxWaitForNodeRequest: Invalid GUID: %d", ret);
-      goto abend;
-   }
-
-   // Decode request type
-   if ((ret = dnxXmlGet(&xbuf, "ReqType", DNX_XML_INT, &(pReg->reqType))) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxWaitForNodeRequest: Invalid ReqType: %d", ret);
-      goto abend;
-   }
-
-   // Decode job capacity
-   if ((ret = dnxXmlGet(&xbuf, "JobCap", DNX_XML_INT, &(pReg->jobCap))) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxWaitForNodeRequest: Invalid JobCap: %d", ret);
-      goto abend;
-   }
-
-   // Decode job expiration (Time-To-Live in seconds)
-   if ((ret = dnxXmlGet(&xbuf, "TTL", DNX_XML_INT, &(pReg->ttl))) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxWaitForNodeRequest: Invalid TTL: %d", ret);
-      goto abend;
-   }
-
-abend:;
-
-   // Check for abend condition
-   if (ret != DNX_OK)
       xfree(msg);
+      return DNX_ERR_SYNTAX;
+   }
+   xfree(msg);
+
+   // decode the worker node's GUID
+   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &pReg->guid)) != DNX_OK)
+   {
+      dnxSyslog(LOG_ERR, 
+            "dnxWaitForNodeRequest: Invalid GUID; failed with %d: %s", 
+            ret, dnxErrorString(ret));
+      return ret;
+   }
+
+   // decode request type
+   if ((ret = dnxXmlGet(&xbuf, "ReqType", DNX_XML_INT, &pReg->reqType)) != DNX_OK)
+   {
+      dnxSyslog(LOG_ERR, 
+            "dnxWaitForNodeRequest: Invalid ReqType; failed with %d: %s", 
+            ret, dnxErrorString(ret));
+      return ret;
+   }
+
+   // decode job capacity
+   if ((ret = dnxXmlGet(&xbuf, "JobCap", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
+   {
+      dnxSyslog(LOG_ERR, 
+            "dnxWaitForNodeRequest: Invalid JobCap; failed with %d: %s", 
+            ret, dnxErrorString(ret));
+      return ret;
+   }
+
+   // decode job expiration (Time-To-Live in seconds)
+   if ((ret = dnxXmlGet(&xbuf, "TTL", DNX_XML_INT, &pReg->ttl)) != DNX_OK)
+      dnxSyslog(LOG_ERR, 
+            "dnxWaitForNodeRequest: Invalid TTL; failed with %d: %s", 
+            ret, dnxErrorString(ret));
 
    return ret;
 }
@@ -252,62 +250,51 @@ int dnxWantJob(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
 int dnxGetJob(dnxChannel * channel, DnxJob * pJob, char * address, int timeout)
 {
    DnxXmlBuf xbuf;
-   char * msg = NULL;
+   char * msg;
    int ret;
 
-   // Validate parameters
-   if (!channel || !pJob)
-      return DNX_ERR_INVALID;
+   assert(channel && pJob);
 
-   // Initialize the job structure
    memset(pJob, 0, sizeof(DnxJob));
 
-   // Await a message from the specified channel
+   // await a message from the specified channel
    xbuf.size = DNX_MAX_MSG;
-   if ((ret = dnxGet(channel, xbuf.buf, &(xbuf.size), timeout, address)) != DNX_OK)
+   if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
       return ret;
 
-   // Decode the XML message:
+   // decode the XML message:
    xbuf.buf[xbuf.size] = '\0';
 
-   // Verify this is a "Job" message
+   // verify this is a "Job" message
    if ((ret = dnxXmlGet(&xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
       return ret;
 
    if (strcmp(msg, "Job"))
    {
-      ret = DNX_ERR_SYNTAX;
-      goto abend;
+      dnxSyslog(LOG_ERR, "dnxGetJob: Unrecognized Request=%s", msg);
+      xfree(msg);
+      return DNX_ERR_SYNTAX;
    }
+   xfree(msg);
 
-   // Decode the job's GUID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &(pJob->guid))) != DNX_OK)
-      goto abend;
+   // decode the job's GUID
+   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &pJob->guid)) != DNX_OK)
+      return ret;
 
-   // Decode the job's state
-   if ((ret = dnxXmlGet(&xbuf, "State", DNX_XML_INT, &(pJob->state))) != DNX_OK)
-      goto abend;
+   // decode the job's state
+   if ((ret = dnxXmlGet(&xbuf, "State", DNX_XML_INT, &pJob->state)) != DNX_OK)
+      return ret;
 
-   // Decode the job's priority
-   if ((ret = dnxXmlGet(&xbuf, "Priority", DNX_XML_INT, &(pJob->priority))) != DNX_OK)
-      goto abend;
+   // decode the job's priority
+   if ((ret = dnxXmlGet(&xbuf, "Priority", DNX_XML_INT, &pJob->priority)) != DNX_OK)
+      return ret;
 
-   // Decode the job's timeout
-   if ((ret = dnxXmlGet(&xbuf, "Timeout", DNX_XML_INT, &(pJob->timeout))) != DNX_OK)
-      goto abend;
+   // decode the job's timeout
+   if ((ret = dnxXmlGet(&xbuf, "Timeout", DNX_XML_INT, &pJob->timeout)) != DNX_OK)
+      return ret;
 
-   // Decode the job's command
-   ret = dnxXmlGet(&xbuf, "Command", DNX_XML_STR, &(pJob->cmd));
-
-abend:;
-
-   // Check for abend condition
-   if (ret != DNX_OK)
-   {
-      if (msg) xfree(msg);
-      if (pJob->cmd) xfree(pJob->cmd);
-   }
-   return ret;
+   // decode the job's command
+   return dnxXmlGet(&xbuf, "Command", DNX_XML_STR, &pJob->cmd);
 }
 
 //----------------------------------------------------------------------------
@@ -365,73 +352,68 @@ int dnxGetResult(dnxChannel * channel, DnxResult * pResult,
    char * msg = NULL;
    int ret;
 
-   // Validate parameters
-   if (!channel || !pResult)
-      return DNX_ERR_INVALID;
+   assert(channel && pResult);
 
-   // Initialize the result structure
    memset(pResult, 0, sizeof(DnxResult));
 
-   // Await a message from the specified channel
+   // await a message from the specified channel
    xbuf.size = DNX_MAX_MSG;
-   if ((ret = dnxGet(channel, xbuf.buf, &(xbuf.size), timeout, address)) != DNX_OK)
+   if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
       return ret;
 
-   // Decode the XML message:
-   xbuf.buf[xbuf.size] = '\0';
+   // decode the XML message:
+   xbuf.buf[xbuf.size] = 0;
    dnxDebug(2, "dnxGetResult: XML Msg(%d)=%s", xbuf.size, xbuf.buf);
 
-   // Verify this is a "Job" message
+   // verify this is a "Result" message
    if ((ret = dnxXmlGet(&xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
       return ret;
 
-   if (strcmp(msg, "Result"))
+   // compare and free so error and success paths are the same
+   if (strcmp(msg, "Result") != 0)
    {
       dnxSyslog(LOG_ERR, "dnxGetResult: Unrecognized Request=%s", msg);
-      ret = DNX_ERR_SYNTAX;
-      goto abend;
+      xfree(msg);
+      return DNX_ERR_SYNTAX;
    }
+   xfree(msg);
 
-   // Decode the result's GUID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &(pResult->guid))) != DNX_OK)
+   // decode the result's GUID
+   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &pResult->guid)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid GUID: %d", ret);
-      goto abend;
+      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid GUID; failed with %d: %s", 
+            ret, dnxErrorString(ret));
+      return ret;
    }
 
-   // Decode the result's state
-   if ((ret = dnxXmlGet(&xbuf, "State", DNX_XML_INT, &(pResult->state))) != DNX_OK)
+   // decode the result's state
+   if ((ret = dnxXmlGet(&xbuf, "State", DNX_XML_INT, &pResult->state)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid State: %d", ret);
-      goto abend;
+      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid State; failed with %d: %s", 
+            ret, dnxErrorString(ret));
+      return ret;
    }
 
-   // Decode the result's execution time delta
-   if ((ret = dnxXmlGet(&xbuf, "Delta", DNX_XML_UINT, &(pResult->delta))) != DNX_OK)
+   // decode the result's execution time delta
+   if ((ret = dnxXmlGet(&xbuf, "Delta", DNX_XML_UINT, &pResult->delta)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid Delta: %d", ret);
-      goto abend;
+      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid Delta; failed with %d: %s", 
+            ret, dnxErrorString(ret));
+      return ret;
    }
 
-   // Decode the result's result code
-   if ((ret = dnxXmlGet(&xbuf, "ResultCode", DNX_XML_INT, &(pResult->resCode))) != DNX_OK)
+   // decode the result's result code
+   if ((ret = dnxXmlGet(&xbuf, "ResultCode", DNX_XML_INT, &pResult->resCode)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid ResultCode: %d", ret);
-      goto abend;
+      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid ResultCode; failed with %d: %s", 
+            ret, dnxErrorString(ret));
+      return ret;
    }
 
-   // Decode the result's result data
-   if ((ret = dnxXmlGet(&xbuf, "ResultData", DNX_XML_STR, &(pResult->resData))) != DNX_OK)
+   // decode the result's result data
+   if ((ret = dnxXmlGet(&xbuf, "ResultData", DNX_XML_STR, &pResult->resData)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxGetResult: Invalid ResultData: %d", ret);
 
-abend:;
-
-   // Check for abend condition
-   if (ret != DNX_OK)
-   {
-      if (msg) xfree(msg);
-      if (pResult->resData) xfree(pResult->resData);
-   }
    return ret;
 }
 
@@ -493,57 +475,53 @@ int dnxGetMgmtRequest(dnxChannel * channel, DnxMgmtRequest * pRequest,
    char * msg = NULL;
    int ret;
 
-   // Validate parameters
-   if (!channel || !pRequest)
-      return DNX_ERR_INVALID;
+   assert(channel && pRequest);
 
-   // Clear MgmtRequest structure
    memset(pRequest, 0, sizeof(DnxMgmtRequest));
 
    // Await a message from the specified channel
    xbuf.size = DNX_MAX_MSG;
-   if ((ret = dnxGet(channel, xbuf.buf, &(xbuf.size), timeout, address)) != DNX_OK)
+   if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
    {
       if (ret != DNX_ERR_TIMEOUT)
-         dnxSyslog(LOG_ERR, "dnxGetMgmtRequest: Failed to retrieve message from channel: %d", ret);
+         dnxSyslog(LOG_ERR, 
+               "dnxGetMgmtRequest: Failed to retrieve message from channel; "
+               "failed with %d: %s", ret, dnxErrorString(ret));
       return ret;
    }
 
-   // Decode the XML message:
-   xbuf.buf[xbuf.size] = '\0';
+   // decode the XML message:
+   xbuf.buf[xbuf.size] = 0;
 
-   // Verify this is a "Job" message
+   // verify this is a "MgmtRequest" message
    if ((ret = dnxXmlGet(&xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxGetMgmtRequest: Failed to decode Request: %d", ret);
+      dnxSyslog(LOG_ERR, 
+            "dnxGetMgmtRequest: Failed to decode Request; failed with %d: %s", 
+            ret, dnxErrorString(ret));
       return ret;
    }
    if (strcmp(msg, "MgmtRequest"))
    {
-      ret = DNX_ERR_SYNTAX;
       dnxSyslog(LOG_ERR, "dnxGetMgmtRequest: Invalid Request: %-20.20s", msg);
-      goto abend;
+      xfree(msg);
+      return DNX_ERR_SYNTAX;
    }
+   xfree(msg);
 
-   // Decode the Manager's GUID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &(pRequest->guid))) != DNX_OK)
+   // decode the Manager's GUID
+   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &pRequest->guid)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxGetMgmtRequest: Failed to decode GUID: %d", ret);
-      goto abend;
+      dnxSyslog(LOG_ERR, 
+            "dnxGetMgmtRequest: Failed to decode GUID; failed with %d: %s", 
+            ret, dnxErrorString(ret));
+      return ret;
    }
 
-   // Decode the management request
-   if ((ret = dnxXmlGet(&xbuf, "Action", DNX_XML_STR, &(pRequest->action))) != DNX_OK)
+   // decode the management request
+   if ((ret = dnxXmlGet(&xbuf, "Action", DNX_XML_STR, &pRequest->action)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxGetMgmtRequest: Failed to decode Action: %d", ret);
 
-abend:;
-
-   // Check for abend condition
-   if (ret != DNX_OK)
-   {
-      if (msg) xfree(msg);
-      if (pRequest->action) xfree(pRequest->action);
-   }
    return ret;
 }
 

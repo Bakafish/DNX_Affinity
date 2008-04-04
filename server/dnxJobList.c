@@ -32,6 +32,8 @@
 #include "dnxLogging.h"
 #include "dnxTimer.h"
 
+#define DNX_JOBLIST_TIMEOUT 5
+
 /** The JobList implementation data structure. */
 typedef struct iDnxJobList_ 
 {
@@ -210,6 +212,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 {
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long current;
+   int ret = 0;
 
    assert(pJobList && pJob);
 
@@ -228,31 +231,45 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    // see if we have a Pending job
    while (ilist->pList[current].state != DNX_JOB_PENDING)
    {
+      struct timeval now;
+      struct timespec timeout;
+
+      gettimeofday(&now, 0);
+      timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
+      timeout.tv_nsec = now.tv_usec * 1000;
+
       dnxDebug(8, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu", 
             ilist->head, ilist->dhead, ilist->tail);
-      pthread_cond_wait(&ilist->cond, &ilist->mut);
+
+      if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, 
+            &timeout)) == ETIMEDOUT)
+         break;
+
       current = ilist->dhead;
    }
 
-   // transition this job's state to InProgress
-   ilist->pList[current].state = DNX_JOB_INPROGRESS;
-
-   // make a copy for the Dispatcher
-   memcpy(pJob, &ilist->pList[current], sizeof(DnxNewJob));
-   //pJob->cmd = xstrdup(pJob->cmd); // BUG: This causes a memory leak!
-
-   // update the dispatch head
-   if (ilist->dhead != ilist->tail)
-      ilist->dhead = (current + 1) % ilist->size;
-
-   dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]: "
-               "Head=%lu, DHead=%lu, Tail=%lu", 
-         pJob->guid.objSerial, pJob->guid.objSlot, 
-         ilist->head, ilist->dhead, ilist->tail);
+   if (ret == 0)
+   {
+      // transition this job's state to InProgress
+      ilist->pList[current].state = DNX_JOB_INPROGRESS;
+   
+      // make a copy for the Dispatcher
+      memcpy(pJob, &ilist->pList[current], sizeof(DnxNewJob));
+      //pJob->cmd = xstrdup(pJob->cmd); // BUG: This causes a memory leak!
+   
+      // update the dispatch head
+      if (ilist->dhead != ilist->tail)
+         ilist->dhead = (current + 1) % ilist->size;
+   
+      dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]: "
+                  "Head=%lu, DHead=%lu, Tail=%lu", 
+            pJob->guid.objSerial, pJob->guid.objSlot, 
+            ilist->head, ilist->dhead, ilist->tail);
+   }
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
 
-   return DNX_OK;
+   return ret;
 }
 
 //----------------------------------------------------------------------------

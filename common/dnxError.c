@@ -31,7 +31,12 @@
 
 #include "dnxError.h"
 
-static dnxError gLastError = DNX_OK;      // Last known error code
+#include <errno.h>
+#include <string.h>
+
+#define elemcount(x) (sizeof(x)/sizeof(*(x)))
+
+static dnxError gLastError = DNX_OK;      /*!< Last known error code. */
 
 /** @todo Create a mechanism for preserving error stack details. */
 
@@ -52,9 +57,9 @@ dnxError dnxGetLastError(void)
  *
  * @param[in] errno - the value to be set.
  */
-void dnxSetLastError(dnxError errno)
+void dnxSetLastError(dnxError eno)
 {
-   gLastError = errno;
+   gLastError = eno;
 }
 
 //----------------------------------------------------------------------------
@@ -67,9 +72,9 @@ void dnxSetLastError(dnxError errno)
  * @return A pointer to a statically allocated string representation of the
  * error code specified in @p errno.
  */
-char * dnxErrorString(dnxError errno)
+char * dnxErrorString(dnxError eno)
 {
-   static char * gErrCatalog[] = 
+   static char * errCatalog[] = 
    {
       "A-OK, Okey-Dokey, Rock-On",
       "Invalid arguments or parameters",
@@ -85,11 +90,20 @@ char * dnxErrorString(dnxError errno)
       "Message reception failure",
       "Invalid communications address",
       "Requested resource was not found",
-      "Incorrect or invalid XML message"
+      "Incorrect or invalid XML message",
+      "Threading error",
+      "Timeout error",
+      "Resource is busy",
    };
 
-   return (char *)((errno < 0 || errno > DNX_ERR_LASTERROR) ? 
-         "Unknown error code" : gErrCatalog[errno]);
+   // check for system error first - return system error string
+   if (eno < DNX_ERR_BASE)
+      return strerror(eno);
+
+   // adjust for dnx error base - return dnx error string
+   eno -= DNX_ERR_BASE;
+   return (char *)((eno < 0 || eno >= elemcount(errCatalog)) ? 
+         "Unknown error code" : errCatalog[eno]);
 }
 
 /*--------------------------------------------------------------------------*/

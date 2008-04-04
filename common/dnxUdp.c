@@ -230,7 +230,8 @@ int dnxUdpOpen(dnxChannel * channel, dnxChanMode mode)   // 0=Passive, 1=Active
    // Create a socket
    if ((sd = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
    {
-      dnxSyslog(LOG_ERR, "dnxUdpOpen: socket failure: %s", strerror(errno));
+      dnxSyslog(LOG_ERR, "dnxUdpOpen: socket failure; failed with %d: %s", 
+            errno, strerror(errno));
       return DNX_ERR_OPEN;
    }
 
@@ -242,7 +243,9 @@ int dnxUdpOpen(dnxChannel * channel, dnxChanMode mode)   // 0=Passive, 1=Active
       if (connect(sd, (struct sockaddr *)&inaddr, sizeof(inaddr)) != 0)
       {
          close(sd);
-         dnxSyslog(LOG_ERR, "dnxUdpOpen: connect(%lx) failure: %s", (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
+         dnxSyslog(LOG_ERR, 
+               "dnxUdpOpen: connect(%lx) failure; failed with %d: %s", 
+               (unsigned long)inaddr.sin_addr.s_addr, errno, strerror(errno));
          return DNX_ERR_OPEN;
       }
    }
@@ -253,7 +256,8 @@ int dnxUdpOpen(dnxChannel * channel, dnxChanMode mode)   // 0=Passive, 1=Active
       if (bind(sd, (struct sockaddr *)&inaddr, sizeof(inaddr)) != 0)
       {
          close(sd);
-         dnxSyslog(LOG_ERR, "dnxUdpOpen: bind(%lx) failure: %s", (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxUdpOpen: bind(%lx) failure; failed with %d: %s", 
+               (unsigned long)inaddr.sin_addr.s_addr, errno, strerror(errno));
          return DNX_ERR_OPEN;
       }
    }
@@ -336,7 +340,8 @@ int dnxUdpRead(dnxChannel * channel, char * buf, int * size,
          return DNX_ERR_TIMEOUT;
       else if (nsd < 0)
       {
-         dnxSyslog(LOG_ERR, "dnxUdpRead: select failure: %s", strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxUdpRead: select failure; failed with %d: %s", 
+               errno, strerror(errno));
          return DNX_ERR_RECEIVE;
       }
    }
@@ -407,7 +412,8 @@ int dnxUdpWrite(dnxChannel * channel, char * buf, int size,
          return DNX_ERR_TIMEOUT;
       else if (nsd < 0)
       {
-         dnxSyslog(LOG_ERR, "dnxUdpWrite: select failure: %s", strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxUdpWrite: select failure; failed with %d: %s", 
+               errno, strerror(errno));
          return DNX_ERR_SEND;
       }
    }

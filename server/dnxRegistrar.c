@@ -46,7 +46,7 @@
 #include <assert.h>
 
 /** Registrar dispatch channel timeout in seconds. */
-#define DNX_REGISTRAR_REQUEST_TIMEOUT  30
+#define DNX_REGISTRAR_REQUEST_TIMEOUT  5
 
 /** The internal registrar structure. */
 typedef struct iDnxRegistrar_
@@ -55,6 +55,7 @@ typedef struct iDnxRegistrar_
    DnxQueue * rqueue;      /*!< The registered worker node requests queue. */
    pthread_t tid;          /*!< The registrar thread id. */
    long * debug;           /*!< A pointer to the global debug level. */
+   int running;            /*!< Running flag - as opposed to cancellation. */
 } iDnxRegistrar;
 
 //----------------------------------------------------------------------------
@@ -99,6 +100,27 @@ static DnxQueueResult dnxRemoveNode(void * pLeft, void * pRight)
 
 //----------------------------------------------------------------------------
 
+/** Deregister all nodes in a node list.
+ * 
+ * @param[in] ireg - the registrar for which all requests should be destroyed.
+ * 
+ * @return Always returns zero.
+ */
+static int dnxDeregisterAllNodes(iDnxRegistrar * ireg)
+{
+   DnxNodeRequest dummy;
+   DnxNodeRequest * pReq = &dummy;
+
+   // search for and remove this node from the Node Request List
+   while (dnxQueueRemove(ireg->rqueue, (void **)&pReq, 
+         dnxRemoveNode) == DNX_QRES_FOUND)
+      xfree(pReq);    // free the dequeued DnxNodeRequest message
+
+   return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
 /** Register a new client node "request for work" request.
  * 
  * @param[in] ireg - the registrar on which to register a new client request.
@@ -123,7 +145,9 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 
    // Add this node to the Worker Node List
    if ((ret = dnxQueuePut(ireg->rqueue, pMsg)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "dnxRegisterNode: dnxQueuePut failed: %d", ret);
+      dnxSyslog(LOG_ERR, 
+            "dnxRegisterNode: dnxQueuePut failed; failed with %d: %s", 
+            ret, dnxErrorString(ret));
 
    return ret;
 }
@@ -155,27 +179,6 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 
 //----------------------------------------------------------------------------
 
-/** Deregister all nodes in a node list.
- * 
- * @param[in] ireg - the registrar for which all requests should be destroyed.
- * 
- * @return Always returns zero.
- */
-static int dnxDeregisterAllNodes(iDnxRegistrar * ireg)
-{
-   DnxNodeRequest dummy;
-   DnxNodeRequest * pReq = &dummy;
-
-   // Search for and remove this node from the Node Request List
-   while (dnxQueueRemove(ireg->rqueue, (void **)&pReq, 
-         dnxRemoveNode) == DNX_QRES_FOUND)
-      xfree(pReq);    // free the dequeued DnxNodeRequest message
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
 /** Process a "request for work" request from a dnx client node.
  * 
  * @param[in] ireg - the registrar for which a node request should be 
@@ -193,7 +196,7 @@ static int dnxProcessNodeRequest(iDnxRegistrar * ireg)
    if ((pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg)) == NULL)
       return DNX_ERR_MEMORY;
 
-   // Wait on the dispatch socket for a request
+   // wait on the dispatch socket for a request
    if ((ret = dnxWaitForNodeRequest(ireg->dispchan, pMsg, pMsg->address, 
          DNX_REGISTRAR_REQUEST_TIMEOUT)) == DNX_OK)
    {
@@ -209,8 +212,9 @@ static int dnxProcessNodeRequest(iDnxRegistrar * ireg)
 
          default:
             ret = DNX_ERR_UNSUPPORTED;
-            dnxSyslog(LOG_ERR, "dnxProcessNodeRequest: Received "
-                               "unsupported request type: %d", pMsg->reqType);
+            dnxSyslog(LOG_ERR, 
+                  "dnxProcessNodeRequest: Received unsupported request "
+                  "type: %d", pMsg->reqType);
       }
    }
    if (ret != DNX_OK)
@@ -236,7 +240,7 @@ static void dnxRegistrarCleanup(void * data)
    assert(data);
 
    // Release all remaining Worker Node channels
-   dnxDeregisterAllNodes((DnxRegistrar *)ireg);
+   dnxDeregisterAllNodes(ireg);
 }
 
 //----------------------------------------------------------------------------
@@ -265,18 +269,17 @@ static void * dnxRegistrar(void * data)
    dnxSyslog(LOG_INFO, "dnxRegistrar[%lx]: Awaiting worker node requests", 
          pthread_self());
 
-   while (1)
+   while (ireg->running)
    {
       pthread_testcancel();
 
-      // Wait for Worker Node Requests
+      // wait for worker node requests
       if ((ret = dnxProcessNodeRequest(ireg)) != DNX_OK)
-         dnxSyslog(LOG_ERR, "dnxRegistrar[%lx]: dnxProcessNodeRequest "
-                            "returned %d", pthread_self(), ret);
+         dnxSyslog(LOG_ERR, 
+               "dnxRegistrar[%lx]: dnxProcessNodeRequest returned %d: %s", 
+               pthread_self(), ret, dnxErrorString(ret));
    }
-
    pthread_cleanup_pop(1);
-
    return 0;
 }
 
@@ -301,10 +304,10 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 
    *ppNode = NULL;
 
-   // Dequeue a Node Request from the Node Request queue
+   // dequeue a Node Request from the Node Request queue
    while ((ret = dnxQueueGet(ireg->rqueue, (void **)ppNode)) == DNX_OK)
    {
-      // Verify that this request's Time-To-Live (TTL) has not expired
+      // verify that this request's Time-To-Live (TTL) has not expired
       if ((*ppNode)->expires > (now = time(NULL)))
          break;
 
@@ -314,18 +317,19 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 
       discard_count++;
 
-      // Discard this expired request
+      // discard this expired request
       xfree(*ppNode);
       *ppNode = NULL;
    }
 
-   // Report discarded node requests
+   // report discarded node requests
    if (discard_count > 0)
       dnxDebug(1, "dnxGetNodeRequest: Discarded %d expired node requests", 
             discard_count);
 
    if (ret != DNX_OK)
-      dnxDebug(1, "dnxGetNodeRequest: Unable to fulfill node request: %d", ret);
+      dnxDebug(1, "dnxGetNodeRequest: Unable to fulfill node request; "
+                  "failed with %d: %s", ret, dnxErrorString(ret));
 
    return ret;
 }
@@ -353,7 +357,7 @@ int dnxRegistrarCreate(long * debug, int queuesz,
 
    ireg->debug = debug;
    ireg->dispchan = dispchan;
-   ireg->tid = 0;
+   ireg->running = 1;
 
    if ((ret = dnxQueueCreate(queuesz, &ireg->rqueue)) != 0)
    {
@@ -363,7 +367,7 @@ int dnxRegistrarCreate(long * debug, int queuesz,
 
    if ((ret = pthread_create(&ireg->tid, NULL, dnxRegistrar, ireg)) != 0)
    {
-      dnxSyslog(LOG_ERR, "Registrar: thread creation failed: (%d) %s", 
+      dnxSyslog(LOG_ERR, "Registrar: thread creation failed with %d: %s", 
             ret, strerror(ret));
       xfree(ireg);
       return DNX_ERR_THREAD;
@@ -387,7 +391,8 @@ void dnxRegistrarDestroy(DnxRegistrar * reg)
 
    assert(reg && ireg->tid);
 
-   pthread_cancel(ireg->tid);
+   ireg->running = 0;
+// pthread_cancel(ireg->tid);
    pthread_join(ireg->tid, NULL);
 
    dnxQueueDestroy(ireg->rqueue);

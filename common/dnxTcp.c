@@ -335,7 +335,8 @@ int dnxTcpRead(dnxChannel * channel, char * buf, int * size,
          return DNX_ERR_TIMEOUT;
       else if (nsd < 0)
       {
-         dnxSyslog(LOG_ERR, "dnxTcpRead: select failure: %s", strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxTcpRead: select failure; failed with %d: %s", 
+               errno, strerror(errno));
          return DNX_ERR_RECEIVE;
       }
    }
@@ -424,7 +425,8 @@ int dnxTcpWrite(dnxChannel * channel, char * buf, int size,
          return DNX_ERR_TIMEOUT;
       else if (nsd < 0)
       {
-         dnxSyslog(LOG_ERR, "dnxTcpWrite: select failure: %s", strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxTcpWrite: select failure; failed with %d: %s", 
+               errno, strerror(errno));
          return DNX_ERR_SEND;
       }
    }

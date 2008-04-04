@@ -24,6 +24,8 @@ AC_SUBST(nagios_target)
 
 # Checks for libraries.
 AC_CHECK_LIB([pthread], [pthread_create])
+AC_CHECK_LIB([gcc_s], [_Unwind_Backtrace])
+AC_CHECK_LIB([rt], [nanosleep])
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -44,7 +46,8 @@ AC_FUNC_MEMCMP
 AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL
 AC_FUNC_STRTOD
-AC_CHECK_FUNCS([dup2 gethostbyname gettimeofday memmove memset regcomp select socket strchr strdup strerror strrchr strtol strtoul])
+AC_CHECK_FUNCS([dup2 gethostbyname gettimeofday memmove memset regcomp \
+   nanosleep select socket strchr strdup strerror strrchr strtol strtoul])
 
 AC_CONFIG_FILES([Makefile
 		 rpm/dnx.spec

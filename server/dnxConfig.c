@@ -256,7 +256,8 @@ int parseFile(char * szFile)
    }
    else
    {
-      dnxSyslog(LOG_ERR, "readCfg: Unable to open %s: %s", szFile, strerror(errno));
+      dnxSyslog(LOG_ERR, "readCfg: Unable to open %s; failed with %d: %s", 
+            szFile, dnxErrorString(ret));
       ret = 2;
    }
    return ret;
