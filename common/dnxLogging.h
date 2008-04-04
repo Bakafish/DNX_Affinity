@@ -54,7 +54,7 @@ void dnxDebug(int level, char * fmt, ... );
  * @param[in] debug - a pointer to the global debug level.
  * @param[in] logFacility - a pointer to the global log facility.
  */
-void initLogging(int * pDebug, int * pLogFacility);
+void initLogging(int * debug, int * logFacility);
 
 #endif   /* _DNXLOGGING_H_ */
 
