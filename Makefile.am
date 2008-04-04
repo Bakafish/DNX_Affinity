@@ -25,9 +25,9 @@ rpmcheck:
         fi
 
 srcrpm: rpmcheck dist
-	rpmbuild -bs $(rpmmacros) --nodeps $(PACKAGE).spec
+	rpmbuild -bs $(rpmmacros) --nodeps rpm/$(PACKAGE).spec
 
 rpms: rpmcheck dist
-	rpmbuild -ba $(rpmmacros) --nodeps --buildroot=$(PWD)/tmp $(PACKAGE).spec
+	rpmbuild -ba $(rpmmacros) --nodeps --buildroot=$(PWD)/tmp rpm/$(PACKAGE).spec
 	mv $(rpmarch)/* .; rm -rf $(rpmarch)
 
