@@ -35,7 +35,7 @@
 typedef struct _DnxNewJob_ 
 {
    DnxJobState state;      // Job state
-   DnxGuid guid;           // Service Request Serial No.
+   DnxXID xid;             // Service request transaction id.
    char * cmd;             // Processed check command
    time_t start_time;      // Service check start time
    int timeout;            // Service check timeout in seconds
@@ -50,7 +50,7 @@ typedef struct { int unused; } DnxJobList;
 int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob);
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs);
 int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob);
-int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob);
+int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob);
 
 int dnxJobListCreate(unsigned size, DnxJobList ** ppJobList);
 void dnxJobListDestroy(DnxJobList * pJobList);

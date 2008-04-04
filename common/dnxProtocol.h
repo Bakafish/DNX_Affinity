@@ -32,7 +32,8 @@
 
 #include "dnxChannel.h"
 
-typedef enum _DnxObjType_ 
+/** Defines the type of a DNX object in a network message. */
+typedef enum DnxObjType_ 
 {
    DNX_OBJ_SCHEDULER = 0,
    DNX_OBJ_DISPATCHER,
@@ -44,7 +45,8 @@ typedef enum _DnxObjType_
    DNX_OBJ_MAX
 } DnxObjType;
 
-typedef enum _DnxReqType_ 
+/** Defines the type of a DNX worker node network request. */
+typedef enum DnxReqType_ 
 {
    DNX_REQ_REGISTER = 0, 
    DNX_REQ_DEREGISTER, 
@@ -52,7 +54,8 @@ typedef enum _DnxReqType_
    DNX_REQ_NAK 
 } DnxReqType;
 
-typedef enum _DnxJobState_ 
+/** Defines the state of a DNX job. */
+typedef enum DnxJobState_ 
 {
    DNX_JOB_NULL = 0, 
    DNX_JOB_PENDING, 
@@ -61,18 +64,20 @@ typedef enum _DnxJobState_
    DNX_JOB_EXPIRED 
 } DnxJobState;
 
+/** The maximum number of bytes in a DNX message address buffer. */
 #define DNX_MAX_ADDRESS 64
 
-typedef struct _DnxGuid_ 
+/** A DNX transaction id. */
+typedef struct DnxXID
 {
    DnxObjType objType;
    unsigned long objSerial;
    unsigned long objSlot;
-} DnxGuid;
+} DnxXID;
 
-typedef struct _DnxNodeRequest_ 
+typedef struct DnxNodeRequest_ 
 {
-   DnxGuid guid;                    // Worker Node GUID
+   DnxXID xid;                      // Worker node transaction id
    DnxReqType reqType;              // Request type
    unsigned int jobCap;             // Job capacity
    unsigned int ttl;                // Request Time-To-Live (in seconds)
@@ -80,9 +85,9 @@ typedef struct _DnxNodeRequest_
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxNodeRequest;
 
-typedef struct _DnxJob_ 
+typedef struct DnxJob_ 
 {
-   DnxGuid guid;                    // Job GUID
+   DnxXID xid;                      // Job transaction id
    DnxJobState state;               // Job state
    int priority;                    // Execution Priority
    int timeout;                     // Max job execution time
@@ -90,9 +95,9 @@ typedef struct _DnxJob_
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxJob;
 
-typedef struct _DnxResult_ 
+typedef struct DnxResult_ 
 {
-   DnxGuid guid;                    // Job GUID
+   DnxXID xid;                      // Job transaction id
    DnxJobState state;               // Job state
    unsigned int delta;              // Job execution time delta
    int resCode;                     // Job result code
@@ -100,16 +105,16 @@ typedef struct _DnxResult_
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxResult;
 
-typedef struct _DnxMgmtRequest_ 
+typedef struct DnxMgmtRequest_ 
 {
-   DnxGuid guid;                    // Manager GUID
+   DnxXID xid;                      // Manager transaction id
    char * action;                   // Request: SHUTDOWN, RELOAD, STATUS
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxMgmtRequest;
 
-typedef struct _DnxMgmtReply_ 
+typedef struct DnxMgmtReply_ 
 {
-   DnxGuid guid;                    // Client GUID
+   DnxXID xid;                      // Client transaction id
    DnxReqType status;               // Request status: ACK or NAK
    char * reply;                    // Reply data (only valid for STATUS request)
    char address[DNX_MAX_ADDRESS];   // Source address

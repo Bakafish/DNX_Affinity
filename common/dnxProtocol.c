@@ -72,10 +72,10 @@ int dnxRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
 
    // Create the XML message
    dnxXmlOpen (&xbuf, "Register");
-   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_GUID, &(pReg->guid));
-   dnxXmlAdd  (&xbuf, "ReqType",  DNX_XML_INT,  &(pReg->reqType));
-   dnxXmlAdd  (&xbuf, "Capacity", DNX_XML_UINT, &(pReg->jobCap));
-   dnxXmlAdd  (&xbuf, "TTL",      DNX_XML_UINT, &(pReg->ttl));
+   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pReg->xid);
+   dnxXmlAdd  (&xbuf, "ReqType",  DNX_XML_INT,  &pReg->reqType);
+   dnxXmlAdd  (&xbuf, "Capacity", DNX_XML_UINT, &pReg->jobCap);
+   dnxXmlAdd  (&xbuf, "TTL",      DNX_XML_UINT, &pReg->ttl);
    dnxXmlClose(&xbuf);
 
    // Send it on the specified channel
@@ -104,10 +104,10 @@ int dnxDeRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
 
    // Create the XML message
    dnxXmlOpen (&xbuf, "DeRegister");
-   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_GUID, &(pReg->guid));
-   dnxXmlAdd  (&xbuf, "ReqType",  DNX_XML_INT,  &(pReg->reqType));
-   dnxXmlAdd  (&xbuf, "Capacity", DNX_XML_UINT, &(pReg->jobCap));
-   dnxXmlAdd  (&xbuf, "TTL",      DNX_XML_UINT, &(pReg->ttl));
+   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pReg->xid);
+   dnxXmlAdd  (&xbuf, "ReqType",  DNX_XML_INT,  &pReg->reqType);
+   dnxXmlAdd  (&xbuf, "Capacity", DNX_XML_UINT, &pReg->jobCap);
+   dnxXmlAdd  (&xbuf, "TTL",      DNX_XML_UINT, &pReg->ttl);
    dnxXmlClose(&xbuf);
 
    // Send it on the specified channel
@@ -161,11 +161,11 @@ int dnxWaitForNodeRequest(dnxChannel * channel, DnxNodeRequest * pReg,
    }
    xfree(msg);
 
-   // decode the worker node's GUID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &pReg->guid)) != DNX_OK)
+   // decode the worker node's XID
+   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pReg->xid)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, 
-            "dnxWaitForNodeRequest: Invalid GUID; failed with %d: %s", 
+            "dnxWaitForNodeRequest: Invalid XID; failed with %d: %s", 
             ret, dnxErrorString(ret));
       return ret;
    }
@@ -220,10 +220,10 @@ int dnxWantJob(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
 
    // Create the XML message
    dnxXmlOpen (&xbuf, "NodeRequest");
-   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_GUID, &(pReg->guid));
-   dnxXmlAdd  (&xbuf, "ReqType",  DNX_XML_INT,  &(pReg->reqType));
-   dnxXmlAdd  (&xbuf, "Capacity", DNX_XML_UINT, &(pReg->jobCap));
-   dnxXmlAdd  (&xbuf, "TTL",      DNX_XML_UINT, &(pReg->ttl));
+   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pReg->xid);
+   dnxXmlAdd  (&xbuf, "ReqType",  DNX_XML_INT,  &pReg->reqType);
+   dnxXmlAdd  (&xbuf, "Capacity", DNX_XML_UINT, &pReg->jobCap);
+   dnxXmlAdd  (&xbuf, "TTL",      DNX_XML_UINT, &pReg->ttl);
    dnxXmlClose(&xbuf);
 
    dnxDebug(2, "dnxWantJob: XML Msg(%d)=%s", xbuf.size, xbuf.buf);
@@ -277,8 +277,8 @@ int dnxGetJob(dnxChannel * channel, DnxJob * pJob, char * address, int timeout)
    }
    xfree(msg);
 
-   // decode the job's GUID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &pJob->guid)) != DNX_OK)
+   // decode the job's XID
+   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pJob->xid)) != DNX_OK)
       return ret;
 
    // decode the job's state
@@ -319,10 +319,10 @@ int dnxPutJob(dnxChannel * channel, DnxJob * pJob, char * address)
 
    // Create the XML message
    dnxXmlOpen (&xbuf, "Job");
-   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_GUID, &(pJob->guid));
-   dnxXmlAdd  (&xbuf, "State",    DNX_XML_INT,  &(pJob->state));
-   dnxXmlAdd  (&xbuf, "Priority", DNX_XML_INT,  &(pJob->priority));
-   dnxXmlAdd  (&xbuf, "Timeout",  DNX_XML_INT,  &(pJob->timeout));
+   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pJob->xid);
+   dnxXmlAdd  (&xbuf, "State",    DNX_XML_INT,  &pJob->state);
+   dnxXmlAdd  (&xbuf, "Priority", DNX_XML_INT,  &pJob->priority);
+   dnxXmlAdd  (&xbuf, "Timeout",  DNX_XML_INT,  &pJob->timeout);
    dnxXmlAdd  (&xbuf, "Command",  DNX_XML_STR,    pJob->cmd);
    dnxXmlClose(&xbuf);
 
@@ -378,10 +378,10 @@ int dnxGetResult(dnxChannel * channel, DnxResult * pResult,
    }
    xfree(msg);
 
-   // decode the result's GUID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &pResult->guid)) != DNX_OK)
+   // decode the result's XID
+   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pResult->xid)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid GUID; failed with %d: %s", 
+      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid XID; failed with %d: %s", 
             ret, dnxErrorString(ret));
       return ret;
    }
@@ -439,10 +439,10 @@ int dnxPutResult(dnxChannel * channel, DnxResult * pResult, char * address)
 
    // Create the XML message
    dnxXmlOpen (&xbuf, "Result");
-   dnxXmlAdd  (&xbuf, "GUID",       DNX_XML_GUID, &(pResult->guid));
-   dnxXmlAdd  (&xbuf, "State",      DNX_XML_INT,  &(pResult->state));
-   dnxXmlAdd  (&xbuf, "Delta",      DNX_XML_UINT, &(pResult->delta));
-   dnxXmlAdd  (&xbuf, "ResultCode", DNX_XML_INT,  &(pResult->resCode));
+   dnxXmlAdd  (&xbuf, "GUID",       DNX_XML_XID,  &pResult->xid);
+   dnxXmlAdd  (&xbuf, "State",      DNX_XML_INT,  &pResult->state);
+   dnxXmlAdd  (&xbuf, "Delta",      DNX_XML_UINT, &pResult->delta);
+   dnxXmlAdd  (&xbuf, "ResultCode", DNX_XML_INT,  &pResult->resCode);
    if (pResult->resData && pResult->resData[0])
       dnxXmlAdd  (&xbuf, "ResultData", DNX_XML_STR, pResult->resData);
    else
@@ -509,11 +509,11 @@ int dnxGetMgmtRequest(dnxChannel * channel, DnxMgmtRequest * pRequest,
    }
    xfree(msg);
 
-   // decode the Manager's GUID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_GUID, &pRequest->guid)) != DNX_OK)
+   // decode the Manager's XID
+   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pRequest->xid)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, 
-            "dnxGetMgmtRequest: Failed to decode GUID; failed with %d: %s", 
+            "dnxGetMgmtRequest: Failed to decode XID; failed with %d: %s", 
             ret, dnxErrorString(ret));
       return ret;
    }

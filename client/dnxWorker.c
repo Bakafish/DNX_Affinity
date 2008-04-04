@@ -199,10 +199,10 @@ static int dnxExecuteJob(DnxWorkerStatus * tData, DnxJob * pJob,
 
    // Announce job reception
    if (gData->debug)
-      syslog(LOG_INFO, "dnxExecuteJob[%lx]: Received job [%lu,%lu] (T/O %d): %s", pthread_self(), pJob->guid.objSerial, pJob->guid.objSlot, pJob->timeout, pJob->cmd);
+      syslog(LOG_INFO, "dnxExecuteJob[%lx]: Received job [%lu,%lu] (T/O %d): %s", pthread_self(), pJob->xid.objSerial, pJob->xid.objSlot, pJob->timeout, pJob->cmd);
 
    // Prepare result structure
-   pResult->guid = pJob->guid;         // Copy GUID over intact, as the server uses this for result matchup with the request
+   pResult->xid = pJob->xid;         // Copy XID over intact, as the server uses this for result matchup with the request
    pResult->state = DNX_JOB_COMPLETE;  // Job can be either complete or expired
    pResult->delta = 0;              // Job execution delta
    pResult->resCode = DNX_PLUGIN_RESULT_OK;  // OK
@@ -222,7 +222,7 @@ static int dnxExecuteJob(DnxWorkerStatus * tData, DnxJob * pJob,
    // Store dynamic copy of the result string
    if (resData[0] && (pResult->resData = xstrdup(resData)) == NULL)
    {
-      syslog(LOG_ERR, "dnxExecuteJob[%lx]: Out of Memory: null result string for job [%lu,%lu]: %s", pthread_self(), pJob->guid.objSerial, pJob->guid.objSlot, pJob->cmd);
+      syslog(LOG_ERR, "dnxExecuteJob[%lx]: Out of Memory: null result string for job [%lu,%lu]: %s", pthread_self(), pJob->xid.objSerial, pJob->xid.objSlot, pJob->cmd);
       ret = DNX_ERR_MEMORY;
    }
 
@@ -353,7 +353,7 @@ void * dnxWorker (void * data)
       tData->requestSerial++;
 
       // Setup job request message
-      dnxMakeGuid(&(Msg.guid), DNX_OBJ_WORKER, tData->requestSerial, (unsigned long)pthread_self());
+      dnxMakeXID(&Msg.xid, DNX_OBJ_WORKER, tData->requestSerial, (unsigned long)pthread_self());
       Msg.reqType = DNX_REQ_REGISTER;
       Msg.jobCap = 1;
       Msg.ttl = gData->threadRequestTimeout - gData->threadTtlBackoff;

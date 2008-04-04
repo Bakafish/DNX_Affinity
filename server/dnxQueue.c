@@ -392,7 +392,6 @@ int dnxQueueNext(DnxQueue * queue, void ** ppPayload)
 /** Return the number of items in the queue.
  * 
  * @param[in] queue - the queue to be queried for item count.
- * @param[out] pSize - the address of storage in which to return the count.
  * 
  * @return The count of items in the queue.
  * 

@@ -73,8 +73,8 @@ static DnxQueueResult dnxCompareNodeReq(void * pLeft, void * pRight)
 
    return
       (
-         ((DnxNodeRequest *)pLeft)->guid.objType   == ((DnxNodeRequest *)pRight)->guid.objType 
-      && ((DnxNodeRequest *)pLeft)->guid.objSerial == ((DnxNodeRequest *)pRight)->guid.objSerial
+         ((DnxNodeRequest *)pLeft)->xid.objType   == ((DnxNodeRequest *)pRight)->xid.objType 
+      && ((DnxNodeRequest *)pLeft)->xid.objSerial == ((DnxNodeRequest *)pRight)->xid.objSerial
       ) ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
 }
 
@@ -91,7 +91,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 {
    DnxNodeRequest * pReq = pMsg;
    time_t now;
-   int ret;
+   int ret = DNX_OK;
 
    assert(ireg && pMsg);
 
@@ -99,7 +99,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
    pMsg->expires = (now = time(0)) + pMsg->ttl;
 
    dnxDebug(1, "dnxRegisterNode: Received request %lu at %lu, expires at %lu", 
-         pMsg->guid.objSerial, (unsigned long)now, (unsigned long)pMsg->expires);
+         pMsg->xid.objSerial, (unsigned long)now, (unsigned long)pMsg->expires);
 
    // locate existing node: update expiration time, or add to the queue
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
@@ -301,7 +301,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
          break;
 
       dnxDebug(1, "dnxRegisterNode: Expired request %lu at %lu, expires at %lu", 
-            (*ppNode)->guid.objSerial, (unsigned long)now, 
+            (*ppNode)->xid.objSerial, (unsigned long)now, 
             (unsigned long)(*ppNode)->expires);
 
       discard_count++;

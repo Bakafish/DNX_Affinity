@@ -339,9 +339,9 @@ int main(int argc, char ** argv)
    verbose = argc > 1? 1: 0;
 
    // setup test harness
-   fakenode.guid.objType   = DNX_OBJ_JOB;
-   fakenode.guid.objSerial = 1;
-   fakenode.guid.objSlot   = 2;
+   fakenode.xid.objType    = DNX_OBJ_JOB;
+   fakenode.xid.objSerial  = 1;
+   fakenode.xid.objSlot    = 2;
    fakenode.reqType        = DNX_REQ_DEREGISTER;
    fakenode.jobCap         = 1;
    fakenode.ttl            = 2;
@@ -349,9 +349,9 @@ int main(int argc, char ** argv)
    strcpy(fakenode.address, "fake address");
 
    fakejob.state           = DNX_JOB_INPROGRESS;
-   fakejob.guid.objType    = DNX_OBJ_JOB;
-   fakejob.guid.objSerial  = 1;
-   fakejob.guid.objSlot    = 2;
+   fakejob.xid.objType     = DNX_OBJ_JOB;
+   fakejob.xid.objSerial   = 1;
+   fakejob.xid.objSlot     = 2;
    fakejob.cmd             = "fake command line";
    fakejob.start_time      = 100;
    fakejob.timeout         = 10;

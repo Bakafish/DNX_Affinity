@@ -73,7 +73,7 @@ int main (int argc, char **argv)
 
    // Initialize Job structure
    memset(&job, 0, sizeof(job));
-   dnxMakeGuid(&(job.guid), DNX_OBJ_JOB, 12345L, 3);
+   dnxMakeXID(&job.xid, DNX_OBJ_JOB, 12345L, 3);
    job.state    = DNX_JOB_PENDING;
    job.priority = 7;
    job.cmd      = "check_spam.pl <wak>test</wak> ahora por favor";
@@ -122,10 +122,10 @@ int xmlPut (DnxXmlBuf *xbuf, DnxJob *pJob)
 
    printf("xndXmlOpen('Job'): Size=%d (%d), Buf=\"%s\"\n", xbuf->size, strlen(xbuf->buf), xbuf->buf);
 
-   dnxXmlAdd  (xbuf, "GUID",     DNX_XML_GUID, &(pJob->guid));
-   dnxXmlAdd  (xbuf, "State",    DNX_XML_INT,  &(pJob->state));
-   dnxXmlAdd  (xbuf, "Priority", DNX_XML_INT,  &(pJob->priority));
-   dnxXmlAdd  (xbuf, "Command",  DNX_XML_STR,    pJob->cmd);
+   dnxXmlAdd  (xbuf, "GUID",     DNX_XML_XID,  &pJob->xid);
+   dnxXmlAdd  (xbuf, "State",    DNX_XML_INT,  &pJob->state);
+   dnxXmlAdd  (xbuf, "Priority", DNX_XML_INT,  &pJob->priority);
+   dnxXmlAdd  (xbuf, "Command",  DNX_XML_STR,   pJob->cmd);
    dnxXmlClose(xbuf);
 
    return ret;
@@ -136,14 +136,14 @@ int xmlPut (DnxXmlBuf *xbuf, DnxJob *pJob)
 
 int xmlGet (DnxXmlBuf *xbuf, DnxJob *pJob)
 {
-   char *msg = NULL;
+   char * msg = 0;
    int ret;
 
-   // Validate parameters
+   // validate parameters
    if (!xbuf || !pJob)
       return DNX_ERR_INVALID;
 
-   // Verify this is a "Job" message
+   // verify this is a "Job" message
    if ((ret = dnxXmlGet(xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
       return ret;
    if (strcmp(msg, "Job"))
@@ -152,28 +152,26 @@ int xmlGet (DnxXmlBuf *xbuf, DnxJob *pJob)
       goto abend;
    }
 
-   // Decode the job's GUID
-   if ((ret = dnxXmlGet(xbuf, "GUID", DNX_XML_GUID, &(pJob->guid))) != DNX_OK)
+   // decode the job's XID
+   if ((ret = dnxXmlGet(xbuf, "GUID", DNX_XML_XID, &pJob->xid)) != DNX_OK)
       goto abend;
 
-   // Decode the job's state
-   if ((ret = dnxXmlGet(xbuf, "State", DNX_XML_INT, &(pJob->state))) != DNX_OK)
+   // decode the job's state
+   if ((ret = dnxXmlGet(xbuf, "State", DNX_XML_INT, &pJob->state)) != DNX_OK)
       goto abend;
 
-   // Decode the job's priority
-   if ((ret = dnxXmlGet(xbuf, "Priority", DNX_XML_INT, &(pJob->priority))) != DNX_OK)
+   // decode the job's priority
+   if ((ret = dnxXmlGet(xbuf, "Priority", DNX_XML_INT, &pJob->priority)) != DNX_OK)
       goto abend;
 
-   // Decode the job's command
-   ret = dnxXmlGet(xbuf, "Command", DNX_XML_STR, &(pJob->cmd));
+   // decode the job's command
+   ret = dnxXmlGet(xbuf, "Command", DNX_XML_STR, &pJob->cmd);
 
 abend:
 
-   // Check for abend condition
+   // check for abend condition
    if (ret != DNX_OK)
-   {
-      if (msg) free(msg);
-   }
+      free(msg);
 
    return ret;
 }
@@ -200,7 +198,7 @@ int jobDump (char *prefix, DnxJob *pJob)
       return DNX_ERR_INVALID;
 
    printf("%s: Job Structure:\n", prefix);
-   printf("\tGUID : %u-%lu-%u\n", pJob->guid.objType, pJob->guid.objSerial, pJob->guid.objSlot);
+   printf("\tXID  : %u-%lu-%u\n", pJob->xid.objType, pJob->xid.objSerial, pJob->xid.objSlot);
    printf("\tState: %d\n", pJob->state);
    printf("\tPrior: %d\n", pJob->priority);
    printf("\tCmd  : %s\n", (char *)((pJob->cmd) ? pJob->cmd : "NULL"));

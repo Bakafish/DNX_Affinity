@@ -55,7 +55,7 @@ dnxError dnxGetLastError(void)
 
 /** Set the global dnx error variable to some dnx error value.
  *
- * @param[in] errno - the value to be set.
+ * @param[in] eno - the value to be set.
  */
 void dnxSetLastError(dnxError eno)
 {
@@ -66,7 +66,7 @@ void dnxSetLastError(dnxError eno)
 
 /** Return an error string that matches a specified dnx error code.
  * 
- * @param[in] errno - the error code for which a string representation is 
+ * @param[in] eno - the error code for which a string representation is 
  *    desired.
  *
  * @return A pointer to a statically allocated string representation of the

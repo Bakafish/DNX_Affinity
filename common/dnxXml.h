@@ -41,7 +41,7 @@ typedef enum _DnxXmlMsg_
    DNX_XML_LONG,
    DNX_XML_ULONG,
    DNX_XML_STR,
-   DNX_XML_GUID
+   DNX_XML_XID
 } DnxXmlType;
 
 typedef struct _DnxXmlBuf_ 
@@ -54,7 +54,7 @@ int dnxXmlOpen(DnxXmlBuf * xbuf, char * tag);
 int dnxXmlAdd(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData);
 int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData);
 int dnxXmlClose(DnxXmlBuf * xbuf);
-int dnxMakeGuid(DnxGuid * pGuid, DnxObjType xType, unsigned long xSerial, 
+int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, 
       unsigned long xSlot);
 
 #endif   /* _DNXXML_H_ */

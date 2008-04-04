@@ -46,7 +46,7 @@ typedef struct iDnxJobList_
    unsigned long tail;     /*!< List tail. */
    unsigned long dhead;    /*!< Head of waiting jobs. */
    pthread_mutex_t mut;    /*!< The job list mutex. */
-   pthread_cond_t cond;    /*!< the job list condition variable. */
+   pthread_cond_t cond;    /*!< The job list condition variable. */
    DnxTimer * timer;       /*!< The job list expiration timer. */
 } iDnxJobList;
 
@@ -78,35 +78,33 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    tail = ilist->tail;
 
    // verify space in the job list
-   if (ilist->list[tail].state 
-         && (tail = (tail + 1) % ilist->size) == ilist->head)
+   if (ilist->list[tail].state && (tail = (tail + 1) % ilist->size) == ilist->head)
    {
       dnxSyslog(LOG_ERR, "dnxJobListAdd: Out of job slots (max=%lu): %s", 
             ilist->size, pJob->cmd);
       ret = DNX_ERR_CAPACITY;
-      goto abend;
    }
-
-   // add the slot identifier to the Job's GUID
-   pJob->guid.objSlot = tail;
-   pJob->state = DNX_JOB_PENDING;
-
-   // add this job to the job list
-   memcpy(&ilist->list[tail], pJob, sizeof(DnxNewJob));
-
-   // update dispatch head index
-   if (ilist->list[ilist->tail].state != DNX_JOB_PENDING)
-      ilist->dhead = tail;
-
-   ilist->tail = tail;
-
-   dnxDebug(8, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", 
-         pJob->guid.objSerial, pJob->guid.objSlot, ilist->head, 
-         ilist->dhead, ilist->tail);
-
-   pthread_cond_signal(&ilist->cond);  // signal that a new job is available
-
-abend:
+   else
+   {
+      // add the slot identifier to the Job's XID
+      pJob->xid.objSlot = tail;
+      pJob->state = DNX_JOB_PENDING;
+   
+      // add this job to the job list
+      memcpy(&ilist->list[tail], pJob, sizeof(DnxNewJob));
+   
+      // update dispatch head index
+      if (ilist->list[ilist->tail].state != DNX_JOB_PENDING)
+         ilist->dhead = tail;
+   
+      ilist->tail = tail;
+   
+      dnxDebug(8, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", 
+            pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, 
+            ilist->dhead, ilist->tail);
+   
+      pthread_cond_signal(&ilist->cond);  // signal that a new job is available
+   }
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
 
@@ -273,7 +271,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    
       dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]: "
                   "Head=%lu, DHead=%lu, Tail=%lu", 
-            pJob->guid.objSerial, pJob->guid.objSlot, 
+            pJob->xid.objSerial, pJob->xid.objSlot, 
             ilist->head, ilist->dhead, ilist->tail);
    }
 
@@ -293,21 +291,21 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
  * The job *is* removed from the the Job List.
  * 
  * @param[in] pJobList - the job list from which to obtain the pending job.
- * @param[in] pGuid - the unique identifier for this pending job.
+ * @param[in] pxid - the unique identifier for this pending job.
  * @param[out] pJob - the address of storage in which to return collected 
- *    result information about the job belonging to @p pGuid.
+ *    result information about the job belonging to @p pxid.
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob)
+int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
 {
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long current;
    int ret = DNX_OK;
 
-   assert(pJobList && pGuid && pJob);  // parameter validation
+   assert(pJobList && pxid && pJob);  // parameter validation
 
-   current = pGuid->objSlot;
+   current = pxid->objSlot;
 
    assert(current < ilist->size);
    if (current >= ilist->size)         // runtime validation requires check
@@ -317,12 +315,12 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob)
 
    dnxDebug(8, "dnxJobListCollect: Compare [%lu,%lu] to "
                "[%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", 
-      pGuid->objSerial, pGuid->objSlot, ilist->list[current].guid.objSerial, 
-      ilist->list[current].guid.objSlot, ilist->head, ilist->dhead, ilist->tail);
+      pxid->objSerial, pxid->objSlot, ilist->list[current].xid.objSerial, 
+      ilist->list[current].xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
 
-   // verify that the GUID of this result matches the GUID of the service check
+   // verify that the XID of this result matches the XID of the service check
    if (ilist->list[current].state == DNX_JOB_NULL 
-         || memcmp(pGuid, &ilist->list[current].guid, sizeof(DnxGuid)) != 0)
+         || memcmp(pxid, &ilist->list[current].xid, sizeof(DnxXID)) != 0)
       ret = DNX_ERR_NOTFOUND;    // job expired and was removed by the timer
    else
    {
@@ -483,8 +481,8 @@ int dnxDebug(int l, char * f, ... )
    if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
    return 0;
 }
-int dnxMakeGuid(DnxGuid * g, DnxObjType t, unsigned long s, unsigned long l)
-      { g->objType = t; g->objSerial = s; g->objSlot = l; return DNX_OK; }
+int dnxMakeXID(DnxXID * x, DnxObjType t, unsigned long s, unsigned long l)
+      { x->objType = t; x->objSerial = s; x->objSlot = l; return DNX_OK; }
 
 /* test main */
 int main(int argc, char ** argv)
@@ -494,7 +492,7 @@ int main(int argc, char ** argv)
    DnxNewJob j1[101];
    DnxNewJob xl[10];
    DnxNewJob jtmp;
-   DnxGuid guid;
+   DnxXID xid;
    int xlsz, serial, expcount;
    iDnxJobList * ijobs;
 
@@ -508,7 +506,7 @@ int main(int argc, char ** argv)
    for (serial = 0; serial < elemcount(j1); serial++)
    {
       // configure request node
-      dnxMakeGuid(&n1[serial].guid, DNX_OBJ_WORKER, serial, 0);
+      dnxMakeXID(&n1[serial].xid, DNX_OBJ_WORKER, serial, 0);
       n1[serial].reqType      = DNX_REQ_REGISTER;
       n1[serial].jobCap       = 1;     // jobs
       n1[serial].ttl          = 5;     // seconds
@@ -516,7 +514,7 @@ int main(int argc, char ** argv)
       strcpy(n1[serial].address, "localhost");
 
       // configure job
-      dnxMakeGuid(&j1[serial].guid, DNX_OBJ_JOB, serial, 0);
+      dnxMakeXID(&j1[serial].xid, DNX_OBJ_JOB, serial, 0);
       j1[serial].cmd          = "some command line";
       j1[serial].start_time   = time(0);
       j1[serial].timeout      = serial < 50? 0: 5;  // 50 expire immediately
@@ -555,8 +553,8 @@ int main(int argc, char ** argv)
    // collect all pending jobs
    for (serial = 50; serial < elemcount(j1) - 2; serial++)
    {
-      dnxMakeGuid(&guid, DNX_OBJ_JOB, serial, serial);
-      CHECK_ZERO(dnxJobListCollect(jobs, &guid, &jtmp));
+      dnxMakeXID(&xid, DNX_OBJ_JOB, serial, serial);
+      CHECK_ZERO(dnxJobListCollect(jobs, &xid, &jtmp));
    }
 
    // ensure there's one left

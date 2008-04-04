@@ -138,7 +138,7 @@
  * 
  * Each DNX Job Object has:
  * 
- *    1. GUID - Assigned at Job creation by the Scheduler
+ *    1. GUID (XID) - Assigned at Job creation by the Scheduler
  *    2. State: Pending, Executing, Completed, Cancelled
  *    3. Execution Command
  *    4. Execution Parameters
@@ -153,12 +153,12 @@
  * For example, a DNX Job object as transmitted to a Dispatcher, via a DNX_MSG_PUT_JOB, will
  * only include the following DNX Job attributes:
  * 
- *    GUID, State, Execution Command, Execution Parameters and Execution Start Time.
+ *    GUID (XID), State, Execution Command, Execution Parameters and Execution Start Time.
  * 
  * Conversely, a DNX Job object as transmitted to a Collector, via a DNS_PUT_RESULT, will
  * only include the following DNX Job attributes:
  * 
- *    GUID, State, Execution Start Time, Execution End Time, Result Code, Result Data
+ *    GUID (XID), State, Execution Start Time, Execution End Time, Result Code, Result Data
  * 
  * @file dnxTransport.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)

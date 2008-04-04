@@ -339,7 +339,7 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
    }
 
    // Fill-in the job structure with the necessary information
-   dnxMakeGuid(&Job.guid, DNX_OBJ_JOB, serial, 0);
+   dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.payload    = svc;
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
@@ -421,12 +421,12 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
       syslog(auditLogFacility | LOG_INFO,
          "%s: Job %lu: Worker %u.%u.%u.%u-%lx: %s",
          action,
-         pJob->guid.objSerial,
+         pJob->xid.objSerial,
          (unsigned)((addr >> 24) & 0xff),
          (unsigned)((addr >> 16) & 0xff),
          (unsigned)((addr >>  8) & 0xff),
          (unsigned)( addr        & 0xff),
-         pJob->pNode->guid.objSlot,
+         pJob->pNode->xid.objSlot,
          pJob->cmd
          );
    }

@@ -112,9 +112,9 @@ int dnxXmlToString(DnxXmlType xType, void * xData, char * buf, int size)
          buf[size-1] = '\0';
          break;
 
-      case DNX_XML_GUID:
-         snprintf(buf, size, "%u-%lu-%lu", ((DnxGuid *)xData)->objType, 
-               ((DnxGuid *)xData)->objSerial, ((DnxGuid *)xData)->objSlot);
+      case DNX_XML_XID:
+         snprintf(buf, size, "%u-%lu-%lu", ((DnxXID *)xData)->objType, 
+               ((DnxXID *)xData)->objSerial, ((DnxXID *)xData)->objSlot);
          break;
 
       default:
@@ -346,19 +346,19 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          }
          break;
 
-      case DNX_XML_GUID:
-         // The format of a GUID is: "objType-objSerial-objSlot",
+      case DNX_XML_XID:
+         // The format of a XID is: "objType-objSerial-objSlot",
          // where objType, objSerial and objSlot are unsigned integers
          if ((cp = strchr(buf, '-')) == NULL)
          {
-            ret = DNX_ERR_SYNTAX;   // Missing GUID separator
+            ret = DNX_ERR_SYNTAX;   // Missing XID separator
             break;
          }
          *cp++ = '\0';  // Now buf points to objType and cp points to objSerial
    
          if ((ep = strchr(cp, '-')) == NULL)
          {
-            ret = DNX_ERR_SYNTAX;   // Missing GUID separator
+            ret = DNX_ERR_SYNTAX;   // Missing XID separator
             break;
          }
          *ep++ = '\0';  // Now ep points to objSlot
@@ -371,7 +371,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
             ret = DNX_ERR_SYNTAX;   // Invalid number
             break;
          }
-         ((DnxGuid *)xData)->objType = (DnxObjType)unum;
+         ((DnxXID *)xData)->objType = (DnxObjType)unum;
    
          // Decode objSerial
          errno = 0;
@@ -381,7 +381,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
             ret = DNX_ERR_SYNTAX;   // Invalid number
             break;
          }
-         ((DnxGuid *)xData)->objSerial = (unsigned long)unum;
+         ((DnxXID *)xData)->objSerial = (unsigned long)unum;
    
          // Decode objSlot
          errno = 0;
@@ -391,7 +391,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
             ret = DNX_ERR_SYNTAX;   // Invalid number
             break;
          }
-         ((DnxGuid *)xData)->objSlot = (unsigned long)unum;
+         ((DnxXID *)xData)->objSlot = (unsigned long)unum;
          break;
 
       default:
@@ -426,22 +426,22 @@ int dnxXmlClose(DnxXmlBuf * xbuf)
 
 /** Create a transaction id (XID) from a type, serial number and slot value.
  * 
- * @param[out] pGuid - the address of storage for the XID to be returned.
+ * @param[out] pxid - the address of storage for the XID to be returned.
  * @param[in] xType - the request type to be stored in the XID.
  * @param[in] xSerial - the serial number to be stored in the XID.
  * @param[in] xSlot - the slot number to be stored in the XID.
  * 
  * @return Always returns zero.
  */
-int dnxMakeGuid(DnxGuid * pGuid, DnxObjType xType, unsigned long xSerial, 
+int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, 
       unsigned long xSlot)
 {
-   assert(pGuid && xType >= 0 && xType < DNX_OBJ_MAX);
+   assert(pxid && xType >= 0 && xType < DNX_OBJ_MAX);
 
    // Set the object type
-   pGuid->objType   = xType;
-   pGuid->objSerial = xSerial;
-   pGuid->objSlot   = xSlot;
+   pxid->objType   = xType;
+   pxid->objSerial = xSerial;
+   pxid->objSlot   = xSlot;
 
    return DNX_OK;
 }

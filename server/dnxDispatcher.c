@@ -76,11 +76,11 @@ static int dnxSendJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    // Debug tracking
    dnxDebug(1, "dnxDispatcher[%lx]: dnxSendJob: Dispatching "
                "job %lu to worker node: %s",
-         pthread_self(), pSvcReq->guid.objSerial, pSvcReq->cmd);
+         pthread_self(), pSvcReq->xid.objSerial, pSvcReq->cmd);
 
    // Initialize the job structure message
    memset(&job, 0, sizeof(job));
-   job.guid     = pSvcReq->guid;
+   job.xid      = pSvcReq->xid;
    job.state    = DNX_JOB_PENDING;
    job.priority = 1;
    job.timeout  = pSvcReq->timeout;
@@ -90,7 +90,7 @@ static int dnxSendJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    if ((ret = dnxPutJob(idisp->channel, &job, pNode->address)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxSendJob: Unable to "
                          "send job %lu to worker node (%d): %s",
-            pthread_self(), pSvcReq->guid.objSerial, ret, pSvcReq->cmd);
+            pthread_self(), pSvcReq->xid.objSerial, ret, pSvcReq->cmd);
 
    return ret;
 }

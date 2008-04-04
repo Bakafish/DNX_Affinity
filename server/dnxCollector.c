@@ -91,11 +91,11 @@ static void * dnxCollector(void * data)
             DNX_COLLECTOR_TIMEOUT)) == DNX_OK)
       {
          dnxDebug(1, "dnxCollector[%lx]: Received result for [%lu,%lu]: %s", 
-               pthread_self(), sResult.guid.objSerial, sResult.guid.objSlot, 
+               pthread_self(), sResult.xid.objSerial, sResult.xid.objSlot, 
                sResult.resData);
 
          // dequeue the matching service request from the pending job queue
-         if (dnxJobListCollect(icoll->joblist, &sResult.guid, &Job) == DNX_OK)
+         if (dnxJobListCollect(icoll->joblist, &sResult.xid, &Job) == DNX_OK)
          {
             // post the results to the Nagios service request buffer
             ret = nagiosPostResult((service *)Job.payload, Job.start_time, 
@@ -107,8 +107,8 @@ static void * dnxCollector(void * data)
             xfree(sResult.resData);
 
             dnxDebug(1, "dnxCollector[%lx]: Posted result [%lu,%lu]: %d: %s", 
-                  pthread_self(), sResult.guid.objSerial, 
-                  sResult.guid.objSlot, ret, dnxErrorString(ret));
+                  pthread_self(), sResult.xid.objSerial, 
+                  sResult.xid.objSlot, ret, dnxErrorString(ret));
 
             dnxAuditJob(&Job, "COLLECT");
 
