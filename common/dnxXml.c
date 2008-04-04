@@ -35,6 +35,7 @@
 #include <string.h>
 #include <errno.h>
 #include <syslog.h>
+#include <assert.h>
 
 #define DNX_XML_MIN_HEADER 32
 
@@ -434,7 +435,7 @@ int dnxXmlClose(DnxXmlBuf * xbuf)
 int dnxMakeGuid(DnxGuid * pGuid, DnxObjType xType, unsigned long xSerial, 
       unsigned long xSlot)
 {
-   assert(pGuid && xType >= 0 && xType < DNX_OBJ_MAX)
+   assert(pGuid && xType >= 0 && xType < DNX_OBJ_MAX);
 
    // Set the object type
    pGuid->objType   = xType;

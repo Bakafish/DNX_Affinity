@@ -179,6 +179,8 @@
 #include <pthread.h>
 #include <syslog.h>
 #include <errno.h>
+#include <assert.h>
+
 
 static int dnxInit = 0;
 static pthread_mutex_t chanMutex;
