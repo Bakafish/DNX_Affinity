@@ -110,8 +110,61 @@ typedef struct iDnxWlm
 static void * dnxWorker(void * data);
 
 /*--------------------------------------------------------------------------
-                           WORKER IMPLEMENTATION
+                     WORK LOAD MANAGER IMPLEMENTATION
   --------------------------------------------------------------------------*/
+
+/** Log changes between old and new configuration data sets.
+ * 
+ * Dynamic reconfiguration of dispatcher and collector URL's is not allowed
+ * so we don't need to check differences in those string values.
+ * 
+ * @param[in] ocp - a reference to the old configuration data set.
+ * @param[in] ncp - a reference to the new configuration data set.
+ */
+static void logConfigChanges(DnxWlmCfgData * ocp, DnxWlmCfgData * ncp)
+{
+   if (ocp->reqTimeout != ncp->reqTimeout)
+      dnxSyslog(LOG_INFO, "WLM: threadRequestTimeout changed from %u to %u", 
+            ocp->reqTimeout, ncp->reqTimeout);
+
+   if (ocp->ttlBackoff != ncp->ttlBackoff)
+      dnxSyslog(LOG_INFO, "WLM: threadTtlBackoff changed from %u to %u", 
+            ocp->ttlBackoff, ncp->ttlBackoff);
+
+   if (ocp->maxRetries != ncp->maxRetries)
+      dnxSyslog(LOG_INFO, "WLM: threadMaxTimeouts changed from %u to %u", 
+            ocp->maxRetries, ncp->maxRetries);
+
+   if (ocp->poolMin != ncp->poolMin)
+      dnxSyslog(LOG_INFO, "WLM: poolMin changed from %u to %u", 
+            ocp->poolMin, ncp->poolMin);
+
+   if (ocp->poolInitial != ncp->poolInitial)
+      dnxSyslog(LOG_INFO, "WLM: poolInitial changed from %u to %u", 
+            ocp->poolInitial, ncp->poolInitial);
+
+   if (ocp->poolMax != ncp->poolMax)
+      dnxSyslog(LOG_INFO, "WLM: poolMax changed from %u to %u", 
+            ocp->poolMax, ncp->poolMax);
+
+   if (ocp->poolGrow != ncp->poolGrow)
+      dnxSyslog(LOG_INFO, "WLM: poolGrow changed from %u to %u", 
+            ocp->poolGrow, ncp->poolGrow);
+
+   if (ocp->pollInterval != ncp->pollInterval)
+      dnxSyslog(LOG_INFO, "WLM: wlmPollInterval changed from %u to %u", 
+            ocp->pollInterval, ncp->pollInterval);
+
+   if (ocp->shutdownGrace != ncp->shutdownGrace)
+      dnxSyslog(LOG_INFO, "WLM: wlmShutdownGracePeriod changed from %u to %u", 
+            ocp->shutdownGrace, ncp->shutdownGrace);
+
+   if (ocp->maxResults != ncp->maxResults)
+      dnxSyslog(LOG_INFO, "WLM: maxResultBuffer changed from %u to %u", 
+            ocp->maxResults, ncp->maxResults);
+}
+
+//----------------------------------------------------------------------------
 
 /** Initialize worker thread communication resources.
  * 
@@ -517,6 +570,8 @@ int dnxWlmReconfigure(DnxWlm * wlm, DnxWlmCfgData * cfg)
 
    // dynamic reconfiguration of dispatcher/collector URL's is not allowed
 
+   logConfigChanges(&iwlm->cfg, cfg);
+ 
    iwlm->cfg.reqTimeout = cfg->reqTimeout;
    iwlm->cfg.ttlBackoff = cfg->ttlBackoff;
    iwlm->cfg.maxRetries = cfg->maxRetries;

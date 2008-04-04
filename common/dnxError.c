@@ -57,23 +57,24 @@ char * dnxErrorString(dnxError eno)
    static char * errCatalog[] = 
    {
       "A-OK, Okey-Dokey, Rock-On",
-      "Invalid arguments or parameters",
+      "Invalid value",
       "Resource is exhausted",
       "Invalid or malformed URL",
       "Resource is already initialized/deinitialized",
       "Resource already exists",
-      "Unsupported protocol",
+      "Unsupported operation",
       "Out of memory",
       "Channel open error",
       "Message size is out of bounds",
       "Message transmission failure",
       "Message reception failure",
       "Invalid communications address",
-      "Requested resource was not found",
+      "Resource was not found",
       "Incorrect or invalid XML message",
       "Threading error",
       "Timeout error",
       "Resource is busy",
+      "Access denied",
    };
 
    // check for system error first - return system error string

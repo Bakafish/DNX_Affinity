@@ -41,6 +41,7 @@
 
 #include "dnxCfgParser.h"
 
+#include "dnxLogging.h"
 #include "dnxError.h"
 #include "dnxDebug.h"
 
@@ -49,6 +50,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <errno.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -300,7 +302,7 @@ static int validate(DnxCfgDictionary * dict, size_t dictsz,
          return 0;
       }
    }
-   return DNX_ERR_NOTFOUND;
+   return DNX_ERR_INVALID; // invalid entry - no dictionary mapping
 }
 
 //----------------------------------------------------------------------------
@@ -429,26 +431,28 @@ int dnxCfgParserCreate(char * cfgfile, DnxCfgDictionary * dict, size_t dictsz,
 int dnxCfgParserParse(DnxCfgParser * cp)
 {
    iDnxCfgParser * icp = (iDnxCfgParser *)cp;
-   int line, ret = DNX_ERR_NOTFOUND;
+   int ret = 0, line = 0;
    char buf[DNX_MAX_CFG_LINE];
    FILE * fp;
 
    assert(cp);
 
-   if ((fp = fopen(icp->cfgfile, "r")) != 0)
+   if ((fp = fopen(icp->cfgfile, "r")) == 0)
+      return errno == EACCES? DNX_ERR_ACCESS : DNX_ERR_NOTFOUND;
+   
+   while (fgets(buf, sizeof(buf), fp) != 0)
    {
-      ret = line = 0;
-      while (fgets(buf, sizeof(buf), fp) != 0)
+      line++;
+      if ((ret = parseCfgLine(icp, buf)) != 0)
       {
-         line++;
-         if ((ret = parseCfgLine(icp, buf)) != 0)
-         {
-            if (!icp->errhandler) break;
+         if (icp->errhandler)
             icp->errhandler(ret, line, buf, icp->data);
-         }
+         else
+            dnxSyslog(LOG_ERR, "cfgParser [%s]: Error on line %d: %s", 
+                  icp->cfgfile, line, dnxErrorString(ret));
       }
-      fclose(fp);
    }
+   fclose(fp);
    return ret;
 }
 
@@ -490,16 +494,16 @@ void dnxCfgParserDestroy(DnxCfgParser * cp)
    "   testCfgString = some string\n"                                         \
    "testCfgInt = -10024\n"                                                    \
    "testCfgIntArray=-1, 87,3   ,2, 32,3,1,-23,  -112,2,234\n"                 \
-   "testCfgUnsigned = 332245235\n"                                            \
+   "testCfgUnsigned = 332245235\r\n"                                          \
    "testCfgUnsignedArray = 2342, 234,234,4,  2342  ,2342  ,234234 \n"         \
    " testCfgIpAddr = 127.0.0.1\n"                                             \
-   "testCfgIpAddrArray = localhost,10.1.1.1, 10.1.1.2 ,10.1.1.3\n"            \
+   "testCfgIpAddrArray = localhost,10.1.1.1, 10.1.1.2 ,10.1.1.3\r\n"          \
    "testCfgUrl = http://www.example.com\n"                                    \
    "testCfgFSPath = /some/path\n"
      
 static verbose;
 
-IMPLEMENT_DNX_DEBUG(verbose);
+IMPLEMENT_DNX_SYSLOG(verbose);
 
 static void test_errhandler(int err, int line, char * buf, void * data) 
 { if (verbose) printf("test_errhandler: Error %d, Line %d, Buffer '%s'.\n", 
