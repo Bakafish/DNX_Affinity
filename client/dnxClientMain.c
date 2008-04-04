@@ -274,28 +274,24 @@ static int getConfig (DnxGlobalData *gData)
 
 //----------------------------------------------------------------------------
 
-typedef struct _FacilityCodes_ {
-   char *str;
-   int val;
-} FacilityCodes;
-
-static FacilityCodes facCode[] = {
-   { "LOG_LOCAL0",   LOG_LOCAL0 },
-   { "LOG_LOCAL1",   LOG_LOCAL1 },
-   { "LOG_LOCAL2",   LOG_LOCAL2 },
-   { "LOG_LOCAL3",   LOG_LOCAL3 },
-   { "LOG_LOCAL4",   LOG_LOCAL4 },
-   { "LOG_LOCAL5",   LOG_LOCAL5 },
-   { "LOG_LOCAL6",   LOG_LOCAL6 },
-   { "LOG_LOCAL7",   LOG_LOCAL7 },
-   { NULL, -1 }
-};
-
 static int verifyFacility (char *szFacility, int *nFacility)
 {
-   FacilityCodes *p;
+   static struct FacilityCode { char * str; int val; } facodes[] = 
+   {
+      { "LOG_LOCAL0", LOG_LOCAL0 },
+      { "LOG_LOCAL1", LOG_LOCAL1 },
+      { "LOG_LOCAL2", LOG_LOCAL2 },
+      { "LOG_LOCAL3", LOG_LOCAL3 },
+      { "LOG_LOCAL4", LOG_LOCAL4 },
+      { "LOG_LOCAL5", LOG_LOCAL5 },
+      { "LOG_LOCAL6", LOG_LOCAL6 },
+      { "LOG_LOCAL7", LOG_LOCAL7 },
+      { NULL, -1 }
+   };
+   struct FacilityCode * p;
 
-   for (p = facCode; p->str && strcmp(szFacility, p->str); p++);
+   for (p = facCode; p->str && strcmp(szFacility, p->str); p++)
+      ;
 
    return (*nFacility = p->val);
 }
