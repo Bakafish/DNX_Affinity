@@ -1,34 +1,24 @@
-SUBDIRS = test
+EXTRA_DIST = test
 
-sbin_PROGRAMS = dnxClient
+bin_PROGRAMS = dnxClient
 
 noinst_HEADERS =\
+ dnxClientMain.h\
  dnxPlugin.h\
- dnxWLM.h
+ dnxWLM.h\
+ dnxWorker.h
 
 dnxClient_SOURCES =\
  dnxClientMain.c\
+ dnxConfig.c\
+ dnxLogging.c\
  dnxPlugin.c\
- dnxWLM.c
+ dnxWLM.c\
+ dnxWorker.c
 
-dnxClient_CPPFLAGS =\
- -DSYSCONFDIR=\"$(sysconfdir)\"\
- -DSYSLOGDIR=\"$(syslogdir)\"\
- -DSYSRUNPATH=\"$(sysrundir)\"\
- -DDNXUSER=\"$(dnx_user)\"\
- -DDNXGROUP=\"$(dnx_group)\"\
+INCLUDES =\
+ -I$(top_srcdir)/include\
  -I$(top_srcdir)/common
 
 dnxClient_LDADD = ../common/libcmn.la
 
-install-exec-hook:
-	$(install_sh) -d $(DESTDIR)$(sysrundir)
-	if [ `id -u` -eq 0 ] && [ -z ${DESTDIR} ]; then \
-	   chown $(dnx_user):$(dnx_group) $(DESTDIR)$(sysrundir); \
-	fi
-	if [ ! -e $(DESTDIR)$(syslogdir) ]; then \
-	   $(install_sh) -d $(DESTDIR)$(syslogdir); \
-	   if [ `id -u` -eq 0 ] && [ -z ${DESTDIR} ]; then \
-	      chown $(dnx_user):$(dnx_group) $(DESTDIR)$(syslogdir); \
-	   fi; \
-	fi
