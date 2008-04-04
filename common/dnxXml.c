@@ -27,6 +27,7 @@
 
 #include "dnxXml.h"
 
+#include "dnxProtocol.h"
 #include "dnxError.h"
 #include "dnxDebug.h"
 #include "dnxLogging.h"
@@ -42,26 +43,9 @@
 
 /** @todo Implement int dnxXmlTypeSize(DnxXmlType). */
 
-//----------------------------------------------------------------------------
-
-/** Open and write header information to a dnx xml buffer.
- * 
- * @param[out] xbuf - the dnx xml buffer to be opened.
- * @param[in] tag - the major xml request tag to write to @p xbuf.
- * 
- * @return Always returns zero.
- */
-int dnxXmlOpen(DnxXmlBuf * xbuf, char * tag)
-{
-   assert(xbuf && tag);
-
-   // Initialize buffer with message container opening tag and request attribute
-   xbuf->size = sprintf(xbuf->buf, "<dnxMessage><Request>%s</Request>", tag);
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                              IMPLEMENTATION
+  --------------------------------------------------------------------------*/
 
 /** Convert an opaque pointer to C data into a dnx xml string format.
  * 
@@ -73,7 +57,7 @@ int dnxXmlOpen(DnxXmlBuf * xbuf, char * tag)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxXmlToString(DnxXmlType xType, void * xData, char * buf, int size)
+static int dnxXmlToString(DnxXmlType xType, void * xData, char * buf, int size)
 {
    int ret = DNX_OK;
 
@@ -109,7 +93,7 @@ int dnxXmlToString(DnxXmlType xType, void * xData, char * buf, int size)
 
       case DNX_XML_STR:
          strncpy(buf, (char *)xData, size);
-         buf[size-1] = '\0';
+         buf[size - 1] = 0;
          break;
 
       case DNX_XML_XID:
@@ -121,6 +105,122 @@ int dnxXmlToString(DnxXmlType xType, void * xData, char * buf, int size)
          ret = DNX_ERR_INVALID;
    }
    return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Locate and return an xml string element by tag value.
+ * 
+ * @param[in] xbuf - the dnx xml buffer to search for @p xTag.
+ * @param[in] xTag - the tag to search @p xbuf for.
+ * @param[in] xType - the C data type of the element - not used.
+ * @param[out] buf - the address of storage for the xml element matching 
+ *    the xml tag in @p xTag.
+ * @param[in] size - the maximum number of bytes that may be written
+ *    to @p buf.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dnxXmlGetTagValue(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, 
+      char * buf, int size)
+{
+   char * cp, * ep, * value;
+   int len;
+   int ret = DNX_OK;
+
+   // validate parameters
+   if (!xbuf || !xTag || !buf || size < 1)
+      return DNX_ERR_INVALID;
+
+   *buf = 0;   // initialize user buffer
+
+   // search XML buffer for specified tag;
+
+   // search for opening bracket
+   cp = xbuf->buf;
+   while ((cp = strchr(cp, '<')) != NULL)
+   {
+      cp++;
+
+      if (*cp == '/')
+         continue;   // not a match
+
+      // search for end-bracket
+      if ((ep = strchr(cp, '>')) == NULL)
+      {
+         ret = DNX_ERR_SYNTAX;
+         break;   // error - unmatched XML brackets
+      }
+
+      // see if we've matched open-tag
+      if (strncmp(cp, xTag, (ep-cp)))
+      {
+         cp = ep+1;  // reset beginning pointer for next search
+         continue;   // not a match
+      }
+
+      value = cp = ep + 1; // beginning of tag-value
+
+end_tag:
+
+      // find opening bracket of end-tag
+      if ((ep = strchr(cp, '<')) == NULL)
+      {
+         ret = DNX_ERR_SYNTAX;
+         break;   // error - missing closing tag
+      }
+
+      len = ep - value; // length of tag-value
+
+      // verify that this is a closing tag
+      if (*(cp = ep + 1) != '/')
+         goto end_tag;  // not a match
+      cp++;
+
+      // search for end-bracket
+      if ((ep = strchr(cp, '>')) == NULL)
+      {
+         ret = DNX_ERR_SYNTAX;
+         break;   // error - nmatched XML brackets
+      }
+
+      // see if we've matched the end-tag
+      if (strncmp(cp, xTag, ep - cp))
+         goto end_tag;  // not a match
+
+      // get min of tag-value-length or conversion buffer size.
+      if (len >= size)
+         len = size - 1;
+
+      // copy tag value to local conversion buffer
+      if (len > 0)
+         memcpy(buf, value, len);
+      buf[len] = 0;
+
+      break;   // success
+   }
+   return ret;
+}
+
+/*--------------------------------------------------------------------------
+                              INTERFACE
+  --------------------------------------------------------------------------*/
+
+/** Open and write header information to a dnx xml buffer.
+ * 
+ * @param[out] xbuf - the dnx xml buffer to be opened.
+ * @param[in] tag - the major xml request tag to write to @p xbuf.
+ * 
+ * @return Always returns zero.
+ */
+int dnxXmlOpen(DnxXmlBuf * xbuf, char * tag)
+{
+   assert(xbuf && tag);
+
+   // initialize buffer with message container opening tag and request attribute
+   xbuf->size = sprintf(xbuf->buf, "<dnxMessage><Request>%s</Request>", tag);
+
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -142,114 +242,19 @@ int dnxXmlAdd(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
 
    assert(xbuf && xbuf->size >= DNX_XML_MIN_HEADER && xTag);
 
-   // Convert data element to string
+   // convert data element to string
    *buf = 0;
    if (xData && (ret = dnxXmlToString(xType, xData, buf, sizeof(buf))) != DNX_OK)
       return ret;
    
-   // Perform capacity check on XML buffer - 5 = number of brackets plus '/'
+   // perform capacity check on XML buffer - 5 = number of brackets plus '/'
    if ((len = xbuf->size + strlen(xTag) * 2 + strlen(buf) + 5) >= DNX_MAX_MSG)
       return DNX_ERR_CAPACITY;
 
-   // Add to XML buffer
-   xbuf->size += sprintf((xbuf->buf + xbuf->size), "<%s>%s</%s>", xTag, buf, xTag);
+   // add to XML buffer
+   xbuf->size += sprintf(xbuf->buf + xbuf->size, "<%s>%s</%s>", xTag, buf, xTag);
 
    return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Locate and return an xml string element by tag value.
- * 
- * @param[in] xbuf - the dnx xml buffer to search for @p xTag.
- * @param[in] xTag - the tag to search @p xbuf for.
- * @param[in] xType - the C data type of the element - not used.
- * @param[out] buf - the address of storage for the xml element matching 
- *    the xml tag in @p xTag.
- * @param[in] size - the maximum number of bytes that may be written
- *    to @p buf.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int dnxXmlGetTagValue(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, 
-      char * buf, int size)
-{
-   char * cp, * ep, * value;
-   int len;
-   int ret = DNX_OK;
-
-   // Validate parameters
-   if (!xbuf || !xTag || !buf || size < 1)
-      return DNX_ERR_INVALID;
-
-   *buf = '\0';   // Initialize user buffer
-
-   // Search XML buffer for specified tag;
-
-   // Search for opening bracket
-   cp = xbuf->buf;
-   while ((cp = strchr(cp, '<')) != NULL)
-   {
-      cp++;
-
-      if (*cp == '/')
-         continue;   // Not a match
-
-      // Search for end-bracket
-      if ((ep = strchr(cp, '>')) == NULL)
-      {
-         ret = DNX_ERR_SYNTAX;
-         break;   // ERROR: Unmatched XML brackets
-      }
-
-      // See if we've matched open-tag
-      if (strncmp(cp, xTag, (ep-cp)))
-      {
-         cp = ep+1;  // Reset beginning pointer for next search
-         continue;   // Not a match
-      }
-
-      value = cp = ep + 1; // Beginning of tag-value
-
-end_tag:;
-
-      // Find opening bracket of end-tag
-      if ((ep = strchr(cp, '<')) == NULL)
-      {
-         ret = DNX_ERR_SYNTAX;
-         break;   // ERROR: Missing closing tag
-      }
-
-      len = ep - value; // Length of tag-value
-
-      // Verify that this is a closing tag
-      if (*(cp = ep + 1) != '/')
-         goto end_tag;  // Not a match
-      cp++;
-
-      // Search for end-bracket
-      if ((ep = strchr(cp, '>')) == NULL)
-      {
-         ret = DNX_ERR_SYNTAX;
-         break;   // ERROR: Unmatched XML brackets
-      }
-
-      // See if we've matched the end-tag
-      if (strncmp(cp, xTag, (ep-cp)))
-         goto end_tag;  // Not a match
-
-      // Get min of tag-value-length or conversion buffer size.
-      if (len >= size)
-         len = size - 1;
-
-      // Copy tag value to local conversion buffer
-      if (len > 0)
-         memcpy(buf, value, len);
-      buf[len] = '\0';
-
-      break;   // Success
-   }
-   return ret;
 }
 
 //----------------------------------------------------------------------------
@@ -276,12 +281,12 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
    long num;
    int ret = DNX_OK;
 
-   // Extract the value of the specified tag from the XML buffer
-   buf[0] = '\0';
-   if ((ret = dnxXmlGetTagValue(xbuf, xTag, xType, buf, sizeof(buf))) != DNX_OK)
+   // extract the value of the specified tag from the XML buffer
+   buf[0] = 0;
+   if ((ret = dnxXmlGetTagValue(xbuf, xTag, xType, buf, sizeof buf)) != DNX_OK)
       return ret;
 
-   // Convert tag value into target binary type
+   // convert tag value into target binary type
    switch (xType)
    {
       case DNX_XML_SHORT:
@@ -290,7 +295,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          if (errno == ERANGE || *lastchar)
             ret = DNX_ERR_SYNTAX;
          else
-            *((short *)xData) = (short)num;
+            *(short *)xData = (short)num;
          break;
 
       case DNX_XML_USHORT:
@@ -299,7 +304,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          if (errno == ERANGE || *lastchar)
             ret = DNX_ERR_SYNTAX;
          else
-            *((unsigned short *)xData) = (unsigned short)unum;
+            *(unsigned short *)xData = (unsigned short)unum;
          break;
 
       case DNX_XML_INT:
@@ -308,7 +313,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          if (errno == ERANGE || *lastchar)
             ret = DNX_ERR_SYNTAX;
          else
-            *((int *)xData) = (int)num;
+            *(int *)xData = (int)num;
          break;
 
       case DNX_XML_UINT:
@@ -317,7 +322,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          if (errno == ERANGE || *lastchar)
             ret = DNX_ERR_SYNTAX;
          else
-            *((unsigned int *)xData) = (unsigned int)unum;
+            *(unsigned int *)xData = (unsigned int)unum;
          break;
 
       case DNX_XML_LONG:
@@ -326,7 +331,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          if (errno == ERANGE || *lastchar)
             ret = DNX_ERR_SYNTAX;
          else
-            *((long *)xData) = (long)num;
+            *(long *)xData = (long)num;
          break;
 
       case DNX_XML_ULONG:
@@ -335,11 +340,11 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          if (errno == ERANGE || *lastchar)
             ret = DNX_ERR_SYNTAX;
          else
-            *((unsigned long *)xData) = (unsigned long)unum;
+            *(unsigned long *)xData = (unsigned long)unum;
          break;
 
       case DNX_XML_STR:
-         if ((*((char **)xData) = xstrdup(buf)) == NULL)
+         if ((*(char **)xData = xstrdup(buf)) == NULL)
          {
             dnxSyslog(LOG_ERR, "dnxXmlGet: DNX_XML_STR: Out of Memory");
             ret = DNX_ERR_MEMORY;
@@ -347,48 +352,48 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          break;
 
       case DNX_XML_XID:
-         // The format of a XID is: "objType-objSerial-objSlot",
+         // the format of a XID is: "objType-objSerial-objSlot",
          // where objType, objSerial and objSlot are unsigned integers
          if ((cp = strchr(buf, '-')) == NULL)
          {
-            ret = DNX_ERR_SYNTAX;   // Missing XID separator
+            ret = DNX_ERR_SYNTAX;   // missing XID separator
             break;
          }
-         *cp++ = '\0';  // Now buf points to objType and cp points to objSerial
+         *cp++ = 0;  // now buf points to objType and cp points to objSerial
    
          if ((ep = strchr(cp, '-')) == NULL)
          {
-            ret = DNX_ERR_SYNTAX;   // Missing XID separator
+            ret = DNX_ERR_SYNTAX;   // missing XID separator
             break;
          }
-         *ep++ = '\0';  // Now ep points to objSlot
+         *ep++ = 0;  // now ep points to objSlot
    
-         // Decode objType
+         // decode objType
          errno = 0;
          unum = strtoul(buf, &lastchar, 0);
          if (errno == ERANGE || *lastchar)
          {
-            ret = DNX_ERR_SYNTAX;   // Invalid number
+            ret = DNX_ERR_SYNTAX;   // invalid number
             break;
          }
          ((DnxXID *)xData)->objType = (DnxObjType)unum;
    
-         // Decode objSerial
+         // decode objSerial
          errno = 0;
          unum = strtoul(cp, &lastchar, 0);
          if (errno == ERANGE || *lastchar)
          {
-            ret = DNX_ERR_SYNTAX;   // Invalid number
+            ret = DNX_ERR_SYNTAX;   // invalid number
             break;
          }
          ((DnxXID *)xData)->objSerial = (unsigned long)unum;
    
-         // Decode objSlot
+         // decode objSlot
          errno = 0;
          unum = strtoul(ep, &lastchar, 0);
          if (errno == ERANGE || *lastchar)
          {
-            ret = DNX_ERR_SYNTAX;   // Invalid number
+            ret = DNX_ERR_SYNTAX;   // invalid number
             break;
          }
          ((DnxXID *)xData)->objSlot = (unsigned long)unum;
@@ -415,36 +420,166 @@ int dnxXmlClose(DnxXmlBuf * xbuf)
    if (xbuf->size > DNX_MAX_MSG)
       return DNX_ERR_CAPACITY;
 
-   // Append final message container tag
+   // append final message container tag
    strcat(xbuf->buf, "</dnxMessage>");
    xbuf->size = strlen(xbuf->buf);
 
    return DNX_OK;
 }
 
-//----------------------------------------------------------------------------
+/*--------------------------------------------------------------------------
+                                 TEST MAIN
 
-/** Create a transaction id (XID) from a type, serial number and slot value.
- * 
- * @param[out] pxid - the address of storage for the XID to be returned.
- * @param[in] xType - the request type to be stored in the XID.
- * @param[in] xSerial - the serial number to be stored in the XID.
- * @param[in] xSlot - the slot number to be stored in the XID.
- * 
- * @return Always returns zero.
- */
-int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, 
-      unsigned long xSlot)
+   From within dnx/common, compile with GNU tools using this command line:
+    
+      gcc -DDEBUG -DDNX_XML_TEST -g -O0 -o dnxXmlTest \
+         dnxXml.c dnxError.c
+
+   Alternatively, a heap check may be done with the following command line:
+
+      gcc -DDEBUG -DDEBUG_HEAP -DDNX_XML_TEST -g -O0 -o \
+         dnxXmlTest dnxXml.c dnxError.c dnxHeap.c
+
+  --------------------------------------------------------------------------*/
+
+#ifdef DNX_XML_TEST
+
+/* test-bed helper macros */
+#define CHECK_ZERO(expr)                                                      \
+do {                                                                          \
+   int ret;                                                                   \
+   if ((ret = (expr)) != 0)                                                   \
+   {                                                                          \
+      fprintf(stderr, "FAILED: '%s'\n  at %s(%d).\n  error %d: %s\n",         \
+            #expr, __FILE__, __LINE__, ret, dnxErrorString(ret));             \
+      exit(1);                                                                \
+   }                                                                          \
+} while (0)
+#define CHECK_TRUE(expr)                                                      \
+do {                                                                          \
+   if (!(expr))                                                               \
+   {                                                                          \
+      fprintf(stderr, "FAILED: Boolean(%s)\n  at %s(%d).\n",                  \
+            #expr, __FILE__, __LINE__);                                       \
+      exit(1);                                                                \
+   }                                                                          \
+} while (0)
+#define CHECK_NONZERO(expr)   CHECK_ZERO(!(expr))
+#define CHECK_FALSE(expr)     CHECK_TRUE(!(expr))
+
+static verbose;
+
+#include <stdarg.h>
+void dnxSyslog(int l, char * f, ... )
+      { if (verbose) { va_list a; va_start(a,f); 
+            vprintf(f,a); va_end(a); puts(""); } }
+
+#ifdef DEBUG_HEAP
+void dnxDebug(int l, char * f, ... )
+      { if (verbose) { va_list a; va_start(a,f); 
+            vprintf(f,a); va_end(a); puts(""); } }
+#endif
+
+int main(int argc, char ** argv)
 {
-   assert(pxid && xType >= 0 && xType < DNX_OBJ_MAX);
+   static int lens[] = {35, 54, 74, 90, 107, 126, 146, 174, 204, 217};
+   static char * testbuf = 
+         "<dnxMessage>"
+         "<Request>Test</Request>"
+         "<Short>-100</Short>"
+         "<UShort>100</UShort>"
+         "<Int>-1000</Int>"
+         "<UInt>1000</UInt>"
+         "<Long>-10000</Long>"
+         "<ULong>10000</ULong>"
+         "<String>test string</String>"
+         "<XID>6-12345678-87654321</XID>"
+         "</dnxMessage>";
 
-   // Set the object type
-   pxid->objType   = xType;
-   pxid->objSerial = xSerial;
-   pxid->objSlot   = xSlot;
+   DnxXmlBuf xbuf;
 
-   return DNX_OK;
+   short xshort = -100;
+   unsigned short xushort = 100;
+   int xint = -1000;
+   unsigned int xuint = 1000;
+   long xlong = -10000;
+   unsigned long xulong = 10000;
+   char * xstring = "test string";
+   DnxXID xid;
+
+   xid.objType = DNX_OBJ_MANAGER;
+   xid.objSerial = 12345678;
+   xid.objSlot = 87654321;
+
+   verbose = argc > 1 ? 1 : 0;
+
+   CHECK_ZERO(dnxXmlOpen(&xbuf, "Test"));
+   CHECK_TRUE(memcmp(xbuf.buf, testbuf, lens[0]) == 0);
+
+   CHECK_ZERO(dnxXmlAdd(&xbuf, "Short", DNX_XML_SHORT, &xshort));
+   CHECK_TRUE(memcmp(xbuf.buf, testbuf, lens[1]) == 0);
+
+   CHECK_ZERO(dnxXmlAdd(&xbuf, "UShort", DNX_XML_USHORT, &xushort));
+   CHECK_TRUE(memcmp(xbuf.buf, testbuf, lens[2]) == 0);
+
+   CHECK_ZERO(dnxXmlAdd(&xbuf, "Int", DNX_XML_INT, &xint));
+   CHECK_TRUE(memcmp(xbuf.buf, testbuf, lens[3]) == 0);
+
+   CHECK_ZERO(dnxXmlAdd(&xbuf, "UInt", DNX_XML_UINT, &xuint));
+   CHECK_TRUE(memcmp(xbuf.buf, testbuf, lens[4]) == 0);
+
+   CHECK_ZERO(dnxXmlAdd(&xbuf, "Long", DNX_XML_LONG, &xlong));
+   CHECK_TRUE(memcmp(xbuf.buf, testbuf, lens[5]) == 0);
+
+   CHECK_ZERO(dnxXmlAdd(&xbuf, "ULong", DNX_XML_ULONG, &xulong));
+   CHECK_TRUE(memcmp(xbuf.buf, testbuf, lens[6]) == 0);
+
+   CHECK_ZERO(dnxXmlAdd(&xbuf, "String", DNX_XML_STR, xstring));
+   CHECK_TRUE(memcmp(xbuf.buf, testbuf, lens[7]) == 0);
+
+   CHECK_ZERO(dnxXmlAdd(&xbuf, "XID", DNX_XML_XID, &xid));
+   CHECK_TRUE(memcmp(xbuf.buf, testbuf, lens[8]) == 0);
+
+   CHECK_ZERO(dnxXmlClose(&xbuf));
+   CHECK_TRUE(memcmp(xbuf.buf, testbuf, lens[9]) == 0);
+
+   CHECK_ZERO(dnxXmlGet(&xbuf, "Short",  DNX_XML_SHORT,  &xshort));
+   CHECK_TRUE(xshort == -100);
+
+   CHECK_ZERO(dnxXmlGet(&xbuf, "UShort", DNX_XML_USHORT, &xushort));
+   CHECK_TRUE(xushort == 100);
+
+   CHECK_ZERO(dnxXmlGet(&xbuf, "Int",    DNX_XML_INT,    &xint));
+   CHECK_TRUE(xint == -1000);
+
+   CHECK_ZERO(dnxXmlGet(&xbuf, "UInt",   DNX_XML_UINT,   &xuint));
+   CHECK_TRUE(xuint == 1000);
+
+   CHECK_ZERO(dnxXmlGet(&xbuf, "Long",   DNX_XML_LONG,   &xlong));
+   CHECK_TRUE(xlong == -10000);
+
+   CHECK_ZERO(dnxXmlGet(&xbuf, "ULong",  DNX_XML_ULONG,  &xulong));
+   CHECK_TRUE(xulong == 10000);
+
+   CHECK_ZERO(dnxXmlGet(&xbuf, "String", DNX_XML_STR, &xstring));
+   CHECK_TRUE(strcmp(xstring, "test string") == 0);
+
+   // we have to free all strings returned by dnxXmlGet - this is so broken
+   xfree(xstring);
+
+   CHECK_ZERO(dnxXmlGet(&xbuf, "XID",    DNX_XML_XID,    &xid));
+   CHECK_TRUE(xid.objType == DNX_OBJ_MANAGER);
+   CHECK_TRUE(xid.objSerial == 12345678);
+   CHECK_TRUE(xid.objSlot == 87654321);
+
+#ifdef DEBUG_HEAP
+   CHECK_ZERO(dnxCheckHeap());
+#endif
+
+   return 0;
 }
+
+#endif   /* DNX_CFGPARSER_TEST */
 
 /*--------------------------------------------------------------------------*/
 

@@ -32,7 +32,7 @@
 
 #include <time.h>
 
-typedef struct _DnxNewJob_ 
+typedef struct DnxNewJob
 {
    DnxJobState state;      // Job state
    DnxXID xid;             // Service request transaction id.

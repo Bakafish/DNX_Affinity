@@ -28,10 +28,9 @@
 #ifndef _DNXXML_H_
 #define _DNXXML_H_
 
-#include "dnxChannel.h"
-#include "dnxProtocol.h"
+#include "dnxChannel.h" // for DNX_MAX_MSG
 
-typedef enum _DnxXmlMsg_ 
+typedef enum DnxXmlType
 {
    DNX_XML_UNKNOWN = 0,
    DNX_XML_SHORT,
@@ -44,7 +43,7 @@ typedef enum _DnxXmlMsg_
    DNX_XML_XID
 } DnxXmlType;
 
-typedef struct _DnxXmlBuf_ 
+typedef struct DnxXmlBuf
 {
    char buf[DNX_MAX_MSG];
    unsigned size;
@@ -54,8 +53,6 @@ int dnxXmlOpen(DnxXmlBuf * xbuf, char * tag);
 int dnxXmlAdd(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData);
 int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData);
 int dnxXmlClose(DnxXmlBuf * xbuf);
-int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, 
-      unsigned long xSlot);
 
 #endif   /* _DNXXML_H_ */
 

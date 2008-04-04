@@ -61,9 +61,16 @@
 
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
-#define DNX_VERSION              VERSION
-#define DNX_EMBEDDED_SVC_OBJECT  1
-#define DNX_MAX_NODE_REQUESTS    1024
+#define DNX_VERSION                    VERSION
+
+#define DNX_EMBEDDED_SVC_OBJECT        1
+
+// default configuration values
+#define DNX_DEFAULT_SERVER_CONFIG_FILE "dnxServer.cfg"
+#define DNX_DEFAULT_MAX_NODE_REQUESTS  0x7FFFFFFF
+#define DNX_DEFAULT_MIN_SERVICE_SLOTS  100
+#define DNX_DEFAULT_EXPIRE_POLL_INT    5
+#define DNX_DEFAULT_LOG_FACILITY       "LOG_LOCAL7"
 
 // specify event broker API version (required)
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);
@@ -75,7 +82,7 @@ typedef struct DnxServerCfg
    char * collectorUrl;
    char * authWorkerNodes;
    unsigned maxNodeRequests;  // Maximum number of node requests we will accept
-   unsigned minServiceSlots;
+   unsigned minServiceSlots;  // Minimum number of node requests we will accept
    unsigned expirePollInterval;
    char * localCheckPattern;
    char * syncScript;
@@ -159,11 +166,12 @@ static int initConfig(char * ConfigFile)
    };
    int ret;
 
-   // set configuration defaults 
-   dnxLogFacility = LOG_LOCAL7;
-   cfg.maxNodeRequests = DNX_MAX_NODE_REQUESTS;
-   cfg.minServiceSlots = 1024;
-   cfg.expirePollInterval = 5;
+   // set configuration defaults - don't forget to allocate strings
+   memset(&cfg, 0, sizeof cfg);
+   cfg.logFacility         = xstrdup(DNX_DEFAULT_LOG_FACILITY);
+   cfg.maxNodeRequests     = DNX_DEFAULT_MAX_NODE_REQUESTS;
+   cfg.minServiceSlots     = DNX_DEFAULT_MIN_SERVICE_SLOTS;
+   cfg.expirePollInterval  = DNX_DEFAULT_EXPIRE_POLL_INT;
 
    if ((ret = dnxCfgParserCreate(ConfigFile, 
          dict, elemcount(dict), 0, 0, &cfgParser)) != 0)
@@ -173,21 +181,21 @@ static int initConfig(char * ConfigFile)
    {
       int err;
 
-      // validate configuration items
+      // validate configuration items in context
       ret = DNX_ERR_INVALID;
       if (!cfg.dispatcherUrl)
          dnxSyslog(LOG_ERR, "config: Missing channelDispatcher parameter");
       else if (!cfg.collectorUrl)
          dnxSyslog(LOG_ERR, "config: Missing channelCollector parameter");
       else if (cfg.maxNodeRequests < 1)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid maxNodeRequests parameter");
+         dnxSyslog(LOG_ERR, "config: Invalid maxNodeRequests parameter");
       else if (cfg.minServiceSlots < 1)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid minServiceSlots parameter");
+         dnxSyslog(LOG_ERR, "config: Invalid minServiceSlots parameter");
       else if (cfg.expirePollInterval < 1)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid expirePollInterval parameter");
-      else if (cfg.localCheckPattern   // if the localCheckPattern is defined, then
+         dnxSyslog(LOG_ERR, "config: Invalid expirePollInterval parameter");
+      else if (cfg.localCheckPattern
             && (err = regcomp(&regEx, cfg.localCheckPattern, 
-                  REG_EXTENDED | REG_NOSUB)) != 0) // compile the regex
+                  REG_EXTENDED | REG_NOSUB)) != 0)
       {
          char buffer[128];
          regerror(err, &regEx, buffer, sizeof(buffer));
@@ -195,13 +203,13 @@ static int initConfig(char * ConfigFile)
                cfg.localCheckPattern, buffer);
          regfree(&regEx);
       }
-      else if (cfg.logFacility &&      // if logFacility is defined, then
-            verifyFacility(cfg.logFacility, &dnxLogFacility) == -1)
-         dnxSyslog(LOG_ERR, "config: Invalid syslog facility for logFacility: %s", 
+      else if (cfg.logFacility 
+               && verifyFacility(cfg.logFacility, &dnxLogFacility) == -1)
+         dnxSyslog(LOG_ERR, "config: Invalid syslog facility: %s", 
                cfg.logFacility);
-      else if (cfg.auditWorkerJobs &&  // if auditWorkerJobs is defined, then
-            verifyFacility(cfg.auditWorkerJobs, &auditLogFacility) == -1)
-         dnxSyslog(LOG_ERR, "config: Invalid syslog facility for auditWorkerJobs: %s", 
+      else if (cfg.auditWorkerJobs 
+            && verifyFacility(cfg.auditWorkerJobs, &auditLogFacility) == -1)
+         dnxSyslog(LOG_ERR, "config: Invalid audit facility: %s", 
                cfg.auditWorkerJobs);
       else
          ret = DNX_OK;
@@ -318,16 +326,28 @@ static int dnxCalculateJobListSize(void)
    if (size < 1)
    {
       size = 100;
-      dnxSyslog(LOG_WARNING, "init: No Nagios services defined! Defaulting "
-                             "to %d slots in the DNX job queue", size);
+      dnxSyslog(LOG_WARNING, 
+            "init: No Nagios services defined! "
+            "Defaulting to %d slots in the DNX job queue", size);
+   }
+
+   // check for configuration minServiceSlots override
+   if (size < cfg.minServiceSlots)
+   {
+      dnxSyslog(LOG_WARNING, 
+         "init: Overriding calculated service check slot count. "
+         "Increasing from %d to configured minimum: %d", 
+         size, cfg.minServiceSlots);
+      size = cfg.minServiceSlots;
    }
 
    // check for configuration maxNodeRequests override
-   if (size < cfg.maxNodeRequests)
+   if (size > cfg.maxNodeRequests)
    {
       dnxSyslog(LOG_WARNING, 
-         "init: Overriding automatic service check slot count. Changing from %d to %d", 
-         size, cfg.maxNodeRequests);
+         "init: Overriding calculated service check slot count. "
+         "Decreasing from %d to configured maximum: %d", size, 
+         cfg.maxNodeRequests);
       size = cfg.maxNodeRequests;
    }
    return size;
@@ -430,7 +450,7 @@ static int ehSvcCheck(int event_type, void * data)
    // matches the regular-expression specified in the localCheckPattern
    // directive in the Server configuration file.
    //
-   if (regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
+   if (cfg.localCheckPattern && regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
    {
       dnxDebug(1, "dnxServer: ehSvcCheck: Job will execute locally: %s", 
             svcdata->command_line);
@@ -763,11 +783,12 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
    // module args string should contain a fully-qualified config file path
    if (!args || !*args)
    {
-      dnxSyslog(LOG_ERR, "dnxServer: DNX config file not specified");
-      return ERROR;
+      args = DNX_DEFAULT_SERVER_CONFIG_FILE;
+      dnxSyslog(LOG_ERR, "dnxServer: DNX config file not specified. "
+                         "Defaulting to %s", args);
    }
 
-   dnxLogFacility = LOG_LOCAL7;
+   verifyFacility(DNX_DEFAULT_LOG_FACILITY, &dnxLogFacility);
    auditLogFacility = 0;
 
    memset(&regEx, 0, sizeof regEx);
@@ -778,8 +799,8 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
       return ERROR;
    }
 
-   // temporary cast till we convert the neb module to the new config parser
-   initLogging((int *)&cfg.debug, &dnxLogFacility);
+   // set configured debug level and syslog log facility code
+   initLogging(&cfg.debug, &dnxLogFacility);
 
    // subscribe to PROCESS_DATA call-backs in order to defer initialization
    //    until after Nagios validates its configuration and environment.

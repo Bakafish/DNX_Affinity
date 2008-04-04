@@ -60,7 +60,19 @@
 
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
-#define DNX_NODE_CONFIG "dnxClient.cfg"
+// default configuration values
+#define DNX_DEFAULT_NODE_CONFIG_FILE   "dnxClient.cfg"
+#define DNX_DEFAULT_REQ_TIMEOUT        5
+#define DNX_DEFAULT_TTL_BACKOFF        1
+#define DNX_DEFAULT_MAX_RETRIES        10
+#define DNX_DEFAULT_POOL_MINIMUM       50
+#define DNX_DEFAULT_POOL_INITIAL       50
+#define DNX_DEFAULT_POOL_MAXIMUM       300
+#define DNX_DEFAULT_POOL_GROW          20
+#define DNX_DEFAULT_POLL_INTERVAL      10
+#define DNX_DEFAULT_SHUTDOWN_GRACE     35
+#define DNX_DEFAULT_MAXIMUM_RESULTS    1024
+#define DNX_DEFAULT_LOG_FACILITY       "LOG_LOCAL7"
 
 typedef struct DnxCfgData
 {
@@ -72,13 +84,12 @@ typedef struct DnxCfgData
 } DnxCfgData;
 
 static DnxCfgParser * cfgParser; /*!< The DNX client configuration parser. */
-static DnxCfgData dnxCfgData;    /*!< The global configuration data. */
+static DnxCfgData cfg;           /*!< The global configuration data. */
 static DnxWlm * wlm;             /*!< The global work load manager. */
 static DnxChannel * agent;       /*!< The agent management channel. */
 
 static char * progname;          /*!< The base program name. */
-static char * ConfigFile = DNX_NODE_CONFIG;
-                                 /*!< The global configuration file name. */
+static char * ConfigFile;        /*!< The global configuration file name. */
 static int Debug = 0;            /*!< The global debug flag. */
 static int shutdown = 0;         /*!< Shutdown signal flag. */
 static int reconfigure = 0;      /*!< Reconfigure signal flag. */
@@ -196,27 +207,41 @@ static int initConfig(void)
 {
    static DnxCfgDictionary dict[] = 
    {
-      {"channelAgent",           DNX_CFG_URL,      &dnxCfgData.channelAgent      },
-      {"channelDispatcher",      DNX_CFG_URL,      &dnxCfgData.wlm.dispatcher    },
-      {"channelCollector",       DNX_CFG_URL,      &dnxCfgData.wlm.collector     },
-      {"poolInitial",            DNX_CFG_UNSIGNED, &dnxCfgData.wlm.poolInitial   },
-      {"poolMin",                DNX_CFG_UNSIGNED, &dnxCfgData.wlm.poolMin       },
-      {"poolMax",                DNX_CFG_UNSIGNED, &dnxCfgData.wlm.poolMax       },
-      {"poolGrow",               DNX_CFG_UNSIGNED, &dnxCfgData.wlm.poolGrow      },
-      {"wlmPollInterval",        DNX_CFG_UNSIGNED, &dnxCfgData.wlm.pollInterval  },
-      {"wlmShutdownGracePeriod", DNX_CFG_UNSIGNED, &dnxCfgData.wlm.shutdownGrace },
-      {"threadRequestTimeout",   DNX_CFG_UNSIGNED, &dnxCfgData.wlm.reqTimeout    },
-      {"threadMaxTimeouts",      DNX_CFG_UNSIGNED, &dnxCfgData.wlm.maxRetries    },
-      {"threadTtlBackoff",       DNX_CFG_UNSIGNED, &dnxCfgData.wlm.ttlBackoff    },
-      {"maxResultBuffer",        DNX_CFG_UNSIGNED, &dnxCfgData.wlm.maxResults    },
-      {"logFacility",            DNX_CFG_STRING,   &dnxCfgData.logFacility       },
-      {"pluginPath",             DNX_CFG_FSPATH,   &dnxCfgData.pluginPath        },
-      {"debug",                  DNX_CFG_UNSIGNED, &dnxCfgData.debug             },
+      {"channelAgent",           DNX_CFG_URL,      &cfg.channelAgent      },
+      {"channelDispatcher",      DNX_CFG_URL,      &cfg.wlm.dispatcher    },
+      {"channelCollector",       DNX_CFG_URL,      &cfg.wlm.collector     },
+      {"poolInitial",            DNX_CFG_UNSIGNED, &cfg.wlm.poolInitial   },
+      {"poolMin",                DNX_CFG_UNSIGNED, &cfg.wlm.poolMin       },
+      {"poolMax",                DNX_CFG_UNSIGNED, &cfg.wlm.poolMax       },
+      {"poolGrow",               DNX_CFG_UNSIGNED, &cfg.wlm.poolGrow      },
+      {"wlmPollInterval",        DNX_CFG_UNSIGNED, &cfg.wlm.pollInterval  },
+      {"wlmShutdownGracePeriod", DNX_CFG_UNSIGNED, &cfg.wlm.shutdownGrace },
+      {"threadRequestTimeout",   DNX_CFG_UNSIGNED, &cfg.wlm.reqTimeout    },
+      {"threadMaxTimeouts",      DNX_CFG_UNSIGNED, &cfg.wlm.maxRetries    },
+      {"threadTtlBackoff",       DNX_CFG_UNSIGNED, &cfg.wlm.ttlBackoff    },
+      {"maxResultBuffer",        DNX_CFG_UNSIGNED, &cfg.wlm.maxResults    },
+      {"logFacility",            DNX_CFG_STRING,   &cfg.logFacility       },
+      {"pluginPath",             DNX_CFG_FSPATH,   &cfg.pluginPath        },
+      {"debug",                  DNX_CFG_UNSIGNED, &cfg.debug             },
    };
    int ret;
 
-   // set the default logging facility
-   dnxLogFacility = LOG_LOCAL7;
+   if (!ConfigFile)
+      ConfigFile = DNX_DEFAULT_NODE_CONFIG_FILE;
+
+   // set configuration defaults - don't forget to allocate strings
+   memset(&cfg, 0, sizeof cfg);
+   cfg.logFacility      = xstrdup(DNX_DEFAULT_LOG_FACILITY);
+   cfg.wlm.reqTimeout   = DNX_DEFAULT_REQ_TIMEOUT;
+   cfg.wlm.ttlBackoff   = DNX_DEFAULT_TTL_BACKOFF;
+   cfg.wlm.maxRetries   = DNX_DEFAULT_MAX_RETRIES;
+   cfg.wlm.poolMin      = DNX_DEFAULT_POOL_MINIMUM;
+   cfg.wlm.poolInitial  = DNX_DEFAULT_POOL_INITIAL;
+   cfg.wlm.poolMax      = DNX_DEFAULT_POOL_MAXIMUM;
+   cfg.wlm.poolGrow     = DNX_DEFAULT_POOL_GROW;
+   cfg.wlm.pollInterval = DNX_DEFAULT_POLL_INTERVAL;
+   cfg.wlm.shutdownGrace= DNX_DEFAULT_SHUTDOWN_GRACE;
+   cfg.wlm.maxResults   = DNX_DEFAULT_MAXIMUM_RESULTS;
 
    if ((ret = dnxCfgParserCreate(ConfigFile, 
          dict, elemcount(dict), 0, 0, &cfgParser)) != 0)
@@ -224,36 +249,35 @@ static int initConfig(void)
 
    if ((ret = dnxCfgParserParse(cfgParser)) == 0)
    {
-      // validate configuration items
+      // validate configuration items in context
       ret = DNX_ERR_INVALID;
-      if (!dnxCfgData.channelAgent)
+      if (!cfg.channelAgent)
          dnxSyslog(LOG_ERR, "config: Missing channelAgent parameter");
-      else if (!dnxCfgData.wlm.dispatcher)
+      else if (!cfg.wlm.dispatcher)
          dnxSyslog(LOG_ERR, "config: Missing channelDispatcher parameter");
-      else if (!dnxCfgData.wlm.collector)
+      else if (!cfg.wlm.collector)
          dnxSyslog(LOG_ERR, "config: Missing channelCollector parameter");
-      else if (dnxCfgData.wlm.poolInitial < 1 || dnxCfgData.wlm.poolInitial > dnxCfgData.wlm.poolMax)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid poolInitial parameter");
-      else if (dnxCfgData.wlm.poolMin < 1 || dnxCfgData.wlm.poolMin > dnxCfgData.wlm.poolMax)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid poolMin parameter");
-      else if (dnxCfgData.wlm.poolGrow < 1 || dnxCfgData.wlm.poolGrow >= dnxCfgData.wlm.poolMax)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid poolGrow parameter");
-      else if (dnxCfgData.wlm.pollInterval < 1)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid wlmPollInterval parameter");
-      else if (dnxCfgData.wlm.shutdownGrace < 0)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid wlmShutdownGracePeriod parameter");
-      else if (dnxCfgData.wlm.reqTimeout < 1 
-            || dnxCfgData.wlm.reqTimeout <= dnxCfgData.wlm.ttlBackoff)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid threadRequestTimeout parameter");
-      else if (dnxCfgData.wlm.ttlBackoff < 1 
-            || dnxCfgData.wlm.ttlBackoff >= dnxCfgData.wlm.reqTimeout)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid threadTtlBackoff parameter");
-      else if (dnxCfgData.wlm.maxResults < 1024)
-         dnxSyslog(LOG_ERR, "config: Missing or invalid maxResultBuffer parameter");
-      else if (dnxCfgData.logFacility &&   /* If logFacility is defined, then */
-            verifyFacility(dnxCfgData.logFacility, &dnxLogFacility) == -1)
-         dnxSyslog(LOG_ERR, "config: Invalid syslog facility for logFacility: %s", 
-               dnxCfgData.logFacility);
+      else if (cfg.wlm.poolInitial < 1 || cfg.wlm.poolInitial > cfg.wlm.poolMax)
+         dnxSyslog(LOG_ERR, "config: Invalid poolInitial parameter");
+      else if (cfg.wlm.poolMin < 1 || cfg.wlm.poolMin > cfg.wlm.poolMax)
+         dnxSyslog(LOG_ERR, "config: Invalid poolMin parameter");
+      else if (cfg.wlm.poolGrow < 1 || cfg.wlm.poolGrow >= cfg.wlm.poolMax)
+         dnxSyslog(LOG_ERR, "config: Invalid poolGrow parameter");
+      else if (cfg.wlm.pollInterval < 1)
+         dnxSyslog(LOG_ERR, "config: Invalid wlmPollInterval parameter");
+      else if (cfg.wlm.shutdownGrace < 0)
+         dnxSyslog(LOG_ERR, "config: Invalid wlmShutdownGracePeriod parameter");
+      else if (cfg.wlm.reqTimeout < 1 
+            || cfg.wlm.reqTimeout <= cfg.wlm.ttlBackoff)
+         dnxSyslog(LOG_ERR, "config: Invalid threadRequestTimeout parameter");
+      else if (cfg.wlm.ttlBackoff < 1 
+            || cfg.wlm.ttlBackoff >= cfg.wlm.reqTimeout)
+         dnxSyslog(LOG_ERR, "config: Invalid threadTtlBackoff parameter");
+      else if (cfg.wlm.maxResults < 1024)
+         dnxSyslog(LOG_ERR, "config: Invalid maxResultBuffer parameter");
+      else if (verifyFacility(cfg.logFacility, &dnxLogFacility) == -1)
+         dnxSyslog(LOG_ERR, "config: Invalid syslog facility: %s", 
+               cfg.logFacility);
       else
          ret = DNX_OK;
    }
@@ -291,7 +315,7 @@ static int initClientComm(void)
 
    // create a channel for receiving DNX Client Requests 
    //    (e.g., Shutdown, Status, etc.)
-   if ((ret = dnxChanMapAdd("Agent", dnxCfgData.channelAgent)) != DNX_OK)
+   if ((ret = dnxChanMapAdd("Agent", cfg.channelAgent)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "comm: dnxChanMapInit(Agent) failed, %d: %s",
             ret, dnxErrorString(ret));
@@ -355,7 +379,7 @@ static int processCommands(void)
       {
          dnxSyslog(LOG_ERR, "process: DNX Client received RECONFIGURE request");
          if ((ret = dnxCfgParserParse(cfgParser)) == 0)
-            ret = dnxWlmReconfigure(wlm, &dnxCfgData.wlm);
+            ret = dnxWlmReconfigure(wlm, &cfg.wlm);
          reconfigure = 0;
       }
    }
@@ -545,10 +569,10 @@ int main(int argc, char ** argv)
    }
 
    // set configured debug level and syslog log facility code
-   initLogging(&dnxCfgData.debug, &dnxLogFacility);
+   initLogging(&cfg.debug, &dnxLogFacility);
 
    // load dynamic plugin modules (e.g., nrpe, snmp, etc.)
-   if ((ret = dnxPluginInit(dnxCfgData.pluginPath)) != DNX_OK)
+   if ((ret = dnxPluginInit(cfg.pluginPath)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "main: Plugin initialization failure, %d: %s",
             ret, dnxErrorString(ret));
@@ -577,7 +601,7 @@ int main(int argc, char ** argv)
       goto e3;
    }
 
-   if ((ret = dnxWlmCreate(&dnxCfgData.wlm, &wlm)) != 0)
+   if ((ret = dnxWlmCreate(&cfg.wlm, &wlm)) != 0)
    {
       dnxSyslog(LOG_ERR, "main: Failed to create work load manager, %d: %s", 
             ret, dnxErrorString(ret));

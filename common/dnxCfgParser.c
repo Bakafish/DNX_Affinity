@@ -165,6 +165,7 @@ static int validate(DnxCfgDictionary * dict, size_t dictsz,
                   return ret;
                if (dict[i].type == DNX_CFG_FSPATH && (ret = validateFSPath(val)) != 0)
                   return ret;
+               xfree(*(void **)dict[i].data);
                *(char **)dict[i].data = xstrdup(val);
                break;
             }
@@ -225,6 +226,7 @@ static int validate(DnxCfgDictionary * dict, size_t dictsz,
                   }
                   bp = p;
                }
+               xfree(*(void **)dict[i].data);
                *(int **)dict[i].data = array;
                break;
             }
@@ -240,6 +242,7 @@ static int validate(DnxCfgDictionary * dict, size_t dictsz,
                   xfree(ss);
                   return ret;
                }
+               xfree(*(void **)dict[i].data);
                *(struct sockaddr_storage **)dict[i].data = ss;
                break;
             }
@@ -287,6 +290,7 @@ static int validate(DnxCfgDictionary * dict, size_t dictsz,
                   bp = p;
                }
                array[cnt] = 0;   // terminate ptr array
+               xfree(*(void **)dict[i].data);
                *(struct sockaddr_storage ***)dict[i].data = array;
                break;
             }
@@ -415,19 +419,6 @@ int dnxCfgParserCreate(char * cfgfile, DnxCfgDictionary * dict, size_t dictsz,
    icp->errhandler = errhandler;
    icp->data = data;
 
-   // set all pointer types in the dictionary to zero
-   for (i = 0; i < dictsz; i++)
-   {
-      assert(dict[i].type >= DNX_CFG_STRING && dict[i].type <= DNX_CFG_FSPATH);
-
-      for (j = 0; j < elemcount(ptrtypes); j++)
-         if (dict[i].type == ptrtypes[j])
-         {
-            *(void **)dict[i].data = 0;
-            break;
-         }
-   }
-
    *pcp = (DnxCfgParser *)icp;
 
    return 0;
@@ -443,8 +434,6 @@ int dnxCfgParserParse(DnxCfgParser * cp)
    FILE * fp;
 
    assert(cp);
-
-   freePtrTypes(icp->dict, icp->dictsz);
 
    if ((fp = fopen(icp->cfgfile, "r")) != 0)
    {
@@ -546,15 +535,15 @@ void dnxDebug(int l, char * f, ... )
 
 int main(int argc, char ** argv)
 {
-   char *               testCfgString;
-   int                  testCfgInt;
-   int *                testCfgIntArray;
-   unsigned             testCfgUnsigned;
-   unsigned *           testCfgUnsignedArray;
-   struct sockaddr *    testCfgIpAddr;
-   struct sockaddr **   testCfgIpAddrArray;
-   char *               testCfgUrl;
-   char *               testCfgFSPath;
+   char *               testCfgString = 0;
+   int                  testCfgInt = 0;
+   int *                testCfgIntArray = 0;
+   unsigned             testCfgUnsigned = 0;
+   unsigned *           testCfgUnsignedArray = 0;
+   struct sockaddr *    testCfgIpAddr = 0;
+   struct sockaddr **   testCfgIpAddrArray = 0;
+   char *               testCfgUrl = 0;
+   char *               testCfgFSPath = 0;
 
    DnxCfgDictionary dict[] = 
    {

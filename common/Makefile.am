@@ -34,9 +34,12 @@ libcmn_la_SOURCES =\
 # ---------------------------------------------------------------------------
 # common code unit tests
 #
-TESTS = dnxCfgParserTest
-check_PROGRAMS = dnxCfgParserTest
+TESTS = dnxCfgParserTest dnxXmlTest
+check_PROGRAMS = dnxCfgParserTest dnxXmlTest
 
 dnxCfgParserTest_SOURCES = dnxCfgParser.c dnxError.c
 dnxCfgParserTest_CPPFLAGS = -DDNX_CFGPARSER_TEST
+
+dnxXmlTest_SOURCES = dnxXml.c dnxError.c
+dnxXmlTest_CPPFLAGS = -DDNX_XML_TEST
 

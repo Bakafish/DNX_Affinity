@@ -99,17 +99,22 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
    // compute expiration time of this request
    pMsg->expires = (now = time(0)) + pMsg->ttl;
 
-   dnxDebug(1, "dnxRegisterNode: Received request %lu at %lu, expires at %lu", 
-         pMsg->xid.objSerial, (unsigned long)now, (unsigned long)pMsg->expires);
-
    // locate existing node: update expiration time, or add to the queue
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
+   {
       pReq->expires = pMsg->expires;
-   else if ((ret = dnxQueuePut(ireg->rqueue, pMsg)) != DNX_OK)
-      dnxSyslog(LOG_ERR, 
-            "dnxRegisterNode: dnxQueuePut failed; failed with %d: %s", 
-            ret, dnxErrorString(ret));
-
+      dnxDebug(1, "dnxRegisterNode: Updated existing request %lu at %lu, now expires at %lu", 
+            pMsg->xid.objSerial, (unsigned long)now, (unsigned long)pMsg->expires);
+   }
+   else
+   {
+      if ((ret = dnxQueuePut(ireg->rqueue, pMsg)) != DNX_OK)
+         dnxSyslog(LOG_ERR, "dnxRegisterNode: dnxQueuePut failed: %s", 
+               dnxErrorString(ret));
+      else
+         dnxDebug(1, "dnxRegisterNode: Appended new request %lu at %lu, expires at %lu", 
+               pMsg->xid.objSerial, (unsigned long)now, (unsigned long)pMsg->expires);
+   }
    return ret;
 }
 
@@ -263,8 +268,8 @@ static void * dnxRegistrar(void * data)
       // wait for worker node requests
       if ((ret = dnxProcessNodeRequest(ireg)) != DNX_OK)
          dnxSyslog(LOG_ERR, 
-               "dnxRegistrar[%lx]: dnxProcessNodeRequest returned %d: %s", 
-               pthread_self(), ret, dnxErrorString(ret));
+               "dnxRegistrar[%lx]: dnxProcessNodeRequest failed: %s", 
+               pthread_self(), dnxErrorString(ret));
    }
    pthread_cleanup_pop(1);
    return 0;
@@ -309,8 +314,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
             discard_count);
 
    if (ret != DNX_OK)
-      dnxDebug(1, "dnxGetNodeRequest: Unable to fulfill node request; "
-                  "failed with %d: %s", ret, dnxErrorString(ret));
+      dnxDebug(1, "dnxGetNodeRequest: Unable to fulfill node request: %s",
+            dnxErrorString(ret));
 
    return ret;
 }

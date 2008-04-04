@@ -136,14 +136,11 @@ static void wlmSetActiveJobs(iDnxWlm * iwlm, int value)
  * @param[in] job - a job to be executed by this thread.
  * @param[out] result - the address of storage for returning a job's result
  *    code.
- * 
- * @return Zero on success, or a non-zero error value.
  */
-static int dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result)
+static void dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result)
 {
    char resData[MAX_RESULT_DATA + 1];
    pthread_t tid = pthread_self();
-   int ret;
 
    dnxDebug(1, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s", 
          tid, job->xid.objSerial, job->xid.objSlot, 
@@ -163,7 +160,7 @@ static int dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result)
 
    time(&ws->jobstart);
 
-   ret = dnxPluginExecute(job->cmd, &result->resCode, resData, 
+   dnxPluginExecute(job->cmd, &result->resCode, resData, 
          sizeof resData - 1, job->timeout, ws->iwlm->myaddr);
 
    result->delta = time(0) - ws->jobstart;
@@ -173,12 +170,9 @@ static int dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result)
 
    // store allocated copy of the result string
    if (*resData && (result->resData = xstrdup(resData)) == 0)
-   {
       dnxSyslog(LOG_ERR, 
             "Worker[%lx]: Results allocation failure for job [%lu,%lu]: %s", 
             tid, job->xid.objSerial, job->xid.objSlot, job->cmd);
-      ret = DNX_ERR_MEMORY;
-   }
 
    // update per-thread statistics
    ws->jobtime += result->delta;
@@ -188,8 +182,6 @@ static int dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result)
    dnxDebug(1, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s", 
          tid, job->xid.objSerial, job->xid.objSlot, 
          result->delta, result->resCode, result->resData);
-
-   return ret;
 }
 
 //----------------------------------------------------------------------------
@@ -244,48 +236,39 @@ static void * dnxWorker(void * data)
       msg.jobCap = 1;
       msg.ttl = ws->iwlm->cfg.reqTimeout - ws->iwlm->cfg.ttlBackoff;
 
-      // request a job
+      // request a job, and then wait for a job to come in...
       if ((ret = dnxWantJob(ws->dispatch, &msg, 0)) != DNX_OK)
       {
          switch (ret)
          {
             case DNX_ERR_SEND:
             case DNX_ERR_TIMEOUT:
-               dnxSyslog(LOG_ERR, "Worker[%lx]: Unable to contact server: %d", 
-                     tid, ret, dnxErrorString(ret));
+               dnxSyslog(LOG_ERR, "Worker[%lx]: Unable to contact server: %s", 
+                     tid, dnxErrorString(ret));
                break;
             default:
-               dnxSyslog(LOG_ERR, "Worker[%lx]: dnxWantJob failure, %d: %s", 
-                     tid, ret, dnxErrorString(ret));
+               dnxSyslog(LOG_ERR, "Worker[%lx]: dnxWantJob failed: %s", 
+                     tid, dnxErrorString(ret));
          }
       }
       else if ((ret = dnxGetJob(ws->dispatch, &job, job.address, 
-            ws->iwlm->cfg.reqTimeout)) != DNX_OK)
+            ws->iwlm->cfg.reqTimeout * 2)) != DNX_OK)
       {
          switch (ret)
          {
             case DNX_ERR_TIMEOUT:  
                break;                  // Timeout is OK here
             case DNX_ERR_RECEIVE:
-               dnxSyslog(LOG_ERR, "Worker[%lx]: Unable to contact server, %d: %s", 
-                     tid, ret, dnxErrorString(ret));
+               dnxSyslog(LOG_ERR, "Worker[%lx]: Unable to contact server: %s", 
+                     tid, dnxErrorString(ret));
                break;
             default:
-               dnxSyslog(LOG_ERR, "Worker[%lx]: dnxGetJob failed, %d: %s", 
-                     tid, ret, dnxErrorString(ret));
+               dnxSyslog(LOG_ERR, "Worker[%lx]: dnxGetJob failed: %s", 
+                     tid, dnxErrorString(ret));
          }
       }
-      else
-      {
-         DnxResult result;
-         if ((ret = dnxExecuteJob(ws, &job, &result)) != DNX_OK)
-            dnxSyslog(LOG_ERR, "Worker[%lx]: Job execution failed, %d: %s", 
-                  tid, ret, dnxErrorString(ret));
-         else if ((ret = dnxPutResult(ws->collect, &result, 0)) != DNX_OK)
-            dnxSyslog(LOG_ERR, "Worker[%lx]: Result posting failed, %d: %s", 
-                  tid, ret, dnxErrorString(ret));
-         xfree(result.resData);
-      }
+
+      // check for transmission error, or execute the job and reset retry count
       if (ret != DNX_OK)
       {
          // if exceeded max retries and above pool minimum...
@@ -297,7 +280,19 @@ static void * dnxWorker(void * data)
          }
       }
       else
+      {
+         DnxResult result;
+
+         // execute job - failures are stored in result
+         dnxExecuteJob(ws, &job, &result);
+
+         if ((ret = dnxPutResult(ws->collect, &result, 0)) != DNX_OK)
+            dnxSyslog(LOG_ERR, "Worker[%lx]: Post results failed: %s", 
+                  tid, dnxErrorString(ret));
+
+         xfree(result.resData);
          retries = 0;
+      }
    }
    pthread_cleanup_pop(1);
    return 0;

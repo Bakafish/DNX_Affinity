@@ -523,5 +523,29 @@ int dnxGetMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest,
    return ret;
 }
 
+//----------------------------------------------------------------------------
+
+/** Create a transaction id (XID) from a type, serial number and slot value.
+ * 
+ * @param[out] pxid - the address of storage for the XID to be returned.
+ * @param[in] xType - the request type to be stored in the XID.
+ * @param[in] xSerial - the serial number to be stored in the XID.
+ * @param[in] xSlot - the slot number to be stored in the XID.
+ * 
+ * @return Always returns zero.
+ */
+int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, 
+      unsigned long xSlot)
+{
+   assert(pxid && xType >= 0 && xType < DNX_OBJ_MAX);
+
+   // set the object type
+   pxid->objType   = xType;
+   pxid->objSerial = xSerial;
+   pxid->objSlot   = xSlot;
+
+   return DNX_OK;
+}
+
 /*--------------------------------------------------------------------------*/
 

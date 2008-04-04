@@ -101,36 +101,34 @@ int dnxUdpNew(DnxChannel ** channel, char * url)
    strcpy(tmpUrl, url);
 
    // look for transport prefix: '[type]://'
-   if ((ep = strchr(tmpUrl, ':')) == NULL || *(ep+1) != '/' || *(ep+2) != '/')
+   if ((ep = strchr(tmpUrl, ':')) == 0 || ep[1] != '/' || ep[2] != '/')
       return DNX_ERR_BADURL;
-   *ep = '\0';
-   cp = ep + 3;   // Set to beginning of destination portion of the URL
+   *ep = 0;
+   cp = ep + 3;   // set to beginning of destination portion of the URL
 
    // search for hostname - port separator
-   if ((ep = strchr(cp, ':')) == NULL || ep == cp)
-      return DNX_ERR_BADURL;  // No separator found or empty hostname
-   *ep++ = '\0';
+   if ((ep = strchr(cp, ':')) == 0 || ep == cp)
+      return DNX_ERR_BADURL;  // no separator found or empty hostname
+   *ep++ = 0;
 
    // get the port number
-   errno = 0;
-   if ((port = strtol(ep, &lastchar, 0)) < 1 || port > 65535 || (*lastchar && *lastchar != '/'))
+   if ((port = strtol(ep, &lastchar, 0)) < 1 || port > 65535 
+         || (*lastchar && *lastchar != '/'))
       return DNX_ERR_BADURL;
 
-   // allocate a new channel structure
-   if ((*channel = (DnxChannel *)xmalloc(sizeof(DnxChannel))) == NULL)
-      return DNX_ERR_MEMORY;  // Memory allocation error
+   if ((*channel = (DnxChannel *)xmalloc(sizeof **channel)) == 0)
+      return DNX_ERR_MEMORY;
 
-   memset(*channel, 0, sizeof(DnxChannel));
+   memset(*channel, 0, sizeof **channel);
 
    // save host name and port
    (*channel)->type = DNX_CHAN_UDP;
-   (*channel)->name = NULL;
-   if (((*channel)->host = xstrdup(cp)) == NULL)
+   (*channel)->name = 0;
+   if (((*channel)->host = xstrdup(cp)) == 0)
    {
       dnxSyslog(LOG_ERR, "dnxUdpNew: Out of Memory: strdup(channel->host)");
       xfree(*channel);
-      *channel = NULL;
-      return DNX_ERR_MEMORY;  // Memory allocation error
+      return DNX_ERR_MEMORY;
    }
    (*channel)->port = (int)port;
    (*channel)->state = DNX_CHAN_CLOSED;
@@ -157,14 +155,11 @@ int dnxUdpDelete(DnxChannel * channel)
 {
    assert(channel && channel->type == DNX_CHAN_UDP);
 
-   // make sure this channel is closed
    if (channel->state == DNX_CHAN_OPEN)
       dnxUdpClose(channel);
 
-   // release host name string
    if (channel->host) xfree(channel->host);
 
-   // release channel memory
    memset(channel, 0, sizeof(DnxChannel));
    xfree(channel);
 
@@ -190,17 +185,17 @@ int dnxUdpOpen(DnxChannel * channel, DnxChanMode mode)   // 0=Passive, 1=Active
 
    assert(channel && channel->type == DNX_CHAN_UDP && channel->port > 0);
 
-   // make sure this channel isn't already open
    if (channel->state != DNX_CHAN_CLOSED)
       return DNX_ERR_ALREADY;
 
-   // setup the socket address structure
    inaddr.sin_family = AF_INET;
    inaddr.sin_port = (in_port_t)channel->port;
    inaddr.sin_port = htons(inaddr.sin_port);
 
    // see if we are listening on any address
-   if (!strcmp(channel->host, "INADDR_ANY") || !strcmp(channel->host, "0.0.0.0") || !strcmp(channel->host, "0"))
+   if (!strcmp(channel->host, "INADDR_ANY") 
+         || !strcmp(channel->host, "0.0.0.0") 
+         || !strcmp(channel->host, "0"))
    {
       // make sure that the request is passive
       if (mode != DNX_CHAN_PASSIVE)
@@ -210,26 +205,22 @@ int dnxUdpOpen(DnxChannel * channel, DnxChanMode mode)   // 0=Passive, 1=Active
    }
    else  // resolve destination address
    {
-      // acquire the lock
       DNX_PT_MUTEX_LOCK(&udpMutex);
 
       // try to resolve this address
-      if ((he = gethostbyname(channel->host)) == NULL)
+      if ((he = gethostbyname(channel->host)) == 0)
       {
          DNX_PT_MUTEX_UNLOCK(&udpMutex);
          return DNX_ERR_ADDRESS;
       }
-      memcpy(&(inaddr.sin_addr.s_addr), he->h_addr_list[0], he->h_length);
+      memcpy(&inaddr.sin_addr.s_addr, he->h_addr_list[0], he->h_length);
 
-      // release the lock
       DNX_PT_MUTEX_UNLOCK(&udpMutex);
    }
 
-   // create a socket
    if ((sd = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
    {
-      dnxSyslog(LOG_ERR, "dnxUdpOpen: socket failure; failed with %d: %s", 
-            errno, strerror(errno));
+      dnxSyslog(LOG_ERR, "dnxUdpOpen: socket failed: %s", strerror(errno));
       return DNX_ERR_OPEN;
    }
 
@@ -241,26 +232,24 @@ int dnxUdpOpen(DnxChannel * channel, DnxChanMode mode)   // 0=Passive, 1=Active
       if (connect(sd, (struct sockaddr *)&inaddr, sizeof(inaddr)) != 0)
       {
          close(sd);
-         dnxSyslog(LOG_ERR, 
-               "dnxUdpOpen: connect(%lx) failure; failed with %d: %s", 
-               (unsigned long)inaddr.sin_addr.s_addr, errno, strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxUdpOpen: connect(%lx) failed: %s", 
+               (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
          return DNX_ERR_OPEN;
       }
    }
-   else  // DNX_CHAN_PASSIVE
+   else
    {
       // want to listen for incoming packets, so bind to the
       // specified local address and port
-      if (bind(sd, (struct sockaddr *)&inaddr, sizeof(inaddr)) != 0)
+      if (bind(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
       {
          close(sd);
-         dnxSyslog(LOG_ERR, "dnxUdpOpen: bind(%lx) failure; failed with %d: %s", 
-               (unsigned long)inaddr.sin_addr.s_addr, errno, strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxUdpOpen: bind(%lx) failed: %s", 
+               (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
          return DNX_ERR_OPEN;
       }
    }
 
-   // mark the channel as open
    channel->chan  = sd;
    channel->state = DNX_CHAN_OPEN;
 
@@ -279,17 +268,14 @@ int dnxUdpClose(DnxChannel * channel)
 {
    assert(channel && channel->type == DNX_CHAN_UDP);
 
-   // make sure this channel isn't already closed
    if (channel->state != DNX_CHAN_OPEN)
       return DNX_ERR_ALREADY;
 
    // shutdown the communication paths on the socket
    // shutdown(channel->chan, SHUT_RDWR);
 
-   // close the socket
    close(channel->chan);
 
-   // mark the channel as closed
    channel->state = DNX_CHAN_CLOSED;
    channel->chan  = 0;
 
@@ -308,59 +294,74 @@ int dnxUdpClose(DnxChannel * channel)
  *    for data to become available on @p channel without returning a timeout
  *    error.
  * @param[out] src - the address of storage for the sender's address if 
- *    desired. This parameter is optional, and may be passed as NULL.
+ *    desired. This parameter is optional, and may be passed as NULL. If
+ *    non-NULL, the buffer pointed to by @p src must be at least the size
+ *    of a @em sockaddr_in structure.
  * 
  * @return Zero on success, or a non-zero error value.
+ * 
+ * @note On Linux, @em select updates the timeout value to reflect the 
+ * remaining timeout value when @em select returns an EINTR (system interrupt) 
+ * error. On most other systems, @em select does not touch the timeout value, 
+ * so we have to update it ourselves between calls to @em select.
  */
 int dnxUdpRead(DnxChannel * channel, char * buf, int * size, 
       int timeout, char * src)
 {
-   struct sockaddr_in src_addr;
-   socklen_t slen;
-   int mlen, nsd;
-   fd_set fd_rds;
+   struct sockaddr_in bit_bucket;
+   socklen_t slen = sizeof bit_bucket;
    struct timeval tv;
+   int mlen;
+
+#ifndef linux
+   time_t expires = time(0) + timeout;
+#endif
 
    assert(channel && channel->type == DNX_CHAN_UDP && buf && size && *size > 0);
 
-   // make sure this channel is open
    if (channel->state != DNX_CHAN_OPEN)
       return DNX_ERR_OPEN;
 
    // implement timeout logic, if timeout value is > 0
-   if (timeout > 0)
+   tv.tv_usec = 0L;
+   tv.tv_sec = timeout;
+
+   while (tv.tv_sec > 0)
    {
+      fd_set fd_rds;
+      int nsd;
+
       FD_ZERO(&fd_rds);
       FD_SET(channel->chan, &fd_rds);
-      tv.tv_sec = (long)timeout;
-      tv.tv_usec = 0L;
-      if ((nsd = select((channel->chan+1), &fd_rds, NULL, NULL, &tv)) == 0)
+
+      if ((nsd = select(channel->chan + 1, &fd_rds, 0, 0, &tv)) == 0)
          return DNX_ERR_TIMEOUT;
-      else if (nsd < 0)
+
+      if (nsd > 0)
+         break;
+
+      if (errno != EINTR) 
       {
-         // treat signal interrupts like timeouts
-         if (errno == EINTR) return DNX_ERR_TIMEOUT;
-         dnxSyslog(LOG_ERR, "dnxUdpRead: select failure; failed with %d: %s", 
-               errno, strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxUdpRead: select failed: %s", strerror(errno));
          return DNX_ERR_RECEIVE;
       }
+
+#ifndef linux
+      tv.tv_usec = 0L;
+      tv.tv_sec = timeout - (int)(expires - time(0));
+#endif
    }
 
    // read the incoming message
-   slen = sizeof(src_addr);
-   if ((mlen = recvfrom(channel->chan, buf, *size, 0, (struct sockaddr *)&src_addr, &slen)) < 0)
+   if (!src) src = (char *)&bit_bucket;
+   if ((mlen = recvfrom(channel->chan, buf, *size, 0, 
+         (struct sockaddr *)src, &slen)) < 0)
       return DNX_ERR_RECEIVE;
 
-   // validate the message length
    if (mlen < 1 || mlen > DNX_MAX_MSG)
       return DNX_ERR_RECEIVE;
 
-   // update actual packet data size
-   *size = (int)mlen;
-
-   // set source IP/port information, if desired
-   if (src)
-      memcpy(src, &src_addr, sizeof(src_addr));
+   *size = mlen;
 
    return DNX_OK;
 }
@@ -382,55 +383,67 @@ int dnxUdpRead(DnxChannel * channel, char * buf, int * size,
  * 
  * @note If this is a stream oriented channel, or if NULL is passed for 
  * the @p dst parameter, The channel destination address is used.
+ * 
+ * @note On Linux, @em select updates the timeout value to reflect the 
+ * remaining timeout value when @em select returns an EINTR (system interrupt) 
+ * error. On most other systems, @em select does not touch the timeout value, 
+ * so we have to update it ourselves between calls to @em select.
  */
 int dnxUdpWrite(DnxChannel * channel, char * buf, int size, 
       int timeout, char * dst)
 {
-   struct sockaddr_in dst_addr;
-   fd_set fd_wrs;
    struct timeval tv;
-   int ret, nsd;
+   int ret;
+
+#ifndef linux
+   time_t expires = time(0) + timeout;
+#endif
 
    assert(channel && channel->type == DNX_CHAN_UDP && buf);
 
-   // validate that the message size is within bounds
    if (size < 1 || size > DNX_MAX_MSG)
       return DNX_ERR_SIZE;
 
-   // make sure this channel is open
    if (channel->state != DNX_CHAN_OPEN)
       return DNX_ERR_OPEN;
 
    // implement timeout logic, if timeout value is > 0
-   if (timeout > 0)
+   tv.tv_usec = 0L;
+   tv.tv_sec = timeout;
+
+   while (tv.tv_sec > 0)   // signal interrupt management
    {
+      fd_set fd_wrs;
+      int nsd;
+
       FD_ZERO(&fd_wrs);
       FD_SET(channel->chan, &fd_wrs);
-      tv.tv_sec = (long)timeout;
-      tv.tv_usec = 0L;
-      if ((nsd = select((channel->chan+1), NULL, &fd_wrs, NULL, &tv)) == 0)
+
+      if ((nsd = select(channel->chan + 1, 0, &fd_wrs, 0, &tv)) == 0)
          return DNX_ERR_TIMEOUT;
-      else if (nsd < 0)
+
+      if (nsd > 0)
+         break;
+
+      if (errno != EINTR)
       {
-         // treat signal interrupts like timeouts
-         if (errno == EINTR) return DNX_ERR_TIMEOUT;
-         dnxSyslog(LOG_ERR, "dnxUdpWrite: select failure; failed with %d: %s", 
-               errno, strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxUdpWrite: select failed: %s", strerror(errno));
          return DNX_ERR_SEND;
       }
+
+#ifndef linux
+      tv.tv_usec = 0L;
+      tv.tv_sec = timeout - (int)(expires - time(0));
+#endif
    }
 
-   // check for a destination override
+   // check for a destination address override
    if (dst)
-   {
-      memcpy(&dst_addr, dst, sizeof(dst_addr));
-      // send the message to the specified address
-      ret = sendto(channel->chan, buf, size, 0, (struct sockaddr *)&dst_addr, sizeof(dst_addr));
-   }
-   else  // send the message to the previously set (via connect(2)) channel address
+      ret = sendto(channel->chan, buf, size, 0,
+            (struct sockaddr *)dst, sizeof(struct sockaddr_in));
+   else 
       ret = write(channel->chan, buf, size);
 
-   // check for write error
    if (ret != size)
       return DNX_ERR_SEND;
    

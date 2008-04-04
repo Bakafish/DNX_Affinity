@@ -33,7 +33,7 @@
 #include "dnxChannel.h"
 
 /** Defines the type of a DNX object in a network message. */
-typedef enum DnxObjType_ 
+typedef enum DnxObjType
 {
    DNX_OBJ_SCHEDULER = 0,
    DNX_OBJ_DISPATCHER,
@@ -46,7 +46,7 @@ typedef enum DnxObjType_
 } DnxObjType;
 
 /** Defines the type of a DNX worker node network request. */
-typedef enum DnxReqType_ 
+typedef enum DnxReqType
 {
    DNX_REQ_REGISTER = 0, 
    DNX_REQ_DEREGISTER, 
@@ -55,7 +55,7 @@ typedef enum DnxReqType_
 } DnxReqType;
 
 /** Defines the state of a DNX job. */
-typedef enum DnxJobState_ 
+typedef enum DnxJobState
 {
    DNX_JOB_NULL = 0, 
    DNX_JOB_PENDING, 
@@ -75,7 +75,7 @@ typedef struct DnxXID
    unsigned long objSlot;
 } DnxXID;
 
-typedef struct DnxNodeRequest_ 
+typedef struct DnxNodeRequest
 {
    DnxXID xid;                      // Worker node transaction id
    DnxReqType reqType;              // Request type
@@ -85,7 +85,7 @@ typedef struct DnxNodeRequest_
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxNodeRequest;
 
-typedef struct DnxJob_ 
+typedef struct DnxJob
 {
    DnxXID xid;                      // Job transaction id
    DnxJobState state;               // Job state
@@ -95,7 +95,7 @@ typedef struct DnxJob_
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxJob;
 
-typedef struct DnxResult_ 
+typedef struct DnxResult
 {
    DnxXID xid;                      // Job transaction id
    DnxJobState state;               // Job state
@@ -105,14 +105,14 @@ typedef struct DnxResult_
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxResult;
 
-typedef struct DnxMgmtRequest_ 
+typedef struct DnxMgmtRequest
 {
    DnxXID xid;                      // Manager transaction id
    char * action;                   // Request: SHUTDOWN, RELOAD, STATUS
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxMgmtRequest;
 
-typedef struct DnxMgmtReply_ 
+typedef struct DnxMgmtReply
 {
    DnxXID xid;                      // Client transaction id
    DnxReqType status;               // Request status: ACK or NAK
@@ -122,13 +122,19 @@ typedef struct DnxMgmtReply_
 
 int dnxRegister(DnxChannel * channel, DnxNodeRequest * pReg, char * address);
 int dnxDeRegister(DnxChannel * channel, DnxNodeRequest * pReg, char * address);
-int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * address, int timeout);
+int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, 
+      char * address, int timeout);
 int dnxWantJob(DnxChannel * channel, DnxNodeRequest * pReq, char * address);
 int dnxGetJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeout);
 int dnxPutJob(DnxChannel * channel, DnxJob * pJob, char * address);
-int dnxGetResult(DnxChannel * channel, DnxResult * pResult, char * address, int timeout);
+int dnxGetResult(DnxChannel * channel, DnxResult * pResult, char * address, 
+      int timeout);
 int dnxPutResult(DnxChannel * channel, DnxResult * pResult, char * address);
-int dnxGetMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, char * address, int timeout);
+int dnxGetMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, 
+      char * address, int timeout);
+
+int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, 
+      unsigned long xSlot);
 
 #endif   /* _DNXPROTOCOL_H_ */
 
