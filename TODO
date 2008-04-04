@@ -1,21 +1,26 @@
-# DNX TODO's (Updated 08-16-2007):
-# ================================
-#  1. Protect dnxClient from SIG alarms from plugins
-#  2. Make it portable to all forms of *NIX that Nagios runs on
-#  3. Extend the dnxClient API (restart, statistics, etc)
-#  4. Implement the authorized worker node lock down
-#  5. Implement debugging levels in the client
-#  6. Perfect "in-client" checks using libraries (check_nrpe, check_icmp, check_snmp, check_nt, etc)
-#  7. Optimize DNX Client response to increasing thread count by having each thread
-#     check to see if all threads are busy (upon receive a new job to execute.)
-#     If all threads are busy, then signal the WLM to wake-up early.
-#  8. Make dnxClient run as the nagios user
-# 99. Testing, Testing, and more Testing.
-#
-#
-# Completed TODO's:
-# =================
-#  - Fix the local check regex (Fixed in version 0.11)
-#  - Log which worker node performed each check for troubleshooting reasons (Added in version 0.12)
-#
+DNX TODO's (Updated 08-16-2007)
+-------------------------------
+
+ 1. Protect dnxClient from SIG alarms from plugins
+ 2. Make it portable to all forms of *NIX that Nagios runs on
+ 3. Extend the dnxClient API (restart, statistics, etc)
+ 4. Implement the authorized worker node lock down
+ 5. Implement debugging levels in the client
+ 6. Perfect "in-client" checks using libraries (check_nrpe, check_icmp, check_snmp, check_nt, etc)
+ 7. Optimize DNX Client response to increasing thread count by having each thread
+    check to see if all threads are busy (upon receive a new job to execute.)
+    If all threads are busy, then signal the WLM to wake-up early.
+ 8. Make dnxClient run as the nagios user
+ 9. Change GUID to XID
+10. Change URL schemes to dnx+tcp/udp/msgq
+
+99. Testing, Testing, and more Testing.
+
+
+Completed TODO's
+----------------
+
+ - Fix the local check regex (Fixed in version 0.11)
+ - Log which worker node performed each check for troubleshooting reasons (Added in version 0.12)
+
 

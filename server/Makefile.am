@@ -1,4 +1,4 @@
-EXTRA_DIST = test
+EXTRA_DIST = test sync_plugins.pl
 
 pkglib_LTLIBRARIES = dnxServer.la
 
@@ -23,7 +23,6 @@ dnxServer_la_SOURCES =\
  dnxTimer.c
 
 INCLUDES =\
- -I$(top_srcdir)/include\
  -I$(top_srcdir)/common\
  -I$(top_srcdir)/nagios/nagios-2.7/include
 

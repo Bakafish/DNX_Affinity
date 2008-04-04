@@ -1,4 +1,4 @@
-EXTRA_DIST = etc doc nagios
+EXTRA_DIST = LEGAL TODO etc doc nagios
 
 SUBDIRS = common server client
 

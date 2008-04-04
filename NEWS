@@ -1,41 +1,8 @@
-Version 0.16:
-=============
-- Fixed install bugs - mostly related to improper file system rights.
-- Debug output is now realistic - not pumping out droves of useless info.
-- Added new configure options for specifying log directory.
-- Fixed miscellaneous build system problems.
-- Fixed rpm build issue - getaddrinfo failing under OBS.
-- Fixed doxygen generation issues related to incorrect exclude dir list.
-- Added new unit test for dnxClient - tests proper client daemonization.
-- Added generic init script for non-SUSE platforms (thanks to 
-  Alberto Villegas!).
-
-Version 0.15.1:
-===============
-- Bug fixes - mostly related to daemon startup, shutdown and timing.
-
 Version 0.15:
 =============
 - We're in SVN on sourceforge now!
 - Added autotools build system.
-- Completely rewritten configuration system.
-- Completely updated thread pool.
-- New configuration parameters added.
-- New command-line options added.
-- Ability to reconfigure most parameters with SIGHUP.
-- Unit test infrastructure added; several unit tests added.
-- Debug memory manager added; fixed several memory leaks.
-- Added node address to dnx error strings passed from failed checks.
-- Doxygen documentation added.
-- Init script updated to LSB.
-- Several install and doc targets added.
-- Added support for Nagios versions 2.8, 2.9, 2.10, 3.0rc2
-- dnxstats utility added to manage and retrieve stats from dnx client nodes.
-- Configuration and build system allow installation of client and server
-  separately.
-- Support added to configure script for RPM packages managed through 
-  the OpenSUSE build service.
- 
+
 
 Version 0.13:
 =============

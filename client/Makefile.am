@@ -17,7 +17,6 @@ dnxClient_SOURCES =\
  dnxWorker.c
 
 INCLUDES =\
- -I$(top_srcdir)/include\
  -I$(top_srcdir)/common
 
 dnxClient_LDADD = ../common/libcmn.la
