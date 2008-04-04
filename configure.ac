@@ -123,8 +123,9 @@ AC_CONFIG_FILES([Makefile
 		 doc/doxyfile
 		 common/Makefile
 		 server/Makefile
+		 stats/Makefile
 		 client/Makefile
-		 stats/Makefile])
+		 client/test/Makefile])
 AC_OUTPUT
 
 echo "------------------------------------------------------------"

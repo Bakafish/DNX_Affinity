@@ -185,11 +185,6 @@ static int dnxTcpClose(iDnxChannel * icp)
  *    of a @em sockaddr_in structure.
  * 
  * @return Zero on success, or a non-zero error value.
- * 
- * @note On Linux, @em select updates the timeout value to reflect the 
- * remaining timeout value when @em select returns an EINTR (system interrupt) 
- * error. On most other systems, @em select does not touch the timeout value, 
- * so we have to update it ourselves between calls to @em select.
  */
 static int dnxTcpRead(iDnxChannel * icp, char * buf, int * size, 
       int timeout, char * src)
@@ -278,11 +273,6 @@ static int dnxTcpRead(iDnxChannel * icp, char * buf, int * size,
  * 
  * @note If this is a stream oriented channel, or if NULL is passed for 
  * the @p dst parameter, the channel destination address is not used.
- * 
- * @note On Linux, @em select updates the timeout value to reflect the 
- * remaining timeout value when @em select returns an EINTR (system interrupt) 
- * error. On most other systems, @em select does not touch the timeout value, 
- * so we have to update it ourselves between calls to @em select.
  */
 static int dnxTcpWrite(iDnxChannel * icp, char * buf, int size, 
       int timeout, char * dst)

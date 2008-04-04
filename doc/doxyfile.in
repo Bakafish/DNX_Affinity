@@ -490,7 +490,7 @@ RECURSIVE              = YES
 # excluded from the INPUT source files. This way you can easily exclude a 
 # subdirectory from a directory tree whose root is specified with the INPUT tag.
 
-EXCLUDE                = @top_srcdir@/nagios @top_srcdir@/client/test @top_srcdir@/server/test @top_builddir@@PACKAGE@-@VERSION@
+EXCLUDE                = @top_srcdir@/nagios @top_srcdir@/client/oldtests @top_srcdir@/server/oldtests @top_builddir@@PACKAGE@-@VERSION@
 
 # The EXCLUDE_SYMLINKS tag can be used select whether or not files or 
 # directories that are symbolic links (a Unix filesystem feature) are excluded 

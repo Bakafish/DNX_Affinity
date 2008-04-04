@@ -1,6 +1,6 @@
 EXTRA_DIST = LEGAL TODO nagios
 
-SUBDIRS = etc obs common server client stats doc
+SUBDIRS = etc obs common server stats client doc
 
 # Additional root-level targets - mostly installation and docs
 docs install-docs:

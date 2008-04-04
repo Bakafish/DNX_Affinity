@@ -1,4 +1,4 @@
-EXTRA_DIST = test sync_plugins.pl
+EXTRA_DIST = sync_plugins.pl
 
 libexec_SCRIPTS = sync_plugins.pl
 
