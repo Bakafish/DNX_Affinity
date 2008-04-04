@@ -1,6 +1,6 @@
 EXTRA_DIST = test
 
-bin_PROGRAMS = dnxClient
+sbin_PROGRAMS = dnxClient
 
 noinst_HEADERS =\
  dnxClientMain.h\
