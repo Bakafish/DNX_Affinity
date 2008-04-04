@@ -239,7 +239,10 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,
    if (!src) src = (char *)&bit_bucket;
    if ((mlen = recvfrom(iucp->socket, buf, *size, 0, 
          (struct sockaddr *)src, &slen)) < 0)
+   {
+      dnxDebug(4, "recvfrom failed: %s.", strerror(errno));
       return DNX_ERR_RECEIVE;
+   }
 
    if (mlen < 1 || mlen > DNX_MAX_MSG)
       return DNX_ERR_RECEIVE;
@@ -322,6 +325,9 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,
             (struct sockaddr *)dst, sizeof(struct sockaddr_in));
    else 
       ret = write(iucp->socket, buf, size);
+
+   if (ret == -1)
+      dnxDebug(4, "sendto/write failed: %s.", strerror(errno));
 
    if (ret != size)
       return DNX_ERR_SEND;

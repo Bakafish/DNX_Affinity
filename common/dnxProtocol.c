@@ -388,7 +388,7 @@ int dnxSendMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, char * a
    dnxXmlOpen (&xbuf, "MgmtRequest");
    dnxXmlAdd  (&xbuf, "XID",    DNX_XML_XID, &pRequest->xid);
    dnxXmlAdd  (&xbuf, "GUID",   DNX_XML_XID, &pRequest->xid);  // old format - for bc
-   dnxXmlAdd  (&xbuf, "Action", DNX_XML_STR, &pRequest->action);
+   dnxXmlAdd  (&xbuf, "Action", DNX_XML_STR,  pRequest->action);
    dnxXmlClose(&xbuf);
 
    dnxDebug(3, "dnxSendMgmtRequest: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);
@@ -439,6 +439,10 @@ int dnxWaitForMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply,
    if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pReply->xid)) != DNX_OK)
       return ret;
 
+   // decode the Manager's XID.
+   if ((ret = dnxXmlGet(&xbuf, "Status", DNX_XML_INT, &pReply->status)) != DNX_OK)
+      return ret;
+
    // decode the management request
    return dnxXmlGet(&xbuf, "Result", DNX_XML_STR, &pReply->reply);
 }
@@ -464,8 +468,8 @@ int dnxSendMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address
    // create the XML message
    dnxXmlOpen (&xbuf, "MgmtReply");
    dnxXmlAdd  (&xbuf, "XID",    DNX_XML_XID, &pReply->xid);
-   dnxXmlAdd  (&xbuf, "GUID",   DNX_XML_XID, &pReply->xid); // old format - for bc
-   dnxXmlAdd  (&xbuf, "Result", DNX_XML_STR, &pReply->reply);
+   dnxXmlAdd  (&xbuf, "Status", DNX_XML_INT, &pReply->status);
+   dnxXmlAdd  (&xbuf, "Result", DNX_XML_STR,  pReply->reply);
    dnxXmlClose(&xbuf);
 
    dnxDebug(3, "dnxSendMgmtReply: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);

@@ -76,35 +76,42 @@ typedef enum DnxThreadState
 /** A structure that describes the attribues of a pool thread. */
 typedef struct DnxWorkerStatus
 {
-   DnxThreadState state;      /*!< The current thread state. */
-   pthread_t tid;             /*!< The thread Identifier. */
-   DnxChannel * dispatch;     /*!< The thread job request channel. */
-   DnxChannel * collect;      /*!< The thread job reply channel. */
-   time_t tstart;             /*!< The thread start time. */
-   time_t jobtime;            /*!< The total amount of time spent in job processing. */
-   unsigned jobsok;           /*!< The total jobs completed. */
-   unsigned jobsfail;         /*!< The total jobs not completed. */
-   unsigned serial;           /*!< The current job tracking serial number. */
-   struct iDnxWlm * iwlm;     /*!< A reference to the owning WLM. */
+   DnxThreadState state;      //!< The current thread state.
+   pthread_t tid;             //!< The thread Identifier.
+   DnxChannel * dispatch;     //!< The thread job request channel.
+   DnxChannel * collect;      //!< The thread job reply channel.
+   time_t tstart;             //!< The thread start time.
+   time_t jobtime;            //!< The total amount of time spent in job processing.
+   unsigned jobsok;           //!< The total jobs completed.
+   unsigned jobsfail;         //!< The total jobs not completed.
+   unsigned serial;           //!< The current job tracking serial number.
+   struct iDnxWlm * iwlm;     //!< A reference to the owning WLM.
 } DnxWorkerStatus;
 
 /** The implementation of a work load manager object. */
 typedef struct iDnxWlm
 {
-   DnxWlmCfgData cfg;         /*!< WLM configuration parameters. */
-   DnxWorkerStatus ** pool;   /*!< The thread pool context list. */
-   pthread_mutex_t mutex;     /*!< The thread pool sync mutex. */
-   unsigned jobsok;           /*!< The number of successful jobs, so far. */
-   unsigned jobsfail;         /*!< The number of failed jobs so far. */
-   unsigned active;           /*!< The current number of active threads. */
-   unsigned tcreated;         /*!< The number of threads created. */
-   unsigned tdestroyed;       /*!< The number of threads destroyed. */
-   unsigned threads;          /*!< The current number of thread status objects. */
-   unsigned poolsz;           /*!< The allocated size of the @em pool array. */
-   time_t lastclean;          /*!< The last time the pool was cleaned. */
-   int terminate;             /*!< The pool termination flag. */
-   unsigned long myipaddr;    /*!< Binary local address for identification. */
-   char myipaddrstr[MAX_IP_ADDRSZ];/*!< String local address for presentation. */
+   DnxWlmCfgData cfg;         //!< WLM configuration parameters.
+   DnxWorkerStatus ** pool;   //!< The thread pool context list.
+   pthread_mutex_t mutex;     //!< The thread pool sync mutex.
+   unsigned jobsok;           //!< The number of successful jobs, so far.
+   unsigned jobsfail;         //!< The number of failed jobs so far.
+   unsigned active;           //!< The current number of active threads.
+   unsigned tcreated;         //!< The number of threads created.
+   unsigned tdestroyed;       //!< The number of threads destroyed.
+   unsigned threads;          //!< The current number of thread status objects.
+   unsigned reqsent;          //!< The number of requests sent.
+   unsigned jobsrcvd;         //!< The number of jobs received.
+   unsigned minexectm;        //!< The minimum execution time.
+   unsigned avgexectm;        //!< The avg execution time.
+   unsigned maxexectm;        //!< The maximum execution time.
+   unsigned avgthreads;       //!< The avg number of threads in existence.
+   unsigned avgactive;        //!< The avg number of active threads.
+   unsigned poolsz;           //!< The allocated size of the @em pool array.
+   time_t lastclean;          //!< The last time the pool was cleaned.
+   int terminate;             //!< The pool termination flag.
+   unsigned long myipaddr;    //!< Binary local address for identification.
+   char myipaddrstr[MAX_IP_ADDRSZ];//!< String local address for presentation.
 } iDnxWlm;
 
 // forward declaration required by source code organization
@@ -544,28 +551,42 @@ static void * dnxWorker(void * data)
                         WORK LOAD MANAGER INTERFACE
   --------------------------------------------------------------------------*/
 
-int dnxWlmGetActiveThreads(DnxWlm * wlm)
+void dnxWlmResetStats(DnxWlm * wlm)
 {
-   int active;
    iDnxWlm * iwlm = (iDnxWlm *)wlm;
+
    assert(wlm);
+
    DNX_PT_MUTEX_LOCK(&iwlm->mutex);
-   active = iwlm->threads;
+   iwlm->jobsok = iwlm->jobsfail = iwlm->tcreated = iwlm->tdestroyed = 0;
+   iwlm->reqsent = iwlm->jobsrcvd = iwlm->minexectm = iwlm->avgexectm = 0;
+   iwlm->maxexectm = iwlm->avgthreads = iwlm->avgactive = 0;
    DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
-   return active;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxWlmGetActiveJobs(DnxWlm * wlm)
+void dnxWlmGetStats(DnxWlm * wlm, DnxWlmStats * wsp)
 {
-   int active;
    iDnxWlm * iwlm = (iDnxWlm *)wlm;
-   assert(wlm);
+
+   assert(wlm && wsp);
+
    DNX_PT_MUTEX_LOCK(&iwlm->mutex);
-   active = iwlm->active;
+   wsp->jobs_succeeded = iwlm->jobsok;
+   wsp->jobs_failed = iwlm->jobsfail;
+   wsp->threads_created = iwlm->tcreated;
+   wsp->threads_destroyed = iwlm->tdestroyed;
+   wsp->total_threads = iwlm->threads;
+   wsp->active_threads = iwlm->active;
+   wsp->requests_sent = iwlm->reqsent;
+   wsp->jobs_received = iwlm->jobsrcvd;
+   wsp->min_exec_time = iwlm->minexectm;
+   wsp->avg_exec_time = iwlm->avgexectm;
+   wsp->max_exec_time = iwlm->maxexectm;
+   wsp->avg_total_threads = iwlm->avgthreads;
+   wsp->avg_active_threads = iwlm->avgactive;
    DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
-   return active;
 }
 
 //----------------------------------------------------------------------------

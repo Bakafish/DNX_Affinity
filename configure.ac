@@ -68,5 +68,6 @@ AC_CONFIG_FILES([Makefile
                  etc/dnxcld.init
                  common/Makefile
                  server/Makefile
-                 client/Makefile])
+                 client/Makefile
+                 stats/Makefile])
 AC_OUTPUT

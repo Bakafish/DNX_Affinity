@@ -148,6 +148,7 @@ static void usage(char * base)
    fprintf(stderr, "   -r, --runpath <path>    specify the path of the lock/pid file.\n");
    fprintf(stderr, "   -v, --version           display DNX client version and exit.\n");
    fprintf(stderr, "   -h, --help              display this help screen and exit.\n\n");
+   exit(-1);
 }
 
 //----------------------------------------------------------------------------
@@ -160,6 +161,7 @@ static void version(char * base)
 {
    printf("\n  %s version %s\n  Bug reports: %s.\n\n", 
          base, VERSION, PACKAGE_BUGREPORT);
+   exit(0);
 }
 
 //----------------------------------------------------------------------------
@@ -171,8 +173,10 @@ static void version(char * base)
  * 
  * @param[in] spp - the address of a dynamically allocated buffer pointer.
  * @param[in] fmt - a printf-like format specifier string.
+ * 
+ * @return Zero on success, or DNX_ERR_MEMORY on out-of-memory condition.
  */
-static void appendString(char ** spp, char * fmt, ... )
+static int appendString(char ** spp, char * fmt, ... )
 {
    char buf[1024];
    char * newstr;
@@ -187,13 +191,14 @@ static void appendString(char ** spp, char * fmt, ... )
    // reallocate buffer; initialize if necessary
    strsz = strlen(buf) + 1;
    if ((newstr = xrealloc(*spp, (*spp? strlen(*spp): 0) + strsz)) == 0)
-      return;
+      return DNX_ERR_MEMORY;
    if (*spp == 0) 
       *newstr = 0;
 
    // concatenate new string onto exiting string; return updated pointer
    strcat(newstr, buf);
    *spp = newstr;
+   return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -246,9 +251,9 @@ static int getOptions(int argc, char ** argv)
          case 'g': dbglvl    = optarg; break;
          case 'l': logfile   = optarg; break;
          case 'D': dbgfile   = optarg; break;
-         case 'v': version(s_progname); exit(0);
+         case 'v': version(s_progname);
          case 'h':
-         default : return usage(s_progname), -1;
+         default : usage(s_progname);
       }
    }
 
@@ -599,6 +604,93 @@ static void logGblConfigChanges(DnxCfgData * ocp, DnxCfgData * ncp)
 
 //----------------------------------------------------------------------------
 
+/** Build an allocated response buffer for requested stats values.
+ * 
+ * @param[in] req - The requested stats in comma-separated string format.
+ * 
+ * @return A pointer to an allocated response buffer, or 0 if out of memory.
+ */
+static char * buildMgmtStatsReply(char * req)
+{
+   DnxWlmStats ws;
+   struct { char * str; unsigned * stat; } rs[] = 
+   {
+      { "jobsok",       &ws.jobs_succeeded     },
+      { "jobsfailed",   &ws.jobs_failed        },
+      { "thcreated",    &ws.threads_created    },
+      { "thdestroyed",  &ws.threads_destroyed  },
+      { "thexist",      &ws.total_threads      },
+      { "thactive",     &ws.active_threads     },
+      { "reqsent",      &ws.requests_sent      },
+      { "jobsrcvd",     &ws.jobs_received      },
+      { "minexectm",    &ws.min_exec_time      },
+      { "avgexectm",    &ws.avg_exec_time      },
+      { "maxexectm",    &ws.max_exec_time      },
+      { "avgthexist",   &ws.avg_total_threads  },
+      { "avgthactive",  &ws.avg_active_threads },
+   };
+   char * rsp = 0;
+
+   assert(req);
+
+   dnxWlmGetStats(s_wlm, &ws);
+
+   // trim leading ws
+   while (isspace(*req)) req++;
+
+   while (*req)
+   {
+      char * ep, * np;
+      unsigned i;
+
+      // find start of next string or end
+      if ((np = strchr(req, ',')) == 0)
+         np = req + strlen(req);
+
+      // trim trailing ws
+      ep = np;
+      while (ep > req && isspace(ep[-1])) ep--;
+
+      // search table for sub-string, append requested stat to rsp
+      for (i = 0; i < elemcount(rs); i++)
+         if (memcmp(req, rs[i].str, ep - req) == 0)
+         {
+            if (appendString(&rsp, "%u,", *rs[i].stat) != 0)
+            {
+               xfree(rsp);
+               return 0;
+            }
+            break;
+         }
+
+      // move to next sub-string or end
+      if (*(req = np)) req++;
+
+      // trim leading ws
+      while (isspace(*req)) req++;
+   }
+   if (rsp)
+   {
+      size_t len = strlen(rsp);
+      if (len && rsp[len - 1] == ',') rsp[len - 1] = 0;
+   }
+   return rsp;
+}
+
+//----------------------------------------------------------------------------
+
+/** Build an allocated response buffer for the current configuration.
+ * 
+ * @return A pointer to an allocated response buffer, or 0 if out of memory.
+ */
+static char * buildMgmtCfgReply(void)
+{
+   /** @todo Implement cfgparser functionality to generate cfg file text. */
+   return 0;
+}
+
+//----------------------------------------------------------------------------
+
 /** The main event loop for the dnxClient process.
  * 
  * @return Zero on success, or a non-zero error code.
@@ -612,9 +704,16 @@ static int processCommands(void)
 
    while (1)
    {
-      // wait for a request; process the request, if valid
-      if ((ret = dnxWaitForMgmtRequest(s_agent, &Msg, Msg.address, 10)) == DNX_OK)
+      // wait 5 seconds for a request; process the request, if valid
+      if ((ret = dnxWaitForMgmtRequest(s_agent, &Msg, Msg.address, 5)) == DNX_OK)
       {
+         DnxMgmtReply Rsp;
+
+         // setup some default response values
+         Rsp.xid = Msg.xid;
+         Rsp.status = DNX_REQ_ACK;
+         Rsp.reply = 0;
+
          // perform the requested action
          if (!strcmp(Msg.action, "SHUTDOWN"))
             s_shutdown = 1;
@@ -622,6 +721,30 @@ static int processCommands(void)
             s_reconfig = 1;
          else if (!strcmp(Msg.action, "DEBUGTOGGLE"))
             s_debugsig = 1;
+         else if (!strcmp(Msg.action, "RESETSTATS"))
+            dnxWlmResetStats(s_wlm);
+         else if (!memcmp(Msg.action, "GETSTATS ", 9))
+         {
+            if ((Rsp.reply = buildMgmtStatsReply(Msg.action + 9)) == 0)
+               Rsp.status = DNX_REQ_NAK;
+         }
+         else if (!strcmp(Msg.action, "GETCONFIG"))
+         {
+            if ((Rsp.reply = buildMgmtCfgReply()) == 0)
+               Rsp.status = DNX_REQ_NAK;
+         }
+         else if (!strcmp(Msg.action, "GETVERSION"))
+         {
+            if ((Rsp.reply = xstrdup("DNX Client " VERSION)) == 0)
+               Rsp.status = DNX_REQ_NAK;
+         }
+
+         // send response, log response failures
+         if ((ret = dnxSendMgmtReply(s_agent, &Rsp, Msg.address)) != 0)
+            dnxLog("Agent response failure: %s.", dnxErrorString(ret));
+
+         // free request and reply message buffers
+         xfree(Rsp.reply);
          xfree(Msg.action);
       }
       else if (ret != DNX_ERR_TIMEOUT)
@@ -661,9 +784,7 @@ static int processCommands(void)
          {
             // reconfigure completed successfully - log diffs; 
             //    free old values and reassign to new values.
-
             logGblConfigChanges(&s_cfg, &tmp_cfg);
-
             dnxCfgParserFreeCfgValues(s_parser, s_ppvals);
             s_cfg = tmp_cfg;
          }
@@ -771,10 +892,10 @@ e4:releaseClientComm();
 e3:removePidFile(s_progname);
 e2:dnxPluginRelease();
 e1:releaseConfig();
-e0:
+e0:dnxLog("-------- DNX Client Daemon Shutdown Complete --------");
+
    xheapchk();    // works when debug heap is compiled in
 
-   dnxLog("-------- DNX Client Daemon Shutdown Complete --------");
    dnxLogExit();
    return ret;
 }

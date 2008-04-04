@@ -31,40 +31,53 @@
 /** A WLM configuration data structure - passed to dnxWlmCreate. */
 typedef struct DnxWlmCfgData
 {
-   char * dispatcher;      /*!< The name of the dispatcher channel. */
-   char * collector;       /*!< The name of the collector channel. */
-   unsigned reqTimeout;    /*!< The thread request timeout in seconds. */
-   unsigned ttlBackoff;    /*!< The time-to-live backoff in seconds. */
-   unsigned maxRetries;    /*!< The maximum allowable retries. */
-   unsigned poolMin;       /*!< The minimum number of pool threads. */
-   unsigned poolInitial;   /*!< The initial number of pool threads. */
-   unsigned poolMax;       /*!< The maximum number of pool threads. */
-   unsigned poolGrow;      /*!< The pool growth increment value. */
-   unsigned pollInterval;  /*!< The poll interval in seconds. */
-   unsigned shutdownGrace; /*!< The shutdown grace period in seconds. */
-   unsigned maxResults;    /*!< The maximum size of the results buffer. */
+   char * dispatcher;            //!< The name of the dispatcher channel.
+   char * collector;             //!< The name of the collector channel.
+   unsigned reqTimeout;          //!< The thread request timeout in seconds.
+   unsigned ttlBackoff;          //!< The time-to-live backoff in seconds.
+   unsigned maxRetries;          //!< The maximum allowable retries.
+   unsigned poolMin;             //!< The minimum number of pool threads.
+   unsigned poolInitial;         //!< The initial number of pool threads.
+   unsigned poolMax;             //!< The maximum number of pool threads.
+   unsigned poolGrow;            //!< The pool growth increment value.
+   unsigned pollInterval;        //!< The poll interval in seconds.
+   unsigned shutdownGrace;       //!< The shutdown grace period in seconds.
+   unsigned maxResults;          //!< The maximum size of the results buffer.
 } DnxWlmCfgData;
+
+/** A structure for returning WLM statistics to a caller. */
+typedef struct DnxWlmStats
+{
+   unsigned jobs_succeeded;      //!< The total number of successful jobs.
+   unsigned jobs_failed;         //!< The total number of unsuccessful jobs.
+   unsigned threads_created;     //!< The total number of threads created.
+   unsigned threads_destroyed;   //!< The total number of threads destroyed.
+   unsigned total_threads;       //!< The number of threads in existence.
+   unsigned active_threads;      //!< The number of threads currently busy.
+   unsigned requests_sent;       //!< The number of requests sent.
+   unsigned jobs_received;       //!< The number of jobs received.
+   unsigned min_exec_time;       //!< The minimum job execution time.
+   unsigned avg_exec_time;       //!< The average job execution time.
+   unsigned max_exec_time;       //!< The maximum job execution time.
+   unsigned avg_total_threads;   //!< The average number of threads existing.
+   unsigned avg_active_threads;  //!< The average number of threads active.
+} DnxWlmStats;
 
 /** An abstract data type - the external representation of a WLM object. */
 typedef struct { int unused; } DnxWlm;
 
-/** Return the active thread count on the specified Work Load Manager.
+/** Reset all WLM statistics counters.
  * 
- * @param[in] wlm - the Work Load Manager whose active thread count should be
- *    returned.
- * 
- * @return The active thread count on @p wlm.
+ * @param[in] wlm - the Work Load Manager whose stats counters are to be reset.
  */
-int dnxWlmGetActiveThreads(DnxWlm * wlm);
+void dnxWlmResetStats(DnxWlm * wlm);
 
-/** Return the active job count on the specified Work Load Manager.
+/** Return a snapshot of WLM statistics.
  * 
- * @param[in] wlm - the Work Load Manager whose active job count should be
- *    returned.
- * 
- * @return The active job count on @p wlm.
+ * @param[in] wlm - the Work Load Manager whose stats are to be returned.
+ * @param[out] wsp - the address of storage for the WLM stats to be returned.
  */
-int dnxWlmGetActiveJobs(DnxWlm * wlm);
+void dnxWlmGetStats(DnxWlm * wlm, DnxWlmStats * wsp);
 
 /** Reconfigure an existing Work Load Manager object.
  * 
