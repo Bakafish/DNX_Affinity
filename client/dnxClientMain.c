@@ -290,7 +290,7 @@ static int verifyFacility (char *szFacility, int *nFacility)
    };
    struct FacilityCode * p;
 
-   for (p = facCode; p->str && strcmp(szFacility, p->str); p++)
+   for (p = facodes; p->str && strcmp(szFacility, p->str); p++)
       ;
 
    return (*nFacility = p->val);
