@@ -11,7 +11,8 @@ dnxClient_SOURCES =\
  dnxPlugin.c\
  dnxWLM.c
 
-INCLUDES =\
+dnxClient_CPPFLAGS =\
+ -DSYSCONFDIR=\"$(sysconfdir)\"\
  -I$(top_srcdir)/common
 
 dnxClient_LDADD = ../common/libcmn.la

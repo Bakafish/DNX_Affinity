@@ -21,6 +21,7 @@ dnxServer_la_SOURCES =\
  dnxTimer.c
 
 dnxServer_la_CPPFLAGS =\
+ -DSYSCONFDIR=\"$(sysconfdir)\"\
  -I$(top_srcdir)/common\
  -I$(top_srcdir)/nagios/nagios-@nagios_target@/include
 

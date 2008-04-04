@@ -58,10 +58,14 @@
 # define VERSION "<unknown>"
 #endif
 
+#ifndef SYSCONFDIR
+# define SYSCONFDIR "/etc"
+#endif
+
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
 // default configuration values
-#define DNX_DEFAULT_NODE_CONFIG_FILE   "dnxClient.cfg"
+#define DNX_DEFAULT_NODE_CONFIG_FILE   SYSCONFDIR "/dnxClient.cfg"
 #define DNX_DEFAULT_REQ_TIMEOUT        5
 #define DNX_DEFAULT_TTL_BACKOFF        1
 #define DNX_DEFAULT_MAX_RETRIES        8

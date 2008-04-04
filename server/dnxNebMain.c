@@ -49,6 +49,10 @@
 # define VERSION "<unknown>"
 #endif
 
+#ifndef SYSCONFDIR
+# define SYSCONFDIR "/etc"
+#endif
+
 #ifndef NSCORE
 # define NSCORE
 #endif
@@ -66,7 +70,7 @@
 #define DNX_EMBEDDED_SVC_OBJECT        1
 
 // default configuration values
-#define DNX_DEFAULT_SERVER_CONFIG_FILE "dnxServer.cfg"
+#define DNX_DEFAULT_SERVER_CONFIG_FILE SYSCONFDIR "/dnxServer.cfg"
 #define DNX_DEFAULT_MAX_NODE_REQUESTS  0x7FFFFFFF
 #define DNX_DEFAULT_MIN_SERVICE_SLOTS  100
 #define DNX_DEFAULT_EXPIRE_POLL_INT    5
