@@ -31,8 +31,19 @@ dnxServer_la_LDFLAGS = -module -avoid-version
 # ---------------------------------------------------------------------------
 # server-side unit tests
 #
-TESTS = dnxJobListTest dnxQueueTest dnxTimerTest dnxCollectorTest
-check_PROGRAMS = dnxJobListTest dnxQueueTest dnxTimerTest dnxCollectorTest
+TESTS =\
+ dnxJobListTest\
+ dnxQueueTest\
+ dnxTimerTest\
+ dnxCollectorTest\
+ dnxDispatcherTest
+
+check_PROGRAMS =\
+ dnxJobListTest\
+ dnxQueueTest\
+ dnxTimerTest\
+ dnxCollectorTest\
+ dnxDispatcherTest
 
 dnxJobListTest_SOURCES = dnxJobList.c @top_srcdir@/common/dnxError.c
 dnxJobListTest_CPPFLAGS = -DDNX_JOBLIST_TEST -I$(top_srcdir)/common
@@ -48,5 +59,10 @@ dnxTimerTest_CPPFLAGS = -DDNX_TIMER_TEST -I$(top_srcdir)/common\
 dnxCollectorTest_SOURCES = dnxCollector.c @top_srcdir@/common/dnxError.c\
  @top_srcdir@/common/dnxSleep.c
 dnxCollectorTest_CPPFLAGS = -DDNX_COLLECTOR_TEST -I$(top_srcdir)/common\
+ -I$(top_srcdir)/nagios/nagios-2.7/include
+
+dnxDispatcherTest_SOURCES = dnxDispatcher.c @top_srcdir@/common/dnxError.c\
+ @top_srcdir@/common/dnxSleep.c
+dnxDispatcherTest_CPPFLAGS = -DDNX_DISPATCHER_TEST -I$(top_srcdir)/common\
  -I$(top_srcdir)/nagios/nagios-2.7/include
 

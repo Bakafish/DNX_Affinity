@@ -76,14 +76,11 @@ static int dnxSendJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    DnxJob job;
    int ret;
 
-   // debug tracking
    dnxDebug(1, 
-         "dnxDispatcher[%lx]: dnxSendJob: "
-         "Dispatching job %lu (%s) to worker node %u.%u.%u.%u",
-         tid, pSvcReq->xid.objSerial, pSvcReq->cmd, 
+         "dnxDispatcher[%lx]: Dispatching job [%lu-%lu] (%s) to node %u.%u.%u.%u",
+         tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
          sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5]);
 
-   // initialize the job structure message
    memset(&job, 0, sizeof job);
    job.xid      = pSvcReq->xid;
    job.state    = DNX_JOB_PENDING;
@@ -91,13 +88,12 @@ static int dnxSendJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    job.timeout  = pSvcReq->timeout;
    job.cmd      = pSvcReq->cmd;
 
-   // transmit the job
    if ((ret = dnxPutJob(idisp->channel, &job, pNode->address)) != DNX_OK)
       dnxSyslog(LOG_ERR, 
-            "dnxDispatcher[%lx]: dnxSendJob: "
-            "Unable to send job %lu (%s) to worker node %u.%u.%u.%u: %s",
-            tid, pSvcReq->xid.objSerial, pSvcReq->cmd, 
-         sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5],
+            "dnxDispatcher[%lx]: Unable to send job [%lu-%lu] "
+            "(%s) to worker node %u.%u.%u.%u: %s",
+            tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
+            sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5],
             dnxErrorString(ret));
 
    return ret;
@@ -114,17 +110,10 @@ static int dnxSendJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
  */
 static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
 {
-   DnxNodeRequest * pNode;
+   DnxNodeRequest * pNode = pSvcReq->pNode;
    int ret;
 
-   // get the worker thread request
-   pNode = pSvcReq->pNode;
-
-   // send this job to the selected worker node
-   if ((ret = dnxSendJob(idisp, pSvcReq, pNode)) != DNX_OK)
-      dnxSyslog(LOG_ERR, 
-            "dnxDispatcher[%lx]: dnxDispatchJob: dnxSendJob failed: %s", 
-            pthread_self(), dnxErrorString(ret));
+   ret = dnxSendJob(idisp, pSvcReq, pNode);
 
    /** @todo Implement the fork-error re-scheduling logic as 
     * found in run_service_check() in checks.c. 
@@ -144,38 +133,31 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
 static void * dnxDispatcher(void * data)
 {
    iDnxDispatcher * idisp = (iDnxDispatcher *)data;
-   pthread_t tid = pthread_self();
-   DnxNewJob SvcReq;
-   int ret = 0;
 
    assert(data);
 
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
 
-   dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Awaiting new jobs...", tid);
+   dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Awaiting jobs...", pthread_self());
 
-   // wait for new service checks or cancellation
    while (1)
    {
+      DnxNewJob svcReq;
+      int ret;
+
       pthread_testcancel();
 
-      // wait for a new entry to be added to the Job Queue
-      if ((ret = dnxJobListDispatch(idisp->joblist, &SvcReq)) == DNX_OK)
+      // wait for a new entry to be added to the job queue
+      if ((ret = dnxJobListDispatch(idisp->joblist, &svcReq)) == DNX_OK)
       {
-         // send the Job to the next Worker Node
-         if ((ret = dnxDispatchJob(idisp, &SvcReq)) == DNX_OK)
-            dnxAuditJob(&SvcReq, "DISPATCH");
+         if ((ret = dnxDispatchJob(idisp, &svcReq)) == DNX_OK)
+            dnxAuditJob(&svcReq, "DISPATCH");
          else
-         {
-            dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxDispatchJob failed: %s", 
-                  tid, dnxErrorString(ret));
-            dnxAuditJob(&SvcReq, "DISPATCH-FAIL");
-         }
+            dnxAuditJob(&svcReq, "DISPATCH-FAIL");
       }
+
    }
-   dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Exiting with error: %s", 
-         tid, dnxErrorString(ret));
    return 0;
 }
 
@@ -221,7 +203,7 @@ int dnxDispatcherCreate(char * chname, char * dispurl, DnxJobList * joblist,
    }
 
    // create the dispatcher thread
-   if ((ret = pthread_create(&idisp->tid, NULL, dnxDispatcher, idisp)) != 0)
+   if ((ret = pthread_create(&idisp->tid, 0, dnxDispatcher, idisp)) != 0)
    {
       dnxSyslog(LOG_ERR, "dnxDispatcherCreate: thread creation failed: %s",
             dnxErrorString(ret));
@@ -260,6 +242,151 @@ void dnxDispatcherDestroy(DnxDispatcher * disp)
    xfree(idisp->chname);
    xfree(idisp);
 }
+
+/*--------------------------------------------------------------------------
+                                 TEST MAIN
+
+   From within dnx/server, compile with GNU tools using this command line:
+    
+      gcc -DDEBUG -DDNX_DISPATCHER_TEST -DHAVE_NANOSLEEP -g -O0 \
+         -lpthread -o dnxDispatcherTest -I../nagios/nagios-2.7/include \
+         -I../common dnxDispatcher.c ../common/dnxError.c \
+         ../common/dnxSleep.c
+
+   Alternatively, a heap check may be done with the following command line:
+
+      gcc -DDEBUG -DDEBUG_HEAP -DDNX_DISPATCHER_TEST -DHAVE_NANOSLEEP -g -O0 \
+         -lpthread -o dnxDispatcherTest -I../nagios/nagios-2.7/include \
+         -I../common dnxDispatcher.c ../common/dnxError.c \
+         ../common/dnxSleep.c ../common/dnxHeap.c
+
+   Note: Leave out -DHAVE_NANOSLEEP if your system doesn't have nanosleep.
+
+  --------------------------------------------------------------------------*/
+
+#ifdef DNX_DISPATCHER_TEST
+
+#include "utesthelp.h"
+
+static int verbose;
+static int once = 0;
+static char * test_url = "udp://0.0.0.0:12489";
+static char * test_chname = "TestCollector";
+static DnxChannel * test_channel = (DnxChannel *)1;
+static DnxJobList * test_joblist = (DnxJobList *)1;
+static DnxNewJob test_job;
+static int test_payload;
+static DnxNodeRequest test_node;
+
+
+// functional stubs
+IMPLEMENT_DNX_DEBUG(verbose);
+IMPLEMENT_DNX_SYSLOG(verbose);
+
+int dnxChanMapAdd(char * name, char * url) 
+{
+   CHECK_TRUE(name != 0);
+   CHECK_TRUE(strcmp(name, test_chname) == 0);
+   CHECK_TRUE(url != 0);
+   CHECK_TRUE(strcmp(url, test_url) == 0);
+   return 0;
+}
+
+int dnxConnect(char * name, DnxChannel ** channel, DnxChanMode mode) 
+{
+   *channel = test_channel;
+   CHECK_TRUE(name != 0);
+   CHECK_TRUE(strcmp(name, test_chname) == 0);
+   CHECK_TRUE(mode == DNX_CHAN_PASSIVE);
+   return 0;
+}
+
+int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
+{
+   CHECK_TRUE(pJobList == test_joblist);
+   CHECK_TRUE(pJob != 0);
+   memcpy(pJob, &test_job, sizeof *pJob);
+
+   once++; 
+
+   return 0;
+}
+
+int dnxPutJob(DnxChannel * channel, DnxJob * pJob, char * address) 
+{
+   CHECK_TRUE(channel != 0);
+   CHECK_TRUE(pJob != 0);
+
+   CHECK_TRUE(memcmp(&pJob->xid, &test_job.xid, sizeof pJob->xid) == 0);
+   CHECK_TRUE(pJob->state == DNX_JOB_PENDING);
+   CHECK_TRUE(pJob->priority == 1);
+   CHECK_TRUE(pJob->timeout == test_job.timeout);
+   CHECK_TRUE(pJob->cmd == test_job.cmd);
+
+   return 0;
+}
+
+int dnxAuditJob(DnxNewJob * pJob, char * action)
+{
+   CHECK_TRUE(pJob != 0);
+   CHECK_TRUE(strcmp(action, "DISPATCH") == 0);
+   return 0;
+}
+
+int dnxDisconnect(DnxChannel * channel) 
+{
+   CHECK_TRUE(channel == test_channel);
+   return 0;
+}
+
+int dnxChanMapDelete(char * name) 
+{
+   CHECK_TRUE(name != 0);
+   CHECK_TRUE(strcmp(name, test_chname) == 0);
+   return 0; 
+}
+
+int main(int argc, char ** argv)
+{
+   DnxDispatcher * dp;
+   iDnxDispatcher * idp;
+
+   verbose = argc > 1 ? 1 : 0;
+
+   memset(&test_node, 0, sizeof test_node);
+   test_job.state = DNX_JOB_PENDING;
+   memset(&test_job.xid, 1, sizeof test_job.xid);
+   test_job.cmd = "test command";
+   test_job.start_time = 1000;
+   test_job.timeout = 5;
+   test_job.expires = 5000;
+   test_job.payload = &test_payload;
+   test_job.pNode = &test_node;
+
+   CHECK_ZERO(dnxDispatcherCreate(test_chname, test_url, test_joblist, &dp));
+
+   idp = (iDnxDispatcher *)dp;
+
+   CHECK_TRUE(strcmp(idp->chname, test_chname) == 0);
+   CHECK_TRUE(idp->joblist == test_joblist);
+   CHECK_TRUE(idp->tid != 0);
+   CHECK_TRUE(strcmp(idp->url, test_url) == 0);
+
+   CHECK_TRUE(dnxDispatcherGetChannel(dp) == idp->channel);
+
+   while (!once)
+      dnxCancelableSleep(10);
+
+   dnxDispatcherDestroy(dp);
+
+#ifdef DEBUG_HEAP
+   CHECK_ZERO(dnxCheckHeap());
+#endif
+
+   return 0;
+}
+
+#endif   /* DNX_DISPATCHER_TEST */
 
 /*--------------------------------------------------------------------------*/
 
