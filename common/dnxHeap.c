@@ -205,7 +205,7 @@ static int check_block(overhead * ohp)
    if ((rc2 = memscan(ohp->picket2, PICKET2, sizeof ohp->picket2)) != 0)
       dump_block(ohp, "corrupt post-header fence");
    if ((rc3 = memscan((char *)&ohp[1] + ohp->reqsz, PICKET3, PICKETSZ)) != 0)
-      dump_block(ohp, "corrupt pre-user fence");
+      dump_block(ohp, "corrupt post-user fence");
 
    assert(!rc1 && !rc2 && !rc3);
 

@@ -15,10 +15,10 @@ AC_CHECK_PROG(DOXYGEN_INSTALLED, doxygen, yes)
 AM_CONDITIONAL(DO_DOXYGEN, [test x$DOXYGEN_INSTALLED = xyes])
 
 AC_ARG_WITH([nagios3x],
-            [AS_HELP_STRING([--with-nagios3x], 
-                            [build against nagios 3.x (default: nagios 2.x)])],
-            [nagios_target=3.x],
-            [nagios_target=2.x])
+	    [AS_HELP_STRING([--with-nagios3x], 
+			    [build against nagios 3.x (default: nagios 2.x)])],
+	    [nagios_target=3.x],
+	    [nagios_target=2.x])
 
 AC_SUBST(nagios_target)
 
@@ -30,7 +30,7 @@ AC_CHECK_LIB([rt], [nanosleep])
 # Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stdlib.h string.h sys/file.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stdlib.h string.h sys/file.h sys/socket.h sys/time.h syslog.h unistd.h getopt.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -47,7 +47,11 @@ AC_FUNC_SELECT_ARGTYPES
 AC_TYPE_SIGNAL
 AC_FUNC_STRTOD
 AC_CHECK_FUNCS([dup2 gethostbyname gettimeofday memmove memset regcomp \
-   nanosleep select socket strchr strdup strerror strrchr strtol strtoul])
+   nanosleep select socket strchr strdup strerror strrchr strtol strtoul \
+   getopt])
+
+# Check for getopt_long
+AC_SEARCH_LIBS([getopt_long],[iberty],[AC_CHECK_FUNCS([getopt_long])])
 
 # Export RPM build architecture
 which rpm > /dev/null; \
@@ -58,16 +62,16 @@ else \
 fi
 AC_SUBST(BUILDARCH)
 AC_DEFINE_UNQUOTED(BUILDARCH, ["$BUILDARCH"],
-        [The build architecture of this build.])
+	[The build architecture of this build.])
 
 AC_CONFIG_FILES([Makefile
 		 rpm/dnx.spec
 		 doc/Makefile
 		 doc/doxyfile
 		 etc/Makefile
-                 etc/dnxcld.init
-                 common/Makefile
-                 server/Makefile
-                 client/Makefile
-                 stats/Makefile])
+		 etc/dnxcld.init
+		 common/Makefile
+		 server/Makefile
+		 client/Makefile
+		 stats/Makefile])
 AC_OUTPUT

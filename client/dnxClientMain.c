@@ -53,14 +53,16 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#define _GNU_SOURCE
-#include <getopt.h>
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #else
 # define VERSION           "<unknown>"
 # define PACKAGE_BUGREPORT "<unknown>"
+#endif
+
+#if HAVE_GETOPT_LONG
+#define _GNU_SOURCE
+#include <getopt.h>
 #endif
 
 #ifndef SYSCONFDIR
@@ -110,16 +112,37 @@ static int s_lockfd = -1;        //!< The system PID file descriptor.
  */
 static void usage(char * base)
 {
+
+#if HAVE_GETOPT_LONG
+# define OL_CFGFILE  ", --cfgfile "
+# define OL_LOGFILE  ", --logfile "
+# define OL_DBGFILE  ", --dbgfile "
+# define OL_DBGLEVEL ", --dbglevel"
+# define OL_DEBUG    ", --debug   "
+# define OL_RUNPATH  ", --runpath "
+# define OL_VERSION  ", --version "
+# define OL_HELP     ", --help    "
+#else
+# define OL_CFGFILE
+# define OL_LOGFILE
+# define OL_DBGFILE
+# define OL_DBGLEVEL
+# define OL_DEBUG
+# define OL_RUNPATH
+# define OL_VERSION
+# define OL_HELP
+#endif
+
    fprintf(stderr, "\nUsage: %s [options]", base);
    fprintf(stderr, "\nWhere [options] are:\n");
-   fprintf(stderr, "   -c, --cfgfile <file>    specify the file and path of the config file.\n");
-   fprintf(stderr, "   -l, --logfile <file>    specify the file and path of the log file.\n");
-   fprintf(stderr, "   -D, --dbgfile <file>    specify the file and path of the debug log file.\n");
-   fprintf(stderr, "   -g, --dbglevel <value>  specify the level of debugging output.\n");
-   fprintf(stderr, "   -d, --debug             enable debug mode (will not become a daemon).\n");
-   fprintf(stderr, "   -r, --runpath <path>    specify the path of the lock/pid file.\n");
-   fprintf(stderr, "   -v, --version           display DNX client version and exit.\n");
-   fprintf(stderr, "   -h, --help              display this help screen and exit.\n\n");
+   fprintf(stderr, "   -c" OL_CFGFILE  " <file>   specify the file and path of the config file.\n");
+   fprintf(stderr, "   -l" OL_LOGFILE  " <file>   specify the file and path of the log file.\n");
+   fprintf(stderr, "   -D" OL_DBGFILE  " <file>   specify the file and path of the debug log file.\n");
+   fprintf(stderr, "   -g" OL_DBGLEVEL " <value>  specify the level of debugging output.\n");
+   fprintf(stderr, "   -d" OL_DEBUG    "          enable debug mode (will not become a daemon).\n");
+   fprintf(stderr, "   -r" OL_RUNPATH  " <path>   specify the path of the lock/pid file.\n");
+   fprintf(stderr, "   -v" OL_VERSION  "          display DNX client version and exit.\n");
+   fprintf(stderr, "   -h" OL_HELP     "          display this help screen and exit.\n\n");
    exit(-1);
 }
 
@@ -189,6 +212,8 @@ static int getOptions(int argc, char ** argv)
    extern int opterr, optopt;
 
    static char opts[] = "c:dr:g:l:D:vh";
+
+#if HAVE_GETOPT_LONG
    static struct option longopts[] = 
    {
       { "cfgfile",  required_argument, 0, 'c' },
@@ -201,6 +226,7 @@ static int getOptions(int argc, char ** argv)
       { "help",     no_argument,       0, 'h' },
       { 0, 0, 0, 0 },
    };
+#endif
 
    int ch;
    char * cp;
@@ -213,7 +239,11 @@ static int getOptions(int argc, char ** argv)
 
    opterr = 0; /* Disable error messages */
 
+#if HAVE_GETOPT_LONG
    while ((ch = getopt_long(argc, argv, opts, longopts, 0)) != -1)
+#else
+   while ((ch = getopt(argc, argv, opts)) != -1)
+#endif
    {
       switch (ch)
       {
@@ -683,8 +713,17 @@ static char * buildMgmtStatsReply(char * req)
  */
 static char * buildMgmtCfgReply(void)
 {
-   /** @todo Implement cfgparser functionality to generate cfg file text. */
-   return 0;
+   char * buf;
+   size_t bufsz = 0;
+
+   if (dnxCfgParserGetCfg(s_parser, 0, &bufsz) != 0)
+      return 0;
+
+   if ((buf = (char *)xmalloc(bufsz)) != 0)
+      if (dnxCfgParserGetCfg(s_parser, buf, &bufsz) != 0)
+         xfree(buf), (buf = 0);
+
+   return buf;
 }
 
 //----------------------------------------------------------------------------

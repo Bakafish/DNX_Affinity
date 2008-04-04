@@ -25,8 +25,8 @@
  * @ingroup DNX_COMMON_IFC
  */
 
-#ifndef _DXCFGPARSER_H_
-#define _DXCFGPARSER_H_
+#ifndef _DNXCFGPARSER_H_
+#define _DNXCFGPARSER_H_
 
 #include <stddef.h>
 
@@ -59,8 +59,6 @@ typedef enum DnxCfgType
    DNX_CFG_INT_ARRAY,         //!< Comma-delimited array (&int*).
    DNX_CFG_UNSIGNED,          //!< Unsigned integer (&unsigned).
    DNX_CFG_UNSIGNED_ARRAY,    //!< Comma-delimited array (&unsigned*).
-   DNX_CFG_ADDR,              //!< Address or DNS name (&struct sockaddr*).
-   DNX_CFG_ADDR_ARRAY,        //!< Comma-delimited array (&struct sockaddr**).
    DNX_CFG_URL,               //!< URL (&char*).
    DNX_CFG_FSPATH,            //!< File system path (&char*).
 } DnxCfgType;
@@ -153,11 +151,36 @@ int dnxCfgParserCreate(char * cfgdefs, char * cfgfile, char * cmdover,
  */
 int dnxCfgParserParse(DnxCfgParser * cp, void * passthru);
 
+/** Return the current configuration as a formatted string.
+ * 
+ * The configuration string is a set of '\n' terminated lines, each containing
+ * the same text as might be specified in a configuration file. The set of 
+ * lines contain the complete current configuration as defined by the specified
+ * configuration parser object.
+ * 
+ * The proper way to use this call is to call it twice, once with a zero length
+ * buffer (null for @p buf and 0 in @p bufszp). On return, @p bufszp will then
+ * contain the required size of buf, which may then be allocated before the 
+ * second call. This operation is efficient because the current configuration
+ * string is cached by the configuration parser object.
+ * 
+ * @param[in] cp - the configuration parser whose current configuration data
+ *    should be returned.
+ * @param[out] buf - the address of storage for the formatted configuration 
+ *    string data.
+ * @param[in,out] bufszp - on entry contains the size of @p buf; on exit, 
+ *    returns the number of bytes used or required to store the entire
+ *    formatted configuration string.
+ * 
+ * @return Zero on success, or a non-zero error value. 
+ */
+int dnxCfgParserGetCfg(DnxCfgParser * cp, char * buf, size_t * bufszp);
+
 /** Destroy a previously created configuration parser object.
  * 
  * @param[in] cp - the configuration parser object to be destroyed.
  */
 void dnxCfgParserDestroy(DnxCfgParser * cp);
 
-#endif   /* _DXCFGPARSER_H_ */
+#endif   /* _DNXCFGPARSER_H_ */
 

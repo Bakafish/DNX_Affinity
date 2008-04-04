@@ -52,10 +52,6 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
 #define DNX_MAX_CFG_LINE   2048     //!< Longest allowed config file line.
@@ -73,10 +69,15 @@ typedef struct iDnxCfgParser
    DnxCfgDict * dict;               //!< The configuration dictionary.
    unsigned dictsz;                 //!< The number of elements in @em dict.
    DnxCfgValidator_t * vfp;         //!< The user validator function.
+   char * curcfg;                   //!< The current config string cache.
+   size_t ccsize;                   //!< The current config string length.
 } iDnxCfgParser;
 
 /** A typedef describing a single type variable parser. */
 typedef int DnxVarParser_t(char * val, DnxCfgType type, void * prval);
+
+/** A typedef describing a single type variable formatter. */
+typedef char * DnxVarFormatter_t(char * var, DnxCfgType type, void * prval);
    
 /*--------------------------------------------------------------------------
                               IMPLEMENTATION
@@ -256,7 +257,7 @@ static char * strtrim(char * s)
 
 //----------------------------------------------------------------------------
 
-/** Validate and return a null-terminated array of sockaddr_storage objects.
+/** Validate and return a null-terminated array of strings.
  * 
  * Any non-zero value passed in @p prval is assumed to be a pointer to 
  * previously allocated array memory. It will be freed before reassigning to 
@@ -367,114 +368,6 @@ static int parseIntOrUnsignedArray(char * val, DnxCfgType type, int ** prval)
 }
 
 //----------------------------------------------------------------------------
-
-/** Validate an address for correctness, and convert to sockaddr_storage.
- * 
- * @param[in] addr - the URL to be validated.
- * @param[out] ss - the address of storage for the converted address.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int validateIPAddr(char * addr, struct sockaddr_storage * ss)
-{
-   int ret;
-   struct addrinfo * ai;
-   if ((ret = getaddrinfo(addr, 0, 0, &ai)) != 0)
-      return ret;
-   memcpy(ss, ai[0].ai_addr, ai[0].ai_addrlen);
-   freeaddrinfo(ai);
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Parse, validate and return an allocated sockaddr_storage object.
- * 
- * Any non-zero value passed in @p prval is assumed to be a pointer to 
- * previously allocated sockaddr_storage object memory. It will be freed 
- * before reassigning to the new object address value.
- * 
- * @param[in] val - the value to be validated.
- * @param[in] type - the high-level type (ADDR) of @p val.
- * @param[in,out] prval - the address of storage for the returned allocated
- *    sockaddr_storage object address.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int parseAddr(char * val, DnxCfgType type, 
-      struct sockaddr_storage ** prval)
-{
-   int ret;
-   struct sockaddr_storage * ss;
-   assert(type == DNX_CFG_ADDR);
-   if ((ss = (struct sockaddr_storage *)xmalloc(sizeof *ss)) == 0)
-      return DNX_ERR_MEMORY;
-   if ((ret = validateIPAddr(val, ss)) != 0)
-      return xfree(ss), ret;
-   xfree(*prval);
-   *prval = ss;
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Validate and return a null-terminated array of sockaddr_storage objects.
- * 
- * Any non-zero value passed in @p prval is assumed to be a pointer to 
- * previously allocated array memory. It will be freed before reassigning to 
- * the new buffer value.
- * 
- * @param[in] val - the value to be validated.
- * @param[in] type - the high-level type (ADDR_ARRAY) of @p val.
- * @param[in,out] prval - the address of storage for the returned allocated
- *    array buffer address.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int parseAddrArray(char * val, DnxCfgType type, 
-      struct sockaddr_storage *** prval)
-{
-   struct sockaddr_storage ** array, * sp;
-   char ** sa;
-   int i;
-
-   assert(type == DNX_CFG_ADDR_ARRAY);
-
-   // parse value string into a sub-string array
-   if ((sa = strToStrArray(val, ',')) == 0)
-      return DNX_ERR_MEMORY;
-
-   // count sub-strings and trim trailing and leading white space
-   for (i = 0; sa[i]; i++)
-      sa[i] = strtrim(sa[i]);
-
-   // allocate space for count + ints
-   if ((array = (struct sockaddr_storage **)xmalloc(
-         (i + 1) * sizeof *array + i * sizeof **array)) == 0)
-      return xfree(sa), DNX_ERR_MEMORY;
-
-   // locate structure array at end of ptr array
-   sp = (struct sockaddr_storage *)&array[i + 1];
-
-   // parse addrs and ptrs into both arrays
-   for (i = 0; sa[i]; i++)
-   {
-      int ret;
-      struct sockaddr_storage * ssp = 0;
-      if ((ret = parseAddr(sa[i], DNX_CFG_ADDR, &ssp)) != 0)
-         return xfree(array), xfree(sa), ret;
-      memcpy(sp, ssp, sizeof *sp);
-      array[i] = sp++;
-      xfree(ssp);
-   }
-   array[i] = 0;   // terminate ptr array
-   xfree(sa);
-   xfree(*prval);
-   *prval = array;
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
  
 /** Validate and convert a single variable/value pair against a dictionary. 
  * 
@@ -502,8 +395,6 @@ static int dnxParseCfgVar(char * var, char * val, DnxCfgDict * dict,
       (DnxVarParser_t *)parseIntOrUnsignedArray,
       (DnxVarParser_t *)parseIntOrUnsigned,
       (DnxVarParser_t *)parseIntOrUnsignedArray,
-      (DnxVarParser_t *)parseAddr,
-      (DnxVarParser_t *)parseAddrArray,
       (DnxVarParser_t *)parseString,
       (DnxVarParser_t *)parseString,
    };
@@ -618,8 +509,8 @@ static int applyCfgSetString(char ** sap, DnxCfgDict * dict, void ** vptrs)
 static void freeArrayPtrs(DnxCfgDict * dict, void ** vptrs)
 {
    static DnxCfgType ptrtypes[] = { DNX_CFG_STRING, DNX_CFG_STRING_ARRAY, 
-         DNX_CFG_INT_ARRAY, DNX_CFG_UNSIGNED_ARRAY, DNX_CFG_ADDR, 
-         DNX_CFG_ADDR_ARRAY, DNX_CFG_URL, DNX_CFG_FSPATH };
+         DNX_CFG_INT_ARRAY, DNX_CFG_UNSIGNED_ARRAY, 
+         DNX_CFG_URL, DNX_CFG_FSPATH };
 
    unsigned i, j;
 
@@ -629,6 +520,198 @@ static void freeArrayPtrs(DnxCfgDict * dict, void ** vptrs)
       for (j = 0; j < elemcount(ptrtypes); j++)
          if (dict[i].type == ptrtypes[j])
             xfree(vptrs? vptrs[i]: *(void **)dict[i].valptr);
+}
+
+//----------------------------------------------------------------------------
+
+/** Format a string configuration value.
+ * 
+ * @param[in] var - the variable name to be used during formatting.
+ * @param[in] type - the type of the variable to be formatted.
+ * @param[in] prval - the string value to be formatted.
+ * 
+ * @return A pointer to an allocated buffer containing the formatted
+ * configuration line, or NULL on memory allocation failure. The caller is 
+ * responsible for freeing the memory returned.
+ */
+static char * formatString(char * var, DnxCfgType type, char * prval)
+{
+   size_t len = prval? strlen(prval): 0;
+   char * cfg;
+
+   assert(var);
+   assert(type == DNX_CFG_STRING || type == DNX_CFG_URL || type == DNX_CFG_FSPATH);
+
+   // var + '=' + val + '\n' + '\0'
+   if ((cfg = (char *)xmalloc(strlen(var) + 1 + len + 2)) != 0)
+      sprintf(cfg, "%s=%s\n", var, prval? prval: "");
+
+   return cfg;
+}
+
+//----------------------------------------------------------------------------
+
+/** Format a string array configuration value.
+ * 
+ * @param[in] var - the variable name to be used during formatting.
+ * @param[in] type - the type of the variable to be formatted.
+ * @param[in] prval - the null-terminated array of strings to be formatted.
+ * 
+ * @return A pointer to an allocated buffer containing the formatted
+ * configuration line, or NULL on memory allocation failure. The caller is 
+ * responsible for freeing the memory returned.
+ */
+static char * formatStringArray(char * var, DnxCfgType type, char ** prval)
+{
+   char ** cp = prval;
+   size_t len = 0;
+   char * cfg;
+
+   assert(var && type == DNX_CFG_STRING_ARRAY);
+
+   if (cp)
+      while (*cp)
+         len += strlen(*cp++) + 1;  // add one for trailing ',' or '\n'
+
+   // var + '=' + val + '\n' + '\0'
+   if ((cfg = (char *)xmalloc(strlen(var) + 1 + len + 1)) != 0)
+   {
+      char * cp = cfg;
+      cp += sprintf(cp, "%s=", var);
+      if (prval)
+         while (*prval)
+            cp += sprintf(cp, "%s,", *prval++);
+      if (cp[-1] == ',') cp--;   // overwrite trailing ','
+      *cp++ = '\n';
+      *cp = 0;
+   }
+   return cfg;
+}
+
+//----------------------------------------------------------------------------
+
+/** Format an  int or unsigned configuration value.
+ * 
+ * @param[in] var - the variable name to be used during formatting.
+ * @param[in] type - the type of the variable to be formatted.
+ * @param[in] prval - the integer to be formatted.
+ * 
+ * @return A pointer to an allocated buffer containing the formatted
+ * configuration line, or NULL on memory allocation failure. The caller is 
+ * responsible for freeing the memory returned.
+ */
+static char * formatIntOrUnsigned(char * var, DnxCfgType type, int prval)
+{
+   char intbuf[16];
+   size_t len;
+   char * cfg;
+
+   assert(var && (type == DNX_CFG_INT || type == DNX_CFG_UNSIGNED));
+
+   len = sprintf(intbuf, type == DNX_CFG_INT? "%d": "%u", prval);
+
+   // var + '=' + val + '\n' + '\0'
+   if ((cfg = (char *)xmalloc(strlen(var) + 1 + len + 2)) != 0)
+      sprintf(cfg, "%s=%s\n", var, intbuf);
+
+   return cfg;
+}
+
+//----------------------------------------------------------------------------
+
+/** Format an int or unsigned array configuration value.
+ * 
+ * @param[in] var - the variable name to be used during formatting.
+ * @param[in] type - the type of the variable to be formatted.
+ * @param[in] prval - the array of integers to be formatted. The first value
+ *    indicates the number of integers following.
+ * 
+ * @return A pointer to an allocated buffer containing the formatted
+ * configuration line, or NULL on memory allocation failure. The caller is 
+ * responsible for freeing the memory returned.
+ */
+static char * formatIntOrUnsignedArray(char * var, DnxCfgType type, int * prval)
+{
+   size_t len = prval? prval[0] * 16: 0;
+   char * cfg;
+
+   assert(var);
+   assert(type == DNX_CFG_INT_ARRAY || type == DNX_CFG_UNSIGNED_ARRAY);
+
+   // var + '=' + val + '\n' + '\0'
+   if ((cfg = (char *)xmalloc(strlen(var) + 1 + len + 2)) != 0)
+   {
+      int i;
+      char * cp = cfg;
+      cp += sprintf(cp, "%s=", var);
+      if (prval)
+         for (i = 1; i <= prval[0]; i++)
+            cp += sprintf(cp, type == DNX_CFG_INT_ARRAY? "%d,": "%u,", prval[i]);
+      if (cp[-1] == ',') cp--;   // overwrite trailing ','
+      *cp++ = '\n';
+      *cp = 0;
+   }
+   return cfg;
+}
+
+//----------------------------------------------------------------------------
+
+/** Format an allocated buffer containing the current configuration.
+ * 
+ * @param[in] dict - the config dictionary to be formatted into a string.
+ * @param[out] ccsizep - the address of storage for returning the size in bytes
+ *    of the returned allocated string buffer.
+ * 
+ * @return A pointer to an allocated string buffer, or NULL on memory
+ * allocation failure.
+ */
+static char * buildCurrentCfgCache(DnxCfgDict * dict, size_t * ccsizep)
+{
+   static DnxVarFormatter_t * fmttbl[] =
+   {
+      (DnxVarFormatter_t *)formatString,
+      (DnxVarFormatter_t *)formatStringArray,
+      (DnxVarFormatter_t *)formatIntOrUnsigned,
+      (DnxVarFormatter_t *)formatIntOrUnsignedArray,
+      (DnxVarFormatter_t *)formatIntOrUnsigned,
+      (DnxVarFormatter_t *)formatIntOrUnsignedArray,
+      (DnxVarFormatter_t *)formatString,
+      (DnxVarFormatter_t *)formatString,
+   };
+
+   char * cfg = 0;
+   size_t cfgsz = 1;     // start with one for null-terminator
+   unsigned i;
+
+   assert(dict && ccsizep);
+
+   for (i = 0; dict[i].varname; i++)
+   {
+      char * str, * newcfg;
+      size_t len;
+
+      if ((str = fmttbl[dict[i].type](dict[i].varname, 
+               dict[i].type, *(void **)dict[i].valptr)) == 0
+            || (newcfg = (char *)xrealloc(cfg, cfgsz + (len = strlen(str)))) == 0)
+      {
+         xfree(str);
+         xfree(cfg);
+         return 0;
+      }
+      cfg = newcfg;
+      memcpy(&cfg[cfgsz - 1], str, len);
+      xfree(str);
+      cfgsz += len;
+      cfg[cfgsz - 1] = 0;
+   }
+
+   // remove trailing '\n'
+   if (cfgsz > 1 && cfg[cfgsz - 2] == '\n')
+      cfg[--cfgsz - 1] = 0;
+
+   *ccsizep = cfgsz;
+
+   return cfg;
 }
 
 /*--------------------------------------------------------------------------
@@ -725,6 +808,11 @@ int dnxCfgParserParse(DnxCfgParser * cp, void * passthru)
          *(void **)icp->dict[i].valptr = vptrs[i];
          vptrs[i] = tmp;
       }
+
+      // free current config cache string
+      xfree(icp->curcfg);
+      icp->curcfg = 0;
+      icp->ccsize = 0;
    }
 
    // free either new or old values; free temp array
@@ -732,6 +820,31 @@ int dnxCfgParserParse(DnxCfgParser * cp, void * passthru)
    xfree(vptrs);
 
    return ret;
+}
+
+//----------------------------------------------------------------------------
+
+int dnxCfgParserGetCfg(DnxCfgParser * cp, char * buf, size_t * bufszp)
+{
+   iDnxCfgParser * icp = (iDnxCfgParser *)cp;
+
+   assert(cp && bufszp && (buf || !*bufszp));
+
+   // build current config if not already there
+   if (icp->curcfg == 0
+         && (icp->curcfg = buildCurrentCfgCache(icp->dict, &icp->ccsize)) == 0)
+      return DNX_ERR_MEMORY;
+
+   // copy what we can into buffer; return required/used size
+   if (buf && *bufszp)
+   {
+      size_t cpysz = *bufszp > icp->ccsize? icp->ccsize: *bufszp;
+      memcpy(buf, icp->curcfg, cpysz - 1);
+      buf[cpysz - 1] = 0;
+   }
+   *bufszp = icp->ccsize;
+
+   return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -748,6 +861,7 @@ void dnxCfgParserDestroy(DnxCfgParser * cp)
    xfree(icp->cmdover);
    xfree(icp->cfgdefs);
    xfree(icp->cfgfile);
+   xfree(icp->curcfg);
    xfree(icp);
 }
 
@@ -781,10 +895,21 @@ void dnxCfgParserDestroy(DnxCfgParser * cp)
    "testCfgIntArray=-1, 87,3   ,2, 32,3,1,-23,  -112,2,234\n"                 \
    "testCfgUnsigned = 332245235\r\n"                                          \
    "testCfgUnsignedArray = 2342, 234,234,4,  2342  ,2342  ,234234 \n"         \
-   " testCfgIpAddr = 127.0.0.1\n"                                             \
-   "testCfgIpAddrArray = localhost,10.1.1.1, 10.1.1.2 ,10.1.1.3\r\n"          \
    "testCfgUrl = http://www.example.com\n"                                    \
    "testCfgFSPath = /some/path\n"
+
+#define TEST_CFG_CONTENTS                                                     \
+   "testCfgString=some string\n"                                              \
+   "testCfgStringArray=This is,a test,of the,string array.\n"                 \
+   "testCfgInt1=-10024\n"                                                     \
+   "testCfgInt2=82\n"                                                         \
+   "testCfgInt3=-57\n"                                                        \
+   "testCfgInt4=102\n"                                                        \
+   "testCfgIntArray=-1,87,3,2,32,3,1,-23,-112,2,234\n"                        \
+   "testCfgUnsigned=332245235\n"                                              \
+   "testCfgUnsignedArray=2342,234,234,4,2342,2342,234234\n"                   \
+   "testCfgUrl=http://www.example.com\n"                                      \
+   "testCfgFSPath=/some/path"
      
 static verbose;
 
@@ -802,8 +927,6 @@ int main(int argc, char ** argv)
    int *              testCfgIntArray;
    unsigned           testCfgUnsigned;
    unsigned *         testCfgUnsignedArray;
-   struct sockaddr *  testCfgIpAddr;
-   struct sockaddr ** testCfgIpAddrArray;
    char *             testCfgUrl;
    char *             testCfgFSPath;
 
@@ -818,24 +941,20 @@ int main(int argc, char ** argv)
       { "testCfgIntArray",     DNX_CFG_INT_ARRAY,      &testCfgIntArray      },
       { "testCfgUnsigned",     DNX_CFG_UNSIGNED,       &testCfgUnsigned      },
       { "testCfgUnsignedArray",DNX_CFG_UNSIGNED_ARRAY, &testCfgUnsignedArray },
-      { "testCfgIpAddr",       DNX_CFG_ADDR,           &testCfgIpAddr        },
-      { "testCfgIpAddrArray",  DNX_CFG_ADDR_ARRAY,     &testCfgIpAddrArray   },
       { "testCfgUrl",          DNX_CFG_URL,            &testCfgUrl           },
       { "testCfgFSPath",       DNX_CFG_FSPATH,         &testCfgFSPath        },
       { 0 },
    };
    char * defs = "testCfgInt2 = 82\ntestCfgInt3 = -67\ntestCfgInt4 = 101";
    char * cmds = "testCfgInt4 = 102\n";
+   char * StrArray_cmp[] = {"This is","a test","of the","string array."};
+   char test_cfg[] = TEST_CFG_CONTENTS;
 
    int i;
    FILE * fp;
    DnxCfgParser * cp;
-
-   char Addr_cmp[]       = {0,0,127,0,0,1};
-   char AddrArray1_cmp[] = {0,0,10,1,1,1};
-   char AddrArray2_cmp[] = {0,0,10,1,1,2};
-   char AddrArray3_cmp[] = {0,0,10,1,1,3};
-   char * StrArray_cmp[] = {"This is","a test","of the","string array."};
+   char * cfg;
+   size_t bufsz;
 
    verbose = argc > 1 ? 1 : 0;
 
@@ -880,15 +999,17 @@ int main(int argc, char ** argv)
    CHECK_TRUE(testCfgUnsignedArray[6] == 2342);
    CHECK_TRUE(testCfgUnsignedArray[7] == 234234);
 
-   CHECK_ZERO(memcmp(testCfgIpAddr->sa_data, Addr_cmp, sizeof Addr_cmp));
-
-   CHECK_ZERO(memcmp(testCfgIpAddrArray[0]->sa_data, Addr_cmp, sizeof Addr_cmp));
-   CHECK_ZERO(memcmp(testCfgIpAddrArray[1]->sa_data, AddrArray1_cmp, sizeof AddrArray1_cmp));
-   CHECK_ZERO(memcmp(testCfgIpAddrArray[2]->sa_data, AddrArray2_cmp, sizeof AddrArray2_cmp));
-   CHECK_ZERO(memcmp(testCfgIpAddrArray[3]->sa_data, AddrArray3_cmp, sizeof AddrArray3_cmp));
-
    CHECK_ZERO(strcmp(testCfgUrl, "http://www.example.com"));
    CHECK_ZERO(strcmp(testCfgFSPath, "/some/path"));
+
+   // test getcfg
+   bufsz = 0;
+   CHECK_ZERO(dnxCfgParserGetCfg(cp, 0, &bufsz));
+   CHECK_NONZERO(cfg = (char *)xmalloc(bufsz));
+   CHECK_ZERO(dnxCfgParserGetCfg(cp, cfg, &bufsz));
+   CHECK_TRUE(memcmp(cfg, test_cfg, bufsz) == 0);
+   CHECK_TRUE(bufsz == sizeof test_cfg);
+   xfree(cfg);
 
    // test reparse here...
    
