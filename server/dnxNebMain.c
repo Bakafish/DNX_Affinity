@@ -511,7 +511,7 @@ static int initThreads (void)
 		
 	}
 
-   if ((ret = dnxTimerInit(&dnxGlobalData.JobList)) != 0)
+   if ((ret = dnxTimerInit(dnxGlobalData.JobList)) != 0)
    {
 		dnxGlobalData.isActive = 0;	// Init failure
 		releaseThreads();		// Cancel prior threads
