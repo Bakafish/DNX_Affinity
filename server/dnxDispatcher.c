@@ -282,6 +282,13 @@ static DnxNodeRequest test_node;
 IMPLEMENT_DNX_DEBUG(verbose);
 IMPLEMENT_DNX_SYSLOG(verbose);
 
+int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb)
+{
+   return pxa->objType == pxb->objType 
+         && pxa->objSerial == pxb->objSerial 
+         && pxa->objSlot == pxb->objSlot;
+}
+
 int dnxChanMapAdd(char * name, char * url) 
 {
    CHECK_TRUE(name != 0);
@@ -316,7 +323,7 @@ int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address)
    CHECK_TRUE(channel != 0);
    CHECK_TRUE(pJob != 0);
 
-   CHECK_TRUE(memcmp(&pJob->xid, &test_job.xid, sizeof pJob->xid) == 0);
+   CHECK_TRUE(dnxEqualXIDs(&pJob->xid, &test_job.xid));
    CHECK_TRUE(pJob->state == DNX_JOB_PENDING);
    CHECK_TRUE(pJob->priority == 1);
    CHECK_TRUE(pJob->timeout == test_job.timeout);

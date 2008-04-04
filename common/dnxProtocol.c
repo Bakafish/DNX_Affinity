@@ -497,5 +497,22 @@ int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial,
    return DNX_OK;
 }
 
+//----------------------------------------------------------------------------
+
+/** Compare two XID's for equality; return a boolean value.   
+ * 
+ * @param[in] pxa - a reference to the first XID to be compared.
+ * @param[in] pxb - a reference to the second XID to be compared.
+ * 
+ * @return A boolean value; false (0) if @p pxa is NOT equal to @p pxa; true
+ * (!false) if @p pxa IS equal to @p pxb.
+ */
+int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb)
+{
+   return pxa->objType == pxb->objType 
+         && pxa->objSerial == pxb->objSerial 
+         && pxa->objSlot == pxb->objSlot;
+}
+
 /*--------------------------------------------------------------------------*/
 

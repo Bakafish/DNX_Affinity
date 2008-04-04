@@ -250,7 +250,7 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
 
    // verify that the XID of this result matches the XID of the service check
    if (ilist->list[current].state == DNX_JOB_NULL 
-         || memcmp(pxid, &ilist->list[current].xid, sizeof *pxid) != 0)
+         || !dnxEqualXIDs(pxid, &ilist->list[current].xid))
       ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
    else
    {
@@ -354,6 +354,10 @@ IMPLEMENT_DNX_SYSLOG(verbose);
 int dnxTimerCreate(DnxJobList * jl, int s, DnxTimer ** pt) { *pt = 0; return 0; }
 void dnxTimerDestroy(DnxTimer * t) { }
 
+int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb)
+      { return pxa->objType == pxb->objType && pxa->objSerial == pxb->objSerial 
+            && pxa->objSlot == pxb->objSlot; }
+
 int dnxMakeXID(DnxXID * x, DnxObjType t, unsigned long s, unsigned long l)
       { x->objType = t; x->objSerial = s; x->objSlot = l; return DNX_OK; }
 
@@ -362,11 +366,11 @@ int main(int argc, char ** argv)
    DnxJobList * jobs;
    DnxNodeRequest n1[101];
    DnxNewJob j1[101];
-   DnxNewJob xl[10];
    DnxNewJob jtmp;
    DnxXID xid;
-   int xlsz, serial, expcount;
+   int serial, xlsz, expcount;
    iDnxJobList * ijobs;
+   time_t now;
 
    verbose = argc > 1;
 
@@ -374,7 +378,12 @@ int main(int argc, char ** argv)
    CHECK_ZERO(dnxJobListCreate(100, &jobs));
    ijobs = (iDnxJobList *)jobs;
 
+   // force entire array to non-zero values for testing
+   memset(j1, 0xcc, sizeof j1);
+   memset(n1, 0xdd, sizeof n1);
+   
    // test that we CAN add 100 jobs to the 100-job list
+   now = time(0);
    for (serial = 0; serial < elemcount(j1); serial++)
    {
       // configure request node
@@ -388,7 +397,7 @@ int main(int argc, char ** argv)
       // configure job
       dnxMakeXID(&j1[serial].xid, DNX_OBJ_JOB, serial, 0);
       j1[serial].cmd          = "some command line";
-      j1[serial].start_time   = time(0);
+      j1[serial].start_time   = now;
       j1[serial].timeout      = serial < 50? 0: 5;  // 50 expire immediately
       j1[serial].expires      = j1[serial].start_time + j1[serial].timeout;
       j1[serial].payload      = 0;     // no payload for tests
@@ -404,7 +413,8 @@ int main(int argc, char ** argv)
    expcount = 0;
    do
    {
-      xlsz = elemcount(xl);
+      DnxNewJob xl[10];
+      xlsz = (int)elemcount(xl);
       CHECK_ZERO(dnxJobListExpire(jobs, xl, &xlsz));
       expcount += xlsz;
    } while (xlsz != 0);
