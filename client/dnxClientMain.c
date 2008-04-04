@@ -269,23 +269,7 @@ static void releaseConfig(void)
  */
 static int initConfig(void)
 {
-   static char * s_cfgdefs[] = 
-   {
-      "channelAgent           = udp://0:12480",
-      "poolInitial            = 20",
-      "poolMin                = 20",
-      "poolMax                = 300",
-      "poolGrow               = 10",
-      "wlmPollInterval        = 2",
-      "wlmShutdownGracePeriod = 35",
-      "threadRequestTimeout   = 5",
-      "threadMaxRetries       = 12",
-      "threadTtlBackoff       = 1",
-      "maxResultBuffer        = 1024",
-      "logFacility            = LOG_LOCAL7",
-      0,
-   };
-   static DnxCfgDict s_dict[] = 
+   static DnxCfgDict dict[] = 
    {
       { "channelAgent",           DNX_CFG_URL      },
       { "channelDispatcher",      DNX_CFG_URL      },
@@ -305,11 +289,24 @@ static int initConfig(void)
       { "debugLevel",             DNX_CFG_UNSIGNED },
       { 0 },
    };
+   static char cfgdefs[] = 
+      "channelAgent = udp://0:12480\n"
+      "poolInitial = 20\n"
+      "poolMin = 20\n"
+      "poolMax = 300\n"
+      "poolGrow = 10\n"
+      "wlmPollInterval = 2\n"
+      "wlmShutdownGracePeriod = 35\n"
+      "threadRequestTimeout = 5\n"
+      "threadMaxRetries = 12\n"
+      "threadTtlBackoff = 1\n"
+      "maxResultBuffer = 1024\n"
+      "logFacility = LOG_LOCAL7\n";
    
    int ret;
 
    // create global configuration parser object
-   if ((ret = dnxCfgParserCreate(s_cfgfile, s_cfgdefs, s_dict, &s_parser)) != 0)
+   if ((ret = dnxCfgParserCreate(cfgdefs, s_cfgfile, 0, dict, &s_parser)) != 0)
       return ret;
 
    // parse config file

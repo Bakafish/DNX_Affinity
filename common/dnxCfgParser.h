@@ -81,18 +81,23 @@ typedef struct { int unused; } DnxCfgParser;
  * file using a user-provided configuration variable dictionary to validate 
  * and convert the string values into usable data values.
  * 
- * A null-terminated array of pointers to configuration strings containing 
- * default values may optionally be passed in the @p cfgdefs parameter. The 
- * @p cfgdefs array strings contain configuration file entries that should be 
- * parsed before the actual file is parsed. Thus, configuration file entries 
- * override default array entries.
+ * A null-terminated string containing default configuration file entries may 
+ * optionally be passed in the @p cfgdefs parameter. The format of the string
+ * is the same as that of a configuration file. The @p cfgdefs string is 
+ * parsed BEFORE the configuration file, thus configuration file entries
+ * override default configuration entries.
  * 
+ * A null-terminated string containing command-line overrides for existing 
+ * configuration file entries may optionally be passed in the @p cmdover 
+ * parameter. The format of the string is the same as that of a configuration 
+ * file. The @p cmdover string is parsed AFTER the configuration file, thus
+ * @p cmdover entries override configuration file entries.
+ * 
+ * Command line overrides ALWAYS 
+ * 
+ * @param[in] cfgdefs - a string containing default config file entries.
  * @param[in] cfgfile - the path name of the config file to be parsed.
- * @param[in] cfgdefs - an array of pointers to default config file entries.
- *    Elements of @p ppvals are initialized to these defaults before @p cfgfile
- *    is parsed. The format of the strings in @cfgdefs is identical to that 
- *    of the configuration file itself. The pointer array must be null-
- *    terminated. This parameter is optional and may be passed as NULL.
+ * @param[in] cmdover - a string containing command line override entries.
  * @param[in] dict - an array of DnxCfgDict objects, each of which defines a 
  *    valid configuration variable name and type for this parser. The @p dict
  *    array should be terminated with NULL field values (a NULL pointer in the 
@@ -102,8 +107,8 @@ typedef struct { int unused; } DnxCfgParser;
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxCfgParserCreate(char * cfgfile, char * cfgdefs[], DnxCfgDict * dict, 
-      DnxCfgParser ** cpp);
+int dnxCfgParserCreate(char * cfgdefs, char * cfgfile, char * cmdover, 
+      DnxCfgDict * dict, DnxCfgParser ** cpp);
 
 /** Parse a configuration file into a value array.
  * 

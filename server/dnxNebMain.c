@@ -192,16 +192,6 @@ static void releaseConfig(void)
  */
 static int initConfig(char * ConfigFile)
 {
-   static char * cfgdefs[] =
-   {
-      "channelDispatcher   = udp://0:12480",
-      "channelCollector    = udp://0:12481",
-      "maxNodeRequests     = 0x7FFFFFFF",
-      "minServiceSlots     = 100",
-      "expirePollInterval  = 5",
-      "logFacility         = LOG_LOCAL7",
-      0,
-   };
    static DnxCfgDict dict[] = 
    {
       { "channelDispatcher",   DNX_CFG_URL      },
@@ -217,10 +207,18 @@ static int initConfig(char * ConfigFile)
       { "debugLevel",          DNX_CFG_UNSIGNED },
       { 0 },
    };
+   static char cfgdefs[] =
+      "channelDispatcher = udp://0:12480\n"
+      "channelCollector = udp://0:12481\n"
+      "maxNodeRequests = 0x7FFFFFFF\n"
+      "minServiceSlots = 100\n"
+      "expirePollInterval = 5\n"
+      "logFacility = LOG_LOCAL7\n";
+
    int ret;
 
    // create global configuration parser object
-   if ((ret = dnxCfgParserCreate(ConfigFile, cfgdefs, dict, &parser)) != 0)
+   if ((ret = dnxCfgParserCreate(cfgdefs, ConfigFile, 0, dict, &parser)) != 0)
       return ret;
 
    // parse configuration file; pass defaults
