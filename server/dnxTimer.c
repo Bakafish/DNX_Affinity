@@ -206,11 +206,7 @@ static int dnxExpireJob (DnxNewJob *pExpire)
    new_message->host_name[sizeof(new_message->host_name)-1] = '\0';
    strncpy(new_message->description, pExpire->svc->description, sizeof(new_message->description)-1);
    new_message->description[sizeof(new_message->description)-1] = '\0';
-#ifdef SERVICE_CHECK_TIMEOUTS_RETURN_UNKNOWN
    new_message->return_code = STATE_UNKNOWN;
-#else
-   new_message->return_code = STATE_CRITICAL;
-#endif
    new_message->exited_ok = TRUE;
    new_message->check_type = SERVICE_CHECK_ACTIVE;
    new_message-> parallelized = pExpire->svc->parallelize;

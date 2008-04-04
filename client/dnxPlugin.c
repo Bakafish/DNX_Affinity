@@ -546,7 +546,7 @@ int dnxPluginExternal(char * command, int * resCode, char * resData,
    else if (count == 0)
    {
       // Plugin timeout
-      *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
+      *resCode = DNX_PLUGIN_RESULT_CRITICAL;
       strcpy(resData, "(DNX: Plugin Timeout)");
       pfkill(pf, SIGTERM);
       pfclose(pf);
