@@ -59,19 +59,6 @@ typedef struct iDnxCollector_
 
 //----------------------------------------------------------------------------
 
-/** Collector thread clean-up routine.
- * 
- * @param[in] data - an opaque pointer to the thread data to be cleaned up.
- */
-static void dnxCollectorCleanup(void * data)
-{
-   iDnxCollector * icoll = (iDnxCollector *)data;
-
-   assert(data);
-}
-
-//----------------------------------------------------------------------------
-
 /** The collector thread main entry point procedure.
  * 
  * @param[in] data - an opaque pointer to the collector thread data structure,
@@ -91,7 +78,6 @@ static void * dnxCollector(void * data)
 
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
-   pthread_cleanup_push(dnxCollectorCleanup, data);
 
    dnxSyslog(LOG_INFO, "dnxCollector[%lx]: Awaiting service check results", 
          pthread_self());
@@ -139,8 +125,6 @@ static void * dnxCollector(void * data)
                "from Collector channel; failed with %d: %s", 
                pthread_self(), ret, dnxErrorString(ret));
    }
-
-   pthread_cleanup_pop(1);
    return 0;
 }
 

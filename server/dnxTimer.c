@@ -142,6 +142,8 @@ static void * dnxTimer(void * data)
 
    while (1)
    {
+      pthread_testcancel();
+
       dnxCancelableSleep(itimer->sleepms);
 
       // search for expired jobs in the pending queue

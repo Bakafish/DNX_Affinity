@@ -188,7 +188,7 @@ static int dnxProcessNodeRequest(iDnxRegistrar * ireg)
       xfree(pMsg);
    }
 
-   pthread_cleanup_pop(1);
+   pthread_cleanup_pop(0);
 
    return ret;
 }

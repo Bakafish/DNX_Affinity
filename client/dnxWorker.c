@@ -376,7 +376,7 @@ void * dnxWorker (void * data)
                // Free result data string
                if (Result.resData)
                {
-                  free(Result.resData);
+                  xfree(Result.resData);
                   Result.resData = NULL;
                }
             }

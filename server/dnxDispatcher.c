@@ -127,19 +127,6 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
 
 //----------------------------------------------------------------------------
 
-/** Dispatcher thread clean-up routine.
- * 
- * @param[in] data - an opaque pointer to the dispatcher thread data 
- *    structure. This is actually a pointer to the global data structure.
- */
-static void dnxDispatcherCleanup(void * data)
-{
-   iDnxDispatcher * idisp = (iDnxDispatcher *)data;
-   assert(data);
-}
-
-//----------------------------------------------------------------------------
-
 /** The dispatcher thread entry point.
  * 
  * @param[in] data - an opaque pointer to the dispatcher object.
@@ -154,9 +141,8 @@ static void * dnxDispatcher(void * data)
 
    assert(data);
 
-   pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-   pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
-   pthread_cleanup_push(dnxDispatcherCleanup, data);
+   pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
+   pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
 
    dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Awaiting new jobs...", pthread_self());
 
@@ -182,7 +168,6 @@ static void * dnxDispatcher(void * data)
    }
    dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Exiting with error %d: %s", 
          pthread_self(), ret, dnxErrorString(ret));
-   pthread_cleanup_pop(1);
    return 0;
 }
 
