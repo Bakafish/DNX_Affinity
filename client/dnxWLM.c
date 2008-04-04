@@ -252,7 +252,7 @@ static void * dnxWorker(void * data)
          }
       }
       else if ((ret = dnxGetJob(ws->dispatch, &job, job.address, 
-            ws->iwlm->cfg.reqTimeout * 2)) != DNX_OK)
+            ws->iwlm->cfg.reqTimeout)) != DNX_OK)
       {
          switch (ret)
          {
