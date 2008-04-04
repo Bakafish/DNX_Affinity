@@ -13,8 +13,18 @@ In addition to event broker interface header files, the nagios-2.x directory
 also contains patches for 2.x versions of Nagios which allows dnx to build 
 and execute correctly under Nagios 2.x releases. nagios-2.7-dnx.patch is 
 especially for Nagios 2.7. nagios-2.9_10-dnx.patch can be used against 
-Nagios versions 2.9 and 2.10. In 3.x releases and beyond, this patch has been 
-incorporated into the mainline Nagios source code.
+Nagios versions 2.9 and 2.10.
+
+In 3.x releases and beyond, most of the changes provided by this patch have
+been incorporated into the mainline Nagios source code. As of Nagios 3.0 
+RC1, however, there are still a few minor quirks that need to be addressed.
+We're hoping to get the Nagios folks to agree with us on the contents of a 
+single change found in the file nagiod-3.0rc1-dnx.patch. Until this time
+3.0 RC1 code may be used with DNX after the application of this patch.
+
+Additionally, until the nagios-devel package is completed, nagios 3.x 
+header files can be found in dnx/nagios/nagios-3.x/include. These files are
+currently used by default when targeting Nagios 3.
 
 APPLYING THE NAGIOS DNX PATCHES
 -------------------------------
@@ -40,7 +50,7 @@ $ ./configure
 $ make
 
 To build against Nagios 3.x header files (this is still experimental, and may
-not always work), use the --without-nagios2x option. 
+not always work), use the --with-nagios3x option. 
 
 Currently, Nagios 2.x is the default configuration. However, it is anticipated
 that when Nagios 3.x becomes the more popular version, the option will change 

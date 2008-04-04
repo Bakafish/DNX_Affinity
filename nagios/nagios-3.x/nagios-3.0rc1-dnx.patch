@@ -1,0 +1,47 @@
+diff -Naur nagios-3.0rc1/base/checks.c nagios-3.0rc1-patched/base/checks.c
+--- nagios-3.0rc1/base/checks.c	2007-12-12 11:39:46.000000000 -0700
++++ nagios-3.0rc1-patched/base/checks.c	2008-01-18 11:49:24.000000000 -0700
+@@ -380,11 +380,6 @@
+ 			*preferred_time+=(svc->check_interval*interval_length);
+ 		return ERROR;
+ 		}
+-
+-	/* neb module wants to override the service check - perhaps it will check the service itself */
+-	/* NOTE: if a module does this, it has to do a lot of the stuff found below to make sure things don't get whacked out of shape! */
+-	if(neb_result==NEBERROR_CALLBACKOVERRIDE)
+-		return OK;
+ #endif
+ 
+ 
+@@ -431,6 +426,19 @@
+ 	/* set the execution flag */
+ 	svc->is_executing=TRUE;
+ 
++#ifdef USE_EVENT_BROKER
++	/* send data to event broker */
++	neb_result=broker_service_check(NEBTYPE_SERVICECHECK_INITIATE,NEBFLAG_NONE,NEBATTR_NONE,svc,SERVICE_CHECK_ACTIVE,start_time,end_time,svc->service_check_command,svc->latency,0.0,service_check_timeout,FALSE,0,processed_command,NULL);
++
++	/* neb module wants to override the service check - perhaps it will check the service itself */
++	if(neb_result==NEBERROR_CALLBACKOVERRIDE){
++		svc->latency=old_latency;
++		my_free(processed_command);
++		my_free(raw_command);
++		return OK;
++		}
++#endif
++
+ 	/* open a temp file for storing check output */
+ 	old_umask=umask(new_umask);
+ 	asprintf(&output_file,"%s/checkXXXXXX",temp_path);
+@@ -492,11 +500,6 @@
+ 	dbuf_init(&checkresult_dbuf,dbuf_chunk);
+ 
+ 
+-#ifdef USE_EVENT_BROKER
+-	/* send data to event broker */
+-	broker_service_check(NEBTYPE_SERVICECHECK_INITIATE,NEBFLAG_NONE,NEBATTR_NONE,svc,SERVICE_CHECK_ACTIVE,start_time,end_time,svc->service_check_command,svc->latency,0.0,service_check_timeout,FALSE,0,processed_command,NULL);
+-#endif
+-
+ 	/* reset latency (permanent value will be set later) */
+ 	svc->latency=old_latency;
+ 

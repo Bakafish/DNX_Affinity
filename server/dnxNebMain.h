@@ -45,7 +45,11 @@
 /** Post a completed service request to the Nagios service result buffer.
  * 
  * @param[in] svc - the nagios service object from which results are taken.
+ * @param[in] chkopts - nagios check options.
+ * @param[in] sched - nagios schedule flag.
+ * @param[in] resched - nagios reschedule flag.
  * @param[in] start_time - the nagios service object start time.
+ * @param[in] delta - the running time of the nagios service object in seconds.
  * @param[in] early_timeout - boolean; true means the job DID time out.
  * @param[in] res_code - the result code of this job.
  * @param[in] res_data - the resulting STDOUT output text of this job.
@@ -55,8 +59,9 @@
  * @todo This routine should be in nagios code. Add it to the dnx patch files
  * for nagios 2.7 and 2.9, and export it from nagios so we can call it.
  */
-int nagiosPostResult(service * svc, time_t start_time, 
-      int early_timeout, int res_code, char * res_data);
+int nagiosPostResult(service * svc, int chkopts, int sched, int resched,
+      time_t start_time, unsigned delta, int early_timeout, 
+      int res_code, char * res_data);
 
 /** Release all resources associated with a job object.
  * 

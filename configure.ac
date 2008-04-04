@@ -14,11 +14,10 @@ AC_PROG_MAKE_SET
 AC_CHECK_PROG(DOXYGEN_INSTALLED, doxygen, yes)
 AM_CONDITIONAL(DO_DOXYGEN, [test x$DOXYGEN_INSTALLED = xyes])
 
-nagios_target=3.0
-AC_ARG_WITH([nagios2x],
-            [AS_HELP_STRING([--without-nagios2x], 
-                            [disable support for nagios 2.x (default: enabled)])],
-            [],
+AC_ARG_WITH([nagios3x],
+            [AS_HELP_STRING([--with-nagios3x], 
+                            [build against nagios 3.x (default: nagios 2.x)])],
+            [nagios_target=3.x],
             [nagios_target=2.x])
 
 AC_SUBST(nagios_target)

@@ -63,11 +63,17 @@
 #include "neberrors.h"
 #include "broker.h"
 
+#if CURRENT_NEB_API_VERSION == 2
+# define OBJECT_FIELD_NAME object
+#elif CURRENT_NEB_API_VERSION == 3
+# define OBJECT_FIELD_NAME object_ptr
+#else
+# error Unsupported NEB API version.
+#endif
+
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
 #define DNX_VERSION                    VERSION
-
-#define DNX_EMBEDDED_SVC_OBJECT        1
 
 #define DNX_DEFAULT_SERVER_CONFIG_FILE SYSCONFDIR "/dnxServer.cfg"
 
@@ -278,9 +284,13 @@ static int nagiosGetServiceCount(void)
 
 //----------------------------------------------------------------------------
 
-int nagiosPostResult(service * svc, time_t start_time, 
-      int early_timeout, int res_code, char * res_data)
+int nagiosPostResult(service * svc, int chkopts, int sched, int resched,
+      time_t start_time, unsigned delta, int early_timeout, 
+      int res_code, char * res_data)
 {
+
+#if CURRENT_NEB_API_VERSION == 2
+
    extern circular_buffer service_result_buffer;
    extern int check_result_buffer_slots;
 
@@ -330,6 +340,68 @@ int nagiosPostResult(service * svc, time_t start_time,
       service_result_buffer.high = service_result_buffer.items;
 
    pthread_mutex_unlock(&service_result_buffer.buffer_lock);
+
+#elif CURRENT_NEB_API_VERSION == 3
+
+   /** @todo Invent a different temp path strategy. */
+
+   // a nagios 3.x global variable
+   extern char * temp_path;
+
+   char * escaped_res_data;
+   char filename[512];
+   mode_t old_umask;
+   FILE * fp = 0;
+   int fd;
+
+   // a nagios 3.x core function
+   if ((escaped_res_data = escape_newlines(res_data)) == 0)
+      return DNX_ERR_MEMORY;
+
+   /* open a temp file for storing check output */
+   sprintf(filename, "%s/checkXXXXXX", temp_path);
+
+   old_umask = umask(077);
+   if ((fd = mkstemp(filename)) >= 0)
+      fp = fdopen(fd, "w");
+   umask(old_umask);
+
+   if (fp == 0)
+   {
+      free(escaped_res_data); // allocated by nagios - use free - not xfree
+      if (fd >= 0) close(fd);
+      return DNX_ERR_OPEN;
+   }
+
+   /* write check result to file */
+   fprintf(fp, "### Active Check Result File ###\n");
+   fprintf(fp, "file_time=%lu\n\n", (unsigned long)start_time);
+   fprintf(fp, "### Nagios Service Check Result ###\n");
+   fprintf(fp, "# Time: %s", ctime(&start_time));
+   fprintf(fp, "host_name=%s\n", svc->host_name);
+   fprintf(fp, "service_description=%s\n", svc->description);
+   fprintf(fp, "check_type=%d\n", SERVICE_CHECK_ACTIVE);
+   fprintf(fp, "check_options=%d\n", chkopts);
+   fprintf(fp, "scheduled_check=%d\n", sched);
+   fprintf(fp, "reschedule_check=%d\n", resched);
+   fprintf(fp, "latency=%f\n", svc->latency);
+   fprintf(fp, "start_time=%lu.0\n", start_time);
+   fprintf(fp, "finish_time=%lu.%lu\n", start_time + delta);
+   fprintf(fp, "early_timeout=%d\n", early_timeout);
+   fprintf(fp, "exited_ok=1\n");
+   fprintf(fp, "return_code=%d\n", res_code);
+   fprintf(fp, "output=%s\n", escaped_res_data);
+
+   fclose(fp);
+
+   free(escaped_res_data); // allocated by nagios - use free - not xfree
+
+   // a nagios 3.x core function
+   move_check_result_to_queue(filename);
+
+#else
+# error Unsupported NEB API version.
+#endif
 
    return 0;
 }
@@ -386,6 +458,9 @@ static int dnxCalculateJobListSize(void)
  * @param[in] joblist - the job list to which the new job should be posted.
  * @param[in] serial - the serial number of the new job.
  * @param[in] ds - a pointer to the nagios job that's being posted.
+ * @param[in] chkopts - nagios check options.
+ * @param[in] sched - nagios schedule flag.
+ * @param[in] resched - nagios reschedule flag.
  * @param[in] pNode - a dnxClient node request structure that is being 
  *    posted with this job. The dispatcher thread will send the job to the
  *    associated node.
@@ -393,42 +468,40 @@ static int dnxCalculateJobListSize(void)
  * @return Zero on success, or a non-zero error value.
  */
 static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial, 
-      nebstruct_service_check_data * ds, DnxNodeRequest * pNode)
+      nebstruct_service_check_data * ds, int chkopts, int sched, int resched, 
+      DnxNodeRequest * pNode)
 {
    service * svc;
    DnxNewJob Job;
    int ret;
 
-   // Obtain a pointer to the Nagios service definition structure
-#ifdef DNX_EMBEDDED_SVC_OBJECT
-   if ((svc = (service *)(ds->object)) == 0)
-#else
-   if ((svc = find_service(ds->host_name, ds->service_description)) == 0)
-#endif
+   // obtain a pointer to the Nagios service definition structure
+   if ((svc = (service *)(ds->OBJECT_FIELD_NAME)) == 0)
    {
-      // ERROR - This should never happen here: The service was not found.
       dnxSyslog(LOG_ERR, "dnxPostNewJob: Could not find service %s for host %s",
-         ds->service_description, ds->host_name);
+            ds->service_description, ds->host_name);
       return DNX_ERR_INVALID;
    }
 
-   // Fill-in the job structure with the necessary information
+   // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
-   Job.payload    = svc;
-   Job.cmd        = xstrdup(ds->command_line);
-   Job.start_time = ds->start_time.tv_sec;
-   Job.timeout    = ds->timeout;
-   Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
-   Job.pNode      = pNode;
+   Job.payload       = svc;
+   Job.chkopts       = chkopts;
+   Job.sched_flag    = sched;
+   Job.resched_flag  = resched;
+   Job.cmd           = xstrdup(ds->command_line);
+   Job.start_time    = ds->start_time.tv_sec;
+   Job.timeout       = ds->timeout;
+   Job.expires       = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
+   Job.pNode         = pNode;
 
    dnxDebug(2, "DnxNebMain: Posting Job [%lu]: %s", serial, Job.cmd);
 
-   // Post to the Job Queue
+   // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxPostNewJob: Failed to post Job [%lu]; \"%s\": %d", 
             Job.xid.objSerial, Job.cmd, ret);
 
-   // Worker Audit Logging
    dnxAuditJob(&Job, "ASSIGN");
 
    return ret;
@@ -450,6 +523,7 @@ static int ehSvcCheck(int event_type, void * data)
    static unsigned long serial = 0; // the number of service checks processed
 
    nebstruct_service_check_data * svcdata = (nebstruct_service_check_data *)data;
+   int chkopts = 0, sched = 0, resched = 0;     // nagios 3.x only
    DnxNodeRequest * pNode;
    int ret;
 
@@ -463,7 +537,7 @@ static int ehSvcCheck(int event_type, void * data)
    }
 
    if (svcdata->type != NEBTYPE_SERVICECHECK_INITIATE)
-      return OK;  // ignore non-pre-run service checks
+      return OK;  // ignore non-initiate service checks
 
    // check for local execution pattern on command line
    if (cfg.localCheckPattern && regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
@@ -483,7 +557,21 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   if ((ret = dnxPostNewJob(joblist, serial, svcdata, pNode)) != DNX_OK)
+#if CURRENT_NEB_API_VERSION == 3
+   {
+      /** @todo patch nagios to pass these values to the event handler. */
+
+      // a nagios 3.x global variable
+      extern check_result check_result_info;
+
+      chkopts  = check_result_info.check_options;
+      sched    = check_result_info.scheduled_check;
+      resched  = check_result_info.reschedule_check;
+   }
+#endif
+
+   if ((ret = dnxPostNewJob(joblist, serial, svcdata, 
+         chkopts, sched, resched, pNode)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "dnxServer: Unable to post job [%lu]: %s", 
             serial, dnxErrorString(ret));
