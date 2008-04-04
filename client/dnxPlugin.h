@@ -28,26 +28,26 @@
 #ifndef _DNXPLUGIN_H_
 #define _DNXPLUGIN_H_
 
-#define DNX_PLUGIN_RESULT_OK		0
-#define DNX_PLUGIN_RESULT_WARNING	1
-#define DNX_PLUGIN_RESULT_CRITICAL	2
-#define DNX_PLUGIN_RESULT_UNKNOWN	3
+#define DNX_PLUGIN_RESULT_OK     0
+#define DNX_PLUGIN_RESULT_WARNING   1
+#define DNX_PLUGIN_RESULT_CRITICAL  2
+#define DNX_PLUGIN_RESULT_UNKNOWN   3
 
 typedef struct _DnxModule_ {
-	char *path;
-	void *handle;
-	int (*init)(void);
-	int (*deinit)(void);
-	struct _DnxModule_ *next;
-	struct _DnxModule_ *prev;
+   char *path;
+   void *handle;
+   int (*init)(void);
+   int (*deinit)(void);
+   struct _DnxModule_ *next;
+   struct _DnxModule_ *prev;
 } DNX_MODULE;
 
 typedef struct _DnxPlugin_ {
-	char *name;
-	int (*func)(int argc, char **argv);
-	DNX_MODULE *parent;
-	struct _DnxPlugin_ *next;
-	struct _DnxPlugin_ *prev;
+   char *name;
+   int (*func)(int argc, char **argv);
+   DNX_MODULE *parent;
+   struct _DnxPlugin_ *next;
+   struct _DnxPlugin_ *prev;
 } DNX_PLUGIN;
 
 

@@ -31,7 +31,7 @@
 // Obtain definition of dnxChannel
 #include "dnxChannel.h"
 
-#define DNX_TCP_LISTEN	5
+#define DNX_TCP_LISTEN  5
 
 int dnxTcpInit (void);
 int dnxTcpDeInit (void);

@@ -41,19 +41,19 @@ typedef enum _DnxQueueResult_ { DNX_QRES_CONTINUE = 0, DNX_QRES_FOUND, DNX_QRES_
 
 // Queue Entry Wrapper Structure: This wraps whatever the app wants to store in the queue
 typedef struct _DnxQueueEntry_ {
-    void *pPayload;					// Payload data stored by app in the queue
-    struct _DnxQueueEntry_ *next;	// Pointer to next entry, NULL if none
+    void *pPayload;              // Payload data stored by app in the queue
+    struct _DnxQueueEntry_ *next;   // Pointer to next entry, NULL if none
 } DnxQueueEntry;
 
 // Queue Structure
 typedef struct _DnxQueue_ {
-    DnxQueueEntry *head;			// head of linked list of requests
-    DnxQueueEntry *tail;			// pointer to last request
-    DnxQueueEntry *current;			// circular buffer pointer
-    int size;						// number of requests in queue
-    int max_size;					// max number of requests allowed in queue (zero = unlimited)
-    pthread_mutex_t* p_mutex;		// queue's mutex
-    pthread_cond_t*  p_cond_var;	// queue's condition variable
+    DnxQueueEntry *head;         // head of linked list of requests
+    DnxQueueEntry *tail;         // pointer to last request
+    DnxQueueEntry *current;         // circular buffer pointer
+    int size;                 // number of requests in queue
+    int max_size;             // max number of requests allowed in queue (zero = unlimited)
+    pthread_mutex_t* p_mutex;    // queue's mutex
+    pthread_cond_t*  p_cond_var; // queue's condition variable
 } DnxQueue;
 
 

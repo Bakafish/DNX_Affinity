@@ -42,8 +42,8 @@
 
 #include "nagios.h"     /* for circular_buffer */
 
-#define DNX_TIMER_SLEEP		5
-#define MAX_EXPIRED		   10
+#define DNX_TIMER_SLEEP    5
+#define MAX_EXPIRED        10
 
 static int timer_thread_running;
 static pthread_t timer_thread_id;
@@ -54,65 +54,65 @@ static pthread_t timer_thread_id;
  */
 static int dnxExpireJob (DnxNewJob *pExpire)
 {
-	extern circular_buffer service_result_buffer;
-	extern int check_result_buffer_slots;
-	service_message *new_message;
+   extern circular_buffer service_result_buffer;
+   extern int check_result_buffer_slots;
+   service_message *new_message;
 
-	// Allocate memory for the message
-	if ((new_message = (service_message *)malloc(sizeof(service_message))) == NULL)
-	{
-		dnxSyslog(LOG_ERR, "dnxExpireJob: Memory allocation failure");
-		return DNX_ERR_MEMORY;
-	}
+   // Allocate memory for the message
+   if ((new_message = (service_message *)malloc(sizeof(service_message))) == NULL)
+   {
+      dnxSyslog(LOG_ERR, "dnxExpireJob: Memory allocation failure");
+      return DNX_ERR_MEMORY;
+   }
 
-	// Copy the expired job's data to the message buffer
-	gettimeofday(&(new_message->finish_time), NULL);
-	strncpy(new_message->host_name, pExpire->svc->host_name, sizeof(new_message->host_name)-1);
-	new_message->host_name[sizeof(new_message->host_name)-1] = '\0';
-	strncpy(new_message->description, pExpire->svc->description, sizeof(new_message->description)-1);
-	new_message->description[sizeof(new_message->description)-1] = '\0';
+   // Copy the expired job's data to the message buffer
+   gettimeofday(&(new_message->finish_time), NULL);
+   strncpy(new_message->host_name, pExpire->svc->host_name, sizeof(new_message->host_name)-1);
+   new_message->host_name[sizeof(new_message->host_name)-1] = '\0';
+   strncpy(new_message->description, pExpire->svc->description, sizeof(new_message->description)-1);
+   new_message->description[sizeof(new_message->description)-1] = '\0';
 #ifdef SERVICE_CHECK_TIMEOUTS_RETURN_UNKNOWN
-	new_message->return_code = STATE_UNKNOWN;
+   new_message->return_code = STATE_UNKNOWN;
 #else
-	new_message->return_code = STATE_CRITICAL;
+   new_message->return_code = STATE_CRITICAL;
 #endif
-	new_message->exited_ok = TRUE;
-	new_message->check_type = SERVICE_CHECK_ACTIVE;
-	new_message-> parallelized = pExpire->svc->parallelize;
-	new_message->start_time.tv_sec = pExpire->start_time;
-	new_message->start_time.tv_usec = 0L;
-	new_message->early_timeout = TRUE;
-	strcpy(new_message->output, "(DNX Service Check Timed Out)");
+   new_message->exited_ok = TRUE;
+   new_message->check_type = SERVICE_CHECK_ACTIVE;
+   new_message-> parallelized = pExpire->svc->parallelize;
+   new_message->start_time.tv_sec = pExpire->start_time;
+   new_message->start_time.tv_usec = 0L;
+   new_message->early_timeout = TRUE;
+   strcpy(new_message->output, "(DNX Service Check Timed Out)");
 
-	// Obtain a lock for writing to the buffer
-	pthread_mutex_lock(&service_result_buffer.buffer_lock);
+   // Obtain a lock for writing to the buffer
+   pthread_mutex_lock(&service_result_buffer.buffer_lock);
 
-	// Handle overflow conditions
-	if (service_result_buffer.items == check_result_buffer_slots)
-	{
-		// Record overflow
-		service_result_buffer.overflow++;
+   // Handle overflow conditions
+   if (service_result_buffer.items == check_result_buffer_slots)
+   {
+      // Record overflow
+      service_result_buffer.overflow++;
 
-		// Update tail pointer
-		service_result_buffer.tail = (service_result_buffer.tail + 1) % check_result_buffer_slots;
+      // Update tail pointer
+      service_result_buffer.tail = (service_result_buffer.tail + 1) % check_result_buffer_slots;
 
-		dnxSyslog(LOG_ERR, "dnxExpireJob: Service result buffer overflow = %lu", service_result_buffer.overflow);
-	}
+      dnxSyslog(LOG_ERR, "dnxExpireJob: Service result buffer overflow = %lu", service_result_buffer.overflow);
+   }
 
-	// Save the data to the buffer
-	((service_message **)service_result_buffer.buffer)[service_result_buffer.head] = new_message;
+   // Save the data to the buffer
+   ((service_message **)service_result_buffer.buffer)[service_result_buffer.head] = new_message;
 
-	// Increment the head counter and items
-	service_result_buffer.head = (service_result_buffer.head + 1) % check_result_buffer_slots;
-	if (service_result_buffer.items < check_result_buffer_slots)
-		service_result_buffer.items++;
-	if(service_result_buffer.items>service_result_buffer.high)
-		service_result_buffer.high=service_result_buffer.items;
+   // Increment the head counter and items
+   service_result_buffer.head = (service_result_buffer.head + 1) % check_result_buffer_slots;
+   if (service_result_buffer.items < check_result_buffer_slots)
+      service_result_buffer.items++;
+   if(service_result_buffer.items>service_result_buffer.high)
+      service_result_buffer.high=service_result_buffer.items;
 
-	// Release lock on buffer
-	pthread_mutex_unlock(&service_result_buffer.buffer_lock);
+   // Release lock on buffer
+   pthread_mutex_unlock(&service_result_buffer.buffer_lock);
 
-	return DNX_OK;
+   return DNX_OK;
 }
 
 
@@ -122,47 +122,47 @@ static int dnxExpireJob (DnxNewJob *pExpire)
  */
 static void * dnxTimer(void * data)
 {
-	DnxJobList * jobList = (DnxJobList *)data;
+   DnxJobList * jobList = (DnxJobList *)data;
 
-	assert(data);
+   assert(data);
 
    // initialize thread cancellation properties
-	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
+   pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
+   pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
 
-	dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Watching for expired jobs...", pthread_self());
+   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Watching for expired jobs...", pthread_self());
 
-	// wait for wakeup or cancellation
-	while (timer_thread_running)
-	{
-   	DnxNewJob ExpiredList[MAX_EXPIRED];
-   	int i, totalExpired, ret = 0;
+   // wait for wakeup or cancellation
+   while (timer_thread_running)
+   {
+      DnxNewJob ExpiredList[MAX_EXPIRED];
+      int i, totalExpired, ret = 0;
 
-		pthread_testcancel();
+      pthread_testcancel();
 
-		sleep(DNX_TIMER_SLEEP); /* wake up every 5 seconds... */
+      sleep(DNX_TIMER_SLEEP); /* wake up every 5 seconds... */
 
-		// Search for expired jobs in the Pending queue
-		totalExpired = MAX_EXPIRED;
-		if ((ret = dnxJobListExpire(jobList, ExpiredList, &totalExpired)) == DNX_OK && totalExpired > 0)
-		{
-			for (i = 0; i < totalExpired; i++)
-			{
-				dnxDebug(1, "dnxTimer[%lx]: Expiring Job: %s", pthread_self(), ExpiredList[i].cmd);
+      // Search for expired jobs in the Pending queue
+      totalExpired = MAX_EXPIRED;
+      if ((ret = dnxJobListExpire(jobList, ExpiredList, &totalExpired)) == DNX_OK && totalExpired > 0)
+      {
+         for (i = 0; i < totalExpired; i++)
+         {
+            dnxDebug(1, "dnxTimer[%lx]: Expiring Job: %s", pthread_self(), ExpiredList[i].cmd);
 
-				dnxAuditJob(&ExpiredList[i], "EXPIRE");
+            dnxAuditJob(&ExpiredList[i], "EXPIRE");
 
-				ret |= dnxExpireJob(&ExpiredList[i]);
+            ret |= dnxExpireJob(&ExpiredList[i]);
 
-				dnxJobCleanup(&ExpiredList[i]);
-			}
-		}
+            dnxJobCleanup(&ExpiredList[i]);
+         }
+      }
 
-		if (totalExpired > 0 || ret != DNX_OK)
-			dnxDebug(1, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d", pthread_self(), totalExpired, ret);
-	}
+      if (totalExpired > 0 || ret != DNX_OK)
+         dnxDebug(1, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d", pthread_self(), totalExpired, ret);
+   }
 
-	dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Exiting", pthread_self());
+   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Exiting", pthread_self());
 
    return 0;
 }
@@ -176,8 +176,8 @@ int dnxTimerInit(DnxJobList * jobList)
 {
    int err;
    timer_thread_running = 1;
-	if ((err = pthread_create(&timer_thread_id, 0, dnxTimer, jobList)) != 0)
-		dnxSyslog(LOG_ERR, "dnxTimerInit: Failed to create Timer thread: %d", err);
+   if ((err = pthread_create(&timer_thread_id, 0, dnxTimer, jobList)) != 0)
+      dnxSyslog(LOG_ERR, "dnxTimerInit: Failed to create Timer thread: %d", err);
    return err;
 }
 
@@ -189,8 +189,8 @@ void dnxTimerExit(void)
    if (timer_thread_id)
    {
       timer_thread_running = 0;
-	   pthread_cancel(timer_thread_id);
-	   pthread_join(timer_thread_id, 0);
+      pthread_cancel(timer_thread_id);
+      pthread_join(timer_thread_id, 0);
       timer_thread_id = 0;
    }
 }

@@ -53,54 +53,54 @@
 #include "dnxJobList.h"
 #include "dnxTransport.h"
 #include "dnxProtocol.h"
-#include "dnxQueue.h"	// For dnxQueue definition
+#include "dnxQueue.h"   // For dnxQueue definition
 
-#define DNX_DISPATH_PORT	12480
-#define DNX_COLLECT_PORT	12481
-#define DNX_TCP_LISTEN		5
+#define DNX_DISPATH_PORT   12480
+#define DNX_COLLECT_PORT   12481
+#define DNX_TCP_LISTEN     5
 
-#define DNX_MAX_NODE_REQUESTS	1024
+#define DNX_MAX_NODE_REQUESTS 1024
 
 typedef struct _DnxGlobalData_ {
-	unsigned long serialNo;	// Number of service checks processed
-	time_t tStart;			// Module start time
+   unsigned long serialNo; // Number of service checks processed
+   time_t tStart;       // Module start time
 
-	pthread_cond_t tcGo;	// ShowStart condition variable
-	pthread_mutex_t tmGo;	// ShowStart mutex
-	int isGo;               // ShowStart flag: 0=No, 1=Yes
+   pthread_cond_t tcGo; // ShowStart condition variable
+   pthread_mutex_t tmGo;   // ShowStart mutex
+   int isGo;               // ShowStart flag: 0=No, 1=Yes
 
-	DnxJobList *JobList;	// Master Job List
+   DnxJobList *JobList; // Master Job List
 
-	pthread_cond_t tcReq;	// Request Queue condition variable
-	pthread_mutex_t tmReq;	// Request Queue mutex
-	DnxQueue *qReq;			// Registered Worker Node Requests
+   pthread_cond_t tcReq;   // Request Queue condition variable
+   pthread_mutex_t tmReq;  // Request Queue mutex
+   DnxQueue *qReq;         // Registered Worker Node Requests
 
-	pthread_t tDispatcher;	// Dispatcher thread ID
-	pthread_t tRegistrar;	// Registrar thread ID
-	pthread_t tCollector;	// Collector thread ID
+   pthread_t tDispatcher;  // Dispatcher thread ID
+   pthread_t tRegistrar;   // Registrar thread ID
+   pthread_t tCollector;   // Collector thread ID
 
-	dnxChannel *pDispatch;	// Dispatch communications channel
-	dnxChannel *pCollect;	// Collector communications channel
+   dnxChannel *pDispatch;  // Dispatch communications channel
+   dnxChannel *pCollect;   // Collector communications channel
 
-	regex_t regEx;			// Compiled Regular Expression structure
+   regex_t regEx;       // Compiled Regular Expression structure
 
-	int  dnxLogFacility;	// DNX syslog facility
-	int  auditLogFacility;	// Worker Audit syslog facility
+   int  dnxLogFacility; // DNX syslog facility
+   int  auditLogFacility;  // Worker Audit syslog facility
 
-	// Configuration File properties
-	char *channelDispatcher;
-	char *channelCollector;
-	char *authWorkerNodes;
-	long  maxNodeRequests;	// Max number of node requests we will accept
-	long  minServiceSlots;
-	long  expirePollInterval;
-	char *localCheckPattern;
-	char *syncScript;
-	char *logFacility;
-	char *auditWorkerJobs;
-	long  debug;
+   // Configuration File properties
+   char *channelDispatcher;
+   char *channelCollector;
+   char *authWorkerNodes;
+   long  maxNodeRequests;  // Max number of node requests we will accept
+   long  minServiceSlots;
+   long  expirePollInterval;
+   char *localCheckPattern;
+   char *syncScript;
+   char *logFacility;
+   char *auditWorkerJobs;
+   long  debug;
 
-	int isActive;			// Boolean: Is this module active?
+   int isActive;        // Boolean: Is this module active?
 } DnxGlobalData;
 
 int nebmodule_init(int flags, char *args, nebmodule *handle);

@@ -34,70 +34,70 @@
 #include "dnxError.h"
 #include "dnxLogging.h"
 
-#define MAX_LOG_LINE	1023
+#define MAX_LOG_LINE 1023
 
-extern DnxGlobalData dnxGlobalData;		// Private module data
+extern DnxGlobalData dnxGlobalData;    // Private module data
 
 
 /*--------------------------------------------------------------------------*/
 
 int dnxSyslog (int priority, char *fmt, ...)
 {
-	va_list ap;
-	char sbuf[MAX_LOG_LINE+1];
+   va_list ap;
+   char sbuf[MAX_LOG_LINE+1];
 
-	// Validate input parameters
-	if (!fmt)
-		return DNX_ERR_INVALID;
+   // Validate input parameters
+   if (!fmt)
+      return DNX_ERR_INVALID;
 
-	// See if we need formatting
-	if (strchr(fmt, '%'))
-	{
-		// Format the string
-		va_start(ap, fmt);
-		vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
-		va_end(ap);
-	}
-	else
-		strncpy(sbuf, fmt, MAX_LOG_LINE);
-	sbuf[MAX_LOG_LINE] = '\0';
+   // See if we need formatting
+   if (strchr(fmt, '%'))
+   {
+      // Format the string
+      va_start(ap, fmt);
+      vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
+      va_end(ap);
+   }
+   else
+      strncpy(sbuf, fmt, MAX_LOG_LINE);
+   sbuf[MAX_LOG_LINE] = '\0';
 
-	// Publish the results
-	syslog((dnxGlobalData.dnxLogFacility | priority), "%s", sbuf);
+   // Publish the results
+   syslog((dnxGlobalData.dnxLogFacility | priority), "%s", sbuf);
 
-	return DNX_OK;
+   return DNX_OK;
 }
 
 /*--------------------------------------------------------------------------*/
 
 int dnxDebug (int level, char *fmt, ...)
 {
-	va_list ap;
-	char sbuf[MAX_LOG_LINE+1];
+   va_list ap;
+   char sbuf[MAX_LOG_LINE+1];
 
-	// Validate input parameters
-	if (!fmt)
-		return DNX_ERR_INVALID;
+   // Validate input parameters
+   if (!fmt)
+      return DNX_ERR_INVALID;
 
-	// See if this message meets or exceeds our debugging level
-	if (level <= dnxGlobalData.debug)
-	{
-		// See if we need formatting
-		if (strchr(fmt, '%'))
-		{
-			// Format the string
-			va_start(ap, fmt);
-			vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
-			va_end(ap);
-		}
-		else
-			strncpy(sbuf, fmt, MAX_LOG_LINE);
-		sbuf[MAX_LOG_LINE] = '\0';
+   // See if this message meets or exceeds our debugging level
+   if (level <= dnxGlobalData.debug)
+   {
+      // See if we need formatting
+      if (strchr(fmt, '%'))
+      {
+         // Format the string
+         va_start(ap, fmt);
+         vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
+         va_end(ap);
+      }
+      else
+         strncpy(sbuf, fmt, MAX_LOG_LINE);
+      sbuf[MAX_LOG_LINE] = '\0';
 
-		// Publish the results
-		syslog((dnxGlobalData.dnxLogFacility | LOG_DEBUG), "%s", sbuf);
-	}
+      // Publish the results
+      syslog((dnxGlobalData.dnxLogFacility | LOG_DEBUG), "%s", sbuf);
+   }
 
-	return DNX_OK;
+   return DNX_OK;
 }
 

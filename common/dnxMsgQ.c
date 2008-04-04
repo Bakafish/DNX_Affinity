@@ -36,11 +36,11 @@
 #include "dnxError.h"
 #include "dnxMsgQ.h"
 
-#define DNX_MSGQ_STANDARD	1	// Message type
+#define DNX_MSGQ_STANDARD  1  // Message type
 
 typedef struct _dnxMsgBuf_ {
-	long mtype;		/* message type, must be > 0 */
-	char *mtext;	/* message data */
+   long mtype;    /* message type, must be > 0 */
+   char *mtext;   /* message data */
 } dnxMsgBuf;
 
 
@@ -48,199 +48,199 @@ typedef struct _dnxMsgBuf_ {
 
 int dnxMsgQInit (void)
 {
-	// Could use this routine to loop through the global channel map
-	// and create all message queues found therein (or error out if
-	// any of them are already in use...)
+   // Could use this routine to loop through the global channel map
+   // and create all message queues found therein (or error out if
+   // any of them are already in use...)
 
-	return DNX_OK;
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
 int dnxMsgQDeInit (void)
 {
-	// Could use this routine to remove all of our own message queues
-	// from the system IPC space.
+   // Could use this routine to remove all of our own message queues
+   // from the system IPC space.
 
-	return DNX_OK;
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
 int dnxMsgQNew (dnxChannel **channel, char *url)
 {
-	char tmpUrl[DNX_MAX_URL+1];
-	char *cp, *ep, *lastchar;
-	long port;
+   char tmpUrl[DNX_MAX_URL+1];
+   char *cp, *ep, *lastchar;
+   long port;
 
-	// Validate parameters
-	if (!channel || !url || !*url || strlen(url) > DNX_MAX_URL)
-		return DNX_ERR_INVALID;
+   // Validate parameters
+   if (!channel || !url || !*url || strlen(url) > DNX_MAX_URL)
+      return DNX_ERR_INVALID;
 
-	*channel = NULL;
+   *channel = NULL;
 
-	// Make a working copy of the URL
-	strcpy(tmpUrl, url);
+   // Make a working copy of the URL
+   strcpy(tmpUrl, url);
 
-	// Look for transport prefix: '[type]://'
-	if ((ep = strchr(tmpUrl, ':')) == NULL || *(ep+1) != '/' || *(ep+2) != '/')
-		return DNX_ERR_BADURL;
-	*ep = '\0';
-	cp = ep + 3;	// Set to beginning of destination portion of the URL
+   // Look for transport prefix: '[type]://'
+   if ((ep = strchr(tmpUrl, ':')) == NULL || *(ep+1) != '/' || *(ep+2) != '/')
+      return DNX_ERR_BADURL;
+   *ep = '\0';
+   cp = ep + 3;   // Set to beginning of destination portion of the URL
 
-	// Get the message queue ID
-	errno = 0;
-	if ((port = strtol(cp, &lastchar, 0)) < 1 || errno == ERANGE || (*lastchar && *lastchar != '/'))
-		return DNX_ERR_BADURL;
+   // Get the message queue ID
+   errno = 0;
+   if ((port = strtol(cp, &lastchar, 0)) < 1 || errno == ERANGE || (*lastchar && *lastchar != '/'))
+      return DNX_ERR_BADURL;
 
-	// No private keys are allowed
-	if ((key_t)port == IPC_PRIVATE)
-		return DNX_ERR_BADURL;
+   // No private keys are allowed
+   if ((key_t)port == IPC_PRIVATE)
+      return DNX_ERR_BADURL;
 
-	// Allocate a new channel structure
-	if ((*channel = (dnxChannel *)malloc(sizeof(dnxChannel))) == NULL)
-		return DNX_ERR_MEMORY;	// Memory allocation error
-	memset(*channel, 0, sizeof(dnxChannel));
+   // Allocate a new channel structure
+   if ((*channel = (dnxChannel *)malloc(sizeof(dnxChannel))) == NULL)
+      return DNX_ERR_MEMORY;  // Memory allocation error
+   memset(*channel, 0, sizeof(dnxChannel));
 
-	// Save host name and port
-	(*channel)->type = DNX_CHAN_MSGQ;
-	(*channel)->name = NULL;
-	(*channel)->host = NULL;
-	(*channel)->port = (int)port;	// This is really the Message Queue ID
-	(*channel)->state = DNX_CHAN_CLOSED;
+   // Save host name and port
+   (*channel)->type = DNX_CHAN_MSGQ;
+   (*channel)->name = NULL;
+   (*channel)->host = NULL;
+   (*channel)->port = (int)port; // This is really the Message Queue ID
+   (*channel)->state = DNX_CHAN_CLOSED;
 
-	// Set I/O methods
-	(*channel)->dnxOpen  = dnxMsgQOpen;
-	(*channel)->dnxClose = dnxMsgQClose;
-	(*channel)->dnxRead  = dnxMsgQRead;
-	(*channel)->dnxWrite = dnxMsgQWrite;
-	(*channel)->txDelete = dnxMsgQDelete;
+   // Set I/O methods
+   (*channel)->dnxOpen  = dnxMsgQOpen;
+   (*channel)->dnxClose = dnxMsgQClose;
+   (*channel)->dnxRead  = dnxMsgQRead;
+   (*channel)->dnxWrite = dnxMsgQWrite;
+   (*channel)->txDelete = dnxMsgQDelete;
 
-	return DNX_OK;
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
 int dnxMsgQDelete (dnxChannel *channel)
 {
-	// Validate parameters
-	if (!channel || channel->type != DNX_CHAN_MSGQ)
-		return DNX_ERR_INVALID;
+   // Validate parameters
+   if (!channel || channel->type != DNX_CHAN_MSGQ)
+      return DNX_ERR_INVALID;
 
-	// Make sure this channel is closed
-	if (channel->state == DNX_CHAN_OPEN)
-		dnxMsgQClose(channel);
+   // Make sure this channel is closed
+   if (channel->state == DNX_CHAN_OPEN)
+      dnxMsgQClose(channel);
 
-	// Release channel memory
-	memset(channel, 0, sizeof(dnxChannel));
-	free(channel);
+   // Release channel memory
+   memset(channel, 0, sizeof(dnxChannel));
+   free(channel);
 
-	return DNX_OK;
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
 int dnxMsgQOpen (dnxChannel *channel, dnxChanMode mode)
 {
-	int qid;
+   int qid;
 
-	// Validate parameters
-	if (!channel || channel->type != DNX_CHAN_MSGQ || channel->port < 1)
-		return DNX_ERR_INVALID;
+   // Validate parameters
+   if (!channel || channel->type != DNX_CHAN_MSGQ || channel->port < 1)
+      return DNX_ERR_INVALID;
 
-	// Make sure this channel isn't already open
-	if (channel->state != DNX_CHAN_CLOSED)
-		return DNX_ERR_ALREADY;
+   // Make sure this channel isn't already open
+   if (channel->state != DNX_CHAN_CLOSED)
+      return DNX_ERR_ALREADY;
 
-	// Attempt to create/open the message queue
-	if ((qid = msgget((key_t)(channel->port), (IPC_CREAT | 0x660))) == (key_t)(-1))
-		return DNX_ERR_OPEN;
+   // Attempt to create/open the message queue
+   if ((qid = msgget((key_t)(channel->port), (IPC_CREAT | 0x660))) == (key_t)(-1))
+      return DNX_ERR_OPEN;
 
-	// Mark the channel as open
-	channel->chan  = qid;
-	channel->state = DNX_CHAN_OPEN;
+   // Mark the channel as open
+   channel->chan  = qid;
+   channel->state = DNX_CHAN_OPEN;
 
-	return DNX_OK;
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
 int dnxMsgQClose (dnxChannel *channel)
 {
-	// Validate parameters
-	if (!channel || channel->type != DNX_CHAN_MSGQ)
-		return DNX_ERR_INVALID;
+   // Validate parameters
+   if (!channel || channel->type != DNX_CHAN_MSGQ)
+      return DNX_ERR_INVALID;
 
-	// Make sure this channel isn't already closed
-	if (channel->state != DNX_CHAN_OPEN)
-		return DNX_ERR_ALREADY;
+   // Make sure this channel isn't already closed
+   if (channel->state != DNX_CHAN_OPEN)
+      return DNX_ERR_ALREADY;
 
-	// This is really a NOP, since we don't "close" our handle to the message queue.
-	//
-	// However, the message queue should be deleted when no longer in use by
-	// any process; but that will have to be implemented in dnxMsgQDeinit().
+   // This is really a NOP, since we don't "close" our handle to the message queue.
+   //
+   // However, the message queue should be deleted when no longer in use by
+   // any process; but that will have to be implemented in dnxMsgQDeinit().
 
-	// Mark the channel as closed
-	channel->state = DNX_CHAN_CLOSED;
-	channel->chan  = 0;
+   // Mark the channel as closed
+   channel->state = DNX_CHAN_CLOSED;
+   channel->chan  = 0;
 
-	return DNX_OK;
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
 int dnxMsgQRead (dnxChannel *channel, char *buf, int *size, int timeout, char *src)
 {
-	dnxMsgBuf msg;
+   dnxMsgBuf msg;
 
-	// Validate parameters
-	if (!channel || channel->type != DNX_CHAN_MSGQ || !buf || *size < 1)
-		return DNX_ERR_INVALID;
+   // Validate parameters
+   if (!channel || channel->type != DNX_CHAN_MSGQ || !buf || *size < 1)
+      return DNX_ERR_INVALID;
 
-	// Make sure this channel is open
-	if (channel->state != DNX_CHAN_OPEN)
-		return DNX_ERR_OPEN;
+   // Make sure this channel is open
+   if (channel->state != DNX_CHAN_OPEN)
+      return DNX_ERR_OPEN;
 
-	// Prepare the message for transfer
-	msg.mtext = buf;
+   // Prepare the message for transfer
+   msg.mtext = buf;
 
-	// Wait for a message, truncate if larger than the specified buffer size
-	if ((*size = (int)msgrcv(channel->chan, &msg, (size_t)*size, 0L, MSG_NOERROR)) == -1)
-		return DNX_ERR_RECEIVE;
-	
-	// TODO: Implement timeout logic
+   // Wait for a message, truncate if larger than the specified buffer size
+   if ((*size = (int)msgrcv(channel->chan, &msg, (size_t)*size, 0L, MSG_NOERROR)) == -1)
+      return DNX_ERR_RECEIVE;
+   
+   // TODO: Implement timeout logic
 
-	return DNX_OK;
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
 int dnxMsgQWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst)
 {
-	dnxMsgBuf msg;
+   dnxMsgBuf msg;
 
-	// Validate parameters
-	if (!channel || channel->type != DNX_CHAN_MSGQ || !buf)
-		return DNX_ERR_INVALID;
+   // Validate parameters
+   if (!channel || channel->type != DNX_CHAN_MSGQ || !buf)
+      return DNX_ERR_INVALID;
 
-	// Validate that the message size is within bounds
-	if (size < 1 || size > DNX_MAX_MSG)
-		return DNX_ERR_SIZE;
+   // Validate that the message size is within bounds
+   if (size < 1 || size > DNX_MAX_MSG)
+      return DNX_ERR_SIZE;
 
-	// Make sure this channel is open
-	if (channel->state != DNX_CHAN_OPEN)
-		return DNX_ERR_OPEN;
+   // Make sure this channel is open
+   if (channel->state != DNX_CHAN_OPEN)
+      return DNX_ERR_OPEN;
 
-	// Prepare the message for transfer
-	msg.mtype = (long)DNX_MSGQ_STANDARD;
-	msg.mtext = buf;
+   // Prepare the message for transfer
+   msg.mtype = (long)DNX_MSGQ_STANDARD;
+   msg.mtext = buf;
 
-	// Send the message
-	if (msgsnd(channel->chan, &msg, (size_t)size, 0) == -1)
-		return DNX_ERR_SEND;
-	
-	// TODO: Implement timeout logic
+   // Send the message
+   if (msgsnd(channel->chan, &msg, (size_t)size, 0) == -1)
+      return DNX_ERR_SEND;
+   
+   // TODO: Implement timeout logic
 
-	return DNX_OK;
+   return DNX_OK;
 }
 

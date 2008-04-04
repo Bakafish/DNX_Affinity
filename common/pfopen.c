@@ -58,9 +58,9 @@
 #include "pfopen.h"
 
 #if 0
-#define PF_IN(pf)	((pf)->fp[0])
-#define PF_OUT(pf)	((pf)->fp[1])
-#define PF_ERR(pf)	((pf)->fp[2])
+#define PF_IN(pf) ((pf)->fp[0])
+#define PF_OUT(pf)   ((pf)->fp[1])
+#define PF_ERR(pf)   ((pf)->fp[2])
 
 
 typedef struct _pfile_ {

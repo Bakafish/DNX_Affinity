@@ -34,38 +34,37 @@
 
 #include "dnxJobList.h"
 
-#define JL_SIZE		5
+#define JL_SIZE      5
 
 //----------------------------------------------------------------------------
 
 int main (int argc, char **argv)
 {
-	DnxJobList *pJobList;
-	int ret;
+   DnxJobList *pJobList;
+   int ret;
 
-	// Initialize the job list
-	if ((ret = dnxJobListInit(&pJobList, JL_SIZE)) != DNX_OK)
-	{
-		fprintf(stderr, "%s: Failed to initialize DNX Job List: %d\n", argv[0], ret);
-		exit(1);
-	}
+   // Initialize the job list
+   if ((ret = dnxJobListInit(&pJobList, JL_SIZE)) != DNX_OK)
+   {
+      fprintf(stderr, "%s: Failed to initialize DNX Job List: %d\n", argv[0], ret);
+      exit(1);
+   }
 
-	// Test add several jobs past limit
+   // Test add several jobs past limit
 
-	// Test add a few and dispatch a few
+   // Test add a few and dispatch a few
 
-	// Test collecting some
+   // Test collecting some
 
-	// Now add some more
+   // Now add some more
 
-	// Release the job list
-	if ((ret = dnxJobListWhack(&pJobList)) != DNX_OK)
-	{
-		fprintf(stderr, "%s: Failed to release DNX Job List: %d\n", argv[0], ret);
-		exit(2);
-	}
+   // Release the job list
+   if ((ret = dnxJobListWhack(&pJobList)) != DNX_OK)
+   {
+      fprintf(stderr, "%s: Failed to release DNX Job List: %d\n", argv[0], ret);
+      exit(2);
+   }
 
-	return 0;
+   return 0;
 }
 
-//----------------------------------------------------------------------------
