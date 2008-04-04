@@ -8,7 +8,7 @@ Version:        @VERSION@
 Release:        1
 License:        GPL
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-BuildRequires:  
+BuildRequires:  gcc
 Group:          Productivity/Security
 Summary:        Distributed Nagios eXecutor (DNX)
 Url:            http://dnx.sourceforge.net
@@ -33,12 +33,11 @@ rm -rf %{buildroot}
 %makeinstall
 mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/usr/sbin
-install -m 755 xdasd.init $RPM_BUILD_ROOT/etc/init.d/xdasd
-ln -sf ../../etc/init.d/xdasd $RPM_BUILD_ROOT/usr/sbin/rcxdasd
-ln -sf %{name}-%{version}.jar $RPM_BUILD_ROOT/%{_datadir}/java/%{name}.jar
+install -m 755 dnxcld.init $RPM_BUILD_ROOT/etc/init.d/dnxcld
+ln -sf ../../etc/init.d/dnxcld $RPM_BUILD_ROOT/usr/sbin/rcdnxcld
 
 %post
-%{fillup_and_insserv -f dnxd}
+%{fillup_and_insserv -f dnxClient}
 
 %preun
 %stop_on_removal dnxClient
@@ -53,9 +52,9 @@ rm -rf "$RPM_BUILD_ROOT"
 %files
 %defattr(-,root,root)
 %doc AUTHORS COPYING ChangeLog NEWS README
-%config /etc/init.d/dnxClient
+%config /etc/init.d/dnxcld
 %dir %{_libdir}/%{name}
 /usr/sbin/dnxClient
-/usr/sbin/rcdnxClient
+/usr/sbin/rcdnxcld
 %{_libdir}/dnxServer.so
 
