@@ -37,7 +37,7 @@
 # Check for missing binaries (stale symlinks should not happen)
 # Note: Special treatment of stop for LSB conformance
 DNXCLIENT_BIN=@prefix@/sbin/dnxClient
-DNXCLIENT_PARAMS="-c @prefix@/etc/dnxClient.cfg"
+DNXCLIENT_PARAMS="-c /etc/dnxClient.cfg"
 test -x $DNXCLIENT_BIN || { echo "$DNXCLIENT_BIN not installed"; 
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }
@@ -144,7 +144,7 @@ case "$1" in
 	rc_status -v
 	;;
     probe)
-	test @prefix@/etc/dnxClient.cfg -nt /var/run/dnxClient.pid && echo reload
+	test /etc/dnxClient.cfg -nt /var/run/dnxClient.pid && echo reload
 	;;
     *)
 	echo "Usage: $0 {start|stop|status|try-restart|restart|force-reload|reload|probe}"
