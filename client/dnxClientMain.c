@@ -386,7 +386,7 @@ static int initConfig(char * cfgfile)
       "channelAgent = udp://0:12480\n"
       "poolInitial = 20\n"
       "poolMin = 20\n"
-      "poolMax = 300\n"
+      "poolMax = 100\n"
       "poolGrow = 10\n"
       "wlmPollInterval = 2\n"
       "wlmShutdownGracePeriod = 35\n"
