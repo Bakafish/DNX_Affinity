@@ -9,8 +9,7 @@ Doxygen. However, this file can be manually configured to become a doxygen input
 file. Use an editor to change any text surrounded by at '@' signs for live
 values. Currently, doxyfile.in contains the following autoconf variables:
 
-  @VERSION@ - the DNX major.minor version number.
-  @REVISION@ - the DNX revision number of the source.
+  @VERSION@ - the DNX major.minor version numbers.
   @top_srcdir@ - the top-level source directory - where configure.ac is located.
 
 Others may be added over time. Replace these variables by hand, and this file
