@@ -54,7 +54,6 @@ typedef struct iDnxDispatcher_
    DnxJobList * joblist;   /*!< The job list we're dispatching from. */
    dnxChannel * channel;   /*!< Dispatcher communications channel. */
    pthread_t tid;          /*!< The dispatcher thread id. */
-   int running;            /*!< Running flag - as opposed to cancellation. */
 } iDnxDispatcher;
 
 //----------------------------------------------------------------------------
@@ -162,7 +161,7 @@ static void * dnxDispatcher(void * data)
    dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Awaiting new jobs...", pthread_self());
 
    // wait for new service checks or cancellation
-   while (idisp->running)
+   while (1)
    {
       pthread_testcancel();
 
@@ -220,25 +219,23 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
    if ((idisp = (iDnxDispatcher *)xmalloc(sizeof *idisp)) == 0)
       return DNX_ERR_MEMORY;
 
+   memset(idisp, 0, sizeof *idisp);
    idisp->chname = xstrdup(chname);
    idisp->url = xstrdup(dispurl);
    idisp->joblist = joblist;
    idisp->debug = debug;
-   idisp->running = 1;
 
    if (!idisp->url || !idisp->chname)
    {
       xfree(idisp);
       return DNX_ERR_MEMORY;
    }
-
    if ((ret = dnxChanMapAdd(chname, dispurl)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "dnxDispatcherCreate: dnxChanMapAdd(%s) failed "
                          "with %d: %s", chname, ret, dnxErrorString(ret));
       goto e1;
    }
-
    if ((ret = dnxConnect(chname, &idisp->channel, DNX_CHAN_PASSIVE)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "dnxDispatcherCreate: dnxConnect(%s) failed "
@@ -283,9 +280,8 @@ void dnxDispatcherDestroy(DnxDispatcher * disp)
 {
    iDnxDispatcher * idisp = (iDnxDispatcher *)disp;
 
-   idisp->running = 0;
-// pthread_cancel(idisp->tid);
-   pthread_join(idisp->tid, NULL);
+   pthread_cancel(idisp->tid);
+   pthread_join(idisp->tid, 0);
 
    dnxDisconnect(idisp->channel);
    dnxChanMapDelete(idisp->chname);

@@ -55,7 +55,6 @@ typedef struct iDnxCollector_
    DnxJobList * joblist;   /*!< The job list we're collecting for. */
    dnxChannel * channel;   /*!< Collector communications channel. */
    pthread_t tid;          /*!< The collector thread id. */
-   int running;            /*!< Running flag - as opposed to cancellation. */
 } iDnxCollector;
 
 //----------------------------------------------------------------------------
@@ -97,7 +96,7 @@ static void * dnxCollector(void * data)
    dnxSyslog(LOG_INFO, "dnxCollector[%lx]: Awaiting service check results", 
          pthread_self());
 
-   while (icoll->running)
+   while (1)
    {
       pthread_testcancel();
 
@@ -167,18 +166,17 @@ int dnxCollectorCreate(long * debug, char * chname, char * collurl,
    if ((icoll = (iDnxCollector *)xmalloc(sizeof *icoll)) == 0)
       return DNX_ERR_MEMORY;
 
+   memset(icoll, 0, sizeof *icoll);
    icoll->chname = xstrdup(chname);
    icoll->url = xstrdup(collurl);
    icoll->joblist = joblist;
    icoll->debug = debug;
-   icoll->running = 1;
 
    if (!icoll->url || !icoll->chname)
    {
       xfree(icoll);
       return DNX_ERR_MEMORY;
    }
-
    if ((ret = dnxChanMapAdd(chname, collurl)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, 
@@ -186,7 +184,6 @@ int dnxCollectorCreate(long * debug, char * chname, char * collurl,
             chname, ret, dnxErrorString(ret));
       goto e1;
    }
-
    if ((ret = dnxConnect(chname, &icoll->channel, DNX_CHAN_PASSIVE)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, 
@@ -198,7 +195,7 @@ int dnxCollectorCreate(long * debug, char * chname, char * collurl,
    if (*debug)
       dnxChannelDebug(icoll->channel, *debug);
 
-   // create the dispatcher thread
+   // create the collector thread
    if ((ret = pthread_create(&icoll->tid, NULL, dnxCollector, icoll)) != 0)
    {
       dnxSyslog(LOG_ERR, 
@@ -233,9 +230,8 @@ void dnxCollectorDestroy(DnxCollector  * coll)
 {
    iDnxCollector * icoll = (iDnxCollector *)coll;
 
-   icoll->running = 0;
-// pthread_cancel(icoll->tid);
-   pthread_join(icoll->tid, NULL);
+   pthread_cancel(icoll->tid);
+   pthread_join(icoll->tid, 0);
 
    dnxDisconnect(icoll->channel);
    dnxChanMapDelete(icoll->chname);
