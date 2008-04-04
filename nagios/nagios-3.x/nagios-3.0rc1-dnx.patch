@@ -1,6 +1,6 @@
 diff -Naur nagios-3.0rc1/base/checks.c nagios-3.0rc1-patched/base/checks.c
 --- nagios-3.0rc1/base/checks.c	2007-12-12 11:39:46.000000000 -0700
-+++ nagios-3.0rc1-patched/base/checks.c	2008-01-18 11:49:24.000000000 -0700
++++ nagios-3.0rc1-patched/base/checks.c	2008-01-20 20:10:06.000000000 -0700
 @@ -380,11 +380,6 @@
  			*preferred_time+=(svc->check_interval*interval_length);
  		return ERROR;
@@ -13,10 +13,40 @@ diff -Naur nagios-3.0rc1/base/checks.c nagios-3.0rc1-patched/base/checks.c
  #endif
  
  
-@@ -431,6 +426,19 @@
+@@ -410,6 +405,7 @@
+ 		log_debug_info(DEBUGL_CHECKS,0,"Raw check command for service '%s' on host '%s' was NULL - aborting.\n",svc->description,svc->host_name);
+ 		if(preferred_time)
+ 			*preferred_time+=(svc->check_interval*interval_length);
++		svc->latency=old_latency;
+ 		return ERROR;
+ 		}
+ 
+@@ -419,6 +415,8 @@
+ 		log_debug_info(DEBUGL_CHECKS,0,"Processed check command for service '%s' on host '%s' was NULL - aborting.\n",svc->description,svc->host_name);
+ 		if(preferred_time)
+ 			*preferred_time+=(svc->check_interval*interval_length);
++		svc->latency=old_latency;
++		my_free(raw_command);
+ 		return ERROR;
+ 		}
+ 
+@@ -431,6 +429,32 @@
  	/* set the execution flag */
  	svc->is_executing=TRUE;
  
++	/* start save check info */
++	check_result_info.object_check_type=SERVICE_CHECK;
++	check_result_info.check_type=SERVICE_CHECK_ACTIVE;
++	check_result_info.check_options=check_options;
++	check_result_info.scheduled_check=scheduled_check;
++	check_result_info.reschedule_check=reschedule_check;
++	check_result_info.start_time=start_time;
++	check_result_info.finish_time=start_time;
++	check_result_info.early_timeout=FALSE;
++	check_result_info.exited_ok=TRUE;
++	check_result_info.return_code=STATE_OK;
++	check_result_info.output=NULL;
++
 +#ifdef USE_EVENT_BROKER
 +	/* send data to event broker */
 +	neb_result=broker_service_check(NEBTYPE_SERVICECHECK_INITIATE,NEBFLAG_NONE,NEBATTR_NONE,svc,SERVICE_CHECK_ACTIVE,start_time,end_time,svc->service_check_command,svc->latency,0.0,service_check_timeout,FALSE,0,processed_command,NULL);
@@ -33,7 +63,30 @@ diff -Naur nagios-3.0rc1/base/checks.c nagios-3.0rc1-patched/base/checks.c
  	/* open a temp file for storing check output */
  	old_umask=umask(new_umask);
  	asprintf(&output_file,"%s/checkXXXXXX",temp_path);
-@@ -492,11 +500,6 @@
+@@ -446,21 +470,10 @@
+ 	log_debug_info(DEBUGL_CHECKS|DEBUGL_IPC,1,"Check result output will be written to '%s' (fd=%d)\n",output_file,check_result_info.output_file_fd);
+ 
+ 
+-	/* save check info */
+-	check_result_info.object_check_type=SERVICE_CHECK;
++	/* finish save check info */
+ 	check_result_info.host_name=(char *)strdup(svc->host_name);
+ 	check_result_info.service_description=(char *)strdup(svc->description);
+-	check_result_info.check_type=SERVICE_CHECK_ACTIVE;
+-	check_result_info.check_options=check_options;
+-	check_result_info.scheduled_check=scheduled_check;
+-	check_result_info.reschedule_check=reschedule_check;
+ 	check_result_info.output_file=(check_result_info.output_file_fd<0 || output_file==NULL)?NULL:strdup(output_file);
+-	check_result_info.start_time=start_time;
+-	check_result_info.finish_time=start_time;
+-	check_result_info.early_timeout=FALSE;
+-	check_result_info.exited_ok=TRUE;
+-	check_result_info.return_code=STATE_OK;
+-	check_result_info.output=NULL;
+ 
+ 	/* free memory */
+ 	my_free(output_file);
+@@ -492,11 +505,6 @@
  	dbuf_init(&checkresult_dbuf,dbuf_chunk);
  
  
