@@ -133,7 +133,7 @@ void dnxPluginUnload(DnxModule * module)
 //----------------------------------------------------------------------------
 
 int dnxPluginExecute(char * command, int * resCode, char * resData, 
-      int maxData, int timeout)
+      int maxData, int timeout, char * myaddr)
 {
    DnxPlugin * plugin;
    int ret;
@@ -143,9 +143,11 @@ int dnxPluginExecute(char * command, int * resCode, char * resData,
 
    // see if this is an internal or external plugin
    if ((ret = dnxPluginLocate(command, &plugin)) == DNX_OK)
-      ret = dnxPluginInternal(plugin, command, resCode, resData, maxData, timeout);
+      ret = dnxPluginInternal(plugin, command, resCode, resData, maxData, 
+            timeout, myaddr);
    else if (ret == DNX_ERR_NOTFOUND)
-      ret = dnxPluginExternal(command, resCode, resData, maxData, timeout);
+      ret = dnxPluginExternal(command, resCode, resData, maxData, 
+            timeout, myaddr);
    else
    {
       *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
@@ -216,7 +218,7 @@ int dnxPluginBaseName(char * command, char * baseName, int maxData)
 //----------------------------------------------------------------------------
 
 int dnxPluginInternal(DnxPlugin * plugin, char * command, int * resCode, 
-      char * resData, int maxData, int timeout)
+      char * resData, int maxData, int timeout, char * myaddr)
 {
    char temp_buffer[MAX_INPUT_BUFFER + 1];
    char * argv[DNX_MAX_ARGV];
@@ -246,12 +248,12 @@ int dnxPluginInternal(DnxPlugin * plugin, char * command, int * resCode,
    *resCode = mod_nrpe(argc, argv, resData);
 #else
    *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
-   strcpy(resData, "(DNX: Internal NRPE modules unavailable)");
+   sprintf(resData, "(DNX: Internal NRPE Modules Unavailable; Node %s)", myaddr);
 #endif
 
    // check for no output condition
    if (!resData[0])
-      strcpy(resData, "(DNX: No output!)");
+      sprintf(resData, "(DNX: No Output; Node %s)", myaddr);
 
    // test for exception conditions:
    temp_buffer[0] = 0;
@@ -279,7 +281,7 @@ int dnxPluginInternal(DnxPlugin * plugin, char * command, int * resCode,
 //----------------------------------------------------------------------------
 
 int dnxPluginExternal(char * command, int * resCode, char * resData, 
-      int maxData, int timeout)
+      int maxData, int timeout, char * myaddr)
 {
    char temp_buffer[MAX_INPUT_BUFFER + 1];
    char temp_cmd[MAX_PLUGIN_PATH + 1];
@@ -382,7 +384,7 @@ int dnxPluginExternal(char * command, int * resCode, char * resData,
    {
       // plugin timeout
       *resCode = DNX_PLUGIN_RESULT_CRITICAL;
-      strcpy(resData, "(DNX: Plugin Timeout)");
+      sprintf(resData, "(DNX: Plugin Timeout; Node %s)", myaddr);
       pfkill(pf, SIGTERM);
       pfclose(pf);
       return DNX_OK;
@@ -410,7 +412,7 @@ int dnxPluginExternal(char * command, int * resCode, char * resData,
    // check for no output condition
    if (!resData[0])
    {
-      strcpy(resData, "(DNX: No output!)");
+      sprintf(resData, "(DNX: No Output; Node %s)", myaddr);
       isErrOutput = 0;
    }
 

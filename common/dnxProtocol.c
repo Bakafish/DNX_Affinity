@@ -444,7 +444,7 @@ int dnxPutResult(DnxChannel * channel, DnxResult * pResult, char * address)
    if (pResult->resData && pResult->resData[0])
       dnxXmlAdd(&xbuf, "ResultData", DNX_XML_STR,   pResult->resData);
    else
-      dnxXmlAdd(&xbuf, "ResultData", DNX_XML_STR,   "(DNX: No output!)");
+      dnxXmlAdd(&xbuf, "ResultData", DNX_XML_STR,   "(DNX: No Output!)");
    dnxXmlClose (&xbuf);
 
    // Send it on the specified channel

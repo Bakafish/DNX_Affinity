@@ -73,11 +73,12 @@ void dnxPluginUnload(DnxModule * module);
  * @param[in] maxData - the maximum size of the @p resData buffer.
  * @param[in] timeout - the maximum number of seconds to wait for @p command 
  *    to complete before returning a timeout error.
+ * @param[in] myaddr - the address (in human readable format) of this DNX node.
  * 
  * @return Zero on success, or a non-zero error value.
  */
 int dnxPluginExecute(char * command, int * resCode, char * resData, 
-      int maxData, int timeout);
+      int maxData, int timeout, char * myaddr);
 
 /** Search for a plugin in the plugin chain.
  * 
@@ -110,11 +111,12 @@ int dnxPluginBaseName(char * command, char * baseName, int maxData);
  * @param[in] maxData - the maximum size of the @p resData buffer.
  * @param[in] timeout - the maximum number of seconds to wait for @p plugin
  *    to complete execution of @p command before returning a timeout error.
+ * @param[in] myaddr - the address (in human readable format) of this DNX node.
  * 
  * @return Zero on success, or a non-zero error value.
  */
 int dnxPluginInternal(DnxPlugin * plugin, char * command, int * resCode, 
-      char * resData, int maxData, int timeout);
+      char * resData, int maxData, int timeout, char * myaddr);
 
 /** Execute an external command line.
  * 
@@ -126,11 +128,12 @@ int dnxPluginInternal(DnxPlugin * plugin, char * command, int * resCode,
  * @param[in] maxData - the maximum size of the @p resData buffer.
  * @param[in] timeout - the maximum number of seconds to wait for @p command 
  *    to complete before returning a timeout error.
+ * @param[in] myaddr - the address (in human readable format) of this DNX node.
  * 
  * @return Zero on success, or a non-zero error value.
  */
 int dnxPluginExternal(char * command, int * resCode, char * resData, 
-      int maxData, int timeout);
+      int maxData, int timeout, char * myaddr);
 
 /** Perform a time sensitive fgets.
  * 

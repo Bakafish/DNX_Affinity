@@ -155,8 +155,8 @@ static int dnxExecuteJob(DnxWorkerStatus * ws, DnxJob * job, DnxResult * result)
 
    time(&ws->jobstart);
 
-   ret = dnxPluginExecute(job->cmd, &result->resCode, resData, 
-         sizeof resData - 1, job->timeout);
+   ret = dnxPluginExecute(job->cmd, &result->resCode, 
+         resData, sizeof resData - 1, job->timeout, job->address);
 
    result->delta = time(0) - ws->jobstart;
    ws->jobstart = 0;
