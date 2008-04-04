@@ -180,46 +180,39 @@
 #include <syslog.h>
 #include <errno.h>
 
-typedef struct _urlTypeMap_ 
-{
-   char * name;         // Transport name: Currently only tcp, udp or msgq
-   dnxChanType type;    // Transport type
-} urlTypeMap;
-
-static urlTypeMap gTypeMap[] = 
-{
-   { "tcp", DNX_CHAN_TCP }, 
-   { "udp", DNX_CHAN_UDP }, 
-   { "msgq", DNX_CHAN_MSGQ }, 
-   { NULL, DNX_CHAN_UNKNOWN } 
-};
-
 static int dnxInit = 0;
 static pthread_mutex_t chanMutex;
 static dnxChanMap gChannelMap[DNX_MAX_CHAN_MAP];
 
 // External TCP Transport Functions
-extern int dnxTcpInit (void);
-extern int dnxTcpDeInit (void);
-extern int dnxTcpNew (dnxChannel **channel, char *url);
+extern int dnxTcpInit(void);
+extern int dnxTcpDeInit(void);
+extern int dnxTcpNew(dnxChannel ** channel, char * url);
 
 // External UDP Transport Functions
-extern int dnxUdpInit (void);
-extern int dnxUdpDeInit (void);
-extern int dnxUdpNew (dnxChannel **channel, char *url);
+extern int dnxUdpInit(void);
+extern int dnxUdpDeInit(void);
+extern int dnxUdpNew(dnxChannel ** channel, char * url);
 
 // External Message Queue Transport Functions
-extern int dnxMsgQInit (void);
-extern int dnxMsgQDeInit (void);
-extern int dnxMsgQNew (dnxChannel **channel, char *url);
+extern int dnxMsgQInit(void);
+extern int dnxMsgQDeInit(void);
+extern int dnxMsgQNew(dnxChannel ** channel, char * url);
 
 //----------------------------------------------------------------------------
 
-int dnxChanMapInit (char *fileName)
+/** Initialize the channel map sub-system.
+ * 
+ * @param[in] fileName - a persistent storage file for the channel map. 
+ *    Not currently used.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxChanMapInit(char * fileName)
 {
-   // Make sure we aren't already initialized
-   if (dnxInit)
-      return DNX_ERR_ALREADY;
+   assert(!dnxInit);
+
+   /** @todo This is the wrong place to initialize the global errno value. */
 
    // Clear global error status variables
    dnxSetLastError(DNX_OK);
@@ -227,13 +220,16 @@ int dnxChanMapInit (char *fileName)
    // Clear global channel map
    memset(gChannelMap, 0, sizeof(gChannelMap));
 
-   // Create protective mutex
    DNX_PT_MUTEX_INIT(&chanMutex);
+
+   /** @todo Check the return values for each individual protocol sub-system. */
 
    // Initialize lower layer transports
    dnxUdpInit();
    dnxTcpInit();
    dnxMsgQInit();
+
+   /** @todo This should be a debug-only flag. */
 
    // Set initialization flag
    dnxInit = 1;
@@ -245,13 +241,15 @@ int dnxChanMapInit (char *fileName)
 
 //----------------------------------------------------------------------------
 
-int dnxChanMapRelease (void)
+/** Clean up resources allocated by the channel map sub-system.
+ * 
+ * @return Always returns zero.
+ */
+int dnxChanMapRelease(void)
 {
    int i;
 
-   // Make sure we aren't already de-initialized
-   if (!dnxInit)
-      return DNX_ERR_ALREADY;
+   assert(dnxInit);
 
    // Clean-up global channel map
    for (i=0; i < DNX_MAX_CHAN_MAP; i++)
@@ -270,11 +268,7 @@ int dnxChanMapRelease (void)
    dnxSetLastError(DNX_OK);
 
    // Destroy the mutex
-   if (DNX_PT_MUTEX_DESTROY(&chanMutex) != 0)
-   {
-      dnxSyslog(LOG_ERR, "dnxChanMapRelease: Unable to destroy mutex: mutex is in use!");
-      //return DNX_ERR_BUSY;
-   }
+   DNX_PT_MUTEX_DESTROY(&chanMutex);
 
    // De-Initialize lower layer transports
    dnxUdpDeInit();
@@ -289,9 +283,16 @@ int dnxChanMapRelease (void)
 
 //----------------------------------------------------------------------------
 
-int dnxChanMapAdd (char *name, char *url)
+/** Add a new channel to the global channel map.
+ * 
+ * @param[in] name - the name of the new channel to be added.
+ * @param[in] url - the URL to associate with this new channel.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxChanMapAdd(char * name, char * url)
 {
-   dnxChanMap *chanMap;
+   dnxChanMap * chanMap;
    int ret;
 
    // Validate arguments
@@ -330,7 +331,8 @@ int dnxChanMapAdd (char *name, char *url)
       ret = DNX_ERR_MEMORY;
    }
 
-abend:
+abend:;
+
    // Clear this channel map slot
    if (ret != DNX_OK && chanMap)
       chanMap->type = DNX_CHAN_UNKNOWN;
@@ -342,16 +344,34 @@ abend:
 }
 
 //----------------------------------------------------------------------------
-// Sets following ChanMap properties: type
 
-int dnxChanMapUrlParse (dnxChanMap *chanMap, char *url)
+/** Parse the URL scheme (type) into a specified channel map.
+ * 
+ * Set the 'type' channel map property.
+ * 
+ * @param[in] chanMap - the channel map on which to set the URL type property.
+ * @param[in] url - the URL to be parsed into @p chanMap.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxChanMapUrlParse(dnxChanMap * chanMap, char * url)
 {
-   char tmpUrl[DNX_MAX_URL+1];
-   urlTypeMap *utm;
-   char *ep;
+   static struct urlTypeMap { char * name; dnxChanType type; } typeMap[] = 
+   {
+      { "tcp", DNX_CHAN_TCP }, 
+      { "udp", DNX_CHAN_UDP }, 
+      { "msgq", DNX_CHAN_MSGQ }, 
+      { NULL, DNX_CHAN_UNKNOWN } 
+   };
+   
+   char tmpUrl[DNX_MAX_URL + 1];
+   struct urlTypeMap * utm;
+   char * ep;
+
+   assert(chanMap && url);
 
    // Validate parameters
-   if (!chanMap || !url || !*url || strlen(url) > DNX_MAX_URL)
+   if (!*url || strlen(url) > DNX_MAX_URL)
       return DNX_ERR_INVALID;
 
    // Make a working copy of the URL
@@ -360,11 +380,11 @@ int dnxChanMapUrlParse (dnxChanMap *chanMap, char *url)
    // Look for transport prefix: '[type]://'
    if ((ep = strchr(tmpUrl, ':')) == NULL || *(ep+1) != '/' || *(ep+2) != '/')
       return DNX_ERR_BADURL;
-   *ep = '\0';
+   *ep = 0;
 
    // Decode destination based upon transport type
    chanMap->type = DNX_CHAN_UNKNOWN;
-   for (utm = gTypeMap; utm->name; utm++)
+   for (utm = typeMap; utm->name; utm++)
    {
       if (!strcmp(tmpUrl, utm->name))
       {
@@ -374,38 +394,43 @@ int dnxChanMapUrlParse (dnxChanMap *chanMap, char *url)
    }
    switch (chanMap->type)
    {
-   case DNX_CHAN_TCP:   // Need hostname and port
-      chanMap->txAlloc = dnxTcpNew;
-      break;
-
-   case DNX_CHAN_UDP:   // Need hostname and port
-      chanMap->txAlloc = dnxUdpNew;
-      break;
-
-   case DNX_CHAN_MSGQ:  // Need message queue ID
-      chanMap->txAlloc = dnxMsgQNew;
-      break;
-
-   default:
-      chanMap->type = DNX_CHAN_UNKNOWN;
-      return DNX_ERR_BADURL;
+      case DNX_CHAN_TCP:   // Need hostname and port
+         chanMap->txAlloc = dnxTcpNew;
+         break;
+   
+      case DNX_CHAN_UDP:   // Need hostname and port
+         chanMap->txAlloc = dnxUdpNew;
+         break;
+   
+      case DNX_CHAN_MSGQ:  // Need message queue ID
+         chanMap->txAlloc = dnxMsgQNew;
+         break;
+   
+      default:
+         chanMap->type = DNX_CHAN_UNKNOWN;
+         return DNX_ERR_BADURL;
    }
-
    return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxChanMapDelete (char *name)
+/** Delete a channel map by name.
+ * 
+ * @param[in] name - the name of the channel map to be deleted.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxChanMapDelete(char * name)
 {
-   dnxChanMap *chanMap;
+   dnxChanMap * chanMap;
    int ret;
 
    // Validate arguments
+   assert(name && *name);
    if (!name || !*name)
       return DNX_ERR_INVALID;
 
-   // Acquire the lock on the global channel map
    DNX_PT_MUTEX_LOCK(&chanMutex);
 
    // Verify that this channel resource exists
@@ -418,7 +443,6 @@ int dnxChanMapDelete (char *name)
       chanMap->type = DNX_CHAN_UNKNOWN;
    }
 
-   // Release the lock on the global channel map
    DNX_PT_MUTEX_UNLOCK(&chanMutex);
 
    return ret;
@@ -426,25 +450,39 @@ int dnxChanMapDelete (char *name)
 
 //----------------------------------------------------------------------------
 
-int dnxChanMapFindSlot (dnxChanMap **chanMap)
+/** Locate a free channel map slot in the global channel map table.
+ * 
+ * @param[out] chanMap - the address of storage in which to return the
+ *    free channel map slot (address).
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxChanMapFindSlot(dnxChanMap ** chanMap)
 {
    int i;
 
-   // Validate parameters
-   if (!chanMap)
-      return DNX_ERR_INVALID;
+   assert(chanMap);
 
    // See if we can find an empty slot in the global channel map
-   for (i=0; i < DNX_MAX_CHAN_MAP && gChannelMap[i].name; i++);
+   for (i=0; i < DNX_MAX_CHAN_MAP && gChannelMap[i].name; i++)
+      ;
 
    *chanMap = (dnxChanMap *)((i < DNX_MAX_CHAN_MAP) ? &gChannelMap[i] : NULL);
 
-   return ((*chanMap) ? DNX_OK : DNX_ERR_CAPACITY);
+   return (*chanMap) ? DNX_OK : DNX_ERR_CAPACITY;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxChanMapFindName (char *name, dnxChanMap **chanMap)
+/** Locate a channel map by name.
+ * 
+ * @param[in] name - the name of the channel map to locate and return.
+ * @param[out] chanMap - the address of storage for returning the located
+ *    channel map.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxChanMapFindName(char * name, dnxChanMap ** chanMap)
 {
    int i;
 
@@ -454,24 +492,39 @@ int dnxChanMapFindName (char *name, dnxChanMap **chanMap)
 
    // See if this name exists in the global channel map
    for (i=0; i < DNX_MAX_CHAN_MAP; i++)
-   {
       if (gChannelMap[i].name && !strcmp(name, gChannelMap[i].name))
          break;
-   }
 
    *chanMap = (dnxChanMap *)((i < DNX_MAX_CHAN_MAP) ? &gChannelMap[i] : NULL);
 
-   return ((*chanMap) ? DNX_OK : DNX_ERR_NOTFOUND);
+   return (*chanMap) ? DNX_OK : DNX_ERR_NOTFOUND;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxConnect (char *name, dnxChannel **channel, dnxChanMode mode)
+/** Connect a specified channel.
+ * 
+ * The @p mode parameter specifies either active (1) or passive (0) for the 
+ * connection mode. An active connection is basically a client connection, or
+ * a connection on which we send data to a server. A passive connection is 
+ * basically a server connection, or a connection on which we listen for 
+ * incoming messages.
+ * 
+ * @param[in] name - the name of the channel to open.
+ * @param[out] channel - the address of storage for the returned connected 
+ *    channel.
+ * @param[in] mode - the connection mode for the newly connected channel.
+ *    This mode value may be either active (1) or passive (0). 
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxConnect(char * name, dnxChannel ** channel, dnxChanMode mode)
 {
-   dnxChanMap *chanMap;
+   dnxChanMap * chanMap;
    int ret;
 
    // Validate arguments
+   assert(name && *name && channel);
    if (!name || !*name || !channel)
       return DNX_ERR_INVALID;
 
@@ -491,59 +544,90 @@ int dnxConnect (char *name, dnxChannel **channel, dnxChanMode mode)
          }
       }
    }
-
    return ret;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxDisconnect (dnxChannel *channel)
+/** Disconnect a specified channel.
+ * 
+ * @param[in] channel - the channel to be disconnected.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxDisconnect(dnxChannel * channel)
 {
    int ret;
 
-   // Validate arguments
-   if (!channel)
-      return DNX_ERR_INVALID;
+   assert(channel);
 
-   // Disconnect this channel
+   // close and delete the channel.
    if ((ret = channel->dnxClose(channel)) == DNX_OK)
-      channel->txDelete(channel);      // Have transport delete this channel
+      channel->txDelete(channel);
 
    return ret;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxGet (dnxChannel *channel, char *buf, int *size, int timeout, char *src)
+/** Read data from an open channel.
+ * 
+ * @param[in] channel - the channel from which to read.
+ * @param[out] buf - the address of storage for data read from @p channel.
+ * @param[in,out] size - on entry, the maximum number of bytes that may be 
+ *    read into @p buf; on exit, returns the number of bytes actually read.
+ * @param[in] timeout - the maximum number of seconds the caller is willing
+ *    to wait for data on @p channel before returning a timeout error.
+ * @param[out] src - the address of storage for the remote sender's address.
+ *    This parameter is optional, and may be passed as NULL. The caller must
+ *    ensure that the buffer pointed to is large enough to hold the returned
+ *    address. Passing the address of a struct sockaddr_storage is more than 
+ *    adequate for any address type available.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxGet(dnxChannel * channel, char * buf, int * size, 
+      int timeout, char * src)
 {
-   // Validate arguments
-   if (!channel || !buf || !size || *size < 1)
-      return DNX_ERR_INVALID;
-
-   // Read a protocol packet
+   assert(channel && buf && size && *size > 0);
    return channel->dnxRead(channel, buf, size, timeout, src);
 }
 
 //----------------------------------------------------------------------------
 
-int dnxPut (dnxChannel *channel, char *buf, int size, int timeout, char *dst)
+/** Write data to an open channel.
+ * 
+ * @param[in] channel - the channel to which data should be written.
+ * @param[in] buf - the data to be written to @p channel.
+ * @param[in] size - the number of bytes in @p buf to be written.
+ * @param[in] timeout - the maximum number of seconds the caller is willing
+ *    to wait for the write operation to complete on @p channel before 
+ *    returning a timeout error.
+ * @param[in] dst - the address to which data should be sent. This parameter 
+ *    is optional, and may be passed as NULL. If NULL, the channel configured
+ *    address will be used.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPut(dnxChannel * channel, char * buf, int size, int timeout, char * dst)
 {
-   // Validate arguments
-   if (!channel || !buf || size < 1)
-      return DNX_ERR_INVALID;
-
-   // Read a protocol packet
+   assert(channel && buf && size > 0);
    return channel->dnxWrite(channel, buf, size, timeout, dst);
 }
 
 //----------------------------------------------------------------------------
 
-int dnxChannelDebug (dnxChannel *channel, int doDebug)
+/** Debug a channel.
+ * 
+ * @param[in] channel - the channel to be debugged.
+ * @param[in] doDebug - boolean: 1 for enable debug, 0 for disable debug.
+ * 
+ * @return Always returns zero.
+ */
+int dnxChannelDebug(dnxChannel * channel, int doDebug)
 {
-   // Validate arguments
-   if (!channel)
-      return DNX_ERR_INVALID;
-   
+   assert(channel);
+  
    channel->debug = doDebug;
 
    return DNX_OK;

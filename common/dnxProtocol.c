@@ -50,9 +50,18 @@
 #include <syslog.h>
 
 //----------------------------------------------------------------------------
-// CLIENT: Use to register with Registrar
 
-int dnxRegister (dnxChannel *channel, DnxNodeRequest *pReg, char *address)
+/** Register with the registrar (client).
+ * 
+ * @param[in] channel - the channel on which to send @p pReg.
+ * @param[in] pReg - the registration request to be sent on @p channel.
+ * @param[in] address - the address to which @p pReg should be sent. This 
+ *    parameter is optional, and may be specified as NULL, in which case the 
+ *    channel address will be used.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
 {
    DnxXmlBuf xbuf;
 
@@ -73,9 +82,18 @@ int dnxRegister (dnxChannel *channel, DnxNodeRequest *pReg, char *address)
 }
 
 //----------------------------------------------------------------------------
-// CLIENT: Use to deregister with Registrar
 
-int dnxDeRegister (dnxChannel *channel, DnxNodeRequest *pReg, char *address)
+/** Deregister with the registrar (client).
+ * 
+ * @param[in] channel - the channel on which to send @p pReg.
+ * @param[in] pReg - the deregistration request to be sent on @p channel.
+ * @param[in] address - the address to which @p pReg should be sent. This 
+ *    parameter is optional, and may be specified as NULL, in which case the 
+ *    channel address will be used.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxDeRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
 {
    DnxXmlBuf xbuf;
 
@@ -96,12 +114,25 @@ int dnxDeRegister (dnxChannel *channel, DnxNodeRequest *pReg, char *address)
 }
 
 //----------------------------------------------------------------------------
-// SERVER: Used by Registrar to wait for a node request
 
-int dnxWaitForNodeRequest (dnxChannel *channel, DnxNodeRequest *pReg, char *address, int timeout)
+/** Wait for a node request (server).
+ * 
+ * @param[in] channel - the channel from which to receive the node request.
+ * @param[out] pReg - the address of storage into which the request should
+ *    be read from @p channel.
+ * @param[out] address - the address of storage in which to return the address
+ *    of the sender. This parameter is optional and may be passed as NULL. If
+ *    non-NULL, it should be large enough to store sockaddr_* data.
+ * @param[in] timeout - the maximum number of seconds the caller is willing to
+ *    wait before accepting a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxWaitForNodeRequest(dnxChannel * channel, DnxNodeRequest * pReg, 
+      char * address, int timeout)
 {
    DnxXmlBuf xbuf;
-   char *msg = NULL;
+   char * msg = NULL;
    int ret;
 
    // Validate parameters
@@ -158,21 +189,30 @@ int dnxWaitForNodeRequest (dnxChannel *channel, DnxNodeRequest *pReg, char *addr
       goto abend;
    }
 
-abend:
+abend:;
 
    // Check for abend condition
    if (ret != DNX_OK)
-   {
-      if (msg) free(msg);
-   }
+      if (msg) 
+         free(msg);
 
    return ret;
 }
 
 //----------------------------------------------------------------------------
-// CLIENT: Issued to Registrar to request a job
 
-int dnxWantJob (dnxChannel *channel, DnxNodeRequest *pReg, char *address)
+/** Request a job from the registrar (client).
+ * 
+ * @param[in] channel - the channel from which to receive the job request.
+ * @param[out] pReg - the address of storage into which the request should
+ *    be read from @p channel.
+ * @param[in] address - the address to which @p pReg should be sent. This 
+ *    parameter is optional, and may be specified as NULL, in which case the 
+ *    channel address will be used.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxWantJob(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
 {
    DnxXmlBuf xbuf;
 
@@ -195,12 +235,24 @@ int dnxWantJob (dnxChannel *channel, DnxNodeRequest *pReg, char *address)
 }
 
 //----------------------------------------------------------------------------
-// CLIENT: Used to wait for a job from the Dispatcher
 
-int dnxGetJob (dnxChannel *channel, DnxJob *pJob, char *address, int timeout)
+/** Wait for a job from the dispatcher (client).
+ * 
+ * @param[in] channel - the channel from which to receive the job request.
+ * @param[out] pJob - the address of storage into which the job request 
+ *    should be read from @p channel.
+ * @param[out] address - the address of storage in which to return the address
+ *    of the sender. This parameter is optional and may be passed as NULL. If
+ *    non-NULL, it should be large enough to store sockaddr_* data.
+ * @param[in] timeout - the maximum number of seconds the caller is willing to
+ *    wait before accepting a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxGetJob(dnxChannel * channel, DnxJob * pJob, char * address, int timeout)
 {
    DnxXmlBuf xbuf;
-   char *msg = NULL;
+   char * msg = NULL;
    int ret;
 
    // Validate parameters
@@ -221,6 +273,7 @@ int dnxGetJob (dnxChannel *channel, DnxJob *pJob, char *address, int timeout)
    // Verify this is a "Job" message
    if ((ret = dnxXmlGet(&xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
       return ret;
+
    if (strcmp(msg, "Job"))
    {
       ret = DNX_ERR_SYNTAX;
@@ -246,7 +299,7 @@ int dnxGetJob (dnxChannel *channel, DnxJob *pJob, char *address, int timeout)
    // Decode the job's command
    ret = dnxXmlGet(&xbuf, "Command", DNX_XML_STR, &(pJob->cmd));
 
-abend:
+abend:;
 
    // Check for abend condition
    if (ret != DNX_OK)
@@ -254,14 +307,22 @@ abend:
       if (msg) free(msg);
       if (pJob->cmd) free(pJob->cmd);
    }
-
    return ret;
 }
 
 //----------------------------------------------------------------------------
-// SERVER: Used by Dispatcher to send a job to a client
 
-int dnxPutJob (dnxChannel *channel, DnxJob *pJob, char *address)
+/** Dispatch a job to a client node (server).
+ * 
+ * @param[in] channel - the channel on which to send @p pJob.
+ * @param[in] pJob - the job request to be sent on @p channel.
+ * @param[in] address - the address to which @p pJob should be sent. This 
+ *    parameter is optional, and may be specified as NULL, in which case the 
+ *    channel address will be used.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPutJob(dnxChannel * channel, DnxJob * pJob, char * address)
 {
    DnxXmlBuf xbuf;
 
@@ -283,12 +344,25 @@ int dnxPutJob (dnxChannel *channel, DnxJob *pJob, char *address)
 }
 
 //----------------------------------------------------------------------------
-// SERVER: Used by Collector to receive a result from a client
 
-int dnxGetResult (dnxChannel *channel, DnxResult *pResult, char *address, int timeout)
+/** Collect job results from a client (server).
+ * 
+ * @param[in] channel - the channel from which to receive the job result.
+ * @param[out] pResult - the address of storage into which the job result
+ *    should be read from @p channel.
+ * @param[out] address - the address of storage in which to return the address
+ *    of the sender. This parameter is optional and may be passed as NULL. If
+ *    non-NULL, it should be large enough to store sockaddr_* data.
+ * @param[in] timeout - the maximum number of seconds the caller is willing to
+ *    wait before accepting a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxGetResult(dnxChannel * channel, DnxResult * pResult, 
+      char * address, int timeout)
 {
    DnxXmlBuf xbuf;
-   char *msg = NULL;
+   char * msg = NULL;
    int ret;
 
    // Validate parameters
@@ -310,6 +384,7 @@ int dnxGetResult (dnxChannel *channel, DnxResult *pResult, char *address, int ti
    // Verify this is a "Job" message
    if ((ret = dnxXmlGet(&xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
       return ret;
+
    if (strcmp(msg, "Result"))
    {
       dnxSyslog(LOG_ERR, "dnxGetResult: Unrecognized Request=%s", msg);
@@ -347,11 +422,9 @@ int dnxGetResult (dnxChannel *channel, DnxResult *pResult, char *address, int ti
 
    // Decode the result's result data
    if ((ret = dnxXmlGet(&xbuf, "ResultData", DNX_XML_STR, &(pResult->resData))) != DNX_OK)
-   {
       dnxSyslog(LOG_ERR, "dnxGetResult: Invalid ResultData: %d", ret);
-   }
 
-abend:
+abend:;
 
    // Check for abend condition
    if (ret != DNX_OK)
@@ -359,14 +432,22 @@ abend:
       if (msg) free(msg);
       if (pResult->resData) free(pResult->resData);
    }
-
    return ret;
 }
 
 //----------------------------------------------------------------------------
-// CLIENT: Used to report a result to the Collector
 
-int dnxPutResult (dnxChannel *channel, DnxResult *pResult, char *address)
+/** Report a job result to the collector (client).
+ * 
+ * @param[in] channel - the channel on which to send @p pResult.
+ * @param[in] pResult - the result data to be sent on @p channel.
+ * @param[in] address - the address to which @p pResult should be sent. This 
+ *    parameter is optional, and may be specified as NULL, in which case the 
+ *    channel address will be used.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxPutResult(dnxChannel * channel, DnxResult * pResult, char * address)
 {
    DnxXmlBuf xbuf;
 
@@ -391,12 +472,25 @@ int dnxPutResult (dnxChannel *channel, DnxResult *pResult, char *address)
 }
 
 //----------------------------------------------------------------------------
-// MANAGER: User to issue requests to client agent
 
-int dnxGetMgmtRequest (dnxChannel *channel, DnxMgmtRequest *pRequest, char *address, int timeout)
+/** Issue a request to the client agent (server).
+ * 
+ * @param[in] channel - the channel from which to read a management request.
+ * @param[out] pRequest - the address of storage in which to return the 
+ *    management request.
+ * @param[out] address - the address of storage in which to return the address
+ *    of the sender. This parameter is optional and may be passed as NULL. If
+ *    non-NULL, it should be large enough to store sockaddr_* data.
+ * @param[in] timeout - the maximum number of seconds the caller is willing to
+ *    wait before accepting a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxGetMgmtRequest(dnxChannel * channel, DnxMgmtRequest * pRequest, 
+      char * address, int timeout)
 {
    DnxXmlBuf xbuf;
-   char *msg = NULL;
+   char * msg = NULL;
    int ret;
 
    // Validate parameters
@@ -440,12 +534,9 @@ int dnxGetMgmtRequest (dnxChannel *channel, DnxMgmtRequest *pRequest, char *addr
 
    // Decode the management request
    if ((ret = dnxXmlGet(&xbuf, "Action", DNX_XML_STR, &(pRequest->action))) != DNX_OK)
-   {
       dnxSyslog(LOG_ERR, "dnxGetMgmtRequest: Failed to decode Action: %d", ret);
-      goto abend;
-   }
 
-abend:
+abend:;
 
    // Check for abend condition
    if (ret != DNX_OK)
@@ -453,7 +544,6 @@ abend:
       if (msg) free(msg);
       if (pRequest->action) free(pRequest->action);
    }
-
    return ret;
 }
 

@@ -37,7 +37,7 @@ typedef struct _dnxChanMap_
    char * name;         // Channel name, as read from configuration file
    char * url;          // Channel connection specification
    dnxChanType type;    // Channel type: which transport to use
-   int (*txAlloc) (dnxChannel ** channel, char * url);  // Transport's channel factory
+   int (*txAlloc)(dnxChannel ** channel, char * url);  // Transport's channel factory
 } dnxChanMap;
 
 int dnxChanMapInit(char * fileName);

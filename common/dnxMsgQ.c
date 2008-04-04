@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
 
 #define DNX_MSGQ_STANDARD  1  // Message type
 
@@ -47,7 +48,11 @@ typedef struct _dnxMsgBuf_
 
 //----------------------------------------------------------------------------
 
-int dnxMsgQInit (void)
+/** Initialize the MSGQ channel sub-system.
+ * 
+ * @return Always returns zero.
+ */
+int dnxMsgQInit(void)
 {
    // Could use this routine to loop through the global channel map
    // and create all message queues found therein (or error out if
@@ -58,7 +63,11 @@ int dnxMsgQInit (void)
 
 //----------------------------------------------------------------------------
 
-int dnxMsgQDeInit (void)
+/** Clean up global resources allocated by the MSGQ channel sub-system.
+ * 
+ * @return Always returns zero.
+ */
+int dnxMsgQDeInit(void)
 {
    // Could use this routine to remove all of our own message queues
    // from the system IPC space.
@@ -68,10 +77,17 @@ int dnxMsgQDeInit (void)
 
 //----------------------------------------------------------------------------
 
-int dnxMsgQNew (dnxChannel **channel, char *url)
+/** Create a new MSGQ channel.
+ * 
+ * @param[out] channel - the address of storage for returning the new channel.
+ * @param[in] url - the URL bind address to associate with the new channel.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxMsgQNew(dnxChannel ** channel, char * url)
 {
-   char tmpUrl[DNX_MAX_URL+1];
-   char *cp, *ep, *lastchar;
+   char tmpUrl[DNX_MAX_URL + 1];
+   char * cp, * ep, * lastchar;
    long port;
 
    // Validate parameters
@@ -122,11 +138,15 @@ int dnxMsgQNew (dnxChannel **channel, char *url)
 
 //----------------------------------------------------------------------------
 
-int dnxMsgQDelete (dnxChannel *channel)
+/** Delete a MSGQ channel.
+ * 
+ * @param[in] channel - the channel to be closed.
+ * 
+ * @return Always returns zero.
+ */
+int dnxMsgQDelete(dnxChannel * channel)
 {
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_MSGQ)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_MSGQ);
 
    // Make sure this channel is closed
    if (channel->state == DNX_CHAN_OPEN)
@@ -141,13 +161,20 @@ int dnxMsgQDelete (dnxChannel *channel)
 
 //----------------------------------------------------------------------------
 
-int dnxMsgQOpen (dnxChannel *channel, dnxChanMode mode)
+/** Open a MSGQ channel.
+ * 
+ * Possible modes are active (1) or passive (0). 
+ * 
+ * @param[in] channel - the channel to be opened.
+ * @param[in] mode - the mode in which @p channel should be opened.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxMsgQOpen(dnxChannel * channel, dnxChanMode mode)
 {
    int qid;
 
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_MSGQ || channel->port < 1)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_MSGQ && channel->port > 0);
 
    // Make sure this channel isn't already open
    if (channel->state != DNX_CHAN_CLOSED)
@@ -166,13 +193,18 @@ int dnxMsgQOpen (dnxChannel *channel, dnxChanMode mode)
 
 //----------------------------------------------------------------------------
 
-int dnxMsgQClose (dnxChannel *channel)
+/** Close a MSGQ channel.
+ * 
+ * @param[in] channel - the channel to be closed.
+ * 
+ * @return Always returns zero.
+ */
+int dnxMsgQClose(dnxChannel * channel)
 {
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_MSGQ)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_MSGQ);
 
    // Make sure this channel isn't already closed
+   assert(channel->state == DNX_CHAN_OPEN);
    if (channel->state != DNX_CHAN_OPEN)
       return DNX_ERR_ALREADY;
 
@@ -190,13 +222,26 @@ int dnxMsgQClose (dnxChannel *channel)
 
 //----------------------------------------------------------------------------
 
-int dnxMsgQRead (dnxChannel *channel, char *buf, int *size, int timeout, char *src)
+/** Read data from a MSGQ channel.
+ * 
+ * @param[in] channel - the channel from which to read data.
+ * @param[out] buf - the address of storage into which data should be read.
+ * @param[in,out] size - on entry, the maximum number of bytes that may be 
+ *    read into @p buf; on exit, returns the number of bytes stored in @p buf.
+ * @param[in] timeout - the maximum number of seconds we're willing to wait
+ *    for data to become available on @p channel without returning a timeout
+ *    error.
+ * @param[out] src - the address of storage for the sender's address if 
+ *    desired. This parameter is optional, and may be passed as NULL.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxMsgQRead(dnxChannel * channel, char * buf, int * size, 
+      int timeout, char * src)
 {
    dnxMsgBuf msg;
 
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_MSGQ || !buf || *size < 1)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_MSGQ && buf && size && *size > 0);
 
    // Make sure this channel is open
    if (channel->state != DNX_CHAN_OPEN)
@@ -216,13 +261,28 @@ int dnxMsgQRead (dnxChannel *channel, char *buf, int *size, int timeout, char *s
 
 //----------------------------------------------------------------------------
 
-int dnxMsgQWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst)
+/** Write data to a MSGQ channel.
+ * 
+ * @param[in] channel - the channel on which to write data from @p buf.
+ * @param[in] buf - a pointer to the data to be written.
+ * @param[in] size - the number of bytes to be written on @p channel.
+ * @param[in] timeout - the maximum number of seconds to wait for the write
+ *    operation to complete without returning a timeout error.
+ * @param[in] dst - the address to which the data in @p buf should be sent
+ *    using this channel. This parameter is ignored for virtual connection
+ *    based channels. This parameter is optional and may be passed as NULL. 
+ *
+ * @return Zero on success, or a non-zero error value.
+ * 
+ * @note If this is a stream oriented channel, or if NULL is passed for 
+ * the @p dst parameter, The channel destination address is used.
+ */
+int dnxMsgQWrite(dnxChannel * channel, char * buf, int size, 
+      int timeout, char * dst)
 {
    dnxMsgBuf msg;
 
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_MSGQ || !buf)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_MSGQ && buf);
 
    // Validate that the message size is within bounds
    if (size < 1 || size > DNX_MAX_MSG)

@@ -38,20 +38,20 @@
 
 #define DNX_XML_MIN_HEADER 32
 
-int dnxXmlToString (DnxXmlType xType, void *xData, char *buf, int size);
-int dnxXmlGetTagValue (DnxXmlBuf *xbuf, char *xTag, DnxXmlType xType, char *buf, int size);
-
-#if 0
-int dnxXmlTypeSize (DnxXmlType); /** @todo Implement dnxXmlTypeSize. */
-#endif
+/** @todo Implement int dnxXmlTypeSize(DnxXmlType). */
 
 //----------------------------------------------------------------------------
 
-int dnxXmlOpen (DnxXmlBuf *xbuf, char *tag)
+/** Open and write header information to a dnx xml buffer.
+ * 
+ * @param[out] xbuf - the dnx xml buffer to be opened.
+ * @param[in] tag - the major xml request tag to write to @p xbuf.
+ * 
+ * @return Always returns zero.
+ */
+int dnxXmlOpen(DnxXmlBuf * xbuf, char * tag)
 {
-   // Validate parameters
-   if (!xbuf || !tag)
-      return DNX_ERR_INVALID;
+   assert(xbuf && tag);
 
    // Initialize buffer with message container opening tag and request attribute
    xbuf->size = sprintf(xbuf->buf, "<dnxMessage><Request>%s</Request>", tag);
@@ -61,24 +61,92 @@ int dnxXmlOpen (DnxXmlBuf *xbuf, char *tag)
 
 //----------------------------------------------------------------------------
 
-int dnxXmlAdd  (DnxXmlBuf *xbuf, char *xTag, DnxXmlType xType, void *xData)
+/** Convert an opaque pointer to C data into a dnx xml string format.
+ * 
+ * @param[in] xType - the C data type to be converted to an xml string.
+ * @param[in] xData - an opaque pointer to the C data to be converted.
+ * @param[out] buf - the address of storage for the returned xml string.
+ * @param[in] size - the maximum number of bytes that may be written
+ *    to @p buf.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxXmlToString(DnxXmlType xType, void * xData, char * buf, int size)
+{
+   int ret = DNX_OK;
+
+   assert(xData && buf && size > 0);
+
+   *buf = 0;
+
+   switch (xType)
+   {
+      case DNX_XML_SHORT:
+         snprintf(buf, size, "%hd", *((short *)xData));
+         break;
+
+      case DNX_XML_USHORT:
+         snprintf(buf, size, "%hu", *((unsigned short *)xData));
+         break;
+
+      case DNX_XML_INT:
+         snprintf(buf, size, "%d", *((int *)xData));
+         break;
+
+      case DNX_XML_UINT:
+         snprintf(buf, size, "%u", *((unsigned int *)xData));
+         break;
+
+      case DNX_XML_LONG:
+         snprintf(buf, size, "%ld", *((long *)xData));
+         break;
+
+      case DNX_XML_ULONG:
+         snprintf(buf, size, "%lu", *((unsigned long *)xData));
+         break;
+
+      case DNX_XML_STR:
+         strncpy(buf, (char *)xData, size);
+         buf[size-1] = '\0';
+         break;
+
+      case DNX_XML_GUID:
+         snprintf(buf, size, "%u-%lu-%lu", ((DnxGuid *)xData)->objType, 
+               ((DnxGuid *)xData)->objSerial, ((DnxGuid *)xData)->objSlot);
+         break;
+
+      default:
+         ret = DNX_ERR_INVALID;
+   }
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Add an XML data element to a dnx xml buffer.
+ * 
+ * @param[out] xbuf - the dnx xml buffer to be appended to.
+ * @param[in] xTag - the xml tag to use for this new data element.
+ * @param[in] xType - the C data type of the xml element data. 
+ * @param[in] xData - an opaque pointer to a C data variable to be expressed
+ *    in xml in @p xbuf.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxXmlAdd(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
 {
    char buf[DNX_MAX_MSG];
    int len, ret;
 
-   // Validate parameters
-   if (!xbuf || xbuf->size < DNX_XML_MIN_HEADER || !xTag)
-      return DNX_ERR_INVALID;
+   assert(xbuf && xbuf->size >= DNX_XML_MIN_HEADER && xTag);
 
    // Convert data element to string
-   buf[0] = '\0';
+   *buf = 0;
    if (xData && (ret = dnxXmlToString(xType, xData, buf, sizeof(buf))) != DNX_OK)
       return ret;
    
-
-   // Perform capacity check on XML buffer
-   len = xbuf->size + strlen(xTag)*2 + strlen(buf) + 5;  // 5 = number of brackets plus /
-   if (len >= DNX_MAX_MSG)
+   // Perform capacity check on XML buffer - 5 = number of brackets plus '/'
+   if ((len = xbuf->size + strlen(xTag) * 2 + strlen(buf) + 5) >= DNX_MAX_MSG)
       return DNX_ERR_CAPACITY;
 
    // Add to XML buffer
@@ -89,200 +157,22 @@ int dnxXmlAdd  (DnxXmlBuf *xbuf, char *xTag, DnxXmlType xType, void *xData)
 
 //----------------------------------------------------------------------------
 
-int dnxXmlGet  (DnxXmlBuf *xbuf, char *xTag, DnxXmlType xType, void *xData)
+/** Locate and return an xml string element by tag value.
+ * 
+ * @param[in] xbuf - the dnx xml buffer to search for @p xTag.
+ * @param[in] xTag - the tag to search @p xbuf for.
+ * @param[in] xType - the C data type of the element - not used.
+ * @param[out] buf - the address of storage for the xml element matching 
+ *    the xml tag in @p xTag.
+ * @param[in] size - the maximum number of bytes that may be written
+ *    to @p buf.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxXmlGetTagValue(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, 
+      char * buf, int size)
 {
-   char buf[DNX_MAX_MSG];
-   char *cp, *ep, *lastchar;
-   unsigned long unum;
-   long num;
-   int ret = DNX_OK;
-
-   // Extract the value of the specified tag from the XML buffer
-   buf[0] = '\0';
-   if ((ret = dnxXmlGetTagValue(xbuf, xTag, xType, buf, sizeof(buf))) != DNX_OK)
-      return ret;
-
-   // Convert tag value into target binary type
-   switch (xType)
-   {
-   case DNX_XML_SHORT:
-      errno = 0;
-      num = strtol(buf, &lastchar, 0);
-      if (errno == ERANGE || *lastchar)
-         ret = DNX_ERR_SYNTAX;
-      else
-         *((short *)xData) = (short)num;
-      break;
-   case DNX_XML_USHORT:
-      errno = 0;
-      unum = strtoul(buf, &lastchar, 0);
-      if (errno == ERANGE || *lastchar)
-         ret = DNX_ERR_SYNTAX;
-      else
-         *((unsigned short *)xData) = (unsigned short)unum;
-      break;
-   case DNX_XML_INT:
-      errno = 0;
-      num = strtol(buf, &lastchar, 0);
-      if (errno == ERANGE || *lastchar)
-         ret = DNX_ERR_SYNTAX;
-      else
-         *((int *)xData) = (int)num;
-      break;
-   case DNX_XML_UINT:
-      errno = 0;
-      unum = strtoul(buf, &lastchar, 0);
-      if (errno == ERANGE || *lastchar)
-         ret = DNX_ERR_SYNTAX;
-      else
-         *((unsigned int *)xData) = (unsigned int)unum;
-      break;
-   case DNX_XML_LONG:
-      errno = 0;
-      num = strtol(buf, &lastchar, 0);
-      if (errno == ERANGE || *lastchar)
-         ret = DNX_ERR_SYNTAX;
-      else
-         *((long *)xData) = (long)num;
-      break;
-   case DNX_XML_ULONG:
-      errno = 0;
-      unum = strtoul(buf, &lastchar, 0);
-      if (errno == ERANGE || *lastchar)
-         ret = DNX_ERR_SYNTAX;
-      else
-         *((unsigned long *)xData) = (unsigned long)unum;
-      break;
-   case DNX_XML_STR:
-      if ((*((char **)xData) = strdup(buf)) == NULL)
-      {
-         dnxSyslog(LOG_ERR, "dnxXmlGet: DNX_XML_STR: Out of Memory");
-         ret = DNX_ERR_MEMORY;
-      }
-      break;
-   case DNX_XML_GUID:
-      // The format of a GUID is: "objType-objSerial-objSlot",
-      // where objType, objSerial and objSlot are unsigned integers
-      if ((cp = strchr(buf, '-')) == NULL)
-      {
-         ret = DNX_ERR_SYNTAX;   // Missing GUID separator
-         break;
-      }
-      *cp++ = '\0';  // Now buf points to objType and cp points to objSerial
-
-      if ((ep = strchr(cp, '-')) == NULL)
-      {
-         ret = DNX_ERR_SYNTAX;   // Missing GUID separator
-         break;
-      }
-      *ep++ = '\0';  // Now ep points to objSlot
-
-      // Decode objType
-      errno = 0;
-      unum = strtoul(buf, &lastchar, 0);
-      if (errno == ERANGE || *lastchar)
-      {
-         ret = DNX_ERR_SYNTAX;   // Invalid number
-         break;
-      }
-      ((DnxGuid *)xData)->objType = (DnxObjType)unum;
-
-      // Decode objSerial
-      errno = 0;
-      unum = strtoul(cp, &lastchar, 0);
-      if (errno == ERANGE || *lastchar)
-      {
-         ret = DNX_ERR_SYNTAX;   // Invalid number
-         break;
-      }
-      ((DnxGuid *)xData)->objSerial = (unsigned long)unum;
-
-      // Decode objSlot
-      errno = 0;
-      unum = strtoul(ep, &lastchar, 0);
-      if (errno == ERANGE || *lastchar)
-      {
-         ret = DNX_ERR_SYNTAX;   // Invalid number
-         break;
-      }
-      ((DnxGuid *)xData)->objSlot = (unsigned long)unum;
-      break;
-   default:
-      ret = DNX_ERR_INVALID;
-   }
-
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-int dnxXmlClose(DnxXmlBuf *xbuf)
-{
-   // Validate parameters
-   if (!xbuf || xbuf->size < 0)
-      return DNX_ERR_INVALID;
-
-   if (xbuf->size > DNX_MAX_MSG)
-      return DNX_ERR_CAPACITY;
-
-   // Append final message container tag
-   strcat(xbuf->buf, "</dnxMessage>");
-   xbuf->size = strlen(xbuf->buf);
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-int dnxXmlToString (DnxXmlType xType, void *xData, char *buf, int size)
-{
-   int ret = DNX_OK;
-
-   // Validate parameters
-   if (!xData || !buf || size < 1)
-      return DNX_ERR_INVALID;
-
-   *buf = '\0';   // Initialize user buffer
-
-   switch (xType)
-   {
-   case DNX_XML_SHORT:
-      snprintf(buf, size, "%hd", *((short *)xData));
-      break;
-   case DNX_XML_USHORT:
-      snprintf(buf, size, "%hu", *((unsigned short *)xData));
-      break;
-   case DNX_XML_INT:
-      snprintf(buf, size, "%d", *((int *)xData));
-      break;
-   case DNX_XML_UINT:
-      snprintf(buf, size, "%u", *((unsigned int *)xData));
-      break;
-   case DNX_XML_LONG:
-      snprintf(buf, size, "%ld", *((long *)xData));
-      break;
-   case DNX_XML_ULONG:
-      snprintf(buf, size, "%lu", *((unsigned long *)xData));
-      break;
-   case DNX_XML_STR:
-      strncpy(buf, (char *)xData, size);
-      buf[size-1] = '\0';
-      break;
-   case DNX_XML_GUID:
-      snprintf(buf, size, "%u-%lu-%lu", ((DnxGuid *)xData)->objType, ((DnxGuid *)xData)->objSerial, ((DnxGuid *)xData)->objSlot);
-      break;
-   default:
-      ret = DNX_ERR_INVALID;
-   }
-
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-int dnxXmlGetTagValue (DnxXmlBuf *xbuf, char *xTag, DnxXmlType xType, char *buf, int size)
-{
-   char *cp, *ep, *value;
+   char * cp, * ep, * value;
    int len;
    int ret = DNX_OK;
 
@@ -319,7 +209,8 @@ int dnxXmlGetTagValue (DnxXmlBuf *xbuf, char *xTag, DnxXmlType xType, char *buf,
 
       value = cp = ep + 1; // Beginning of tag-value
 
-end_tag:
+end_tag:;
+
       // Find opening bracket of end-tag
       if ((ep = strchr(cp, '<')) == NULL)
       {
@@ -356,17 +247,194 @@ end_tag:
 
       break;   // Success
    }
-
    return ret;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxMakeGuid (DnxGuid *pGuid, DnxObjType xType, unsigned long xSerial, unsigned long xSlot)
+/** Return the C data typed value associated with a specified tag.
+ * 
+ * @param[in] xbuf - the dnx xml buffer from which to extract a value.
+ * @param[in] xTag - the tag for which to search in @p xbuf.
+ * @param[in] xType - the C data type of the specified tag.
+ * @param[out] xData - the address of storage for the returned C data value.
+ *    Note that @p xData must be large enough to hold an element of the 
+ *    specified C data type. In the case of a string, xData actually 
+ *    accepts a char pointer, not character data of a specified length.
+ *    Note also that the caller is responsible for freeing the memory 
+ *    returned if @p xType is DNX_XML_STR.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
 {
-   // Validate parameters
-   if (!pGuid || xType < 0 || xType >= DNX_OBJ_MAX)
-      return DNX_ERR_INVALID;
+   char buf[DNX_MAX_MSG];
+   char * cp, * ep, * lastchar;
+   unsigned long unum;
+   long num;
+   int ret = DNX_OK;
+
+   // Extract the value of the specified tag from the XML buffer
+   buf[0] = '\0';
+   if ((ret = dnxXmlGetTagValue(xbuf, xTag, xType, buf, sizeof(buf))) != DNX_OK)
+      return ret;
+
+   // Convert tag value into target binary type
+   switch (xType)
+   {
+      case DNX_XML_SHORT:
+         errno = 0;
+         num = strtol(buf, &lastchar, 0);
+         if (errno == ERANGE || *lastchar)
+            ret = DNX_ERR_SYNTAX;
+         else
+            *((short *)xData) = (short)num;
+         break;
+
+      case DNX_XML_USHORT:
+         errno = 0;
+         unum = strtoul(buf, &lastchar, 0);
+         if (errno == ERANGE || *lastchar)
+            ret = DNX_ERR_SYNTAX;
+         else
+            *((unsigned short *)xData) = (unsigned short)unum;
+         break;
+
+      case DNX_XML_INT:
+         errno = 0;
+         num = strtol(buf, &lastchar, 0);
+         if (errno == ERANGE || *lastchar)
+            ret = DNX_ERR_SYNTAX;
+         else
+            *((int *)xData) = (int)num;
+         break;
+
+      case DNX_XML_UINT:
+         errno = 0;
+         unum = strtoul(buf, &lastchar, 0);
+         if (errno == ERANGE || *lastchar)
+            ret = DNX_ERR_SYNTAX;
+         else
+            *((unsigned int *)xData) = (unsigned int)unum;
+         break;
+
+      case DNX_XML_LONG:
+         errno = 0;
+         num = strtol(buf, &lastchar, 0);
+         if (errno == ERANGE || *lastchar)
+            ret = DNX_ERR_SYNTAX;
+         else
+            *((long *)xData) = (long)num;
+         break;
+
+      case DNX_XML_ULONG:
+         errno = 0;
+         unum = strtoul(buf, &lastchar, 0);
+         if (errno == ERANGE || *lastchar)
+            ret = DNX_ERR_SYNTAX;
+         else
+            *((unsigned long *)xData) = (unsigned long)unum;
+         break;
+
+      case DNX_XML_STR:
+         if ((*((char **)xData) = strdup(buf)) == NULL)
+         {
+            dnxSyslog(LOG_ERR, "dnxXmlGet: DNX_XML_STR: Out of Memory");
+            ret = DNX_ERR_MEMORY;
+         }
+         break;
+
+      case DNX_XML_GUID:
+         // The format of a GUID is: "objType-objSerial-objSlot",
+         // where objType, objSerial and objSlot are unsigned integers
+         if ((cp = strchr(buf, '-')) == NULL)
+         {
+            ret = DNX_ERR_SYNTAX;   // Missing GUID separator
+            break;
+         }
+         *cp++ = '\0';  // Now buf points to objType and cp points to objSerial
+   
+         if ((ep = strchr(cp, '-')) == NULL)
+         {
+            ret = DNX_ERR_SYNTAX;   // Missing GUID separator
+            break;
+         }
+         *ep++ = '\0';  // Now ep points to objSlot
+   
+         // Decode objType
+         errno = 0;
+         unum = strtoul(buf, &lastchar, 0);
+         if (errno == ERANGE || *lastchar)
+         {
+            ret = DNX_ERR_SYNTAX;   // Invalid number
+            break;
+         }
+         ((DnxGuid *)xData)->objType = (DnxObjType)unum;
+   
+         // Decode objSerial
+         errno = 0;
+         unum = strtoul(cp, &lastchar, 0);
+         if (errno == ERANGE || *lastchar)
+         {
+            ret = DNX_ERR_SYNTAX;   // Invalid number
+            break;
+         }
+         ((DnxGuid *)xData)->objSerial = (unsigned long)unum;
+   
+         // Decode objSlot
+         errno = 0;
+         unum = strtoul(ep, &lastchar, 0);
+         if (errno == ERANGE || *lastchar)
+         {
+            ret = DNX_ERR_SYNTAX;   // Invalid number
+            break;
+         }
+         ((DnxGuid *)xData)->objSlot = (unsigned long)unum;
+         break;
+
+      default:
+         ret = DNX_ERR_INVALID;
+   }
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Validate and close a dnx xml buffer.
+ * 
+ * @param[in,out] xbuf - the buffer to be validated and closed.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxXmlClose(DnxXmlBuf * xbuf)
+{
+   assert(xbuf && xbuf->size >= 0);
+
+   if (xbuf->size > DNX_MAX_MSG)
+      return DNX_ERR_CAPACITY;
+
+   // Append final message container tag
+   strcat(xbuf->buf, "</dnxMessage>");
+   xbuf->size = strlen(xbuf->buf);
+
+   return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** Create a transaction id (XID) from a type, serial number and slot value.
+ * 
+ * @param[out] pGuid - the address of storage for the XID to be returned.
+ * @param[in] xType - the request type to be stored in the XID.
+ * @param[in] xSerial - the serial number to be stored in the XID.
+ * @param[in] xSlot - the slot number to be stored in the XID.
+ * 
+ * @return Always returns zero.
+ */
+int dnxMakeGuid(DnxGuid * pGuid, DnxObjType xType, unsigned long xSerial, 
+      unsigned long xSlot)
+{
+   assert(pGuid && xType >= 0 && xType < DNX_OBJ_MAX)
 
    // Set the object type
    pGuid->objType   = xType;

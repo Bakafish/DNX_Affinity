@@ -44,12 +44,19 @@
 #include <pthread.h>
 #include <syslog.h>
 #include <errno.h>
+#include <assert.h>
 
 static pthread_mutex_t udpMutex;
 
+/** @todo Use GNU reentrant resolver extensions on platforms where available. */
+
 //----------------------------------------------------------------------------
 
-int dnxUdpInit (void)
+/** Initialize the UDP channel sub-system.
+ * 
+ * @return Always returns zero.
+ */
+int dnxUdpInit(void)
 {
    // Create protective mutex for non-reentrant functions (gethostbyname)
    DNX_PT_MUTEX_INIT(&udpMutex);
@@ -59,7 +66,11 @@ int dnxUdpInit (void)
 
 //----------------------------------------------------------------------------
 
-int dnxUdpDeInit (void)
+/** Clean up global resources allocated by the UDP channel sub-system.
+ * 
+ * @return Always returns zero.
+ */
+int dnxUdpDeInit(void)
 {
    // Destroy the mutex
    DNX_PT_MUTEX_DESTROY(&udpMutex);
@@ -69,10 +80,17 @@ int dnxUdpDeInit (void)
 
 //----------------------------------------------------------------------------
 
-int dnxUdpNew (dnxChannel **channel, char *url)
+/** Create a new UDP channel.
+ * 
+ * @param[out] channel - the address of storage for returning the new channel.
+ * @param[in] url - the URL bind address to associate with the new channel.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxUdpNew(dnxChannel ** channel, char * url)
 {
-   char tmpUrl[DNX_MAX_URL+1];
-   char *cp, *ep, *lastchar;
+   char tmpUrl[DNX_MAX_URL + 1];
+   char * cp, * ep, * lastchar;
    long port;
 
    // Validate parameters
@@ -133,11 +151,15 @@ int dnxUdpNew (dnxChannel **channel, char *url)
 
 //----------------------------------------------------------------------------
 
-int dnxUdpDelete (dnxChannel *channel)
+/** Delete a UDP channel.
+ * 
+ * @param[in] channel - the channel to be closed.
+ * 
+ * @return Always returns zero.
+ */
+int dnxUdpDelete(dnxChannel * channel)
 {
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_UDP)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_UDP);
 
    // Make sure this channel is closed
    if (channel->state == DNX_CHAN_OPEN)
@@ -155,15 +177,22 @@ int dnxUdpDelete (dnxChannel *channel)
 
 //----------------------------------------------------------------------------
 
-int dnxUdpOpen (dnxChannel *channel, dnxChanMode mode)   // 0=Passive, 1=Active
+/** Open a UDP channel.
+ * 
+ * Possible modes are active (1) or passive (0). 
+ * 
+ * @param[in] channel - the channel to be opened.
+ * @param[in] mode - the mode in which @p channel should be opened.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxUdpOpen(dnxChannel * channel, dnxChanMode mode)   // 0=Passive, 1=Active
 {
-   struct hostent *he;
+   struct hostent * he;
    struct sockaddr_in inaddr;
    int sd;
 
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_UDP || channel->port < 1)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_UDP && channel->port > 0);
 
    // Make sure this channel isn't already open
    if (channel->state != DNX_CHAN_CLOSED)
@@ -240,11 +269,15 @@ int dnxUdpOpen (dnxChannel *channel, dnxChanMode mode)   // 0=Passive, 1=Active
 
 //----------------------------------------------------------------------------
 
-int dnxUdpClose (dnxChannel *channel)
+/** Close a UDP channel.
+ * 
+ * @param[in] channel - the channel to be closed.
+ * 
+ * @return Always returns zero.
+ */
+int dnxUdpClose(dnxChannel * channel)
 {
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_UDP)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_UDP);
 
    // Make sure this channel isn't already closed
    if (channel->state != DNX_CHAN_OPEN)
@@ -265,7 +298,22 @@ int dnxUdpClose (dnxChannel *channel)
 
 //----------------------------------------------------------------------------
 
-int dnxUdpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *src)
+/** Read data from a UDP channel.
+ * 
+ * @param[in] channel - the channel from which to read data.
+ * @param[out] buf - the address of storage into which data should be read.
+ * @param[in,out] size - on entry, the maximum number of bytes that may be 
+ *    read into @p buf; on exit, returns the number of bytes stored in @p buf.
+ * @param[in] timeout - the maximum number of seconds we're willing to wait
+ *    for data to become available on @p channel without returning a timeout
+ *    error.
+ * @param[out] src - the address of storage for the sender's address if 
+ *    desired. This parameter is optional, and may be passed as NULL.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxUdpRead(dnxChannel * channel, char * buf, int * size, 
+      int timeout, char * src)
 {
    struct sockaddr_in src_addr;
    socklen_t slen;
@@ -273,9 +321,7 @@ int dnxUdpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *sr
    fd_set fd_rds;
    struct timeval tv;
 
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_UDP || !buf || !size || *size < 1)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_UDP && buf && size && *size > 0);
 
    // Make sure this channel is open
    if (channel->state != DNX_CHAN_OPEN)
@@ -318,16 +364,31 @@ int dnxUdpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *sr
 
 //----------------------------------------------------------------------------
 
-int dnxUdpWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst)
+/** Write data to a UDP channel.
+ * 
+ * @param[in] channel - the channel on which to write data from @p buf.
+ * @param[in] buf - a pointer to the data to be written.
+ * @param[in] size - the number of bytes to be written on @p channel.
+ * @param[in] timeout - the maximum number of seconds to wait for the write
+ *    operation to complete without returning a timeout error.
+ * @param[in] dst - the address to which the data in @p buf should be sent
+ *    using this channel. This parameter is ignored for virtual connection
+ *    based channels. This parameter is optional and may be passed as NULL. 
+ *
+ * @return Zero on success, or a non-zero error value.
+ * 
+ * @note If this is a stream oriented channel, or if NULL is passed for 
+ * the @p dst parameter, The channel destination address is used.
+ */
+int dnxUdpWrite(dnxChannel * channel, char * buf, int size, 
+      int timeout, char * dst)
 {
    struct sockaddr_in dst_addr;
    fd_set fd_wrs;
    struct timeval tv;
    int ret, nsd;
 
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_UDP || !buf)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_UDP && buf);
 
    // Validate that the message size is within bounds
    if (size < 1 || size > DNX_MAX_MSG)

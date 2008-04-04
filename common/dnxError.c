@@ -33,50 +33,63 @@
 
 static dnxError gLastError = DNX_OK;      // Last known error code
 
-#if 0
-static char gLastErrStr[MAX_ERR_STR+1];      // Last error message
-#endif
-
-static char * gErrCatalog[] = 
-{
-   "A-OK, Okey-Dokey, Rock-On",
-   "Invalid arguments or parameters",
-   "Resource is exhausted",
-   "Invalid or malformed URL",
-   "Resource is already initialized/deinitialized",
-   "Resource already exists",
-   "Unsupported protocol",
-   "Out of memory",
-   "Channel open error",
-   "Message size is out of bounds",
-   "Message transmission failure",
-   "Message reception failure",
-   "Invalid communications address",
-   "Requested resource was not found",
-   "Incorrect or invalid XML message"
-};
-
-/** @todo Create mechanism for preserving error stack details. */
+/** @todo Create a mechanism for preserving error stack details. */
 
 //----------------------------------------------------------------------------
 
-dnxError dnxGetLastError (void)
+/** Return the last error code stored in the global dnx error variable.
+ *
+ * @return The last error value stored.
+ */
+dnxError dnxGetLastError(void)
 {
    return gLastError;
 }
 
 //----------------------------------------------------------------------------
 
-void dnxSetLastError (dnxError errno)
+/** Set the global dnx error variable to some dnx error value.
+ *
+ * @param[in] errno - the value to be set.
+ */
+void dnxSetLastError(dnxError errno)
 {
    gLastError = errno;
 }
 
 //----------------------------------------------------------------------------
 
-char *dnxErrorString (dnxError errno)
+/** Return an error string that matches a specified dnx error code.
+ * 
+ * @param[in] errno - the error code for which a string representation is 
+ *    desired.
+ *
+ * @return A pointer to a statically allocated string representation of the
+ * error code specified in @p errno.
+ */
+char * dnxErrorString(dnxError errno)
 {
-   return (char *)((errno < 0 || errno > DNX_ERR_LASTERROR) ? "Unknown error code" : gErrCatalog[errno]);
+   static char * gErrCatalog[] = 
+   {
+      "A-OK, Okey-Dokey, Rock-On",
+      "Invalid arguments or parameters",
+      "Resource is exhausted",
+      "Invalid or malformed URL",
+      "Resource is already initialized/deinitialized",
+      "Resource already exists",
+      "Unsupported protocol",
+      "Out of memory",
+      "Channel open error",
+      "Message size is out of bounds",
+      "Message transmission failure",
+      "Message reception failure",
+      "Invalid communications address",
+      "Requested resource was not found",
+      "Incorrect or invalid XML message"
+   };
+
+   return (char *)((errno < 0 || errno > DNX_ERR_LASTERROR) ? 
+         "Unknown error code" : gErrCatalog[errno]);
 }
 
 /*--------------------------------------------------------------------------*/

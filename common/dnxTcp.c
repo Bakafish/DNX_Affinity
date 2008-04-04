@@ -44,12 +44,19 @@
 #include <pthread.h>
 #include <syslog.h>
 #include <errno.h>
+#include <assert.h>
 
 static pthread_mutex_t tcpMutex;
 
+/** @todo Use GNU reentrant resolver interface on platforms where available. */
+
 //----------------------------------------------------------------------------
 
-int dnxTcpInit (void)
+/** Initialize the TCP channel sub-system.
+ * 
+ * @return Always returns zero.
+ */
+int dnxTcpInit(void)
 {
    // Create protective mutex for non-reentrant functions (gethostbyname)
    DNX_PT_MUTEX_INIT(&tcpMutex);
@@ -59,7 +66,11 @@ int dnxTcpInit (void)
 
 //----------------------------------------------------------------------------
 
-int dnxTcpDeInit (void)
+/** Clean up global resources allocated by the TCP channel sub-system.
+ * 
+ * @return Always returns zero.
+ */
+int dnxTcpDeInit(void)
 {
    // Destroy the mutex
    DNX_PT_MUTEX_DESTROY(&tcpMutex);
@@ -69,10 +80,17 @@ int dnxTcpDeInit (void)
 
 //----------------------------------------------------------------------------
 
-int dnxTcpNew (dnxChannel **channel, char *url)
+/** Create a new TCP channel.
+ * 
+ * @param[out] channel - the address of storage for returning the new channel.
+ * @param[in] url - the URL bind address to associate with the new channel.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxTcpNew(dnxChannel ** channel, char * url)
 {
-   char tmpUrl[DNX_MAX_URL+1];
-   char *cp, *ep, *lastchar;
+   char tmpUrl[DNX_MAX_URL + 1];
+   char * cp, * ep, * lastchar;
    long port;
 
    // Validate parameters
@@ -97,7 +115,8 @@ int dnxTcpNew (dnxChannel **channel, char *url)
 
    // Get the port number
    errno = 0;
-   if ((port = strtol(ep, &lastchar, 0)) < 1 || port > 65535 || (*lastchar && *lastchar != '/'))
+   if ((port = strtol(ep, &lastchar, 0)) < 1 || port > 65535 
+         || (*lastchar && *lastchar != '/'))
       return DNX_ERR_BADURL;
 
    // Allocate a new channel structure
@@ -133,11 +152,15 @@ int dnxTcpNew (dnxChannel **channel, char *url)
 
 //----------------------------------------------------------------------------
 
-int dnxTcpDelete (dnxChannel *channel)
+/** Delete a TCP channel.
+ * 
+ * @param[in] channel - the channel to be closed.
+ * 
+ * @return Always returns zero.
+ */
+int dnxTcpDelete(dnxChannel * channel)
 {
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_TCP)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_TCP);
 
    // Make sure this channel is closed
    if (channel->state == DNX_CHAN_OPEN)
@@ -155,15 +178,22 @@ int dnxTcpDelete (dnxChannel *channel)
 
 //----------------------------------------------------------------------------
 
-int dnxTcpOpen (dnxChannel *channel, dnxChanMode mode)   // 0=Passive, 1=Active
+/** Open a TCP channel.
+ * 
+ * Possible modes are active (1) or passive (0). 
+ * 
+ * @param[in] channel - the channel to be opened.
+ * @param[in] mode - the mode in which @p channel should be opened.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxTcpOpen(dnxChannel * channel, dnxChanMode mode)   // 0=Passive, 1=Active
 {
-   struct hostent *he;
+   struct hostent * he;
    struct sockaddr_in inaddr;
    int sd;
 
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_TCP || channel->port < 1)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_TCP && channel->port > 0);
 
    // Make sure this channel isn't already open
    if (channel->state != DNX_CHAN_CLOSED)
@@ -175,7 +205,9 @@ int dnxTcpOpen (dnxChannel *channel, dnxChanMode mode)   // 0=Passive, 1=Active
    inaddr.sin_port = htons(inaddr.sin_port);
 
    // See if we are listening on any address
-   if (!strcmp(channel->host, "INADDR_ANY") || !strcmp(channel->host, "0.0.0.0") || !strcmp(channel->host, "0"))
+   if (!strcmp(channel->host, "INADDR_ANY") 
+         || !strcmp(channel->host, "0.0.0.0") 
+         || !strcmp(channel->host, "0"))
    {
       // Make sure that the request is passive
       if (mode != DNX_CHAN_PASSIVE)
@@ -185,7 +217,6 @@ int dnxTcpOpen (dnxChannel *channel, dnxChanMode mode)   // 0=Passive, 1=Active
    }
    else  // Resolve destination address
    {
-      // Acquire the lock
       DNX_PT_MUTEX_LOCK(&tcpMutex);
 
       // Try to resolve this address
@@ -196,7 +227,6 @@ int dnxTcpOpen (dnxChannel *channel, dnxChanMode mode)   // 0=Passive, 1=Active
       }
       memcpy(&(inaddr.sin_addr.s_addr), he->h_addr_list[0], he->h_length);
 
-      // Release the lock
       DNX_PT_MUTEX_UNLOCK(&tcpMutex);
    }
 
@@ -236,11 +266,15 @@ int dnxTcpOpen (dnxChannel *channel, dnxChanMode mode)   // 0=Passive, 1=Active
 
 //----------------------------------------------------------------------------
 
-int dnxTcpClose (dnxChannel *channel)
+/** Close a TCP channel.
+ * 
+ * @param[in] channel - the channel to be closed.
+ * 
+ * @return Always returns zero.
+ */
+int dnxTcpClose(dnxChannel * channel)
 {
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_TCP)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_TCP);
 
    // Make sure this channel isn't already closed
    if (channel->state != DNX_CHAN_OPEN)
@@ -261,7 +295,22 @@ int dnxTcpClose (dnxChannel *channel)
 
 //----------------------------------------------------------------------------
 
-int dnxTcpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *src)
+/** Read data from a TCP channel.
+ * 
+ * @param[in] channel - the channel from which to read data.
+ * @param[out] buf - the address of storage into which data should be read.
+ * @param[in,out] size - on entry, the maximum number of bytes that may be 
+ *    read into @p buf; on exit, returns the number of bytes stored in @p buf.
+ * @param[in] timeout - the maximum number of seconds we're willing to wait
+ *    for data to become available on @p channel without returning a timeout
+ *    error.
+ * @param[out] src - the address of storage for the sender's address if 
+ *    desired. This parameter is optional, and may be passed as NULL.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxTcpRead(dnxChannel * channel, char * buf, int * size, 
+      int timeout, char * src)
 {
    struct sockaddr_in src_addr;
    socklen_t slen;
@@ -271,9 +320,7 @@ int dnxTcpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *sr
    struct timeval tv;
    int nsd;
 
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_TCP || !buf || *size < 1)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_TCP && buf && size && *size > 0);
 
    // Make sure this channel is open
    if (channel->state != DNX_CHAN_OPEN)
@@ -329,22 +376,36 @@ int dnxTcpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *sr
       else
          *src = 0;   // Set zero-byte to indicate no source address avavilable
    }
-
    return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxTcpWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst)
+/** Write data to a TCP channel.
+ * 
+ * @param[in] channel - the channel on which to write data from @p buf.
+ * @param[in] buf - a pointer to the data to be written.
+ * @param[in] size - the number of bytes to be written on @p channel.
+ * @param[in] timeout - the maximum number of seconds to wait for the write
+ *    operation to complete without returning a timeout error.
+ * @param[in] dst - the address to which the data in @p buf should be sent
+ *    using this channel. This parameter is ignored for virtual connection
+ *    based channels. This parameter is optional and may be passed as NULL. 
+ *
+ * @return Zero on success, or a non-zero error value.
+ * 
+ * @note If this is a stream oriented channel, or if NULL is passed for 
+ * the @p dst parameter, The channel destination address is used.
+ */
+int dnxTcpWrite(dnxChannel * channel, char * buf, int size, 
+      int timeout, char * dst)
 {
    fd_set fd_wrs;
    struct timeval tv;
    int nsd;
    unsigned short mlen;
 
-   // Validate parameters
-   if (!channel || channel->type != DNX_CHAN_TCP || !buf)
-      return DNX_ERR_INVALID;
+   assert(channel && channel->type == DNX_CHAN_TCP && buf);
 
    // Validate that the message size is within bounds
    if (size < 1 || size > DNX_MAX_MSG)
