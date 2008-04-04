@@ -44,8 +44,8 @@ typedef void DnxRegistrar;
 
 int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode);
 
-int dnxRegistrarCreate(long * debug, dnxChannel * dchannel, 
-      DnxQueue * rqueue, DnxRegistrar ** preg);
+int dnxRegistrarCreate(long * debug, int queuesz, 
+      DnxChannel * dispchan, DnxRegistrar ** preg);
 void dnxRegistrarDestroy(DnxRegistrar * reg);
 
 #endif   /* _DNXREGISTRAR_H_ */

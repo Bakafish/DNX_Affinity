@@ -100,9 +100,6 @@ typedef struct _DnxGlobalData_
 
    DnxJobList * JobList;   // Master Job List
 
-   pthread_cond_t tcReq;   // Request Queue condition variable
-   pthread_mutex_t tmReq;  // Request Queue mutex
-   DnxQueue * qReq;        // Registered Worker Node Requests
    DnxRegistrar * reg;     // The client node registrar.
 
    pthread_t tDispatcher;  // Dispatcher thread ID

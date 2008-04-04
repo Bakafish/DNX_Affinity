@@ -51,10 +51,10 @@
 /** The internal registrar structure. */
 typedef struct iDnxRegistrar_
 {
-   long * debug;           /*!< A pointer to the global debug level. */
    DnxChannel * dispchan;  /*!< The dispatch communications channel. */
    DnxQueue * rqueue;      /*!< The registered worker node requests queue. */
    pthread_t tid;          /*!< The registrar thread id. */
+   long * debug;           /*!< A pointer to the global debug level. */
 } iDnxRegistrar;
 
 //----------------------------------------------------------------------------
@@ -338,28 +338,33 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 /** Create a new registrar object.
  * 
  * @param[in] debug - a pointer to the global debug level.
+ * @param[in] queuesz - the size of the queue to create in this registrar.
  * @param[in] dispchan - a pointer to the dispatcher channel.
- * @param[in] rqueue - a pointer to the request queue.
  * @param[out] preg - the address of storage in which to return the newly
  *    created registrar.
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxRegistrarCreate(long * debug, DnxChannel * dispchan, 
-      DnxQueue * rqueue, DnxRegistrar ** preg)
+int dnxRegistrarCreate(long * debug, int queuesz, 
+      DnxChannel * dispchan, DnxRegistrar ** preg)
 {
    iDnxRegistrar * ireg;
    int ret;
 
-   assert(debug && dispchan && rqueue && preg);
+   assert(debug && dispchan && preg);
 
    if ((ireg = (iDnxRegistrar *)malloc(sizeof *ireg)) == 0)
       return DNX_ERR_MEMORY;
 
    ireg->debug = debug;
    ireg->dispchan = dispchan;
-   ireg->rqueue = rqueue;
    ireg->tid = 0;
+
+   if ((ret = dnxQueueCreate(queuesz, &ireg->rqueue)) != 0)
+   {
+      free(ireg);
+      return ret;
+   }
 
    if ((ret = pthread_create(&ireg->tid, NULL, dnxRegistrar, ireg)) != 0)
    {
@@ -389,6 +394,9 @@ void dnxRegistrarDestroy(DnxRegistrar * reg)
 
    pthread_cancel(ireg->tid);
    pthread_join(ireg->tid, NULL);
+
+   dnxQueueDestroy(ireg->rqueue);
+
    free(ireg);
 }
 

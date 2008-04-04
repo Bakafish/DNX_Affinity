@@ -241,13 +241,8 @@ static int releaseThreads(void)
 static int releaseQueues(void)
 {
    // Remove the Job List
-   dnxJobListWhack(&(dnxGlobalData.JobList));
-   
-   // Remove the Worker Node Request Queue
-   dnxQueueDelete(dnxGlobalData.qReq);
-   DNX_PT_MUTEX_DESTROY(&dnxGlobalData.tmReq);
-   DNX_PT_COND_DESTROY(&dnxGlobalData.tcReq);
-   
+   dnxJobListWhack(&dnxGlobalData.JobList);
+
    return DNX_OK;
 }
 
@@ -366,15 +361,6 @@ static int initThreads(void)
       
    }
 
-   // Create the Registrar
-   if ((ret = dnxRegistrarCreate(&dnxGlobalData.debug, dnxGlobalData.pDispatch, 
-         dnxGlobalData.qReq, &dnxGlobalData.reg)) != DNX_OK)
-   {
-      dnxGlobalData.isActive = 0;   // Init failure
-      releaseThreads();    // Cancel prior threads
-      return ret;
-   }
-
    // Set the ShowStart flag
    dnxGlobalData.isGo = 1;
 
@@ -438,14 +424,10 @@ static int initQueues(void)
       return DNX_ERR_MEMORY;
    }
 
-   // Create the Worker Node Requests Queue (Worker Nodes wanting work)
-   DNX_PT_MUTEX_INIT(&dnxGlobalData.tmReq);
-   pthread_cond_init(&(dnxGlobalData.tcReq), NULL);
-   if ((ret = dnxQueueInit(&(dnxGlobalData.qReq), &(dnxGlobalData.tmReq), &(dnxGlobalData.tcReq), total_services)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "initQueues: Failed to init Request Queue: %d", ret);
+   // create the registrar
+   if ((ret = dnxRegistrarCreate(&dnxGlobalData.debug, total_services,
+         dnxGlobalData.pDispatch, &dnxGlobalData.reg)) != DNX_OK)
       return ret;
-   }
 
    return DNX_OK;
 }
