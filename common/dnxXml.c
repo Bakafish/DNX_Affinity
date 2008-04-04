@@ -47,6 +47,177 @@
                               IMPLEMENTATION
   --------------------------------------------------------------------------*/
 
+/** Escape the text within XML strings - compliant with W3C.
+ * 
+ * Routine donated by William Leibzon. Thanks William!
+ * 
+ * @param[out] outstr - escaped string is returned in this buffer.
+ * @param[in] instr - string to be escaped is passed in this buffer.
+ * @param[in] maxbuf - the maximum number of bytes in @p outstr on entry.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+static int dnxXmlEscapeStr(char * outstr, char * instr, int maxbuf)
+{
+   int i,op;
+   int ret = DNX_OK;
+   
+   for (i = 0, op = 0; i < strlen(instr) && i < maxbuf && ret == DNX_OK; i++) 
+   {
+      switch(instr[i]) 
+      {
+         case 38: // & -> &amp;
+            if (op + 5 < maxbuf) 
+            {
+               memcpy(outstr + op, "&amp;", 5);
+               op += 5;
+            }
+            else 
+               ret = DNX_ERR_CAPACITY;
+            break;
+         case 60: // < -> &lt;
+            if (op + 4 < maxbuf) 
+            {
+               memcpy(outstr + op, "&lt;", 4);
+               op += 4;
+            }
+            else 
+               ret = DNX_ERR_CAPACITY;
+            break;
+         case 62: // > -> &gt;
+            if (op + 4 < maxbuf) 
+            {
+               memcpy(outstr + op, "&gt;", 4);
+               op += 4;
+            }
+            else ret = DNX_ERR_CAPACITY;
+            break;
+         case 34: // " -> &quot;
+            if (op + 6 < maxbuf) 
+            {
+               memcpy(outstr + op, "&qout;", 6);
+               op += 6;
+            }
+            else 
+               ret = DNX_ERR_CAPACITY;
+            break;
+         case 39: // ' -> &apos;
+            if (op + 6 < maxbuf) 
+            {
+               memcpy(outstr + op, "&apos;", 6);
+               op += 6;
+            }
+            else 
+               ret = DNX_ERR_CAPACITY;
+            break;
+         default:
+            if (op + 1 < maxbuf) 
+            {
+               outstr[op] = instr[i];
+               op++;
+            }
+            else 
+               ret = DNX_ERR_CAPACITY;
+            break;
+      }
+   }
+   if (i >= maxbuf)
+      ret = DNX_ERR_CAPACITY;
+   if (ret != DNX_ERR_CAPACITY)
+      outstr[op] = 0;
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Un-Escape the text within XML strings - compliant with W3C.
+ * 
+ * Routine donated by William Leibzon. Thanks William!
+ * 
+ * @param[out] outstr - unescaped string is returned in this buffer.
+ * @param[in] instr - string to be unescaped is passed in this buffer.
+ * @param[in] maxbuf - the maximum number of bytes in @p outstr on entry.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+static int dnxXmlUnescapeStr(char * outstr, char * instr, int maxbuf)
+{
+   int i, op;
+   int ret = DNX_OK;
+   char * temp;
+   int tempnum;
+   
+   for (i = 0, op = 0; i < strlen(instr) && i < maxbuf && ret == DNX_OK; i++, op++) 
+   {
+      if (instr[i] == 38)
+      {  // &
+         if (strncmp(instr + i, "&amp;", 5) == 0)
+         {
+            outstr[op] = '&';
+            i += 4;
+         }
+         else if (strncmp(instr + i, "&lt;", 4) == 0)
+         {
+            outstr[op] = '<';
+            i += 3;
+         }
+         else if (strncmp(instr + i, "&gt;", 4) == 0)
+         {
+            outstr[op] = '>';
+            i+=3;
+         }
+         else if (strncmp(instr + i, "&qout;", 6) == 0)
+         {
+            outstr[op] = 34;
+            i+=5;
+         }
+         else if (strncmp(instr + i, "&apos;", 6) == 0)
+         {
+            outstr[op] = 39;
+            i+=5;
+         }
+         else if ((temp = memchr(instr + i, ';', maxbuf-i)) != 0)
+         {
+            if (instr[i+1] == '#') 
+            {  // Handle cases like &#39;
+               errno = 0;
+               tempnum = strtol(instr + i, 0, 0);
+               if (errno == ERANGE || tempnum < 0 || tempnum > 255) 
+               {
+                  ret = DNX_ERR_SYNTAX;
+                  dnxDebug(2, "dnxXmlUnescapeStr: invalid unescape #, "
+                              "instr=%s, i=%d, num=%d", instr, i, tempnum);
+               }
+               else
+                  outstr[op]=(int)tempnum;
+               i = temp-instr;
+            }
+            else 
+            {  // Unsupported XML escape sequence
+               ret = DNX_ERR_SYNTAX;
+               dnxDebug(2, "dnxXmlUnescapeStr: unsupported xml escape "
+                           "sequence, instr=%s, i=%d", instr, i);
+            }
+         }
+         else 
+         {  // This was not an escape sequence
+            ret = DNX_ERR_SYNTAX;
+            dnxDebug(2, "dnxXmlUnescapeStr: inappropriate escape "
+                        "sequence, instr=%s, i=%d", instr, i);
+         }
+      }
+      else 
+         outstr[op]=instr[i];
+   }
+   if (i >= maxbuf)
+      ret = DNX_ERR_CAPACITY;
+   if (ret != DNX_ERR_CAPACITY)
+      outstr[op] = 0;
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
 /** Convert an opaque pointer to C data into a dnx xml string format.
  * 
  * @param[in] xType - the C data type to be converted to an xml string.
@@ -91,9 +262,15 @@ static int dnxXmlToString(DnxXmlType xType, void * xData, char * buf, int size)
          snprintf(buf, size, "%lu", *((unsigned long *)xData));
          break;
 
-      case DNX_XML_STR:
+      case DNX_XML_STR_UNESCAPED:
          assert(strlen((char *)xData) < size);
          strncpy(buf, (char *)xData, size);
+         buf[size - 1] = 0;
+         break;
+
+      case DNX_XML_STR:
+         assert(strlen((char *)xData) < size);
+         ret = dnxXmlEscapeStr(buf, (char *)xData, size);
          buf[size - 1] = 0;
          break;
 
@@ -274,6 +451,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
    unsigned long unum;
    long num;
    int ret = DNX_OK;
+   char * temp;
 
    // extract the value of the specified tag from the XML buffer
    if ((ret = dnxXmlGetTagValue(xbuf, xTag, xType, buf, sizeof buf)) != DNX_OK)
@@ -336,9 +514,19 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
             *(unsigned long *)xData = (unsigned long)unum;
          break;
 
-      case DNX_XML_STR:
-         if ((*(char **)xData = xstrdup(buf)) == 0)
+      case DNX_XML_STR_UNESCAPED:
+         if ((*((char **)xData) = xstrdup(buf)) == 0)
             ret = DNX_ERR_MEMORY;
+         break;
+
+      case DNX_XML_STR:
+         if ((temp = strdup(buf)) == 0)
+            ret = DNX_ERR_MEMORY;
+         else
+         {
+            ret = dnxXmlUnescapeStr(temp, buf, sizeof buf);
+            *(char **)xData = temp;
+         }
          break;
 
       case DNX_XML_XID:

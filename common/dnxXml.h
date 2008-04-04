@@ -39,8 +39,9 @@ typedef enum DnxXmlType
    DNX_XML_UINT,
    DNX_XML_LONG,
    DNX_XML_ULONG,
-   DNX_XML_STR,
-   DNX_XML_XID
+   DNX_XML_STR_UNESCAPED,
+   DNX_XML_XID,
+   DNX_XML_STR
 } DnxXmlType;
 
 typedef struct DnxXmlBuf
