@@ -1,34 +1,18 @@
-DNX TODO's (Updated 11-01-2007)
+DNX TODO's (Updated 08-16-2007)
 -------------------------------
 
  1. Protect dnxClient from SIG alarms from plugins
  2. Make it portable to all forms of *NIX that Nagios runs on
- 3. Drop privileges for dnxClient from root to user.
- 4. Enhance localCheckPattern to multiple 3-tuples for {host,service,command}
- 5. Extend the dnxClient API (restart, statistics, etc)
- 6. DNX adds data to check_* output indicating DNX failure information.
-    a. dnxClient adds to failed output.
-    b. dnxServer adds to failed jobs output.
- 7. Implement the authorized worker node lock down
-    a. Add ssl encryption to dnx channels.
-    b. No unauthorized node can connect.
- 8. Implement debugging levels in the client
- 9. Perfect "in-client" checks using libraries (check_nrpe, check_icmp, check_snmp, check_nt, etc)
-10. Optimize DNX Client response to increasing thread count by having each thread
+ 3. Extend the dnxClient API (restart, statistics, etc)
+ 4. Implement the authorized worker node lock down
+ 5. Implement debugging levels in the client
+ 6. Perfect "in-client" checks using libraries (check_nrpe, check_icmp, check_snmp, check_nt, etc)
+ 7. Optimize DNX Client response to increasing thread count by having each thread
     check to see if all threads are busy (upon receive a new job to execute.)
     If all threads are busy, then signal the WLM to wake-up early.
-11. Change GUID to XID
-12. Change URL schemes to dnx+tcp/udp/msgq
-13. Get unit tests working under autotools. Integrate for "make check".
-14. Verify clean node shutdown.
-15. Verify local execute regex functionality.
-16. Add "compiled with" to --version for dnxClient.
-17. Add statics support to dnxClient/Server
-
-35. Write documentation
-
-49. RPM spec file (SLES)
-50. Binary packages for SLES 9/10, etc.
+ 8. Make dnxClient run as the nagios user
+ 9. Change GUID to XID
+10. Change URL schemes to dnx+tcp/udp/msgq
 
 99. Testing, Testing, and more Testing.
 

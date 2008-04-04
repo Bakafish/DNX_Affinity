@@ -1,29 +1,27 @@
-/*--------------------------------------------------------------------------
- 
-   Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
- 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as 
-   published by the Free Software Foundation.
- 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
-  --------------------------------------------------------------------------*/
-
-/** Structure and prototypes for DNX messaging protocol.
- *
- * @file dnxProtocol.h
- * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
- * @attention Please submit patches to http://dnx.sourceforge.net
- * @ingroup DNX
- */
+//	dnxProtocol.h
+//
+//	Structure and prototypes for DNX messaging protocol.
+//
+//	Copyright (c) 2006-2007 Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+//
+//	First Written:   2006-06-19
+//	Last Modified:   2007-02-08
+//
+//	License:
+//
+//	This program is free software; you can redistribute it and/or modify
+//	it under the terms of the GNU General Public License version 2 as
+//	published by the Free Software Foundation.
+//
+//	This program is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//	GNU General Public License for more details.
+//
+//	You should have received a copy of the GNU General Public License
+//	along with this program; if not, write to the Free Software
+//	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+//
 
 #ifndef _DNXPROTOCOL_H_
 #define _DNXPROTOCOL_H_
@@ -32,6 +30,11 @@
 
 // Obtain definition of dnxChannel
 #include "dnxChannel.h"
+
+
+//
+//	Constants
+//
 
 typedef enum _DnxObjType_ {
 	DNX_OBJ_SCHEDULER = 0,
@@ -49,6 +52,11 @@ typedef enum _DnxReqType_ { DNX_REQ_REGISTER = 0, DNX_REQ_DEREGISTER, DNX_REQ_AC
 typedef enum _DnxJobState_ { DNX_JOB_NULL = 0, DNX_JOB_PENDING, DNX_JOB_INPROGRESS, DNX_JOB_COMPLETE, DNX_JOB_EXPIRED } DnxJobState;
 
 #define DNX_MAX_ADDRESS	64
+
+
+//
+//	Structures
+//
 
 typedef struct _DnxGuid_ {
 	DnxObjType    objType;
@@ -96,6 +104,16 @@ typedef struct _DnxMgmtReply_ {
 	char address[DNX_MAX_ADDRESS];	// Source address
 } DnxMgmtReply;
 
+
+//
+//	Globals
+//
+
+
+//
+//	Prototypes
+//
+
 int dnxRegister (dnxChannel *channel, DnxNodeRequest *pReg, char *address);
 int dnxDeRegister (dnxChannel *channel, DnxNodeRequest *pReg, char *address);
 int dnxWaitForNodeRequest (dnxChannel *channel, DnxNodeRequest *pReg, char *address, int timeout);
@@ -106,5 +124,4 @@ int dnxGetResult (dnxChannel *channel, DnxResult *pResult, char *address, int ti
 int dnxPutResult (dnxChannel *channel, DnxResult *pResult, char *address);
 int dnxGetMgmtRequest (dnxChannel *channel, DnxMgmtRequest *pRequest, char *address, int timeout);
 
-#endif   /* _DNXPROTOCOL_H_ */
-
+#endif

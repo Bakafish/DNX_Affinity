@@ -1,29 +1,27 @@
-/*--------------------------------------------------------------------------
- 
-   Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
- 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as 
-   published by the Free Software Foundation.
- 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
-  --------------------------------------------------------------------------*/
-
-/** Parses DNX Worker Node config file.
- *
- * @file dnxConfig.c
- * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
- * @attention Please submit patches to http://dnx.sourceforge.net
- * @ingroup DNX
- */
+//	dnxConfig.c
+//
+//	Parses DNX Worker Node config file.
+//
+//	Copyright (c) 2006-2007 Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+//
+//	First Written:   2006-06-19
+//	Last Modified:   2007-02-26
+//
+//	License:
+//
+//	This program is free software; you can redistribute it and/or modify
+//	it under the terms of the GNU General Public License version 2 as
+//	published by the Free Software Foundation.
+//
+//	This program is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//	GNU General Public License for more details.
+//
+//	You should have received a copy of the GNU General Public License
+//	along with this program; if not, write to the Free Software
+//	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+//
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +33,17 @@
 #include "dnxConfig.h"
 #include "dnxClientMain.h"
 
+
+//
+//	Constants
+//
+
 #define DNX_MAX_CFG_LINE	2048
+
+
+//
+//	Structures
+//
 
 typedef enum _DnxVarType_ { DNX_VAR_ERR = 0, DNX_VAR_STR, DNX_VAR_INT, DNX_VAR_DBL } DnxVarType;
 
@@ -44,6 +52,11 @@ typedef struct _DnxVarMap_ {
 	DnxVarType varType;
 	void *varStorage;
 } DnxVarMap;
+
+
+//
+//	Globals
+//
 
 extern DnxGlobalData dnxGlobalData;
 
@@ -66,6 +79,11 @@ static DnxVarMap DnxVarDictionary[] = {
 { "debug",                DNX_VAR_INT, NULL },
 { NULL, DNX_VAR_ERR, NULL }
 };
+
+
+//
+//	Prototypes
+//
 
 void displayGlobals (char *title);
 int parseLine (char *szFile, int lineNo, char *szLine);
@@ -267,3 +285,4 @@ int strTrim (char *szLine)
 	return strlen(szLine);
 }
 
+//----------------------------------------------------------------------------

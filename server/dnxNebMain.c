@@ -1,29 +1,35 @@
-/*--------------------------------------------------------------------------
- 
-   Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
- 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as 
-   published by the Free Software Foundation.
- 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
-  --------------------------------------------------------------------------*/
-
-/** Intercepts service checks and dispatches them to distributed worker nodes.
+/*****************************************************************************
  *
- * @file dnxNebMain.c
- * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
- * @attention Please submit patches to http://dnx.sourceforge.net
- * @ingroup DNX
- */
+ * dnxNebMain.c - NEB Module providing the main entry point for the
+ *                Distributed Nagios eXecutive (DNX).
+ *
+ * Description:
+ *
+ * Intercepts all service checks and dispatches them to distributed worker
+ * nodes.
+ *
+ *	Copyright (c) 2006-2007 Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ *
+ *	First Written: 2006-06-25	R.W.Ingraham
+ *	Last Modified: 2007-09-25
+ *
+ *	License:
+ *
+ *	This program is free software; you can redistribute it and/or modify
+ *	it under the terms of the GNU General Public License version 2 as
+ *	published by the Free Software Foundation.
+ *
+ *	This program is distributed in the hope that it will be useful,
+ *	but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *	GNU General Public License for more details.
+ *
+ *	You should have received a copy of the GNU General Public License
+ *	along with this program; if not, write to the Free Software
+ *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ *****************************************************************************/
+
 
 #include "dnxNebMain.h"
 #include "dnxConfig.h"
@@ -511,12 +517,15 @@ static int initThreads (void)
 		
 	}
 
-   if ((ret = dnxTimerInit(dnxGlobalData.JobList)) != 0)
-   {
+	// Create the Service Check Timer thread
+	if ((ret = pthread_create(&dnxGlobalData.tTimer, NULL, dnxTimer, (void *)&dnxGlobalData)) != 0)
+	{
 		dnxGlobalData.isActive = 0;	// Init failure
+		dnxSyslog(LOG_ERR, "initThreads: Failed to create Timer thread: %d", ret);
 		releaseThreads();		// Cancel prior threads
 		return DNX_ERR_THREAD;
-   }
+		
+	}
 
 	// Set the ShowStart flag
 	dnxGlobalData.isGo = 1;
@@ -543,13 +552,13 @@ static int releaseThreads (void)
 {
 	int ret;
 
-   dnxTimerExit();
-
 	// Cancel all threads
 	if (dnxGlobalData.tRegistrar && (ret = pthread_cancel(dnxGlobalData.tRegistrar)) != 0)
 		dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tRegistrar) failed with ret = %d", ret);
 	if (dnxGlobalData.tDispatcher && (ret = pthread_cancel(dnxGlobalData.tDispatcher)) != 0)
 		dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tDispatcher) failed with ret = %d", ret);
+	if (dnxGlobalData.tTimer && (ret = pthread_cancel(dnxGlobalData.tTimer)) != 0)
+		dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tTimer) failed with ret = %d", ret);
 	if (dnxGlobalData.tCollector && (ret = pthread_cancel(dnxGlobalData.tCollector)) != 0)
 		dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tCollector) failed with ret = %d", ret);
 
@@ -558,6 +567,8 @@ static int releaseThreads (void)
 		dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tRegistrar) failed with ret = %d", ret);
 	if (dnxGlobalData.tDispatcher && (ret = pthread_join(dnxGlobalData.tDispatcher, NULL)) != 0)
 		dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tDispatcher) failed with ret = %d", ret);
+	if (dnxGlobalData.tTimer && (ret = pthread_join(dnxGlobalData.tTimer, NULL)) != 0)
+		dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tTimer) failed with ret = %d", ret);
 	if (dnxGlobalData.tCollector && (ret = pthread_join(dnxGlobalData.tCollector, NULL)) != 0)
 		dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tCollector) failed with ret = %d", ret);
 
@@ -618,12 +629,12 @@ static int initQueues (void)
 static int releaseQueues (void)
 {
 	// Remove the Job List
-	dnxJobListExit(&dnxGlobalData.JobList);
+	dnxJobListWhack(&(dnxGlobalData.JobList));
 	
 	// Remove the Worker Node Request Queue
 	dnxQueueDelete(dnxGlobalData.qReq);
-	pthread_mutex_destroy(&dnxGlobalData.tmReq);
-	pthread_cond_destroy(&dnxGlobalData.tcReq);
+	pthread_mutex_destroy(&(dnxGlobalData.tmReq));
+	pthread_cond_destroy(&(dnxGlobalData.tcReq));
 	
 	return DNX_OK;
 }
@@ -778,3 +789,4 @@ int dnxAuditJob (DnxNewJob *pJob, char *action)
 	return DNX_OK;
 }
 
+/*--------------------------------------------------------------------------*/
