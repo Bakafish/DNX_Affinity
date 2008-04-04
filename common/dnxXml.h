@@ -52,6 +52,7 @@ typedef struct DnxXmlBuf
 int dnxXmlOpen(DnxXmlBuf * xbuf, char * tag);
 int dnxXmlAdd(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData);
 int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData);
+int dnxXmlCmpStr(DnxXmlBuf * xbuf, char * xTag, char * cmpstr);
 int dnxXmlClose(DnxXmlBuf * xbuf);
 
 #endif   /* _DNXXML_H_ */

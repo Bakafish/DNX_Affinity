@@ -68,7 +68,7 @@ typedef struct iDnxDispatcher_
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxSendJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, 
+static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, 
       DnxNodeRequest * pNode)
 {
    struct sockaddr * sin = (struct sockaddr *)pNode->address;
@@ -88,7 +88,7 @@ static int dnxSendJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    job.timeout  = pSvcReq->timeout;
    job.cmd      = pSvcReq->cmd;
 
-   if ((ret = dnxPutJob(idisp->channel, &job, pNode->address)) != DNX_OK)
+   if ((ret = dnxSendJob(idisp->channel, &job, pNode->address)) != DNX_OK)
       dnxSyslog(LOG_ERR, 
             "dnxDispatcher[%lx]: Unable to send job [%lu-%lu] "
             "(%s) to worker node %u.%u.%u.%u: %s",
@@ -113,7 +113,7 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
    DnxNodeRequest * pNode = pSvcReq->pNode;
    int ret;
 
-   ret = dnxSendJob(idisp, pSvcReq, pNode);
+   ret = dnxSendJobMsg(idisp, pSvcReq, pNode);
 
    /** @todo Implement the fork-error re-scheduling logic as 
     * found in run_service_check() in checks.c. 
@@ -312,7 +312,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    return 0;
 }
 
-int dnxPutJob(DnxChannel * channel, DnxJob * pJob, char * address) 
+int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address) 
 {
    CHECK_TRUE(channel != 0);
    CHECK_TRUE(pJob != 0);

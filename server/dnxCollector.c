@@ -87,7 +87,7 @@ static void * dnxCollector(void * data)
    {
       pthread_testcancel();
 
-      if ((ret = dnxGetResult(icoll->channel, 
+      if ((ret = dnxWaitForResult(icoll->channel, 
             &sResult, sResult.address, DNX_COLLECTOR_TIMEOUT)) == DNX_OK)
       {
          dnxDebug(1, "dnxCollector[%lx]: Received result for [%lu,%lu]: %s", 
@@ -260,7 +260,7 @@ int dnxConnect(char * name, DnxChannel ** channel, DnxChanMode mode)
    return 0;
 }
 
-int dnxGetResult(DnxChannel * channel, DnxResult * pResult, char * address, int timeout) 
+int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, int timeout) 
 {
    CHECK_TRUE(pResult != 0);
 

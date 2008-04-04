@@ -237,7 +237,7 @@ static void * dnxWorker(void * data)
       msg.ttl = ws->iwlm->cfg.reqTimeout - ws->iwlm->cfg.ttlBackoff;
 
       // request a job, and then wait for a job to come in...
-      if ((ret = dnxWantJob(ws->dispatch, &msg, 0)) != DNX_OK)
+      if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
       {
          switch (ret)
          {
@@ -251,7 +251,7 @@ static void * dnxWorker(void * data)
                      tid, dnxErrorString(ret));
          }
       }
-      else if ((ret = dnxGetJob(ws->dispatch, &job, job.address, 
+      else if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
             ws->iwlm->cfg.reqTimeout)) != DNX_OK)
       {
          switch (ret)
@@ -286,7 +286,7 @@ static void * dnxWorker(void * data)
          // execute job - failures are stored in result
          dnxExecuteJob(ws, &job, &result);
 
-         if ((ret = dnxPutResult(ws->collect, &result, 0)) != DNX_OK)
+         if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK)
             dnxSyslog(LOG_ERR, "Worker[%lx]: Post results failed: %s", 
                   tid, dnxErrorString(ret));
 

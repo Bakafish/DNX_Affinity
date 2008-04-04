@@ -92,6 +92,7 @@ static int dnxXmlToString(DnxXmlType xType, void * xData, char * buf, int size)
          break;
 
       case DNX_XML_STR:
+         assert(strlen((char *)xData) < size);
          strncpy(buf, (char *)xData, size);
          buf[size - 1] = 0;
          break;
@@ -125,20 +126,13 @@ static int dnxXmlGetTagValue(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType,
       char * buf, int size)
 {
    char * cp, * ep, * value;
-   int len;
-   int ret = DNX_OK;
+   int len, ret = DNX_OK;
 
-   // validate parameters
-   if (!xbuf || !xTag || !buf || size < 1)
-      return DNX_ERR_INVALID;
-
-   *buf = 0;   // initialize user buffer
-
-   // search XML buffer for specified tag;
+   assert(xbuf && xTag && buf && size);
 
    // search for opening bracket
    cp = xbuf->buf;
-   while ((cp = strchr(cp, '<')) != NULL)
+   while ((cp = strchr(cp, '<')) != 0)
    {
       cp++;
 
@@ -146,7 +140,7 @@ static int dnxXmlGetTagValue(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType,
          continue;   // not a match
 
       // search for end-bracket
-      if ((ep = strchr(cp, '>')) == NULL)
+      if ((ep = strchr(cp, '>')) == 0)
       {
          ret = DNX_ERR_SYNTAX;
          break;   // error - unmatched XML brackets
@@ -164,7 +158,7 @@ static int dnxXmlGetTagValue(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType,
 end_tag:
 
       // find opening bracket of end-tag
-      if ((ep = strchr(cp, '<')) == NULL)
+      if ((ep = strchr(cp, '<')) == 0)
       {
          ret = DNX_ERR_SYNTAX;
          break;   // error - missing closing tag
@@ -178,7 +172,7 @@ end_tag:
       cp++;
 
       // search for end-bracket
-      if ((ep = strchr(cp, '>')) == NULL)
+      if ((ep = strchr(cp, '>')) == 0)
       {
          ret = DNX_ERR_SYNTAX;
          break;   // error - nmatched XML brackets
@@ -282,7 +276,6 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
    int ret = DNX_OK;
 
    // extract the value of the specified tag from the XML buffer
-   buf[0] = 0;
    if ((ret = dnxXmlGetTagValue(xbuf, xTag, xType, buf, sizeof buf)) != DNX_OK)
       return ret;
 
@@ -344,24 +337,21 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          break;
 
       case DNX_XML_STR:
-         if ((*(char **)xData = xstrdup(buf)) == NULL)
-         {
-            dnxSyslog(LOG_ERR, "dnxXmlGet: DNX_XML_STR: Out of Memory");
+         if ((*(char **)xData = xstrdup(buf)) == 0)
             ret = DNX_ERR_MEMORY;
-         }
          break;
 
       case DNX_XML_XID:
          // the format of a XID is: "objType-objSerial-objSlot",
          // where objType, objSerial and objSlot are unsigned integers
-         if ((cp = strchr(buf, '-')) == NULL)
+         if ((cp = strchr(buf, '-')) == 0)
          {
             ret = DNX_ERR_SYNTAX;   // missing XID separator
             break;
          }
          *cp++ = 0;  // now buf points to objType and cp points to objSerial
    
-         if ((ep = strchr(cp, '-')) == NULL)
+         if ((ep = strchr(cp, '-')) == 0)
          {
             ret = DNX_ERR_SYNTAX;   // missing XID separator
             break;
@@ -373,7 +363,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          unum = strtoul(buf, &lastchar, 0);
          if (errno == ERANGE || *lastchar)
          {
-            ret = DNX_ERR_SYNTAX;   // invalid number
+            ret = DNX_ERR_SYNTAX;
             break;
          }
          ((DnxXID *)xData)->objType = (DnxObjType)unum;
@@ -383,7 +373,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          unum = strtoul(cp, &lastchar, 0);
          if (errno == ERANGE || *lastchar)
          {
-            ret = DNX_ERR_SYNTAX;   // invalid number
+            ret = DNX_ERR_SYNTAX;
             break;
          }
          ((DnxXID *)xData)->objSerial = (unsigned long)unum;
@@ -393,7 +383,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          unum = strtoul(ep, &lastchar, 0);
          if (errno == ERANGE || *lastchar)
          {
-            ret = DNX_ERR_SYNTAX;   // invalid number
+            ret = DNX_ERR_SYNTAX;
             break;
          }
          ((DnxXID *)xData)->objSlot = (unsigned long)unum;
@@ -403,6 +393,28 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          ret = DNX_ERR_INVALID;
    }
    return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Compare a string with an XML node text value.
+ * 
+ * @param[in,out] xbuf - the buffer to be validated and closed.
+ * @param[in] xTag - the tag for which to search in @p xbuf.
+ * @param[in] cmpstr - the comparison string to match.
+ * 
+ * @return Zero on match; non-zero on not found, or no match.
+ */
+int dnxXmlCmpStr(DnxXmlBuf * xbuf, char * xTag, char * cmpstr)
+{
+   char buf[DNX_MAX_MSG];
+   int ret;
+
+   if ((ret = dnxXmlGetTagValue(xbuf, 
+         xTag, DNX_XML_STR, buf, sizeof buf)) != DNX_OK)
+      return ret;
+
+   return strcmp(cmpstr, buf) == 0 ? DNX_OK : DNX_ERR_SYNTAX;
 }
 
 //----------------------------------------------------------------------------

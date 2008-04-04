@@ -19,6 +19,118 @@
 
 /** Types and definitions for DNX messaging protocol.
  * 
+ * DNX messages are transport independent and have the following properties:
+ * 
+ *    1. Request - enumerated constant identifying the message payload
+ *    2. XML (REST-style) body
+ * 
+ * Currently supported DNX messages are:
+ * 
+ *    1. DNX_MSG_NODE_REQUEST
+ *    2. DNX_MSG_JOB
+ *    3. DNX_MSG_RESULT
+ *    4. DNX_MSG_MGMT_REQUEST
+ *    5. DNX_MSG_MGMT_REPLY
+ * 
+@verbatim   
+
+   ----------------------------------------------
+   Structure: DNX_MSG_NODE_REQUEST
+   Issued By: Worker       (dnxSendNodeRequest)
+   Issued To: Registrar    (dnxWaitForNodeRequest)
+   
+     <dnxMessage>
+       <Request>NodeRequest</Request>
+       <XID>Xid:ObjType-ObjSerial-ObjSlot</XID>
+       <ReqType>IntegerRequestType</ReqType>
+       <JobCap>IntegerCapabilityCount</JobCap>
+       <TTL>IntegerSeconds<TTL>
+     </dnxMessage>
+
+   ----------------------------------------------
+   Structure: DNX_MSG_JOB
+   Issued By: Dispatcher   (dnxSendJob)
+   Issued To: Worker       (dnxWaitForJob)
+   
+     <dnxMessage>
+       <Request>Job</Request>
+       <XID>Xid:ObjType-ObjSerial-ObjSlot</XID>
+       <State>IntegerPending</State>
+       <Priority>IntegerPriority</Priority>
+       <Timeout>IntegerTimeout</Timeout>
+       <Command>StringCommand param1 ... </Command>
+     </dnxMessage>
+
+   ----------------------------------------------
+   Structure: DNX_MSG_RESULT
+   Issued By: Worker       (dnxSendResult)
+   Issued To: Collector    (dnxWaitForResult)
+   
+     <dnxMessage>
+       <Request>Result</Request>
+       <XID>Xid:ObjType-ObjSerial-ObjSlot</XID>
+       <State>IntegerState</State>
+       <Delta>IntegerSeconds</Delta>
+       <ResultCode>IntegerResultCode</ResultCode>
+       <ResultData>StringResult</ResultData>
+     </dnxMessage>
+
+   ----------------------------------------------
+   Structure: DNX_MSG_MGMT_REQUEST
+   Issued By: Server       (dnxSendMgmtRequest)
+   Issued To: Client       (dnxWaitForMgmtRequest)
+   
+     <dnxMessage>
+       <Request>MgmtRequest</Request>
+       <XID>Xid:ObjType-ObjSerial-ObjSlot</XID>
+       <Action>StringAction</Action>
+     </dnxMessage>
+
+   ----------------------------------------------
+   Structure: DNX_MSG_MGMT_REPLY
+   Issued By: Client       (dnxSendMgmtReply)
+   Issued To: Server       (dnxWaitForMgmtReply)
+   
+     <dnxMessage>
+       <Request>MgmtReply</Request>
+       <XID>Xid:ObjType-ObjSerial-ObjSlot</XID>
+       <Result>StringResponse</Result>
+     </dnxMessage>
+
+@endverbatim   
+ * The DNX Objects are:
+ * 
+ *    1. DNX_JOB
+ *    2. DNX_RESULT
+ *    3. DNX_AGENT
+ * 
+ * Each DNX Job Object has:
+ * 
+ *    1. XID - Assigned at Job creation by the Scheduler
+ *    2. State: Pending, Executing, Completed, Cancelled
+ *    3. Execution Command
+ *    4. Execution Parameters
+ *    5. Execution Start Time
+ *    5. Execution End Time
+ *    6. Result Code
+ *    7. Result Data
+ * 
+ * When and object is serialized and transmitted, only those relevant 
+ * portions of the object are transmitted - order to optimize bandwith usage 
+ * and processing time.
+ * 
+ * For example, a DNX Job object as transmitted to a Dispatcher, via a 
+ * DNX_MSG_PUT_JOB, will only include the following DNX Job attributes:
+ * 
+ *    XID, State, Execution Command, Execution Parameters 
+ *    and Execution Start Time.
+ * 
+ * Conversely, a DNX Job object as transmitted to a Collector, via a 
+ * DNS_PUT_RESULT, will only include the following DNX Job attributes:
+ * 
+ *    XID, State, Execution Start Time, Execution End Time, Result Code, 
+ *    and Result Data
+ * 
  * @file dnxProtocol.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
@@ -67,71 +179,82 @@ typedef enum DnxJobState
 /** The maximum number of bytes in a DNX message address buffer. */
 #define DNX_MAX_ADDRESS 64
 
-/** A DNX transaction id. */
+/** DNX wire transaction ID structure. */
 typedef struct DnxXID
 {
-   DnxObjType objType;
-   unsigned long objSerial;
-   unsigned long objSlot;
+   DnxObjType objType;              //!< Type of object sending message.
+   unsigned long objSerial;         //!< Serial number of this request.
+   unsigned long objSlot;           //!< Request queue slot number.
 } DnxXID;
 
+/** Request job wire structure. */
 typedef struct DnxNodeRequest
 {
-   DnxXID xid;                      // Worker node transaction id
-   DnxReqType reqType;              // Request type
-   unsigned int jobCap;             // Job capacity
-   unsigned int ttl;                // Request Time-To-Live (in seconds)
-   time_t expires;                  // Job expiration time (not transmitted)
-   char address[DNX_MAX_ADDRESS];   // Source address
+   DnxXID xid;                      //!< Worker node transaction ID.
+   DnxReqType reqType;              //!< Request type.
+   unsigned int jobCap;             //!< Job capacity.
+   unsigned int ttl;                //!< Request Time-To-Live (in seconds).
+   time_t expires;                  //!< Job expiration time (not transmitted).
+   char address[DNX_MAX_ADDRESS];   //!< Source address.
 } DnxNodeRequest;
 
+/** Send job wire structure. */
 typedef struct DnxJob
 {
-   DnxXID xid;                      // Job transaction id
-   DnxJobState state;               // Job state
-   int priority;                    // Execution Priority
-   int timeout;                     // Max job execution time
-   char * cmd;                      // Contains command plus arguments
-   char address[DNX_MAX_ADDRESS];   // Source address
+   DnxXID xid;                      //!< Job transaction id.
+   DnxJobState state;               //!< Job state.
+   int priority;                    //!< Execution Priority.
+   int timeout;                     //!< Max job execution time.
+   char * cmd;                      //!< Contains command plus arguments.
+   char address[DNX_MAX_ADDRESS];   //!< Source address.
 } DnxJob;
 
+/** Send job results wire structure. */
 typedef struct DnxResult
 {
-   DnxXID xid;                      // Job transaction id
-   DnxJobState state;               // Job state
-   unsigned int delta;              // Job execution time delta
-   int resCode;                     // Job result code
-   char * resData;                  // Job result data
-   char address[DNX_MAX_ADDRESS];   // Source address
+   DnxXID xid;                      //!< Job transaction id.
+   DnxJobState state;               //!< Job state.
+   unsigned int delta;              //!< Job execution time delta.
+   int resCode;                     //!< Job result code.
+   char * resData;                  //!< Job result data.
+   char address[DNX_MAX_ADDRESS];   //!< Source address.
 } DnxResult;
 
+/** DNX management request wire structure. */
 typedef struct DnxMgmtRequest
 {
-   DnxXID xid;                      // Manager transaction id
-   char * action;                   // Request: SHUTDOWN, RELOAD, STATUS
-   char address[DNX_MAX_ADDRESS];   // Source address
+   DnxXID xid;                      //!< Generated manager transaction id.
+   char * action;                   //!< Request: SHUTDOWN, RELOAD, STATUS.
+   char address[DNX_MAX_ADDRESS];   //!< Source address.
 } DnxMgmtRequest;
 
+/** DNX management response wire structure. */
 typedef struct DnxMgmtReply
 {
-   DnxXID xid;                      // Client transaction id
-   DnxReqType status;               // Request status: ACK or NAK
-   char * reply;                    // Reply data (only valid for STATUS request)
-   char address[DNX_MAX_ADDRESS];   // Source address
+   DnxXID xid;                      //!< Reflected manager transaction id.
+   DnxReqType status;               //!< Request status: ACK or NAK.
+   char * reply;                    //!< Reply data (only valid for STATUS request).
+   char address[DNX_MAX_ADDRESS];   //!< Source address.
 } DnxMgmtReply;
 
-int dnxRegister(DnxChannel * channel, DnxNodeRequest * pReg, char * address);
-int dnxDeRegister(DnxChannel * channel, DnxNodeRequest * pReg, char * address);
 int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, 
       char * address, int timeout);
-int dnxWantJob(DnxChannel * channel, DnxNodeRequest * pReq, char * address);
-int dnxGetJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeout);
-int dnxPutJob(DnxChannel * channel, DnxJob * pJob, char * address);
-int dnxGetResult(DnxChannel * channel, DnxResult * pResult, char * address, 
+int dnxSendNodeRequest(DnxChannel * channel, DnxNodeRequest * pReq, char * address);
+
+int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeout);
+int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address);
+
+int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, 
       int timeout);
-int dnxPutResult(DnxChannel * channel, DnxResult * pResult, char * address);
-int dnxGetMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, 
+int dnxSendResult(DnxChannel * channel, DnxResult * pResult, char * address);
+
+int dnxWaitForMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, 
       char * address, int timeout);
+int dnxSendMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, char * address);
+
+int dnxWaitForMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, 
+      char * address, int timeout);
+int dnxSendMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address);
 
 int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, 
       unsigned long xSlot);

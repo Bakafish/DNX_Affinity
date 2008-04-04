@@ -359,7 +359,7 @@ static int processCommands(void)
    dnxSyslog(LOG_INFO, "process: DNX Client awaiting commands");
 
    // wait on the Agent socket for a request
-   while (!shutdown && (ret = dnxGetMgmtRequest(agent, 
+   while (!shutdown && (ret = dnxWaitForMgmtRequest(agent, 
          &Msg, Msg.address, 10)) != DNX_ERR_RECEIVE && ret != DNX_ERR_OPEN)
    {
       // process the request, if valid

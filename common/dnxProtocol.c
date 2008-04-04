@@ -19,17 +19,6 @@
 
 /** Implements the DNX communications methods.
  *
- * This module contains all of the 
- * 
- * Exports:
- * 
- *    - dnxRegisterDispatcher
- *    - dnxDeregisterDispatcher
- *    - dnxGetJob
- *    - dnxPutJob
- *    - dnxGetResult
- *    - dnxPutResult
- * 
  * @file dnxProtocol.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
@@ -52,70 +41,6 @@
 
 //----------------------------------------------------------------------------
 
-/** Register with the registrar (client).
- * 
- * @param[in] channel - the channel on which to send @p pReg.
- * @param[in] pReg - the registration request to be sent on @p channel.
- * @param[in] address - the address to which @p pReg should be sent. This 
- *    parameter is optional, and may be specified as NULL, in which case the 
- *    channel address will be used.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int dnxRegister(DnxChannel * channel, DnxNodeRequest * pReg, char * address)
-{
-   DnxXmlBuf xbuf;
-
-   // Validate parameters
-   if (!channel || !pReg)
-      return DNX_ERR_INVALID;
-
-   // Create the XML message
-   dnxXmlOpen (&xbuf, "Register");
-   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pReg->xid);
-   dnxXmlAdd  (&xbuf, "ReqType",  DNX_XML_INT,  &pReg->reqType);
-   dnxXmlAdd  (&xbuf, "Capacity", DNX_XML_UINT, &pReg->jobCap);
-   dnxXmlAdd  (&xbuf, "TTL",      DNX_XML_UINT, &pReg->ttl);
-   dnxXmlClose(&xbuf);
-
-   // Send it on the specified channel
-   return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
-}
-
-//----------------------------------------------------------------------------
-
-/** Deregister with the registrar (client).
- * 
- * @param[in] channel - the channel on which to send @p pReg.
- * @param[in] pReg - the deregistration request to be sent on @p channel.
- * @param[in] address - the address to which @p pReg should be sent. This 
- *    parameter is optional, and may be specified as NULL, in which case the 
- *    channel address will be used.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int dnxDeRegister(DnxChannel * channel, DnxNodeRequest * pReg, char * address)
-{
-   DnxXmlBuf xbuf;
-
-   // Validate parameters
-   if (!channel || !pReg)
-      return DNX_ERR_INVALID;
-
-   // Create the XML message
-   dnxXmlOpen (&xbuf, "DeRegister");
-   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pReg->xid);
-   dnxXmlAdd  (&xbuf, "ReqType",  DNX_XML_INT,  &pReg->reqType);
-   dnxXmlAdd  (&xbuf, "Capacity", DNX_XML_UINT, &pReg->jobCap);
-   dnxXmlAdd  (&xbuf, "TTL",      DNX_XML_UINT, &pReg->ttl);
-   dnxXmlClose(&xbuf);
-
-   // Send it on the specified channel
-   return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
-}
-
-//----------------------------------------------------------------------------
-
 /** Wait for a node request (server).
  * 
  * @param[in] channel - the channel from which to receive the node request.
@@ -133,68 +58,41 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg,
       char * address, int timeout)
 {
    DnxXmlBuf xbuf;
-   char * msg = NULL;
    int ret;
 
    assert(channel && pReg);
 
-   memset(pReg, 0, sizeof(DnxNodeRequest));
+   memset(pReg, 0, sizeof *pReg);
 
    // await a message from the specified channel
-   xbuf.size = DNX_MAX_MSG;
+   xbuf.size = sizeof xbuf.buf - 1;
    if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
       return ret;
 
    // decode the XML message:
    xbuf.buf[xbuf.size] = 0;
-   dnxDebug(2, "dnxWaitForNodeRequest: XML Msg(%d)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(2, "dnxWaitForNodeRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // verify this is a "NodeRequest" message
-   if ((ret = dnxXmlGet(&xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
+   if ((ret = dnxXmlCmpStr(&xbuf, "Request", "NodeRequest")) != DNX_OK)
       return ret;
 
-   if (strcmp(msg, "NodeRequest") != 0)
-   {
-      dnxSyslog(LOG_ERR, "dnxWaitForNodeRequest: Unrecognized Request=%s", msg);
-      xfree(msg);
-      return DNX_ERR_SYNTAX;
-   }
-   xfree(msg);
-
-   // decode the worker node's XID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pReg->xid)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, 
-            "dnxWaitForNodeRequest: Invalid XID; failed with %d: %s", 
-            ret, dnxErrorString(ret));
+   // decode the worker node's XID (support older GUID format as well)
+   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pReg->xid)) != DNX_OK
+         && (ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pReg->xid)) != DNX_OK)
       return ret;
-   }
 
    // decode request type
    if ((ret = dnxXmlGet(&xbuf, "ReqType", DNX_XML_INT, &pReg->reqType)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, 
-            "dnxWaitForNodeRequest: Invalid ReqType; failed with %d: %s", 
-            ret, dnxErrorString(ret));
       return ret;
-   }
 
-   // decode job capacity
-   if ((ret = dnxXmlGet(&xbuf, "JobCap", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, 
-            "dnxWaitForNodeRequest: Invalid JobCap; failed with %d: %s", 
-            ret, dnxErrorString(ret));
+   // decode job capacity (support strange mixture of JobCap and Capacity)
+   if ((ret = dnxXmlGet(&xbuf, "JobCap", DNX_XML_INT, &pReg->jobCap)) != DNX_OK
+         && (ret = dnxXmlGet(&xbuf, "Capacity", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
       return ret;
-   }
 
    // decode job expiration (Time-To-Live in seconds)
-   if ((ret = dnxXmlGet(&xbuf, "TTL", DNX_XML_INT, &pReg->ttl)) != DNX_OK)
-      dnxSyslog(LOG_ERR, 
-            "dnxWaitForNodeRequest: Invalid TTL; failed with %d: %s", 
-            ret, dnxErrorString(ret));
-
-   return ret;
+   return dnxXmlGet(&xbuf, "TTL", DNX_XML_INT, &pReg->ttl);
 }
 
 //----------------------------------------------------------------------------
@@ -210,25 +108,23 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg,
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxWantJob(DnxChannel * channel, DnxNodeRequest * pReg, char * address)
+int dnxSendNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * address)
 {
    DnxXmlBuf xbuf;
 
-   // Validate parameters
-   if (!channel || !pReg)
-      return DNX_ERR_INVALID;
+   assert(channel && pReg);
 
-   // Create the XML message
+   // create the XML message
    dnxXmlOpen (&xbuf, "NodeRequest");
-   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pReg->xid);
-   dnxXmlAdd  (&xbuf, "ReqType",  DNX_XML_INT,  &pReg->reqType);
-   dnxXmlAdd  (&xbuf, "Capacity", DNX_XML_UINT, &pReg->jobCap);
-   dnxXmlAdd  (&xbuf, "TTL",      DNX_XML_UINT, &pReg->ttl);
+   dnxXmlAdd  (&xbuf, "XID",     DNX_XML_XID,  &pReg->xid);
+   dnxXmlAdd  (&xbuf, "ReqType", DNX_XML_INT,  &pReg->reqType);
+   dnxXmlAdd  (&xbuf, "JobCap",  DNX_XML_UINT, &pReg->jobCap);
+   dnxXmlAdd  (&xbuf, "TTL",     DNX_XML_UINT, &pReg->ttl);
    dnxXmlClose(&xbuf);
 
-   dnxDebug(2, "dnxWantJob: XML Msg(%d)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(2, "dnxSendNodeRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
-   // Send it on the specified channel
+   // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
 }
 
@@ -247,38 +143,31 @@ int dnxWantJob(DnxChannel * channel, DnxNodeRequest * pReg, char * address)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxGetJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeout)
+int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeout)
 {
    DnxXmlBuf xbuf;
-   char * msg;
    int ret;
 
    assert(channel && pJob);
 
-   memset(pJob, 0, sizeof(DnxJob));
+   memset(pJob, 0, sizeof *pJob);
 
    // await a message from the specified channel
-   xbuf.size = DNX_MAX_MSG;
+   xbuf.size = sizeof xbuf.buf - 1;
    if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
       return ret;
 
-   // decode the XML message:
-   xbuf.buf[xbuf.size] = '\0';
+   // decode the XML message
+   xbuf.buf[xbuf.size] = 0;
+   dnxDebug(2, "dnxWaitForJob: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // verify this is a "Job" message
-   if ((ret = dnxXmlGet(&xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
+   if ((ret = dnxXmlCmpStr(&xbuf, "Request", "Job")) != DNX_OK)
       return ret;
 
-   if (strcmp(msg, "Job"))
-   {
-      dnxSyslog(LOG_ERR, "dnxGetJob: Unrecognized Request=%s", msg);
-      xfree(msg);
-      return DNX_ERR_SYNTAX;
-   }
-   xfree(msg);
-
-   // decode the job's XID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pJob->xid)) != DNX_OK)
+   // decode the job's XID (support older GUID format as well)
+   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pJob->xid)) != DNX_OK
+         && (ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pJob->xid)) != DNX_OK)
       return ret;
 
    // decode the job's state
@@ -309,24 +198,24 @@ int dnxGetJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeout)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxPutJob(DnxChannel * channel, DnxJob * pJob, char * address)
+int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address)
 {
    DnxXmlBuf xbuf;
 
-   // Validate parameters
-   if (!channel || !pJob || !(pJob->cmd))
-      return DNX_ERR_INVALID;
+   assert(channel && pJob && pJob->cmd && *pJob->cmd);
 
-   // Create the XML message
+   // create the XML message
    dnxXmlOpen (&xbuf, "Job");
-   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pJob->xid);
+   dnxXmlAdd  (&xbuf, "XID",      DNX_XML_XID,  &pJob->xid);
    dnxXmlAdd  (&xbuf, "State",    DNX_XML_INT,  &pJob->state);
    dnxXmlAdd  (&xbuf, "Priority", DNX_XML_INT,  &pJob->priority);
    dnxXmlAdd  (&xbuf, "Timeout",  DNX_XML_INT,  &pJob->timeout);
-   dnxXmlAdd  (&xbuf, "Command",  DNX_XML_STR,    pJob->cmd);
+   dnxXmlAdd  (&xbuf, "Command",  DNX_XML_STR,   pJob->cmd);
    dnxXmlClose(&xbuf);
 
-   // Send it on the specified channel
+   dnxDebug(2, "dnxSendJob: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+
+   // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
 }
 
@@ -345,76 +234,48 @@ int dnxPutJob(DnxChannel * channel, DnxJob * pJob, char * address)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxGetResult(DnxChannel * channel, DnxResult * pResult, 
+int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, 
       char * address, int timeout)
 {
    DnxXmlBuf xbuf;
-   char * msg = NULL;
    int ret;
 
    assert(channel && pResult);
 
-   memset(pResult, 0, sizeof(DnxResult));
+   memset(pResult, 0, sizeof *pResult);
 
    // await a message from the specified channel
-   xbuf.size = DNX_MAX_MSG;
+   xbuf.size = sizeof xbuf.buf - 1;
    if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
       return ret;
 
-   // decode the XML message:
+   // decode the XML message
    xbuf.buf[xbuf.size] = 0;
-   dnxDebug(2, "dnxGetResult: XML Msg(%d)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(2, "dnxWaitForResult: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // verify this is a "Result" message
-   if ((ret = dnxXmlGet(&xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
+   if ((ret = dnxXmlCmpStr(&xbuf, "Request", "Result")) != DNX_OK)
       return ret;
 
-   // compare and free so error and success paths are the same
-   if (strcmp(msg, "Result") != 0)
-   {
-      dnxSyslog(LOG_ERR, "dnxGetResult: Unrecognized Request=%s", msg);
-      xfree(msg);
-      return DNX_ERR_SYNTAX;
-   }
-   xfree(msg);
-
-   // decode the result's XID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pResult->xid)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid XID; failed with %d: %s", 
-            ret, dnxErrorString(ret));
+   // decode the result's XID (support older GUID format as well)
+   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pResult->xid)) != DNX_OK
+         && (ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pResult->xid)) != DNX_OK)
       return ret;
-   }
 
    // decode the result's state
    if ((ret = dnxXmlGet(&xbuf, "State", DNX_XML_INT, &pResult->state)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid State; failed with %d: %s", 
-            ret, dnxErrorString(ret));
       return ret;
-   }
 
    // decode the result's execution time delta
    if ((ret = dnxXmlGet(&xbuf, "Delta", DNX_XML_UINT, &pResult->delta)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid Delta; failed with %d: %s", 
-            ret, dnxErrorString(ret));
       return ret;
-   }
 
    // decode the result's result code
    if ((ret = dnxXmlGet(&xbuf, "ResultCode", DNX_XML_INT, &pResult->resCode)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid ResultCode; failed with %d: %s", 
-            ret, dnxErrorString(ret));
       return ret;
-   }
 
    // decode the result's result data
-   if ((ret = dnxXmlGet(&xbuf, "ResultData", DNX_XML_STR, &pResult->resData)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "dnxGetResult: Invalid ResultData: %d", ret);
-
-   return ret;
+   return dnxXmlGet(&xbuf, "ResultData", DNX_XML_STR, &pResult->resData);
 }
 
 //----------------------------------------------------------------------------
@@ -429,31 +290,34 @@ int dnxGetResult(DnxChannel * channel, DnxResult * pResult,
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxPutResult(DnxChannel * channel, DnxResult * pResult, char * address)
+int dnxSendResult(DnxChannel * channel, DnxResult * pResult, char * address)
 {
    DnxXmlBuf xbuf;
+   char * resData;
 
    assert(channel && pResult);
 
-   // Create the XML message
-   dnxXmlOpen  (&xbuf, "Result");
-   dnxXmlAdd   (&xbuf, "GUID",       DNX_XML_XID,  &pResult->xid);
-   dnxXmlAdd   (&xbuf, "State",      DNX_XML_INT,  &pResult->state);
-   dnxXmlAdd   (&xbuf, "Delta",      DNX_XML_UINT, &pResult->delta);
-   dnxXmlAdd   (&xbuf, "ResultCode", DNX_XML_INT,  &pResult->resCode);
-   if (pResult->resData && pResult->resData[0])
-      dnxXmlAdd(&xbuf, "ResultData", DNX_XML_STR,   pResult->resData);
-   else
-      dnxXmlAdd(&xbuf, "ResultData", DNX_XML_STR,   "(DNX: No Output!)");
-   dnxXmlClose (&xbuf);
+   if ((resData = pResult->resData) == 0 || *resData == 0)
+      resData = "(DNX: No Output!)";
 
-   // Send it on the specified channel
+   // create the XML message
+   dnxXmlOpen (&xbuf, "Result");
+   dnxXmlAdd  (&xbuf, "XID",        DNX_XML_XID,  &pResult->xid);
+   dnxXmlAdd  (&xbuf, "State",      DNX_XML_INT,  &pResult->state);
+   dnxXmlAdd  (&xbuf, "Delta",      DNX_XML_UINT, &pResult->delta);
+   dnxXmlAdd  (&xbuf, "ResultCode", DNX_XML_INT,  &pResult->resCode);
+   dnxXmlAdd  (&xbuf, "ResultData", DNX_XML_STR,   resData);
+   dnxXmlClose(&xbuf);
+
+   dnxDebug(2, "dnxSendResult: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+
+   // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
 }
 
 //----------------------------------------------------------------------------
 
-/** Issue a request to the client agent (server).
+/** Wait for a management request to come in (client).
  * 
  * @param[in] channel - the channel from which to read a management request.
  * @param[out] pRequest - the address of storage in which to return the 
@@ -466,61 +330,142 @@ int dnxPutResult(DnxChannel * channel, DnxResult * pResult, char * address)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxGetMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, 
+int dnxWaitForMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, 
       char * address, int timeout)
 {
    DnxXmlBuf xbuf;
-   char * msg = NULL;
    int ret;
 
    assert(channel && pRequest);
 
-   memset(pRequest, 0, sizeof(DnxMgmtRequest));
+   memset(pRequest, 0, sizeof *pRequest);
 
-   // Await a message from the specified channel
-   xbuf.size = DNX_MAX_MSG;
+   // await a message from the specified channel
+   xbuf.size = sizeof xbuf.buf - 1;
    if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
-   {
-      if (ret != DNX_ERR_TIMEOUT)
-         dnxSyslog(LOG_ERR, 
-               "dnxGetMgmtRequest: Failed to retrieve message from channel; "
-               "failed with %d: %s", ret, dnxErrorString(ret));
       return ret;
-   }
 
-   // decode the XML message:
+   // decode the XML message
    xbuf.buf[xbuf.size] = 0;
+   dnxDebug(2, "dnxWaitForMgmtRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // verify this is a "MgmtRequest" message
-   if ((ret = dnxXmlGet(&xbuf, "Request", DNX_XML_STR, &msg)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, 
-            "dnxGetMgmtRequest: Failed to decode Request; failed with %d: %s", 
-            ret, dnxErrorString(ret));
+   if ((ret = dnxXmlCmpStr(&xbuf, "Request", "MgmtRequest")) != DNX_OK)
       return ret;
-   }
-   if (strcmp(msg, "MgmtRequest"))
-   {
-      dnxSyslog(LOG_ERR, "dnxGetMgmtRequest: Invalid Request: %-20.20s", msg);
-      xfree(msg);
-      return DNX_ERR_SYNTAX;
-   }
-   xfree(msg);
 
-   // decode the Manager's XID
-   if ((ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pRequest->xid)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, 
-            "dnxGetMgmtRequest: Failed to decode XID; failed with %d: %s", 
-            ret, dnxErrorString(ret));
+   // decode the Manager's XID (support older GUID format as well).
+   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pRequest->xid)) != DNX_OK
+         && (ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pRequest->xid)) != DNX_OK)
       return ret;
-   }
 
    // decode the management request
-   if ((ret = dnxXmlGet(&xbuf, "Action", DNX_XML_STR, &pRequest->action)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "dnxGetMgmtRequest: Failed to decode Action: %d", ret);
+   return dnxXmlGet(&xbuf, "Action", DNX_XML_STR, &pRequest->action);
+}
 
-   return ret;
+//----------------------------------------------------------------------------
+
+/** Issue a management request to the client agent (server).
+ * 
+ * @param[in] channel - the channel on which to send the management request.
+ * @param[out] pRequest - the management request to be sent.
+ * @param[in] address - the address to which @p pRequest should be sent. This 
+ *    parameter is optional, and may be specified as NULL, in which case the 
+ *    channel address will be used.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxSendMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, char * address)
+{
+   DnxXmlBuf xbuf;
+
+   assert(channel && pRequest);
+
+   // create the XML message
+   dnxXmlOpen (&xbuf, "MgmtRequest");
+   dnxXmlAdd  (&xbuf, "XID",    DNX_XML_XID, &pRequest->xid);
+   dnxXmlAdd  (&xbuf, "Action", DNX_XML_STR, &pRequest->action);
+   dnxXmlClose(&xbuf);
+
+   dnxDebug(2, "dnxSendMgmtRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+
+   // send it on the specified channel
+   return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
+}
+
+//----------------------------------------------------------------------------
+
+/** Wait for a management reply to come in (server).
+ * 
+ * @param[in] channel - the channel from which to read a management request.
+ * @param[out] pReply - the address of storage in which to return the 
+ *    management reply.
+ * @param[out] address - the address of storage in which to return the address
+ *    of the sender. This parameter is optional and may be passed as NULL. If
+ *    non-NULL, it should be large enough to store sockaddr_* data.
+ * @param[in] timeout - the maximum number of seconds the caller is willing to
+ *    wait before accepting a timeout error.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxWaitForMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, 
+      char * address, int timeout)
+{
+   DnxXmlBuf xbuf;
+   int ret;
+
+   assert(channel && pReply);
+
+   memset(pReply, 0, sizeof *pReply);
+
+   // await a message from the specified channel
+   xbuf.size = sizeof xbuf.buf - 1;
+   if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
+      return ret;
+
+   // decode the XML message
+   xbuf.buf[xbuf.size] = 0;
+   dnxDebug(2, "dnxWaitForMgmtReply: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+
+   // verify this is a "MgmtRequest" message
+   if ((ret = dnxXmlCmpStr(&xbuf, "Request", "MgmtReply")) != DNX_OK)
+      return ret;
+
+   // decode the Manager's XID.
+   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pReply->xid)) != DNX_OK)
+      return ret;
+
+   // decode the management request
+   return dnxXmlGet(&xbuf, "Result", DNX_XML_STR, &pReply->reply);
+}
+
+//----------------------------------------------------------------------------
+
+/** Issue a management reply to the server (client).
+ * 
+ * @param[in] channel - the channel on which to send the management request.
+ * @param[out] pReply - the management request to be sent.
+ * @param[in] address - the address to which @p pRequest should be sent. This 
+ *    parameter is optional, and may be specified as NULL, in which case the 
+ *    channel address will be used.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxSendMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address)
+{
+   DnxXmlBuf xbuf;
+
+   assert(channel && pReply);
+
+   // create the XML message
+   dnxXmlOpen (&xbuf, "MgmtReply");
+   dnxXmlAdd  (&xbuf, "XID",    DNX_XML_XID, &pReply->xid);
+   dnxXmlAdd  (&xbuf, "Result", DNX_XML_STR, &pReply->reply);
+   dnxXmlClose(&xbuf);
+
+   dnxDebug(2, "dnxSendMgmtReply: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+
+   // send it on the specified channel
+   return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
 }
 
 //----------------------------------------------------------------------------
