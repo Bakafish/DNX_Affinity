@@ -195,7 +195,7 @@ int dnxDispatcherCreate(char * chname, char * dispurl, DnxJobList * joblist,
             chname, dnxErrorString(ret));
       goto e1;
    }
-   if ((ret = dnxConnect(chname, &idisp->channel, DNX_CHAN_PASSIVE)) != DNX_OK)
+   if ((ret = dnxConnect(chname, 0, &idisp->channel)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "dnxDispatcherCreate: dnxConnect(%s) failed: %s",
             chname, dnxErrorString(ret));
@@ -292,12 +292,12 @@ int dnxChanMapAdd(char * name, char * url)
    return 0;
 }
 
-int dnxConnect(char * name, DnxChannel ** channel, DnxChanMode mode) 
+int dnxConnect(char * name, int active, DnxChannel ** channel) 
 {
    *channel = test_channel;
    CHECK_TRUE(name != 0);
    CHECK_TRUE(strcmp(name, test_chname) == 0);
-   CHECK_TRUE(mode == DNX_CHAN_PASSIVE);
+   CHECK_TRUE(active == 0);
    return 0;
 }
 
@@ -333,17 +333,15 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
    return 0;
 }
 
-int dnxDisconnect(DnxChannel * channel) 
+void dnxDisconnect(DnxChannel * channel) 
 {
    CHECK_TRUE(channel == test_channel);
-   return 0;
 }
 
-int dnxChanMapDelete(char * name) 
+void dnxChanMapDelete(char * name) 
 {
    CHECK_TRUE(name != 0);
    CHECK_TRUE(strcmp(name, test_chname) == 0);
-   return 0; 
 }
 
 int main(int argc, char ** argv)

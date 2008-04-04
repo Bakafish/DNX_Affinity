@@ -321,7 +321,7 @@ static int initWorkerComm(DnxWorkerStatus * ws)
             ws, ret, dnxErrorString(ret));
       return ret;
    }
-   if ((ret = dnxConnect(szChan, &ws->dispatch, DNX_CHAN_ACTIVE)) != DNX_OK)
+   if ((ret = dnxConnect(szChan, 1, &ws->dispatch)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "WLM: dnxConnect(Dispatch:%lx) failed, %d: %s", 
             ws, ret, dnxErrorString(ret));
@@ -336,7 +336,7 @@ static int initWorkerComm(DnxWorkerStatus * ws)
             ws, ret, dnxErrorString(ret));
       return ret;
    }
-   if ((ret = dnxConnect(szChan, &ws->collect, DNX_CHAN_ACTIVE)) != DNX_OK)
+   if ((ret = dnxConnect(szChan, 1, &ws->collect)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "WLM: dnxConnect(Collect:%lx) failed, %d: %s", 
             ws, ret, dnxErrorString(ret));

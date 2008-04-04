@@ -324,7 +324,7 @@ static int initClientComm(void)
    }
 
    // attempt to open the Agent channel
-   if ((ret = dnxConnect("Agent", &agent, DNX_CHAN_PASSIVE)) != DNX_OK)
+   if ((ret = dnxConnect("Agent", 0, &agent)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "comm: dnxConnect(Agent) failed, %d: %s", 
             ret, dnxErrorString(ret));

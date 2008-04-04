@@ -19,6 +19,10 @@
 
 /** Types and definitions for SysV Message Queue transport layer.
  * 
+ * This file is temporary till we get loadable transport libraries. Once 
+ * that is finished, then dnxTSPI.h will act as a proper header file for all 
+ * loadable transports.
+ * 
  * @file dnxMsgQ.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
@@ -28,16 +32,11 @@
 #ifndef _DNXMSGQ_H_
 #define _DNXMSGQ_H_
 
-#include "dnxTransport.h"
+#include "dnxTSPI.h"
 
-int dnxMsgQInit(void);
-int dnxMsgQDeInit(void);
-int dnxMsgQNew(DnxChannel ** channel, char * url);
-int dnxMsgQDelete(DnxChannel * channel);
-int dnxMsgQOpen(DnxChannel * channel, DnxChanMode mode);
-int dnxMsgQClose(DnxChannel * channel);
-int dnxMsgQRead(DnxChannel * channel, char * buf, int * size, int timeout, char * src);
-int dnxMsgQWrite(DnxChannel * channel, char * buf, int size, int timeout, char * dst);
+// MsgQ transport sub-system initialization/shutdown.
+extern int dnxMsgQInit(int (**ptxAlloc)(char * url, iDnxChannel ** icpp));
+extern void dnxMsgQDeInit(void);
 
 #endif   /* _DNXMSGQ_H_ */
 

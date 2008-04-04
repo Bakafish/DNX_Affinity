@@ -9,6 +9,7 @@ noinst_HEADERS =\
  dnxMsgQ.h\
  dnxProtocol.h\
  dnxSleep.h\
+ dnxTSPI.h\
  dnxTcp.h\
  dnxTransport.h\
  dnxUdp.h\

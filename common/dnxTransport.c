@@ -26,6 +26,7 @@
  */
  
 #include "dnxTransport.h"
+#include "dnxTSPI.h"
 
 #include "dnxDebug.h"
 #include "dnxError.h"
@@ -40,105 +41,82 @@
 #include <errno.h>
 #include <assert.h>
 
+#define elemcount(x) (sizeof(x)/sizeof(*(x)))
+
+/** The maximum number of simultaneous open channels. */
 #define DNX_MAX_CHAN_MAP   1000
 
+/** The channel map object structure. */
 typedef struct DnxChanMap_ 
 {
-   char * name;         // Channel name, as read from configuration file
-   char * url;          // Channel connection specification
-   DnxChanType type;    // Channel type: which transport to use
-   int (*txAlloc)(DnxChannel ** channel, char * url);  // Transport's channel factory
+   char * name;         //!< Channel name.
+   char * url;          //!< Channel connection specification.
+   int (*txAlloc)(char * url, iDnxChannel ** icpp);  //!< Channel factory.
 } DnxChanMap;
 
-static int dnxInit = 0;
-static pthread_mutex_t chanMutex;
-static DnxChanMap gChannelMap[DNX_MAX_CHAN_MAP];
+/** A low-level transport module. */
+typedef struct DnxTransport
+{
+   char * scheme;
+   char * libpath;
+   int (*txAlloc)(char * url, iDnxChannel ** icpp);
+   int (*txInit)(int (**ptxAlloc)(char * url, iDnxChannel ** icpp));
+   void (*txExit)(void);
+} DnxTransport;
 
-// External TCP Transport Functions
-extern int dnxTcpInit(void);
-extern int dnxTcpDeInit(void);
-extern int dnxTcpNew(DnxChannel ** channel, char * url);
+// ---------------------------------------------------------------------------
+// This structure is temporary till we start loading from disk, at which point
+// URL schemes may then be added at runtime via the configuration file, eg.,
+// transport = dnx+transport : /path/to/transport/service/provider/library
+ 
+#include "dnxTcp.h"
+#include "dnxUdp.h"
+#include "dnxMsgQ.h"
 
-// External UDP Transport Functions
-extern int dnxUdpInit(void);
-extern int dnxUdpDeInit(void);
-extern int dnxUdpNew(DnxChannel ** channel, char * url);
+static DnxTransport gTMList[] = 
+{
+   { "tcp",  0, 0, dnxTcpInit,  dnxTcpDeInit  },
+   { "udp",  0, 0, dnxUdpInit,  dnxUdpDeInit  },
+   { "msgq", 0, 0, dnxMsgQInit, dnxMsgQDeInit },
+};
 
-// External Message Queue Transport Functions
-extern int dnxMsgQInit(void);
-extern int dnxMsgQDeInit(void);
-extern int dnxMsgQNew(DnxChannel ** channel, char * url);
+// ---------------------------------------------------------------------------
+
+static int dnxInit = 0;             //!< The channel map initialization  flag.
+static pthread_mutex_t chanMutex;   //!< The channel map mutex.
+static DnxChanMap gChannelMap[DNX_MAX_CHAN_MAP]; //!< The global channel map.
 
 /*--------------------------------------------------------------------------
                               IMPLEMENTATION
   --------------------------------------------------------------------------*/
 
-/** Parse the URL scheme (type) into a specified channel map.
+/** Set a channel map's transport object allocator in a based on URL scheme.
  * 
- * Set the 'type' channel map property.
- * 
- * @param[in] chanMap - the channel map on which to set the URL type property.
- * @param[in] url - the URL to be parsed into @p chanMap.
+ * @param[in] chanMap - the channel map on which to set the allocator.
+ * @param[in] url - the URL to be parsed.
  * 
  * @return Zero on success, or a non-zero error value.
  */
 static int dnxChanMapUrlParse(DnxChanMap * chanMap, char * url)
 {
-   static struct urlTypeMap { char * name; DnxChanType type; } typeMap[] = 
-   {
-      { "tcp", DNX_CHAN_TCP }, 
-      { "udp", DNX_CHAN_UDP }, 
-      { "msgq", DNX_CHAN_MSGQ }, 
-      { NULL, DNX_CHAN_UNKNOWN } 
-   };
-   
-   char tmpUrl[DNX_MAX_URL + 1];
-   struct urlTypeMap * utm;
    char * ep;
+   int i;
 
-   assert(chanMap && url);
+   assert(chanMap && url && strlen(url) <= DNX_MAX_URL);
 
-   // Validate parameters
-   if (!*url || strlen(url) > DNX_MAX_URL)
-      return DNX_ERR_INVALID;
-
-   // Make a working copy of the URL
-   strcpy(tmpUrl, url);
-
-   // Look for transport prefix: '[type]://'
-   if ((ep = strchr(tmpUrl, ':')) == NULL || *(ep+1) != '/' || *(ep+2) != '/')
+   // locate end of scheme
+   if ((ep = strstr(url, "://")) == 0)
       return DNX_ERR_BADURL;
-   *ep = 0;
 
-   // Decode destination based upon transport type
-   chanMap->type = DNX_CHAN_UNKNOWN;
-   for (utm = typeMap; utm->name; utm++)
-   {
-      if (!strcmp(tmpUrl, utm->name))
+   // set allocator for this transport based on the scheme string
+   for (i = 0; i < elemcount(gTMList); i++)
+      if (!strncmp(url, gTMList[i].scheme, ep - url))
       {
-         chanMap->type = utm->type;
+         chanMap->txAlloc = gTMList[i].txAlloc;
          break;
       }
-   }
-   switch (chanMap->type)
-   {
-      case DNX_CHAN_TCP:   // Need hostname and port
-         chanMap->txAlloc = dnxTcpNew;
-         break;
-   
-      case DNX_CHAN_UDP:   // Need hostname and port
-         chanMap->txAlloc = dnxUdpNew;
-         break;
-   
-      case DNX_CHAN_MSGQ:  // Need message queue ID
-         chanMap->txAlloc = dnxMsgQNew;
-         break;
-   
-      default:
-         chanMap->type = DNX_CHAN_UNKNOWN;
-         return DNX_ERR_BADURL;
-   }
-   return DNX_OK;
+
+   return i < elemcount(gTMList) ? DNX_OK : DNX_ERR_BADURL;
 }
 
 //----------------------------------------------------------------------------
@@ -156,13 +134,13 @@ static int dnxChanMapFindSlot(DnxChanMap ** chanMap)
 
    assert(chanMap);
 
-   // See if we can find an empty slot in the global channel map
-   for (i=0; i < DNX_MAX_CHAN_MAP && gChannelMap[i].name; i++)
+   // see if we can find an empty slot in the global channel map
+   for (i = 0; i < DNX_MAX_CHAN_MAP && gChannelMap[i].name; i++)
       ;
 
-   *chanMap = (DnxChanMap *)((i < DNX_MAX_CHAN_MAP) ? &gChannelMap[i] : NULL);
+   *chanMap = (DnxChanMap *)((i < DNX_MAX_CHAN_MAP) ? &gChannelMap[i] : 0);
 
-   return (*chanMap) ? DNX_OK : DNX_ERR_CAPACITY;
+   return *chanMap ? DNX_OK : DNX_ERR_CAPACITY;
 }
 
 //----------------------------------------------------------------------------
@@ -179,18 +157,43 @@ static int dnxChanMapFindName(char * name, DnxChanMap ** chanMap)
 {
    int i;
 
-   // Validate arguments
-   if (!name || !*name || !chanMap)
-      return DNX_ERR_INVALID;
+   assert(name && *name && chanMap);
 
-   // See if this name exists in the global channel map
-   for (i=0; i < DNX_MAX_CHAN_MAP; i++)
+   // see if this name exists in the global channel map
+   for (i = 0; i < DNX_MAX_CHAN_MAP; i++)
       if (gChannelMap[i].name && !strcmp(name, gChannelMap[i].name))
          break;
 
-   *chanMap = (DnxChanMap *)((i < DNX_MAX_CHAN_MAP) ? &gChannelMap[i] : NULL);
+   *chanMap = (DnxChanMap *)((i < DNX_MAX_CHAN_MAP) ? &gChannelMap[i] : 0);
 
-   return (*chanMap) ? DNX_OK : DNX_ERR_NOTFOUND;
+   return *chanMap ? DNX_OK : DNX_ERR_NOTFOUND;
+}
+
+//----------------------------------------------------------------------------
+
+/** Allocate an unconnected channel.
+ * 
+ * @param[in] name - the name of the channel to allocate.
+ * @param[out] icpp - the address of storage for the returned object 
+ *    reference.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dnxChanMapAllocChannel(char * name, iDnxChannel ** icpp)
+{
+   DnxChanMap * chanMap;
+   int ret;
+
+   assert(name && *name && icpp);
+
+   DNX_PT_MUTEX_LOCK(&chanMutex);
+
+   if ((ret = dnxChanMapFindName(name, &chanMap)) == DNX_OK)
+      ret = chanMap->txAlloc(chanMap->url, icpp);
+
+   DNX_PT_MUTEX_UNLOCK(&chanMutex);
+
+   return ret;
 }
 
 /*--------------------------------------------------------------------------
@@ -206,54 +209,41 @@ static int dnxChanMapFindName(char * name, DnxChanMap ** chanMap)
  */
 int dnxChanMapAdd(char * name, char * url)
 {
-   DnxChanMap * chanMap;
+   DnxChanMap tmp, * chanMap;
    int ret;
 
-   // Validate arguments
-   if (!name || !*name || !url || !*url)
-      return DNX_ERR_INVALID;
+   assert(name && *name && url && strlen(url) < DNX_MAX_URL);
 
-   // Acquire the lock on the global channel map
+   // parse and validate the URL
+   if ((ret = dnxChanMapUrlParse(&tmp, url)) != DNX_OK)
+      return ret;
+
+   // set the name, unless we are overriding and existing channel
+   if ((tmp.name = xstrdup(name)) == 0 || (tmp.url = xstrdup(url)) == 0)
+   {
+      xfree(tmp.name);
+      return DNX_ERR_MEMORY;
+   }
+
    DNX_PT_MUTEX_LOCK(&chanMutex);
 
-   // See if this name already exists, otherwise grab an empty channel slot
-   chanMap = NULL;
-   if ((ret = dnxChanMapFindName(name, &chanMap)) != DNX_OK && (ret = dnxChanMapFindSlot(&chanMap)) != DNX_OK)
-      goto abend;
-
-   // Parse and validate the URL
-   if ((ret = dnxChanMapUrlParse(chanMap, url)) != DNX_OK)
-      goto abend;
-
-   // Set the name, unless we are overriding and existing channel
-   if (!(chanMap->name))
+   // see if this name already exists, otherwise grab an empty channel slot
+   if ((ret = dnxChanMapFindName(name, &chanMap)) == DNX_OK 
+         || (ret = dnxChanMapFindSlot(&chanMap)) == DNX_OK)
    {
-      if ((chanMap->name = xstrdup(name)) == NULL)
-      {
-         dnxSyslog(LOG_ERR, "dnxChanMapAdd: Out of Memory: chanMap->name");
-         ret = DNX_ERR_MEMORY;
-         goto abend;
-      }
-   }
-
-   // Set the url
-   if (chanMap->url) xfree(chanMap->url);  // Free any prior value
-   if ((chanMap->url = xstrdup(url)) == NULL)
-   {
-      dnxSyslog(LOG_ERR, "dnxChanMapAdd: Out of Memory: chanMap->url");
       xfree(chanMap->name);
-      ret = DNX_ERR_MEMORY;
+      xfree(chanMap->url);
+      memcpy(chanMap, &tmp, sizeof *chanMap);
    }
-
-abend:;
-
-   // Clear this channel map slot
-   if (ret != DNX_OK && chanMap)
-      chanMap->type = DNX_CHAN_UNKNOWN;
    
-   // Release the lock on the global channel map
    DNX_PT_MUTEX_UNLOCK(&chanMutex);
 
+   // on error, release previously allocated memory
+   if (ret != DNX_OK)
+   {
+      xfree(tmp.name);
+      xfree(tmp.url);
+   }
    return ret;
 }
 
@@ -262,34 +252,25 @@ abend:;
 /** Delete a channel map by name.
  * 
  * @param[in] name - the name of the channel map to be deleted.
- * 
- * @return Zero on success, or a non-zero error value.
  */
-int dnxChanMapDelete(char * name)
+void dnxChanMapDelete(char * name)
 {
    DnxChanMap * chanMap;
-   int ret;
 
-   // Validate arguments
    assert(name && *name);
-   if (!name || !*name)
-      return DNX_ERR_INVALID;
 
    DNX_PT_MUTEX_LOCK(&chanMutex);
 
-   // Verify that this channel resource exists
-   if ((ret = dnxChanMapFindName(name, &chanMap)) == DNX_OK)
+   // locate resource by name
+   if (dnxChanMapFindName(name, &chanMap) == DNX_OK)
    {
-      // Release allocated variables
+      // release allocated variables, clear object
       xfree(chanMap->name);
-      if (chanMap->url)  xfree(chanMap->url);
-      memset(chanMap, 0, sizeof(DnxChanMap));
-      chanMap->type = DNX_CHAN_UNKNOWN;
+      xfree(chanMap->url);
+      memset(chanMap, 0, sizeof *chanMap);
    }
 
    DNX_PT_MUTEX_UNLOCK(&chanMutex);
-
-   return ret;
 }
 
 //----------------------------------------------------------------------------
@@ -303,61 +284,49 @@ int dnxChanMapDelete(char * name)
  * incoming messages.
  * 
  * @param[in] name - the name of the channel to open.
+ * @param[in] active - boolean; true (1) means this will be an active (client-
+ *    side) connection to a server; false (0) means this will be a passive
+ *    (server-side) listen point.
  * @param[out] channel - the address of storage for the returned connected 
  *    channel.
- * @param[in] mode - the connection mode for the newly connected channel.
- *    This mode value may be either active (1) or passive (0). 
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxConnect(char * name, DnxChannel ** channel, DnxChanMode mode)
+int dnxConnect(char * name, int active, DnxChannel ** channel)
 {
    DnxChanMap * chanMap;
+   iDnxChannel * icp;
    int ret;
 
-   // Validate arguments
    assert(name && *name && channel);
-   if (!name || !*name || !channel)
-      return DNX_ERR_INVALID;
 
-   *channel = NULL;
-
-   // Verify that this channel resource exists
-   if ((ret = dnxChanMapFindName(name, &chanMap)) == DNX_OK)
+   // locate channel resource by name, return a new unopened channel
+   if ((ret = dnxChanMapAllocChannel(name, &icp)) == DNX_OK)
    {
-      // Have the lower-layer transport allocate a channel
-      if ((ret = chanMap->txAlloc(channel, chanMap->url)) == DNX_OK)
-      {
-         // Connect this channel
-         if ((ret = (*channel)->dnxOpen(*channel, mode)) != DNX_OK)
-         {
-            (*channel)->txDelete(*channel);  // Have transport delete this channel
-            *channel = NULL;
-         }
-      }
+      if ((ret = icp->txOpen(icp, active)) != DNX_OK)
+         icp->txDelete(icp);
    }
+   if (ret == DNX_OK)
+      *channel = (DnxChannel *)icp;
    return ret;
 }
 
 //----------------------------------------------------------------------------
 
-/** Disconnect a specified channel.
+/** Disconnect and delete a specified channel.
  * 
- * @param[in] channel - the channel to be disconnected.
- * 
- * @return Zero on success, or a non-zero error value.
+ * @param[in] channel - the channel to be disconnected (and deleted).
  */
-int dnxDisconnect(DnxChannel * channel)
+void dnxDisconnect(DnxChannel * channel)
 {
-   int ret;
+   iDnxChannel * icp = (iDnxChannel *)channel;
 
    assert(channel);
 
-   // close and delete the channel.
-   if ((ret = channel->dnxClose(channel)) == DNX_OK)
-      channel->txDelete(channel);
+   if (icp->txClose(icp) == DNX_OK)
+      icp->txDelete(icp);
 
-   return ret;
+   xfree(icp);
 }
 
 //----------------------------------------------------------------------------
@@ -381,8 +350,9 @@ int dnxDisconnect(DnxChannel * channel)
 int dnxGet(DnxChannel * channel, char * buf, int * size, 
       int timeout, char * src)
 {
+   iDnxChannel * icp = (iDnxChannel *)channel;
    assert(channel && buf && size && *size > 0);
-   return channel->dnxRead(channel, buf, size, timeout, src);
+   return icp->txRead(icp, buf, size, timeout, src);
 }
 
 //----------------------------------------------------------------------------
@@ -403,26 +373,9 @@ int dnxGet(DnxChannel * channel, char * buf, int * size,
  */
 int dnxPut(DnxChannel * channel, char * buf, int size, int timeout, char * dst)
 {
-   assert(channel && buf && size > 0);
-   return channel->dnxWrite(channel, buf, size, timeout, dst);
-}
-
-//----------------------------------------------------------------------------
-
-/** Debug a channel.
- * 
- * @param[in] channel - the channel to be debugged.
- * @param[in] doDebug - boolean: 1 for enable debug, 0 for disable debug.
- * 
- * @return Always returns zero.
- */
-int dnxChannelDebug(DnxChannel * channel, int doDebug)
-{
-   assert(channel);
-  
-   channel->debug = doDebug;
-
-   return DNX_OK;
+   iDnxChannel * icp = (iDnxChannel *)channel;
+   assert(channel && buf && size > 0 && size < DNX_MAX_MSG);
+   return icp->txWrite(icp, buf, size, timeout, dst);
 }
 
 //----------------------------------------------------------------------------
@@ -436,31 +389,29 @@ int dnxChannelDebug(DnxChannel * channel, int doDebug)
  */
 int dnxChanMapInit(char * fileName)
 {
+   int i;
+
    assert(!dnxInit);
 
-   /** @todo This is the wrong place to initialize the global errno value. */
-
-   // Clear global error status variables
-   dnxSetLastError(DNX_OK);
-
-   // Clear global channel map
-   memset(gChannelMap, 0, sizeof(gChannelMap));
+   memset(gChannelMap, 0, sizeof gChannelMap);
 
    DNX_PT_MUTEX_INIT(&chanMutex);
 
-   /** @todo Check the return values for each individual protocol sub-system. */
-
-   // Initialize lower layer transports
-   dnxUdpInit();
-   dnxTcpInit();
-   dnxMsgQInit();
-
-   /** @todo This should be a debug-only flag. */
-
-   // Set initialization flag
-   dnxInit = 1;
+   // initialize transport module table
+   for (i = 0; i < elemcount(gTMList); i++)
+   {
+      int ret;
+      if ((ret = gTMList[i].txInit(&gTMList[i].txAlloc)) != DNX_OK)
+      {
+         while (i--) gTMList[i].txExit();
+         DNX_PT_MUTEX_DESTROY(&chanMutex);
+         return ret;
+      }
+   }
 
    /** @todo Load global channel map from file, if specified. */
+
+   dnxInit = 1;
 
    return DNX_OK;
 }
@@ -468,47 +419,32 @@ int dnxChanMapInit(char * fileName)
 //----------------------------------------------------------------------------
 
 /** Clean up resources allocated by the channel map sub-system.
- * 
- * @return Always returns zero.
  */
-int dnxChanMapRelease(void)
+void dnxChanMapRelease(void)
 {
-   int i;
-
-   /** @todo Objectize the channel map. */
-
-// assert(dnxInit);
-   if (!dnxInit)
-      return 0;
-
-   // Clean-up global channel map
-   for (i=0; i < DNX_MAX_CHAN_MAP; i++)
+   if (dnxInit)
    {
-      if (gChannelMap[i].name)
+      int i;
+
+      DNX_PT_MUTEX_LOCK(&chanMutex);
+
+      for (i = 0; i < DNX_MAX_CHAN_MAP; i++)
       {
          xfree(gChannelMap[i].name);
-         if (gChannelMap[i].url) xfree(gChannelMap[i].url);
+         xfree(gChannelMap[i].url);
       }
+   
+      memset(gChannelMap, 0, sizeof gChannelMap);
+   
+      DNX_PT_MUTEX_UNLOCK(&chanMutex);
+      DNX_PT_MUTEX_DESTROY(&chanMutex);
+   
+      // de-initialize transport module table
+      i = elemcount(gTMList);
+      while (i--) gTMList[i].txExit();
+   
+      dnxInit = 0;
    }
-
-   // Clear global channel map
-   memset(gChannelMap, 0, sizeof(gChannelMap));
-
-   // Clear global error status variables
-   dnxSetLastError(DNX_OK);
-
-   // Destroy the mutex
-   DNX_PT_MUTEX_DESTROY(&chanMutex);
-
-   // De-Initialize lower layer transports
-   dnxUdpDeInit();
-   dnxTcpDeInit();
-   dnxMsgQDeInit();
-
-   // Clear initialization flag
-   dnxInit = 0;
-
-   return DNX_OK;
 }
 
 /*--------------------------------------------------------------------------*/

@@ -88,14 +88,14 @@ static int initComm (void)
    }
    
    // Attempt to open the Dispatcher channel
-   if ((ret = dnxConnect("Dispatch", &pDispatch, DNX_CHAN_PASSIVE)) != DNX_OK)
+   if ((ret = dnxConnect("Dispatch", 0, &pDispatch)) != DNX_OK)
    {
       printf("initComm: dnxConnect(Dispatch) failed: %d\n", ret);
       return ret;
    }
    
    // Attempt to open the Collector channel
-   if ((ret = dnxConnect("Collect", &pCollect, DNX_CHAN_PASSIVE)) != DNX_OK)
+   if ((ret = dnxConnect("Collect", 0, &pCollect)) != DNX_OK)
    {
       printf("initComm: dnxConnect(Collect) failed: %d\n", ret);
       return ret;

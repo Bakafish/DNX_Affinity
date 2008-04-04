@@ -19,6 +19,10 @@
 
 /** Types and definitions for UDP transport layer.
  * 
+ * This file is temporary till we get loadable transport libraries. Once 
+ * that is finished, then dnxTSPI.h will act as a proper header file for all 
+ * loadable transports.
+ * 
  * @file dnxUdp.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
@@ -28,16 +32,11 @@
 #ifndef _DNXUDP_H_
 #define _DNXUDP_H_
 
-#include "dnxTransport.h"
+#include "dnxTSPI.h"
 
-int dnxUdpInit(void);
-int dnxUdpDeInit(void);
-int dnxUdpNew(DnxChannel ** channel, char * url);
-int dnxUdpDelete(DnxChannel * channel);
-int dnxUdpOpen(DnxChannel * channel, DnxChanMode mode);
-int dnxUdpClose(DnxChannel * channel);
-int dnxUdpRead(DnxChannel * channel, char * buf, int * size, int timeout, char * src);
-int dnxUdpWrite(DnxChannel * channel, char * buf, int size, int timeout, char * dst);
+// UDP transport sub-system initialization/shutdown.
+extern int dnxUdpInit(int (**ptxAlloc)(char * url, iDnxChannel ** icpp));
+extern void dnxUdpDeInit(void);
 
 #endif   /* _DNXUDP_H_ */
 

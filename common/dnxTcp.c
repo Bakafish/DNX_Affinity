@@ -17,7 +17,7 @@
  
   --------------------------------------------------------------------------*/
 
-/** Implements the TCP Tranport Layer.
+/** Implements the DNX TCP Transport Layer.
  *
  * @file dnxTcp.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
@@ -25,368 +25,257 @@
  * @ingroup DNX_COMMON_IMPL
  */
 
-#include "dnxTcp.h"
+#include "dnxTcp.h"     // temporary
+#include "dnxTSPI.h"
 
+#include "dnxTransport.h"
 #include "dnxError.h"
 #include "dnxDebug.h"
 #include "dnxLogging.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
+#include <errno.h>
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
 #include <pthread.h>
 #include <syslog.h>
-#include <errno.h>
-#include <assert.h>
 
+/** Number of listen buffers per TCP listen point. */
 #define DNX_TCP_LISTEN  5
 
-static pthread_mutex_t tcpMutex;
+/** The implementation of the TCP low-level I/O transport. */
+typedef struct iDnxTcpChannel_
+{
+   char * host;         //!< Channel transport host name.
+   int port;            //!< Channel transport port number.
+   int socket;          //!< Channel transport socket.
+   iDnxChannel ichan;   //!< Channel transport I/O (TSPI) methods.
+} iDnxTcpChannel;
 
 /** @todo Use GNU reentrant resolver interface on platforms where available. */
 
-//----------------------------------------------------------------------------
+static pthread_mutex_t tcpMutex;
 
-/** Initialize the TCP channel sub-system.
+/*--------------------------------------------------------------------------
+                  TRANSPORT SERVICE PROVIDER INTERFACE
+  --------------------------------------------------------------------------*/
+
+/** Open a TCP channel object.
  * 
- * @return Always returns zero.
- */
-int dnxTcpInit(void)
-{
-   // Create protective mutex for non-reentrant functions (gethostbyname)
-   DNX_PT_MUTEX_INIT(&tcpMutex);
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Clean up global resources allocated by the TCP channel sub-system.
- * 
- * @return Always returns zero.
- */
-int dnxTcpDeInit(void)
-{
-   // Destroy the mutex
-   DNX_PT_MUTEX_DESTROY(&tcpMutex);
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Create a new TCP channel.
- * 
- * @param[out] channel - the address of storage for returning the new channel.
- * @param[in] url - the URL bind address to associate with the new channel.
+ * @param[in] icp - the TCP channel object to be opened.
+ * @param[in] active - boolean; true (1) indicates the transport will be used
+ *    in active mode (as a client); false (0) indicates the transport will be 
+ *    used in passive mode (as a server listen point).
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxTcpNew(DnxChannel ** channel, char * url)
+static int dnxTcpOpen(iDnxChannel * icp, int active)
 {
-   char tmpUrl[DNX_MAX_URL + 1];
-   char * cp, * ep, * lastchar;
-   long port;
-
-   // Validate parameters
-   if (!channel || !url || !*url || strlen(url) > DNX_MAX_URL)
-      return DNX_ERR_INVALID;
-
-   *channel = NULL;
-
-   // Make a working copy of the URL
-   strcpy(tmpUrl, url);
-
-   // Look for transport prefix: '[type]://'
-   if ((ep = strchr(tmpUrl, ':')) == NULL || *(ep+1) != '/' || *(ep+2) != '/')
-      return DNX_ERR_BADURL;
-   *ep = '\0';
-   cp = ep + 3;   // Set to beginning of destination portion of the URL
-
-   // Search for hostname - port separator
-   if ((ep = strchr(cp, ':')) == NULL || ep == cp)
-      return DNX_ERR_BADURL;  // No separator found or empty hostname
-   *ep++ = '\0';
-
-   // Get the port number
-   errno = 0;
-   if ((port = strtol(ep, &lastchar, 0)) < 1 || port > 65535 
-         || (*lastchar && *lastchar != '/'))
-      return DNX_ERR_BADURL;
-
-   // Allocate a new channel structure
-   if ((*channel = (DnxChannel *)xmalloc(sizeof(DnxChannel))) == NULL)
-      return DNX_ERR_MEMORY;  // Memory allocation error
-
-   memset(*channel, 0, sizeof(DnxChannel));
-
-   // Save host name and port
-   (*channel)->type = DNX_CHAN_TCP;
-   (*channel)->name = NULL;
-   if (((*channel)->host = xstrdup(cp)) == NULL)
-   {
-      dnxSyslog(LOG_ERR, "dnxTcpNew: Out of Memory: strdup(channel->host)");
-      xfree(*channel);
-      *channel = NULL;
-      return DNX_ERR_MEMORY;  // Memory allocation error
-   }
-   (*channel)->port = (int)port;
-   (*channel)->state = DNX_CHAN_CLOSED;
-
-   // Set I/O methods
-   (*channel)->dnxOpen  = dnxTcpOpen;
-   (*channel)->dnxClose = dnxTcpClose;
-   (*channel)->dnxRead  = dnxTcpRead;
-   (*channel)->dnxWrite = dnxTcpWrite;
-   (*channel)->txDelete = dnxTcpDelete;
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Delete a TCP channel.
- * 
- * @param[in] channel - the channel to be closed.
- * 
- * @return Always returns zero.
- */
-int dnxTcpDelete(DnxChannel * channel)
-{
-   assert(channel && channel->type == DNX_CHAN_TCP);
-
-   // Make sure this channel is closed
-   if (channel->state == DNX_CHAN_OPEN)
-      dnxTcpClose(channel);
-
-   // Release host name string
-   if (channel->host) xfree(channel->host);
-
-   // Release channel memory
-   memset(channel, 0, sizeof(DnxChannel));
-   xfree(channel);
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Open a TCP channel.
- * 
- * Possible modes are active (1) or passive (0). 
- * 
- * @param[in] channel - the channel to be opened.
- * @param[in] mode - the mode in which @p channel should be opened.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int dnxTcpOpen(DnxChannel * channel, DnxChanMode mode)   // 0=Passive, 1=Active
-{
+   iDnxTcpChannel * itcp = (iDnxTcpChannel *)
+         ((char *)icp - offsetof(iDnxTcpChannel, ichan));
    struct hostent * he;
    struct sockaddr_in inaddr;
    int sd;
 
-   assert(channel && channel->type == DNX_CHAN_TCP && channel->port > 0);
+   assert(icp && itcp->port > 0);
 
-   // Make sure this channel isn't already open
-   if (channel->state != DNX_CHAN_CLOSED)
-      return DNX_ERR_ALREADY;
-
-   // Setup the socket address structure
    inaddr.sin_family = AF_INET;
-   inaddr.sin_port = (in_port_t)channel->port;
+   inaddr.sin_port = (in_port_t)itcp->port;
    inaddr.sin_port = htons(inaddr.sin_port);
 
-   // See if we are listening on any address
-   if (!strcmp(channel->host, "INADDR_ANY") 
-         || !strcmp(channel->host, "0.0.0.0") 
-         || !strcmp(channel->host, "0"))
+   // see if we are listening on any address
+   if (!strcmp(itcp->host, "INADDR_ANY") 
+         || !strcmp(itcp->host, "0.0.0.0") 
+         || !strcmp(itcp->host, "0"))
    {
-      // Make sure that the request is passive
-      if (mode != DNX_CHAN_PASSIVE)
-         return DNX_ERR_ADDRESS;
-
+      // make sure that the request is passive
+      if (active) return DNX_ERR_ADDRESS;
       inaddr.sin_addr.s_addr = INADDR_ANY;
    }
-   else  // Resolve destination address
+   else  // resolve destination address
    {
       DNX_PT_MUTEX_LOCK(&tcpMutex);
-
-      // Try to resolve this address
-      if ((he = gethostbyname(channel->host)) == NULL)
-      {
-         DNX_PT_MUTEX_UNLOCK(&tcpMutex);
-         return DNX_ERR_ADDRESS;
-      }
-      memcpy(&(inaddr.sin_addr.s_addr), he->h_addr_list[0], he->h_length);
-
+      if ((he = gethostbyname(itcp->host)) != 0)
+         memcpy(&inaddr.sin_addr.s_addr, he->h_addr_list[0], he->h_length);
       DNX_PT_MUTEX_UNLOCK(&tcpMutex);
+
+      if (!he) return DNX_ERR_ADDRESS;
    }
 
-   // Create a socket
    if ((sd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-      return DNX_ERR_OPEN;
-
-   // Determing whether we are connecting or listening
-   if (mode == DNX_CHAN_ACTIVE)
    {
-      // Attempt to open the socket connect
-      if (connect(sd, (struct sockaddr *)&inaddr, sizeof(inaddr)) != 0)
+      dnxSyslog(LOG_ERR, "dnxUdpOpen: socket failed: %s", strerror(errno));
+      return DNX_ERR_OPEN;
+   }
+
+   // determine how to handle socket connectivity based upon open mode
+   if (active)
+   {
+      if (connect(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
       {
          close(sd);
+         dnxSyslog(LOG_ERR, "dnxTcpOpen: connect(%lx) failed: %s", 
+               (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
          return DNX_ERR_OPEN;
       }
    }
-   else  // DNX_CHAN_PASSIVE
+   else
    {
-      // Bind the socket to a local address and port
-      if (bind(sd, (struct sockaddr *)&inaddr, sizeof(inaddr)) != 0)
+      // bind the socket to a local address and port and listen
+      if (bind(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
       {
          close(sd);
+         dnxSyslog(LOG_ERR, "dnxTcpOpen: bind(%lx) failed: %s", 
+               (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
          return DNX_ERR_OPEN;
       }
-
-      // Set the listen depth
       listen(sd, DNX_TCP_LISTEN);
    }
 
-   // Mark the channel as open
-   channel->chan  = sd;
-   channel->state = DNX_CHAN_OPEN;
+   itcp->socket = sd;
 
    return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Close a TCP channel.
+/** Close a TCP channel object.
  * 
- * @param[in] channel - the channel to be closed.
+ * @param[in] icp - the TCP channel object to be closed.
  * 
  * @return Always returns zero.
  */
-int dnxTcpClose(DnxChannel * channel)
+static int dnxTcpClose(iDnxChannel * icp)
 {
-   assert(channel && channel->type == DNX_CHAN_TCP);
+   iDnxTcpChannel * itcp = (iDnxTcpChannel *)
+         ((char *)icp - offsetof(iDnxTcpChannel, ichan));
 
-   // Make sure this channel isn't already closed
-   if (channel->state != DNX_CHAN_OPEN)
-      return DNX_ERR_ALREADY;
+   assert(icp && itcp->socket);
 
-   // Shutdown the communication paths on the socket
-   shutdown(channel->chan, SHUT_RDWR);
-
-   // Close the socket
-   close(channel->chan);
-
-   // Mark the channel as closed
-   channel->state = DNX_CHAN_CLOSED;
-   channel->chan  = 0;
+   shutdown(itcp->socket, SHUT_RDWR);
+   close(itcp->socket);
+   itcp->socket = 0;
 
    return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Read data from a TCP channel.
+/** Read data from a TCP channel object.
  * 
- * @param[in] channel - the channel from which to read data.
+ * @param[in] icp - the TCP channel object from which to read data.
  * @param[out] buf - the address of storage into which data should be read.
  * @param[in,out] size - on entry, the maximum number of bytes that may be 
  *    read into @p buf; on exit, returns the number of bytes stored in @p buf.
  * @param[in] timeout - the maximum number of seconds we're willing to wait
- *    for data to become available on @p channel without returning a timeout
+ *    for data to become available on @p icp without returning a timeout
  *    error.
  * @param[out] src - the address of storage for the sender's address if 
- *    desired. This parameter is optional, and may be passed as NULL.
+ *    desired. This parameter is optional, and may be passed as NULL. If
+ *    non-NULL, the buffer pointed to by @p src must be at least the size
+ *    of a @em sockaddr_in structure.
  * 
  * @return Zero on success, or a non-zero error value.
+ * 
+ * @note On Linux, @em select updates the timeout value to reflect the 
+ * remaining timeout value when @em select returns an EINTR (system interrupt) 
+ * error. On most other systems, @em select does not touch the timeout value, 
+ * so we have to update it ourselves between calls to @em select.
  */
-int dnxTcpRead(DnxChannel * channel, char * buf, int * size, 
+static int dnxTcpRead(iDnxChannel * icp, char * buf, int * size, 
       int timeout, char * src)
 {
-   struct sockaddr_in src_addr;
-   socklen_t slen;
+   iDnxTcpChannel * itcp = (iDnxTcpChannel *)
+         ((char *)icp - offsetof(iDnxTcpChannel, ichan));
    char mbuf[DNX_MAX_MSG];
    unsigned short mlen;
-   fd_set fd_rds;
    struct timeval tv;
-   int nsd;
 
-   assert(channel && channel->type == DNX_CHAN_TCP && buf && size && *size > 0);
+#ifndef linux
+   time_t expires = time(0) + timeout;
+#endif
 
-   // Make sure this channel is open
-   if (channel->state != DNX_CHAN_OPEN)
-      return DNX_ERR_OPEN;
+   assert(icp && itcp->socket && buf && size && *size > 0);
 
-   // Implement timeout logic, if timeout value is > 0
-   if (timeout > 0)
+   // implement timeout logic, if timeout value is > 0
+   tv.tv_usec = 0L;
+   tv.tv_sec = timeout;
+
+   while (tv.tv_sec > 0)
    {
+      fd_set fd_rds;
+      int nsd;
+
       FD_ZERO(&fd_rds);
-      FD_SET(channel->chan, &fd_rds);
-      tv.tv_sec = (long)timeout;
-      tv.tv_usec = 0L;
-      if ((nsd = select((channel->chan+1), &fd_rds, NULL, NULL, &tv)) == 0)
+      FD_SET(itcp->socket, &fd_rds);
+
+      if ((nsd = select(itcp->socket + 1, &fd_rds, 0, 0, &tv)) == 0)
          return DNX_ERR_TIMEOUT;
-      else if (nsd < 0)
+
+      if (nsd > 0)
+         break;
+
+      if (errno != EINTR) 
       {
-         dnxSyslog(LOG_ERR, "dnxTcpRead: select failure; failed with %d: %s", 
-               errno, strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxTcpRead: select failed: %s", strerror(errno));
          return DNX_ERR_RECEIVE;
       }
+
+#ifndef linux
+      tv.tv_usec = 0L;
+      tv.tv_sec = timeout - (int)(expires - time(0));
+#endif
    }
 
-   // First, read the incoming message length
-   if (read(channel->chan, &mlen, sizeof(mlen)) != sizeof(mlen))
+   // read the incoming message length
+   if (read(itcp->socket, &mlen, sizeof mlen) != sizeof mlen)
       return DNX_ERR_RECEIVE;
    mlen = ntohs(mlen);
 
-   // Validate the message length
+   // validate the message length
    if (mlen < 1 || mlen > DNX_MAX_MSG)
       return DNX_ERR_RECEIVE;
 
-   // Check to see if the message fits within the user buffer
+   // check to see if the message fits within the user buffer
    if (*size >= mlen)
    {
-      // User buffer is adequate, read directly into it
-      if (read(channel->chan, buf, (int)mlen) != (int)mlen)
+      if (read(itcp->socket, buf, (int)mlen) != (int)mlen)
          return DNX_ERR_RECEIVE;
       *size = (int)mlen;
    }
-   else
+   else  // user buffer too small, read what we can, throw the rest away
    {
-      // User buffer is inadequate, read whole message and truncate
-      if (read(channel->chan, mbuf, (int)mlen) == (int)mlen)
+      if (read(itcp->socket, mbuf, (int)mlen) != (int)mlen)
          return DNX_ERR_RECEIVE;
-      memcpy(buf, mbuf, *size);  // Copy portion that fits
-      // No need to adjust size variable, since we used the all of it
+      memcpy(buf, mbuf, *size);
    }
 
-   // Set source IP/port information, if desired
+   // set source addr/port information, if desired
    if (src)
    {
-      if (getpeername(channel->chan, (struct sockaddr *)&src_addr, &slen) == 0)
-         memcpy(src, &src_addr, sizeof(src_addr));
-      else
-         *src = 0;   // Set zero-byte to indicate no source address avavilable
+      socklen_t slen;
+      *src = 0;   // clear first byte in case getpeeraddr fails
+      getpeername(itcp->socket, (struct sockaddr *)src, &slen);
    }
    return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Write data to a TCP channel.
+/** Write data to a TCP channel object.
  * 
- * @param[in] channel - the channel on which to write data from @p buf.
+ * @param[in] icp - the TCP channel object on which to write data.
  * @param[in] buf - a pointer to the data to be written.
- * @param[in] size - the number of bytes to be written on @p channel.
+ * @param[in] size - the number of bytes to be written on @p icp.
  * @param[in] timeout - the maximum number of seconds to wait for the write
  *    operation to complete without returning a timeout error.
  * @param[in] dst - the address to which the data in @p buf should be sent
@@ -396,56 +285,177 @@ int dnxTcpRead(DnxChannel * channel, char * buf, int * size,
  * @return Zero on success, or a non-zero error value.
  * 
  * @note If this is a stream oriented channel, or if NULL is passed for 
- * the @p dst parameter, The channel destination address is used.
+ * the @p dst parameter, the channel destination address is not used.
+ * 
+ * @note On Linux, @em select updates the timeout value to reflect the 
+ * remaining timeout value when @em select returns an EINTR (system interrupt) 
+ * error. On most other systems, @em select does not touch the timeout value, 
+ * so we have to update it ourselves between calls to @em select.
  */
-int dnxTcpWrite(DnxChannel * channel, char * buf, int size, 
+static int dnxTcpWrite(iDnxChannel * icp, char * buf, int size, 
       int timeout, char * dst)
 {
-   fd_set fd_wrs;
+   iDnxTcpChannel * itcp = (iDnxTcpChannel *)
+         ((char *)icp - offsetof(iDnxTcpChannel, ichan));
    struct timeval tv;
-   int nsd;
    unsigned short mlen;
 
-   assert(channel && channel->type == DNX_CHAN_TCP && buf);
+#ifndef linux
+   time_t expires = time(0) + timeout;
+#endif
 
-   // Validate that the message size is within bounds
-   if (size < 1 || size > DNX_MAX_MSG)
-      return DNX_ERR_SIZE;
+   assert(icp && itcp->socket && buf && size);
 
-   // Make sure this channel is open
-   if (channel->state != DNX_CHAN_OPEN)
-      return DNX_ERR_OPEN;
+   // implement timeout logic, if timeout value is > 0
+   tv.tv_usec = 0L;
+   tv.tv_sec = timeout;
 
-   // Implement timeout logic, if timeout value is > 0
-   if (timeout > 0)
+   while (tv.tv_sec > 0)   // signal interrupt management
    {
+      fd_set fd_wrs;
+      int nsd;
+
       FD_ZERO(&fd_wrs);
-      FD_SET(channel->chan, &fd_wrs);
+      FD_SET(itcp->socket, &fd_wrs);
+
       tv.tv_sec = (long)timeout;
       tv.tv_usec = 0L;
-      if ((nsd = select((channel->chan+1), NULL, &fd_wrs, NULL, &tv)) == 0)
+      if ((nsd = select(itcp->socket + 1, 0, &fd_wrs, 0, &tv)) == 0)
          return DNX_ERR_TIMEOUT;
-      else if (nsd < 0)
+
+      if (nsd > 0)
+         break;
+
+      if (errno != EINTR)
       {
-         dnxSyslog(LOG_ERR, "dnxTcpWrite: select failure; failed with %d: %s", 
-               errno, strerror(errno));
+         dnxSyslog(LOG_ERR, "dnxTcpWrite: select failed: %s", strerror(errno));
          return DNX_ERR_SEND;
       }
+
+#ifndef linux
+      tv.tv_usec = 0L;
+      tv.tv_sec = timeout - (int)(expires - time(0));
+#endif
    }
 
-   // Convert the size into a network ushort
+   // convert the size into a network ushort
    mlen = (unsigned short)size;
    mlen = htons(mlen);
 
-   // Send the length of the message as a header
-   if (write(channel->chan, &mlen, sizeof(mlen)) != sizeof(mlen))
+   // send the length of the message as a header
+   if (write(itcp->socket, &mlen, sizeof mlen) != sizeof mlen)
       return DNX_ERR_SEND;
 
-   // Send the message
-   if (write(channel->chan, buf, size) != size)
+   // send the message
+   if (write(itcp->socket, buf, size) != size)
       return DNX_ERR_SEND;
    
    return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** Delete a TCP channel object.
+ * 
+ * @param[in] icp - the TCP channel object to be deleted.
+ */
+static void dnxTcpDelete(iDnxChannel * icp)
+{
+   iDnxTcpChannel * itcp = (iDnxTcpChannel *)
+         ((char *)icp - offsetof(iDnxTcpChannel, ichan));
+
+   assert(icp && itcp->socket == 0);
+
+   xfree(itcp->host);
+   xfree(itcp);
+}
+
+//----------------------------------------------------------------------------
+
+/** Create a new TCP transport.
+ * 
+ * @param[in] url - the URL containing the host name and port number.
+ * @param[out] icpp - the address of storage for returning the new low-
+ *    level TCP transport object (as a generic transport object).
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dnxTcpNew(char * url, iDnxChannel ** icpp)
+{
+   char * cp, * ep, * lastchar;
+   iDnxTcpChannel * itcp;
+   long port;
+
+   assert(icpp && url && *url);
+
+   // search for host:port in URL
+   if ((cp = strstr(url, "://")) == 0)
+      return DNX_ERR_BADURL;
+   cp += 3;
+
+   // find host/port separator ':' - copy host name
+   if ((ep = strchr(cp, ':')) == 0 || ep == cp || ep - cp > HOST_NAME_MAX)
+      return DNX_ERR_BADURL;
+
+   // extract port number
+   if ((port = strtol(ep + 1, &lastchar, 0)) < 1 || port > 65535 
+         || (*lastchar && *lastchar != '/'))
+      return DNX_ERR_BADURL;
+
+   // allocate a new iDnxTcpChannel object
+   if ((itcp = (iDnxTcpChannel *)xmalloc(sizeof *itcp)) == 0)
+      return DNX_ERR_MEMORY;
+   memset(itcp, 0, sizeof *itcp);
+
+   // save host name and port
+   if ((itcp->host = (char *)xmalloc(ep - cp + 1)) == 0)
+   {
+      xfree(itcp);
+      return DNX_ERR_MEMORY;
+   }
+   memcpy(itcp->host, cp, ep - cp);
+   itcp->host[ep - cp] = 0;
+   itcp->port = (int)port;
+
+   // set I/O methods
+   itcp->ichan.txOpen   = dnxTcpOpen;
+   itcp->ichan.txClose  = dnxTcpClose;
+   itcp->ichan.txRead   = dnxTcpRead;
+   itcp->ichan.txWrite  = dnxTcpWrite;
+   itcp->ichan.txDelete = dnxTcpDelete;
+
+   *icpp = &itcp->ichan;
+
+   return DNX_OK;
+}
+
+/*--------------------------------------------------------------------------
+                           EXPORTED INTERFACE
+  --------------------------------------------------------------------------*/
+
+/** Initialize the TCP transport sub-system; return TCP channel contructor.
+ * 
+ * @param[out] ptxAlloc - the address of storage in which to return the 
+ *    address of the TCP channel object constructor (dnxTcpNew).
+ * 
+ * @return Always returns zero.
+ */
+int dnxTcpInit(int (**ptxAlloc)(char * url, iDnxChannel ** icpp))
+{
+   DNX_PT_MUTEX_INIT(&tcpMutex);
+
+   *ptxAlloc = dnxTcpNew;
+
+   return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** Clean up global resources allocated by the TCP channel sub-system. 
+ */
+void dnxTcpDeInit(void)
+{
+   DNX_PT_MUTEX_DESTROY(&tcpMutex);
 }
 
 /*--------------------------------------------------------------------------*/

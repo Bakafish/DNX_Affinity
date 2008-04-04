@@ -518,7 +518,6 @@ static int dnxServerDeInit(void)
 static int dnxServerInit(void)
 {
    int ret, joblistsz;
-   DnxChannel * channel;
 
    // clear globals so we know what to "undo" as we back out
    joblist = 0;
@@ -552,19 +551,14 @@ static int dnxServerInit(void)
          joblist, &collector)) != 0)
       return ret;
 
-   channel = dnxCollectorGetChannel(collector);
-   if (cfg.debug) dnxChannelDebug(channel, cfg.debug);
-
    // create and configure dispatcher
    if ((ret = dnxDispatcherCreate("Dispatch", cfg.dispatcherUrl, 
          joblist, &dispatcher)) != 0)
       return ret;
 
-   channel = dnxDispatcherGetChannel(dispatcher);
-   if (cfg.debug) dnxChannelDebug(channel, cfg.debug);
-
    // create worker node registrar
-   if ((ret = dnxRegistrarCreate(joblistsz, channel, &registrar)) != 0)
+   if ((ret = dnxRegistrarCreate(joblistsz, 
+         dnxDispatcherGetChannel(dispatcher), &registrar)) != 0)
       return ret;
 
    // registration for this event starts everything rolling

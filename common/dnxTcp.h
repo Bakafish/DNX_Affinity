@@ -19,6 +19,10 @@
 
 /** Types and definitions for TCP transport layer.
  * 
+ * This file is temporary till we get loadable transport libraries. Once 
+ * that is finished, then dnxTSPI.h will act as a proper header file for all 
+ * loadable transports.
+ * 
  * @file dnxTcp.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
@@ -28,16 +32,11 @@
 #ifndef _DNXTCP_H_
 #define _DNXTCP_H_
 
-#include "dnxTransport.h"
+#include "dnxTSPI.h"
 
-int dnxTcpInit(void);
-int dnxTcpDeInit(void);
-int dnxTcpNew(DnxChannel ** channel, char * url);
-int dnxTcpDelete(DnxChannel * channel);
-int dnxTcpOpen(DnxChannel * channel, DnxChanMode mode);
-int dnxTcpClose(DnxChannel * channel);
-int dnxTcpRead(DnxChannel * channel, char * buf, int * size, int timeout, char * src);
-int dnxTcpWrite(DnxChannel * channel, char * buf, int size, int timeout, char * dst);
+// TCP transport sub-system initialization/shutdown.
+extern int dnxTcpInit(int (**ptxAlloc)(char * url, iDnxChannel ** icpp));
+extern void dnxTcpDeInit(void);
 
 #endif   /* _DNXTCP_H_ */
 
