@@ -490,7 +490,6 @@ int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial,
 {
    assert(pxid && xType >= 0 && xType < DNX_OBJ_MAX);
 
-   // set the object type
    pxid->objType   = xType;
    pxid->objSerial = xSerial;
    pxid->objSlot   = xSlot;

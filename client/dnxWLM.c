@@ -54,6 +54,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <ifaddrs.h>
 
 /** @todo Dynamically allocate based on config file maxResultBuffer setting. */
@@ -82,7 +83,7 @@ typedef struct DnxWorkerStatus
    time_t jobtime;            /*!< The total amount of time spent in job processing. */
    unsigned jobsok;           /*!< The total jobs completed. */
    unsigned jobsfail;         /*!< The total jobs not completed. */
-   unsigned reqserial;        /*!< The current request tracking serial number. */
+   unsigned serial;           /*!< The current job tracking serial number. */
    struct iDnxWlm * iwlm;     /*!< A reference to the owning WLM. */
 } DnxWorkerStatus;
 
@@ -101,7 +102,8 @@ typedef struct iDnxWlm
    unsigned poolsz;           /*!< The allocated size of the @em pool array. */
    time_t lastclean;          /*!< The last time the pool was cleaned. */
    int terminate;             /*!< The pool termination flag. */
-   char myaddr[MAX_IP_ADDRSZ];/*!< Cached local node address for presentation. */
+   unsigned long myipaddr;    /*!< Binary local address for identification. */
+   char myipaddrstr[MAX_IP_ADDRSZ];/*!< String local address for presentation. */
 } iDnxWlm;
 
 // forward declaration required by source code organization
@@ -342,10 +344,8 @@ static void * dnxWorker(void * data)
 
       pthread_testcancel();
       
-      ws->reqserial++;  // increment request serial number
-
-      // setup job request message
-      dnxMakeXID(&msg.xid, DNX_OBJ_WORKER, ws->reqserial, tid);
+      // setup job request message - use thread id and node address in XID
+      dnxMakeXID(&msg.xid, DNX_OBJ_WORKER, tid, iwlm->myipaddr);
       msg.reqType = DNX_REQ_REGISTER;
       msg.jobCap = 1;
       msg.ttl = iwlm->cfg.reqTimeout - iwlm->cfg.ttlBackoff;
@@ -412,9 +412,8 @@ static void * dnxWorker(void * data)
          }
          DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 
-         dnxDebug(2, "Worker[%lx]: Received job [%lu-%lu] (T/O %d): %s", 
-               tid, job.xid.objSerial, job.xid.objSlot, 
-               job.timeout, job.cmd);
+         dnxDebug(2, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s", 
+               tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
 
          // prepare result structure
          result.xid = job.xid;               // result xid must match job xid
@@ -428,7 +427,7 @@ static void * dnxWorker(void * data)
          *resData = 0;
          jobstart = time(0);
          dnxPluginExecute(job.cmd, &result.resCode, resData, 
-               sizeof resData - 1, job.timeout, iwlm->myaddr);
+               sizeof resData - 1, job.timeout, iwlm->myipaddrstr);
          result.delta = time(0) - jobstart;
 
          // store allocated copy of the result string
@@ -441,13 +440,13 @@ static void * dnxWorker(void * data)
          else 
             ws->jobsfail++;
 
-         dnxDebug(2, "Worker[%lx]: Job [%lu-%lu] completed in %lu seconds: %d, %s", 
-               tid, job.xid.objSerial, job.xid.objSlot, 
-               result.delta, result.resCode, result.resData);
+         dnxDebug(2, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s", 
+               tid, job.xid.objSerial, job.xid.objSlot, result.delta, 
+               result.resCode, result.resData);
 
          if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK)
-            dnxSyslog(LOG_ERR, "Worker[%lx]: Post results failed: %s", 
-                  tid, dnxErrorString(ret));
+            dnxSyslog(LOG_ERR, "Worker[%lx]: Post job [%lu,%lu] results failed: %s", 
+                  tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
 
          xfree(result.resData);
 
@@ -464,6 +463,7 @@ static void * dnxWorker(void * data)
          }
          DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 
+         ws->serial++;  // increment job serial number for next job
          retries = 0;
       }
    }
@@ -565,6 +565,7 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
    assert(cfg->poolInitial >= cfg->poolMin);
    assert(cfg->poolInitial <= cfg->poolMax);
 
+   // allocate and configure the master thread pool data structure
    if ((iwlm = (iDnxWlm *)xmalloc(sizeof *iwlm)) == 0)
       return DNX_ERR_MEMORY;
 
@@ -576,23 +577,37 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
    iwlm->pool = (DnxWorkerStatus **)xmalloc(iwlm->poolsz * sizeof *iwlm->pool);
    memset(iwlm->pool, 0, iwlm->poolsz * sizeof *iwlm->pool);
 
-   if (!iwlm->cfg.dispatcher || !iwlm->cfg.collector || !iwlm->pool)
+   // cache our (primary?) ip address in binary and string format
+   if (getifaddrs(&ifa) == 0)
+   {
+      // locate the first AF_NET address in our interface list
+      struct ifaddrs * ifcur = ifa;
+      while (ifcur && ifcur->ifa_addr->sa_family != AF_INET)
+         ifcur = ifcur->ifa_next;
+
+      if (ifcur)
+      {
+         // cache binary and presentation (string) versions of the ip address
+         iwlm->myipaddr = (unsigned long)
+               ((struct sockaddr_in *)ifcur->ifa_addr)->sin_addr.s_addr;
+         inet_ntop(ifcur->ifa_addr->sa_family, ifcur->ifa_addr->sa_data, 
+               iwlm->myipaddrstr, sizeof iwlm->myipaddrstr);
+      }
+      freeifaddrs(ifa);
+   }
+
+   // if any of the above failed, we really can't continue
+   if (!iwlm->cfg.dispatcher || !iwlm->cfg.collector || !iwlm->pool || !iwlm->myipaddr)
    {
       xfree(iwlm->cfg.dispatcher);
       xfree(iwlm->cfg.collector);
       xfree(iwlm);
+      if (!iwlm->myipaddr)
+      {
+         dnxSyslog(LOG_ERR, "WLM: Unable to access network interfaces.");
+         return DNX_ERR_ADDRESS;
+      }
       return DNX_ERR_MEMORY;
-   }
-
-   // cache our ip address (well, one of them anyway) as a text string
-   if (getifaddrs(&ifa) == 0)
-   {
-      /** @todo Use the "best" address. */
-
-      // just use the first address for now - convert to presentation form
-      inet_ntop(ifa->ifa_addr->sa_family, ifa->ifa_addr->sa_data, 
-            iwlm->myaddr, sizeof iwlm->myaddr);
-      freeifaddrs(ifa);
    }
 
    // create initial worker thread pool

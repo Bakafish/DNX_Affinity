@@ -77,7 +77,7 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    int ret;
 
    dnxDebug(2, 
-         "dnxDispatcher[%lx]: Dispatching job [%lu-%lu] (%s) to node %u.%u.%u.%u",
+         "dnxDispatcher[%lx]: Dispatching job [%lu,%lu] (%s) to node %u.%u.%u.%u",
          tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
          sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5]);
 
@@ -90,10 +90,9 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
 
    if ((ret = dnxSendJob(idisp->channel, &job, pNode->address)) != DNX_OK)
       dnxSyslog(LOG_ERR, 
-            "dnxDispatcher[%lx]: Unable to send job [%lu-%lu] "
-            "(%s) to worker node %u.%u.%u.%u: %s",
+            "Unable to send job [%lu,%lu] (%s) to worker node %u.%u.%u.%u: %s",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
-            sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5],
+            sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5], 
             dnxErrorString(ret));
 
    return ret;
@@ -139,7 +138,7 @@ static void * dnxDispatcher(void * data)
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
 
-   dnxSyslog(LOG_INFO, "dnxDispatcher[%lx]: Awaiting jobs...", pthread_self());
+   dnxSyslog(LOG_INFO, "Dispatcher awaiting jobs...");
 
    while (1)
    {

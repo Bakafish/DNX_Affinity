@@ -121,9 +121,9 @@ static int dnxUdpOpen(iDnxChannel * icp, int active)
       // now use send() and write() in addition to sendto() and sendmsg()
       if (connect(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
       {
-         close(sd);
          dnxSyslog(LOG_ERR, "dnxUdpOpen: connect(%lx) failed: %s", 
                (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
+         close(sd);
          return DNX_ERR_OPEN;
       }
    }
@@ -159,10 +159,6 @@ static int dnxUdpClose(iDnxChannel * icp)
          ((char *)icp - offsetof(iDnxUdpChannel, ichan));
 
    assert(icp && iucp->socket);
-
-   /** @todo Why is this commented out? */
-
-   // shutdown(iucp->socket, SHUT_RDWR);
 
    close(iucp->socket);
    iucp->socket = 0;

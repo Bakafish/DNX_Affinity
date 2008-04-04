@@ -75,12 +75,13 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    }
    else
    {
-      // add the slot identifier to the Job's XID
+      // add the slot index to the Job's XID - this allows us to index 
+      //    the job list using the returned result's XID.objSlot field
       pJob->xid.objSlot = tail;
       pJob->state = DNX_JOB_PENDING;
    
       // add this job to the job list
-      memcpy(&ilist->list[tail], pJob, sizeof(DnxNewJob));
+      memcpy(&ilist->list[tail], pJob, sizeof *pJob);
    
       // update dispatch head index
       if (ilist->list[ilist->tail].state != DNX_JOB_PENDING)
@@ -88,9 +89,9 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    
       ilist->tail = tail;
    
-      dnxDebug(8, "dnxJobListAdd: Job [%lu-%lu]: Head=%lu, DHead=%lu, Tail=%lu", 
-            pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, 
-            ilist->dhead, ilist->tail);
+      dnxDebug(8, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu", 
+            pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, 
+            ilist->tail);
    
       pthread_cond_signal(&ilist->cond);  // signal that a new job is available
    }
@@ -176,8 +177,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    // wait on the condition variable if there are no pending jobs
 
    /** @todo Need to track total number of Pending jobs in the JobList structure?
-    * OR simply just check to see if the dhead index points to a valid
-    * Pending job?
+    * OR simply check to see if the dhead index points to a valid Pending job?
     */
 
    // start at current dispatch head
@@ -209,16 +209,14 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       ilist->list[current].state = DNX_JOB_INPROGRESS;
    
       // make a copy for the Dispatcher
-      memcpy(pJob, &ilist->list[current], sizeof(DnxNewJob));
+      memcpy(pJob, &ilist->list[current], sizeof *pJob);
    
       // update the dispatch head
       if (ilist->dhead != ilist->tail)
          ilist->dhead = (current + 1) % ilist->size;
    
-      dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu-%lu]: "
-                  "Head=%lu, DHead=%lu, Tail=%lu", 
-            pJob->xid.objSerial, pJob->xid.objSlot, 
-            ilist->head, ilist->dhead, ilist->tail);
+      dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu", 
+            pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
    }
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
@@ -244,10 +242,11 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
 
-   dnxDebug(8, "dnxJobListCollect: Compare [%lu-%lu] to [%lu-%lu]: "
-               "Head=%lu, DHead=%lu, Tail=%lu", 
-      pxid->objSerial, pxid->objSlot, ilist->list[current].xid.objSerial, 
-      ilist->list[current].xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
+   dnxDebug(8, 
+         "dnxJobListCollect: Compare job [%lu,%lu] to job [%lu,%lu]: "
+         "Head=%lu, DHead=%lu, Tail=%lu", pxid->objSerial, pxid->objSlot,
+         ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot, 
+         ilist->head, ilist->dhead, ilist->tail);
 
    // verify that the XID of this result matches the XID of the service check
    if (ilist->list[current].state == DNX_JOB_NULL 

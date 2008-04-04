@@ -64,6 +64,13 @@ typedef struct iDnxRegistrar_
 
 /** Compare two node "request for work" requests for equality.
  * 
+ * In the message exchange between the Registrar and client worker threads
+ * the XID.TYPE field will ALWAYS be DNX_OBJ_WORKER, so there is no need to 
+ * compare this field because it will always be the same value. However, the 
+ * XID.SERIAL field is configured as the worker's thread identifier, and the
+ * XID.SLOT field is configured as the worker's IP node address. Thus, the 
+ * XID.SERIAL and XID.SLOT fields uniquely identify a given worker thread.
+ * 
  * @param[in] pLeft - the left node to be compared.
  * @param[in] pRight - the right node to be compared.
  * 
@@ -76,8 +83,8 @@ static DnxQueueResult dnxCompareNodeReq(void * pLeft, void * pRight)
 
    assert(pLeft && pRight);
 
-   return pxl->objType == pxr->objType && pxl->objSerial == pxr->objSerial ? 
-         DNX_QRES_FOUND : DNX_QRES_CONTINUE;
+   return pxl->objSerial == pxr->objSerial && pxl->objSlot == pxr->objSlot
+         ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
 }
 
 //----------------------------------------------------------------------------
@@ -111,14 +118,16 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
       pReq->expires = (*ppMsg)->expires;
-      dnxDebug(2, "dnxRegistrar[%lx]: Updated [%lu-%lu] at %u; expires at %u", 
+      dnxDebug(2, 
+            "dnxRegistrar[%lx]: Updated req [%lu,%lu] at %u; expires at %u", 
             tid, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       *ppMsg = 0;    // we're keeping this message; return NULL
-      dnxDebug(2, "dnxRegistrar[%lx]: Added [%lu-%lu] at %u; expires at %u", 
+      dnxDebug(2, 
+            "dnxRegistrar[%lx]: Added req [%lu,%lu] at %u; expires at %u", 
             tid, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
@@ -239,7 +248,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
          break;
 
       dnxDebug(3, 
-            "dnxRegisterNode: Expired request [%lu-%lu] at %u; expired at %u", 
+            "dnxRegisterNode: Expired req [%lu,%lu] at %u; expired at %u", 
             node->xid.objSerial, node->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(node->expires % 1000));
 

@@ -121,8 +121,8 @@ static void * dnxTimer(void * data)
             char msg[128];
             DnxNewJob * job = &ExpiredList[i];
 
-            dnxDebug(1, "dnxTimer[%lx]: Expiring Job: %s", 
-                  pthread_self(), job->cmd);
+            dnxDebug(1, "dnxTimer[%lx]: Expiring Job [%lu,%lu]: %s", 
+                  pthread_self(), job->xid.objSerial, job->xid.objSlot, job->cmd);
 
             dnxAuditJob(job, "EXPIRE");
 

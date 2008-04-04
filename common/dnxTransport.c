@@ -218,7 +218,7 @@ int dnxChanMapAdd(char * name, char * url)
    if ((ret = dnxChanMapUrlParse(&tmp, url)) != DNX_OK)
       return ret;
 
-   // set the name, unless we are overriding and existing channel
+   // set the name, unless we are overriding an existing channel
    if ((tmp.name = xstrdup(name)) == 0 || (tmp.url = xstrdup(url)) == 0)
    {
       xfree(tmp.name);

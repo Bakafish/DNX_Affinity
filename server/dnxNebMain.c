@@ -395,12 +395,12 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
    Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
    Job.pNode      = pNode;
 
-   dnxDebug(2, "DnxNebMain: Posting Job %lu: %s", serial, Job.cmd);
+   dnxDebug(2, "DnxNebMain: Posting Job [%lu]: %s", serial, Job.cmd);
 
    // Post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "dnxPostNewJob: Failed to post Job \"%s\": %d", 
-            Job.cmd, ret);
+      dnxSyslog(LOG_ERR, "dnxPostNewJob: Failed to post Job [%lu]; \"%s\": %d", 
+            Job.xid.objSerial, Job.cmd, ret);
 
    // Worker Audit Logging
    dnxAuditJob(&Job, "ASSIGN");
@@ -442,12 +442,11 @@ static int ehSvcCheck(int event_type, void * data)
    // check for local execution pattern on command line
    if (cfg.localCheckPattern && regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
    {
-      dnxDebug(1, "ehSvcCheck: Job will execute locally: %s", 
-            svcdata->command_line);
+      dnxDebug(1, "ehSvcCheck: Job will execute locally: %s", svcdata->command_line);
       return OK;     // tell nagios execute locally
    }
 
-   dnxDebug(2, "ehSvcCheck: Received Job %lu at %lu (%lu)",
+   dnxDebug(2, "ehSvcCheck: Received Job [%lu] at %lu (%lu)",
          serial, (unsigned long)time(0), 
          (unsigned long)svcdata->start_time.tv_sec);
 
@@ -460,7 +459,8 @@ static int ehSvcCheck(int event_type, void * data)
 
    if ((ret = dnxPostNewJob(joblist, serial, svcdata, pNode)) != DNX_OK)
    {
-      dnxSyslog(LOG_ERR, "dnxServer: Unable to post job: %s", dnxErrorString(ret));
+      dnxSyslog(LOG_ERR, "dnxServer: Unable to post job [%lu]: %s", 
+            serial, dnxErrorString(ret));
       return OK;     // tell nagios execute locally
    }
 
