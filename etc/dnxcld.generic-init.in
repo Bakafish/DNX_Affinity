@@ -25,7 +25,7 @@ fi
 
 DnxcldBin=@prefix@/sbin/dnxClient
 DnxcldCfg=@sysconfdir@/dnxClient.cfg
-LockFile=@sysrundir@/dnxClient.pid
+LockFile=@localstatedir@/run/dnx/dnxClient.pid
 
 # See how we were called.
 case "$1" in

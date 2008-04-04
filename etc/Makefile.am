@@ -1,4 +1,4 @@
-EXTRA_DIST = dnxClient.cfg.in dnxServer.cfg.in dnxcld.init.in
+EXTRA_DIST = dnxClient.cfg.in dnxServer.cfg.in dnxcld.generic-init.in dnxcld.init.in
 
 edit = sed \
    -e 's|@sysconfdir[@]|$(sysconfdir)|g' \
@@ -9,16 +9,20 @@ edit = sed \
    -e 's|@localstatedir[@]|$(localstatedir)|g' \
    -e 's|@prefix[@]|$(prefix)|g'
 
-all: dnxClient.cfg dnxServer.cfg dnxcld.init
+all: dnxClient.cfg dnxServer.cfg dnxcld.generic-init dnxcld.init
 
 # The link from rcdnxcld to dnxcld needs to be a relative reference because 
 # we can't link by name to a file in $DESTDIR, and a hard link won't work 
 # across file systems. We'll just assume we're talking about the real /etc.
 
 # Install init script and soft link to it from sbin directory
-install-initscript: dnxcld.init
+install-initscript: dnxcld.generic-init dnxcld.init
 	$(mkdir_p) $(DESTDIR)@initrddir@
-	$(INSTALL_SCRIPT) dnxcld.init $(DESTDIR)@initrddir@/dnxcld
+	if [ -f /etc/SuSE-release ]; then \
+	   $(INSTALL_SCRIPT) dnxcld.init $(DESTDIR)@initrddir@/dnxcld; \
+	else \
+	   $(INSTALL_SCRIPT) dnxcld.generic-init $(DESTDIR)@initrddir@/dnxcld; \
+	fi
 	$(LN_S) -f @initrddir@/dnxcld $(DESTDIR)@sbindir@/rcdnxcld
 
 # Install sample config files
@@ -42,7 +46,7 @@ install-servercfg-nochown: dnxServer.cfg
 	$(INSTALL_DATA) dnxServer.cfg $(DESTDIR)@sysconfdir@/dnxServer.cfg
 
 # Build executable scripts
-dnxcld.init: Makefile
+dnxcld.generic-init dnxcld.init: Makefile
 	rm -f $@ $@.tmp
 	$(edit) '$(srcdir)/$@.in' > $@.tmp
 	chmod +x $@.tmp

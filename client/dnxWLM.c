@@ -689,16 +689,11 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
    }
 
    // if any of the above failed, we really can't continue
-   if (!iwlm->cfg.dispatcher || !iwlm->cfg.collector || !iwlm->pool || !iwlm->myipaddr)
+   if (!iwlm->cfg.dispatcher || !iwlm->cfg.collector || !iwlm->pool)
    {
       xfree(iwlm->cfg.dispatcher);
       xfree(iwlm->cfg.collector);
       xfree(iwlm);
-      if (!iwlm->myipaddr)
-      {
-         dnxLog("WLM: Unable to access network interfaces.");
-         return DNX_ERR_ADDRESS;
-      }
       return DNX_ERR_MEMORY;
    }
 

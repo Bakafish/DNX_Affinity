@@ -10,11 +10,16 @@ channelDispatcher = udp://localhost:13480
 channelCollector = udp://localhost:13481
 END_CONFIG_FILE
 
-# Execute the dnx client as a daemon - give it a second to get started
-./dnxClient -c $PWD/testrun/test.cfg -r $PWD/testrun -l $PWD/testrun/test.log -D $PWD/testrun/test.dbg -U $USER
-sleep 1
+# Execute the dnx client as a daemon
+./dnxClient -c $PWD/testrun/test.cfg -r $PWD/testrun -l $PWD/testrun/test.log -D $PWD/testrun/test.dbg
 
-# Check the files in the testrun directory
+# Give it time to create its lock file
+count=0
+while ((count<15)) && [ ! -e $PWD/testrun/dnxClient.pid ]; do
+	sleep 1; let count++
+done
+
+# Ensure we HAVE a lock file now
 if [ ! -e $PWD/testrun/dnxClient.pid ]; then
 	echo "dnxClient.pid NOT found - daemon didn't start!"
 	exit 1
@@ -23,12 +28,14 @@ fi
 # Send a SIGTERM - wait up to 15 seconds for it to die
 # echo "dnxClient PID:" `cat $PWD/testrun/dnxClient.pid`
 kill `cat $PWD/testrun/dnxClient.pid`
+
+# Give it time to remove its lock file
 count=0
 while ((count<15)) && [ -e $PWD/testrun/dnxClient.pid ]; do
 	sleep 1; let count++
 done
 
-# Check the files in the testrun directory
+# Ensure we DON'T have a lock file now
 if [ -e $PWD/testrun/dnxClient.pid ]; then
 	echo "dnxClient.pid still exists - daemon didn't stop!"
 	exit 1
