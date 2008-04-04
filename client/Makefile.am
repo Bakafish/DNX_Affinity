@@ -13,6 +13,7 @@ dnxClient_SOURCES =\
 
 dnxClient_CPPFLAGS =\
  -DSYSCONFDIR=\"$(sysconfdir)\"\
+ -DLOCALSTATEDIR=\"$(localstatedir)\"\
  -DSYSRUNPATH=\"$(sysrunpath)\"\
  -DDNXUSER=\"$(dnx_user)\"\
  -DDNXGROUP=\"$(dnx_group)\"\

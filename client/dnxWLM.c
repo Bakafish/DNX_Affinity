@@ -360,7 +360,6 @@ static void cleanThreadPool(iDnxWlm * iwlm)
       }
       i++;
    }
-   dnxDebug(1, "WLM: Threads: %d; Busy: %d.", iwlm->threads, iwlm->active);
 }
 
 //----------------------------------------------------------------------------
@@ -487,7 +486,7 @@ static void * dnxWorker(void * data)
          // store allocated copy of the result string
          if (*resData) result.resData = xstrdup(resData);
 
-         dnxDebug(2, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s.", 
+         dnxDebug(1, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, result.delta, 
                result.resCode, result.resData);
 

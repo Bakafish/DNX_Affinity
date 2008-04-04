@@ -53,6 +53,10 @@
 # define SYSCONFDIR "/etc"
 #endif
 
+#ifndef LOCALSTATEDIR
+# define LOCALSTATEDIR "/var"
+#endif
+
 #ifndef NSCORE
 # define NSCORE
 #endif
@@ -75,6 +79,8 @@
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
 #define DNX_DEFAULT_SERVER_CONFIG_FILE SYSCONFDIR "/dnxServer.cfg"
+#define DNX_DEFAULT_LOG                LOCALSTATEDIR "/log/dnxsrv.log"
+#define DNX_DEFAULT_DBGLOG             LOCALSTATEDIR "/log/dnxsrv.dbg.log"
 
 // specify event broker API version (required)
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);
@@ -224,7 +230,7 @@ static int initConfig(char * cfgfile)
       "maxNodeRequests = 0x7FFFFFFF\n"
       "minServiceSlots = 100\n"
       "expirePollInterval = 5\n"
-      "logFile = /var/log/dnxsrv.log\n";
+      "logFile = " DNX_DEFAULT_LOG "\n";
 
    int ret;
    regex_t re;

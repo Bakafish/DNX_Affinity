@@ -132,12 +132,16 @@ echo
 echo "  Project ${PACKAGE} version ${VERSION} configuration:"
 echo
 echo "  Targeting Nagios version ${nagios_target}."
-echo "  Prefix is '${prefix}'."
+echo
 echo "  Nagios user is '${nagios_user}'."
 echo "  Nagios group is '${nagios_group}'."
 echo "  DNX client user is '${dnx_user}'."
 echo "  DNX client group is '${dnx_group}'."
-echo "  DNX client run path is '${sysrunpath}'."
+echo
+echo "  Path prefix is '${prefix}'."
+echo "  Data directory is '${datadir}'."
+echo "  Client run path is '${sysrunpath}'."
+echo "  Local state directory is '${localstatedir}'."
 echo "  System init directory is '${initrddir}'."
 echo
 echo "  Now type 'make @<:@prefix=<user-prefix>@:>@ @<:@<target>@:>@'"

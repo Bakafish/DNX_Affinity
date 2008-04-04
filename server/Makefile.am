@@ -24,6 +24,7 @@ dnxServer_la_SOURCES =\
 
 dnxServer_la_CPPFLAGS =\
  -DSYSCONFDIR=\"$(sysconfdir)\"\
+ -DLOCALSTATEDIR=\"$(localstatedir)\"\
  -I$(top_srcdir)/common\
  -I$(top_srcdir)/nagios/nagios-@nagios_target@/include
 

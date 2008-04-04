@@ -49,7 +49,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
-#include <syslog.h>
 #include <pthread.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -69,27 +68,33 @@
 #endif
 
 #ifndef SYSCONFDIR
-# define SYSCONFDIR  "/etc"
+# define SYSCONFDIR     "/etc"
+#endif
+
+#ifndef LOCALSTATEDIR
+# define LOCALSTATEDIR  "/var"
 #endif
 
 #ifndef SYSRUNPATH
-# define SYSRUNPATH  "/var/run/dnx"
+# define SYSRUNPATH     LOCALSTATEDIR "/run/dnx"
 #endif
 
 #ifndef DNXUSER
-# define DNXUSER     "nagios"
+# define DNXUSER        "nagios"
 #endif
 
 #ifndef DNXGROUP
-# define DNXGROUP    "nagios"
+# define DNXGROUP       "nagios"
 #endif
 
 #ifndef COMPILE_FLAGS
-# define COMPILE_FLAGS "<unknown>"
+# define COMPILE_FLAGS  "<unknown>"
 #endif
 
 // default configuration
 #define DNX_DEFAULT_NODE_CONFIG_FILE      SYSCONFDIR "/dnxClient.cfg"
+#define DNX_DEFAULT_LOG                   LOCALSTATEDIR "/log/dnxcld.log"
+#define DNX_DEFAULT_DBGLOG                LOCALSTATEDIR "/log/dnxcld.debug.log"
 #define DNX_DEFAULT_RUN_PATH              SYSRUNPATH
 #define DNX_DEFAULT_USER                  DNXUSER
 #define DNX_DEFAULT_GROUP                 DNXGROUP
@@ -141,6 +146,8 @@ static void version(FILE * fp, char * base)
       "\n"
       "  Default configuration:\n"
       "    Default config file: "      DNX_DEFAULT_NODE_CONFIG_FILE "\n"
+      "    Default log file: "         DNX_DEFAULT_LOG "\n"
+      "    Default debug log file: "   DNX_DEFAULT_DBGLOG "\n"
       "    Default system run path: "  DNX_DEFAULT_RUN_PATH "\n"
       "    Default daemon user: "      DNX_DEFAULT_USER "\n"
       "    Default daemon group: "     DNX_DEFAULT_GROUP "\n"
@@ -462,8 +469,8 @@ static int initConfig(char * cfgfile)
       "threadMaxRetries = 12\n"
       "threadTtlBackoff = 1\n"
       "maxResultBuffer = 1024\n"
-      "logFile = /var/log/dnxcld.log\n"
-      "debugFile = /var/log/dnxcld.debug.log\n"
+      "logFile = " DNX_DEFAULT_LOG "\n"
+      "debugFile = " DNX_DEFAULT_DBGLOG "\n"
       "user = " DNX_DEFAULT_USER "\n"
       "group = " DNX_DEFAULT_GROUP "\n"
       "runPath = " DNX_DEFAULT_RUN_PATH "\n";
