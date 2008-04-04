@@ -53,6 +53,6 @@ if [ -e $PWD/testrun/dnxClient.pid ]; then
 fi
 
 # Remove all daemon droppings
-# rm -rf testrun
+rm -rf testrun
 
 exit $status
