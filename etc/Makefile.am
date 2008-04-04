@@ -12,16 +12,17 @@ edit = sed \
 all: dnxClient.cfg dnxServer.cfg dnxcld.generic-init dnxcld.init
 
 # The link from rcdnxcld to dnxcld needs to be a relative reference because 
-# we can't link by name to a file in $DESTDIR, and a hard link won't work 
-# across file systems. We'll just assume we're talking about the real /etc.
+# we can't link by name to a file in a staged installation directory, and a
+# hard link won't work across file systems. We'll just assume we're talking
+# about the real /etc directory.
 
 # Install init script and soft link to it from sbin directory
 install-initscript: dnxcld.generic-init dnxcld.init
-	$(mkdir_p) $(DESTDIR)$(initrddir)
+	$(install_sh) -d $(DESTDIR)$(initrddir)
 	if [ -f /etc/SuSE-release ]; then \
-	   $(INSTALL_SCRIPT) dnxcld.init $(DESTDIR)$(initrddir)/dnxcld; \
+	   $(install_sh) -m 0755 dnxcld.init $(DESTDIR)$(initrddir)/dnxcld; \
 	else \
-	   $(INSTALL_SCRIPT) dnxcld.generic-init $(DESTDIR)$(initrddir)/dnxcld; \
+	   $(install_sh) -m 0755 dnxcld.generic-init $(DESTDIR)$(initrddir)/dnxcld; \
 	fi
 	$(LN_S) -f $(initrddir)/dnxcld $(DESTDIR)$(sbindir)/rcdnxcld
 
@@ -29,16 +30,16 @@ install-initscript: dnxcld.generic-init dnxcld.init
 install-cfg: install-clientcfg install-servercfg
 
 install-clientcfg: dnxClient.cfg
-	$(mkdir_p) $(DESTDIR)$(sysconfdir)
-	$(INSTALL_DATA) dnxClient.cfg $(DESTDIR)$(sysconfdir)/dnxClient.cfg
-	if [ `id -u` -eq 0 ]; then \
+	$(install_sh) -d $(DESTDIR)$(sysconfdir)
+	$(install_sh) -m 0644 dnxClient.cfg $(DESTDIR)$(sysconfdir)/dnxClient.cfg
+	if [ `id -u` -eq 0 ] && [ -z ${DESTDIR} ]; then \
 	   chown $(dnx_user):$(dnx_group) $(DESTDIR)$(sysconfdir)/dnxClient.cfg; \
 	fi
 
 install-servercfg: dnxServer.cfg
-	$(mkdir_p) $(DESTDIR)$(sysconfdir)
-	$(INSTALL_DATA) dnxServer.cfg $(DESTDIR)$(sysconfdir)/dnxServer.cfg
-	if [ `id -u` -eq 0 ]; then \
+	$(install_sh) -d $(DESTDIR)$(sysconfdir)
+	$(install_sh) -m 644 dnxServer.cfg $(DESTDIR)$(sysconfdir)/dnxServer.cfg
+	if [ `id -u` -eq 0 ] && [ -z ${DESTDIR} ]; then \
 	   chown $(nagios_user):$(nagios_group) $(DESTDIR)$(sysconfdir)/dnxServer.cfg; \
 	fi
 

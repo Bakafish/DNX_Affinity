@@ -33,15 +33,15 @@ dnxServer_la_LIBADD = ../common/libcmn.la
 dnxServer_la_LDFLAGS = -module -avoid-version
 
 install-exec-hook:
-	if [ `id -u` -eq 0 ]; then \
+	if [ `id -u` -eq 0 ] && [ -z ${DESTDIR} ]; then \
 	   chown $(nagios_user):$(nagios_group) $(DESTDIR)$(libexecdir); \
 	   chown $(nagios_user):$(nagios_group) $(DESTDIR)$(libexecdir)/sync_plugins.pl; \
 	fi
 	rm $(DESTDIR)$(libdir)/dnxServer.a
 	rm $(DESTDIR)$(libdir)/dnxServer.la
 	if [ ! -e $(syslogdir) ]; then \
-	   $(mkdir_p) $(syslogdir); \
-	   if [ `id -u` -eq 0 ]; then \
+	   $(install_sh) -d $(syslogdir); \
+	   if [ `id -u` -eq 0 ] && [ -z ${DESTDIR} ]; then \
 	      chown $(nagios_user):$(nagios_group) $(syslogdir); \
 	   fi; \
 	fi

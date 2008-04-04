@@ -22,13 +22,13 @@ dnxClient_CPPFLAGS =\
 dnxClient_LDADD = ../common/libcmn.la
 
 install-exec-hook:
-	$(mkdir_p) $(DESTDIR)$(sysrundir)
-	if [ `id -u` -eq 0 ]; then \
+	$(install_sh) -d $(DESTDIR)$(sysrundir)
+	if [ `id -u` -eq 0 ] && [ -z ${DESTDIR} ]; then \
 	   chown $(dnx_user):$(dnx_group) $(DESTDIR)$(sysrundir); \
 	fi
 	if [ ! -e $(DESTDIR)$(syslogdir) ]; then \
-	   $(mkdir_p) $(DESTDIR)$(syslogdir); \
-	   if [ `id -u` -eq 0 ]; then \
+	   $(install_sh) -d $(DESTDIR)$(syslogdir); \
+	   if [ `id -u` -eq 0 ] && [ -z ${DESTDIR} ]; then \
 	      chown $(dnx_user):$(dnx_group) $(DESTDIR)$(syslogdir); \
 	   fi; \
 	fi
