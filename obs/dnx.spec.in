@@ -69,5 +69,5 @@ rm -rf "$RPM_BUILD_ROOT"
 %{_libdir}/%{name}/dnxServer.a
 %{_libdir}/%{name}/dnxServer.la
 %{_libdir}/%{name}/dnxServer.so
-
+%{_libdir}/sync_plugins.pl
 
