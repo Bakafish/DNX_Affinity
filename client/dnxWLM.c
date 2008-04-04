@@ -37,7 +37,7 @@
 #include "dnxError.h"
 #include "dnxDebug.h"
 #include "dnxLogging.h"
-#include "dnxChannel.h"
+#include "dnxTransport.h"
 #include "dnxSleep.h"
 #include "dnxProtocol.h"
 #include "dnxPlugin.h"

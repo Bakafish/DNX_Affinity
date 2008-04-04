@@ -46,6 +46,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#define DNX_TCP_LISTEN  5
+
 static pthread_mutex_t tcpMutex;
 
 /** @todo Use GNU reentrant resolver interface on platforms where available. */

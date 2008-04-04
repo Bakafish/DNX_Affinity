@@ -36,7 +36,7 @@
 #define _DNXDISPATCHER_H_
 
 #include "dnxJobList.h"
-#include "dnxChannel.h"
+#include "dnxTransport.h"
 
 /** Abstract data type for the DNX job dispatcher. */
 typedef struct { int unused; } DnxDispatcher;

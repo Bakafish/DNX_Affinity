@@ -28,30 +28,63 @@
 #ifndef _DNXTRANSPORT_H_
 #define _DNXTRANSPORT_H_
 
-#include "dnxChannel.h"
+#define DNX_MAX_URL        1023
+#define DNX_MAX_MSG        1024
 
-#define DNX_MAX_CHAN_MAP   1000
-
-typedef struct DnxChanMap_ 
+typedef enum DnxChanType_ 
 {
-   char * name;         // Channel name, as read from configuration file
-   char * url;          // Channel connection specification
-   DnxChanType type;    // Channel type: which transport to use
-   int (*txAlloc)(DnxChannel ** channel, char * url);  // Transport's channel factory
-} DnxChanMap;
+   DNX_CHAN_UNKNOWN = 0, 
+   DNX_CHAN_TCP, 
+   DNX_CHAN_UDP, 
+   DNX_CHAN_UNIX, 
+   DNX_CHAN_MSGQ 
+} DnxChanType;
+
+typedef enum DnxChanMode_ 
+{
+   DNX_CHAN_PASSIVE = 0, 
+   DNX_CHAN_ACTIVE 
+} DnxChanMode;
+
+typedef enum DnxChanState_ 
+{
+   DNX_CHAN_CLOSED = 0, 
+   DNX_CHAN_OPEN 
+} DnxChanState;
+
+typedef struct DnxChannel_ 
+{
+   int chan;            // Can be: INET socket, UNIX socket or IPC Message Queue ID
+                        // (Can implement as a union in the future, if needed, to support
+                        // other communications mechanisms.)  Better yet, implement as an
+                        // opaque (void) structure pointer to allow the transport protocols
+                        // to manipulate this with complete encapsulation and privacy.
+   DnxChanType type;    // Channel type
+   char * name;         // Channel name, as specified to dnxConnect
+   char * host;         // Host for TCP/UDP channels; NULL for Message Queues
+   int port;            // Port for TCP and UDP channels; ID for Message Queues
+   DnxChanState state;  // Channel state
+   int debug;           // Channel comm debug flag
+   int (*dnxOpen)(struct DnxChannel_ * channel, DnxChanMode mode);
+   int (*dnxClose)(struct DnxChannel_ * channel);
+   int (*dnxRead)(struct DnxChannel_ * channel, char * buf, int * size, int timeout, char * src);
+   int (*dnxWrite)(struct DnxChannel_ * channel, char * buf, int size, int timeout, char * dst);
+   int (*txDelete)(struct DnxChannel_ * channel); // Release a channel using this transport
+} DnxChannel;
+
+int dnxChanMapAdd(char * name, char * url);
+int dnxChanMapDelete(char * name);
+
+int dnxConnect(char * name, DnxChannel ** channel, DnxChanMode mode);
+int dnxDisconnect(DnxChannel * channel);
+
+int dnxGet(DnxChannel * channel, char * buf, int * size, int timeout, char * src);
+int dnxPut(DnxChannel * channel, char * buf, int size, int timeout, char * dst);
+
+int dnxChannelDebug(DnxChannel * channel, int doDebug);
 
 int dnxChanMapInit(char * fileName);
 int dnxChanMapRelease(void);
-int dnxChanMapAdd(char * name, char * url);
-int dnxChanMapUrlParse(DnxChanMap * chanMap, char * url);
-int dnxChanMapDelete(char * name);
-int dnxChanMapFindSlot(DnxChanMap ** chanMap);
-int dnxChanMapFindName(char * name, DnxChanMap ** chanMap);
-int dnxConnect(char * name, DnxChannel ** channel, DnxChanMode mode);
-int dnxDisconnect(DnxChannel * channel);
-int dnxGet(DnxChannel * channel, char * buf, int * size, int timeout, char * src);
-int dnxPut(DnxChannel * channel, char * buf, int size, int timeout, char * dst);
-int dnxChannelDebug(DnxChannel * channel, int doDebug);
 
 #endif   /* _DNXTRANSPORT_H_ */
 

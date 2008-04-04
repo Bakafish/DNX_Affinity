@@ -30,7 +30,7 @@
 
 #include <time.h>
 
-#include "dnxChannel.h"
+#include "dnxTransport.h"
 
 /** Defines the type of a DNX object in a network message. */
 typedef enum DnxObjType

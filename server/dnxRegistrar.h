@@ -37,7 +37,7 @@
 #define _DNXREGISTRAR_H_
 
 #include "dnxQueue.h"
-#include "dnxChannel.h"
+#include "dnxTransport.h"
 #include "dnxProtocol.h"
 
 /** An abstraction data type for the DNX registrar object. */

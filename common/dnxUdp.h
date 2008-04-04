@@ -28,7 +28,7 @@
 #ifndef _DNXUDP_H_
 #define _DNXUDP_H_
 
-#include "dnxChannel.h"
+#include "dnxTransport.h"
 
 int dnxUdpInit(void);
 int dnxUdpDeInit(void);

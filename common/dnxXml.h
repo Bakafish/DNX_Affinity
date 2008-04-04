@@ -28,7 +28,7 @@
 #ifndef _DNXXML_H_
 #define _DNXXML_H_
 
-#include "dnxChannel.h" // for DNX_MAX_MSG
+#include "dnxTransport.h"  // for DNX_MAX_MSG
 
 typedef enum DnxXmlType
 {

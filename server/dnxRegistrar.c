@@ -35,12 +35,12 @@
 
 #include "dnxRegistrar.h"
 
-#include "dnxChannel.h"
 #include "dnxNebMain.h"
 #include "dnxError.h"
 #include "dnxDebug.h"
 #include "dnxQueue.h"
 #include "dnxSleep.h"
+#include "dnxTransport.h"
 #include "dnxProtocol.h"
 #include "dnxLogging.h"
 

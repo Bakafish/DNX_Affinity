@@ -35,7 +35,7 @@
 #define _DNXCOLLECTOR_H_
 
 #include "dnxJobList.h"
-#include "dnxChannel.h"
+#include "dnxTransport.h"
 
 /** Abstract data type for the DNX job results collector. */
 typedef struct { int unused; } DnxCollector;

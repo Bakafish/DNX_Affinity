@@ -28,9 +28,7 @@
 #ifndef _DNXTCP_H_
 #define _DNXTCP_H_
 
-#include "dnxChannel.h"
-
-#define DNX_TCP_LISTEN  5
+#include "dnxTransport.h"
 
 int dnxTcpInit(void);
 int dnxTcpDeInit(void);

@@ -28,7 +28,7 @@
 #ifndef _DNXMSGQ_H_
 #define _DNXMSGQ_H_
 
-#include "dnxChannel.h"
+#include "dnxTransport.h"
 
 int dnxMsgQInit(void);
 int dnxMsgQDeInit(void);
