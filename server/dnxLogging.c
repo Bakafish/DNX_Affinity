@@ -26,18 +26,19 @@
  */
 
 #include "dnxLogging.h"
-
-#include "dnxNebMain.h"
 #include "dnxError.h"
 
 #include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include <syslog.h>
 
 #define MAX_LOG_LINE 1023
 
 static long defDebug = 0;
 static int defLogFacility = LOG_LOCAL7;
 
-static long * pDebug = &defDebug;
+static int * pDebug = &defDebug;
 static int * pLogFacility = &defLogFacility;
 
 //----------------------------------------------------------------------------
@@ -91,7 +92,7 @@ int dnxSyslog(int priority, char * fmt, ...)
 int dnxDebug(int level, char * fmt, ...)
 {
    va_list ap;
-   char sbuf[MAX_LOG_LINE+1];
+   char sbuf[MAX_LOG_LINE + 1];
 
    // Validate input parameters
    if (!fmt)
@@ -121,12 +122,12 @@ int dnxDebug(int level, char * fmt, ...)
 
 //----------------------------------------------------------------------------
 
-/** Initialize server logging functionality.
+/** Initialize logging functionality.
  * 
  * @param[in] debug - a pointer to the global debug level.
  * @param[in] logFacility - a pointer to the global log facility.
  */
-void cfgServerLogging(long * debug, int * logFacility)
+void initLogging(int * debug, int * logFacility)
 {
    pDebug = debug;
    pLogFacility = logFacility;
