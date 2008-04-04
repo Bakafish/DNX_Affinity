@@ -111,14 +111,14 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
       pReq->expires = (*ppMsg)->expires;
-      dnxDebug(1, "dnxRegistrar[%lx]: Updated [%lu-%lu] at %u; expires at %u", 
+      dnxDebug(2, "dnxRegistrar[%lx]: Updated [%lu-%lu] at %u; expires at %u", 
             tid, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       *ppMsg = 0;    // we're keeping this message; return NULL
-      dnxDebug(1, "dnxRegistrar[%lx]: Added [%lu-%lu] at %u; expires at %u", 
+      dnxDebug(2, "dnxRegistrar[%lx]: Added [%lu-%lu] at %u; expires at %u", 
             tid, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
@@ -238,7 +238,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       if (node->expires > now)
          break;
 
-      dnxDebug(1, 
+      dnxDebug(3, 
             "dnxRegisterNode: Expired request [%lu-%lu] at %u; expired at %u", 
             node->xid.objSerial, node->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(node->expires % 1000));
@@ -254,7 +254,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
             discard_count);
 
    if (ret != DNX_OK)
-      dnxDebug(1, "dnxGetNodeRequest: Unable to fulfill node request: %s",
+      dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s",
             dnxErrorString(ret));
 
    *ppNode = node;   // return a node or NULL

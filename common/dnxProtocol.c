@@ -71,7 +71,7 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg,
 
    // decode the XML message:
    xbuf.buf[xbuf.size] = 0;
-   dnxDebug(2, "dnxWaitForNodeRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxWaitForNodeRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // verify this is a "NodeRequest" message
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "NodeRequest")) != DNX_OK)
@@ -124,7 +124,7 @@ int dnxSendNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * addre
    dnxXmlAdd  (&xbuf, "TTL",     DNX_XML_UINT, &pReg->ttl);
    dnxXmlClose(&xbuf);
 
-   dnxDebug(2, "dnxSendNodeRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxSendNodeRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
@@ -161,7 +161,7 @@ int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeo
 
    // decode the XML message
    xbuf.buf[xbuf.size] = 0;
-   dnxDebug(2, "dnxWaitForJob: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxWaitForJob: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // verify this is a "Job" message
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "Job")) != DNX_OK)
@@ -216,7 +216,7 @@ int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address)
    dnxXmlAdd  (&xbuf, "Command",  DNX_XML_STR,   pJob->cmd);
    dnxXmlClose(&xbuf);
 
-   dnxDebug(2, "dnxSendJob: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxSendJob: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
@@ -254,7 +254,7 @@ int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult,
 
    // decode the XML message
    xbuf.buf[xbuf.size] = 0;
-   dnxDebug(2, "dnxWaitForResult: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxWaitForResult: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // verify this is a "Result" message
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "Result")) != DNX_OK)
@@ -313,7 +313,7 @@ int dnxSendResult(DnxChannel * channel, DnxResult * pResult, char * address)
    dnxXmlAdd  (&xbuf, "ResultData", DNX_XML_STR,   resData);
    dnxXmlClose(&xbuf);
 
-   dnxDebug(2, "dnxSendResult: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxSendResult: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
@@ -351,7 +351,7 @@ int dnxWaitForMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest,
 
    // decode the XML message
    xbuf.buf[xbuf.size] = 0;
-   dnxDebug(2, "dnxWaitForMgmtRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxWaitForMgmtRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // verify this is a "MgmtRequest" message
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "MgmtRequest")) != DNX_OK)
@@ -391,7 +391,7 @@ int dnxSendMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, char * a
    dnxXmlAdd  (&xbuf, "Action", DNX_XML_STR, &pRequest->action);
    dnxXmlClose(&xbuf);
 
-   dnxDebug(2, "dnxSendMgmtRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxSendMgmtRequest: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
@@ -429,7 +429,7 @@ int dnxWaitForMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply,
 
    // decode the XML message
    xbuf.buf[xbuf.size] = 0;
-   dnxDebug(2, "dnxWaitForMgmtReply: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxWaitForMgmtReply: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // verify this is a "MgmtRequest" message
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "MgmtReply")) != DNX_OK)
@@ -468,7 +468,7 @@ int dnxSendMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address
    dnxXmlAdd  (&xbuf, "Result", DNX_XML_STR, &pReply->reply);
    dnxXmlClose(&xbuf);
 
-   dnxDebug(2, "dnxSendMgmtReply: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxSendMgmtReply: XML msg(%d bytes)=%s", xbuf.size, xbuf.buf);
 
    // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);

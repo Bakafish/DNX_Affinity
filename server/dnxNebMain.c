@@ -395,7 +395,7 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
    Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
    Job.pNode      = pNode;
 
-   dnxDebug(1, "DnxNebMain: Posting Job %lu: %s", serial, Job.cmd);
+   dnxDebug(2, "DnxNebMain: Posting Job %lu: %s", serial, Job.cmd);
 
    // Post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
@@ -447,7 +447,7 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   dnxDebug(1, "ehSvcCheck: Received Job %lu at %lu (%lu)",
+   dnxDebug(2, "ehSvcCheck: Received Job %lu at %lu (%lu)",
          serial, (unsigned long)time(0), 
          (unsigned long)svcdata->start_time.tv_sec);
 

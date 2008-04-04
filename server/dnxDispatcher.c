@@ -76,7 +76,7 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    DnxJob job;
    int ret;
 
-   dnxDebug(1, 
+   dnxDebug(2, 
          "dnxDispatcher[%lx]: Dispatching job [%lu-%lu] (%s) to node %u.%u.%u.%u",
          tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
          sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5]);

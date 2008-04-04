@@ -138,7 +138,7 @@ static void * dnxTimer(void * data)
       }
 
       if (totalExpired > 0 || ret != DNX_OK)
-         dnxDebug(1, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d: %s", 
+         dnxDebug(2, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d: %s", 
                pthread_self(), totalExpired, ret, dnxErrorString(ret));
    }
 
