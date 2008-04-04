@@ -108,6 +108,18 @@ AC_ARG_WITH([init-dir],
 initrddir="$with_init_dir"
 AC_SUBST(initrddir)
 
+AC_ARG_ENABLE([debug-heap], 
+	      [AS_HELP_STRING([--enable-debug-heap], [Turn on DNX debug heap support @<:@default is OFF@:>@])],
+	      [case "${enableval}" in
+		 yes) dbgheap=yes ;;
+		 no)  dbgheap=no  ;;
+		 *)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug-heap]) ;;
+	       esac], [dbgheap=no])
+AM_CONDITIONAL([ENABLE_DEBUG_HEAP], [test "${dbgheap}" = yes])
+if test "${dbgheap}" = yes; then
+  CPPFLAGS="${CPPFLAGS} -DDEBUG_HEAP"
+fi
+
 AC_CONFIG_FILES([Makefile
 		 etc/Makefile
 		 obs/dnx.spec
@@ -125,41 +137,43 @@ AC_CONFIG_FILES([Makefile
 		 client/test/Makefile])
 AC_OUTPUT
 
-echo "------------------------------------------------------------"
-echo
-echo "  Project ${PACKAGE} version ${VERSION} configuration:"
-echo
-echo "  Targeting Nagios version ${nagios_target}."
-echo
-echo "  Nagios user is '${nagios_user}'."
-echo "  Nagios group is '${nagios_group}'."
-echo "  DNX client user is '${dnx_user}'."
-echo "  DNX client group is '${dnx_group}'."
-echo
-echo "  Path prefix is '${prefix}'."
-echo "  Data directory is '${datadir}'."
-echo "  Log directory is '${syslogdir}'."
-echo "  Config directory is '${sysconfdir}'."
-echo "  System run path is '${sysrundir}'."
-echo "  System init directory is '${initrddir}'."
-echo
-echo "  Now type 'make @<:@prefix=<user-prefix>@:>@ @<:@<target>@:>@'"
-echo "    where the optional <target> is:"
-echo "      all                - build all binaries (default)."
-echo "      docs               - build doxygen documentation."
-echo "      install            - install all binaries and data."
-echo "      install-client     - install client binaries and data."
-echo "      install-server     - install server binaries and data."
-echo "      install-cfg        - install both sample config scripts."
-echo "      install-clientcfg  - install client sample config script."
-echo "      install-servercfg  - install server sample config script."
-echo "      install-initscript - install system init script."
-echo "      install-docs       - install all documentation."
-echo
-echo "    additionally on rpm-based systems only:"
-echo "      rpmcheck           - check whether rpms may be built."
-echo "      srcrpm             - build only source rpm."
-echo "      rpms               - build source and binary rpms."
-echo
-echo "------------------------------------------------------------"
+echo \
+"------------------------------------------------------------
+
+  Project ${PACKAGE} version ${VERSION} configuration:
+
+  Targeting Nagios version ${nagios_target}.
+
+  Nagios user is '${nagios_user}'.
+  Nagios group is '${nagios_group}'.
+  DNX client user is '${dnx_user}'.
+  DNX client group is '${dnx_group}'.
+
+  Path prefix is '${prefix}'.
+  Data directory is '${datadir}'.
+  Log directory is '${syslogdir}'.
+  Config directory is '${sysconfdir}'.
+  System run path is '${sysrundir}'.
+  System init directory is '${initrddir}'.
+  Compiler: '${CC} ${DEFS} ${CPPFLAGS} ${CFLAGS}'
+
+  Now type 'make @<:@prefix=<user-prefix>@:>@ @<:@<target>@:>@'
+    where the optional <target> is:
+      all                - build all binaries (default).
+      docs               - build doxygen documentation.
+      install            - install all binaries and data.
+      install-client     - install client binaries and data.
+      install-server     - install server binaries and data.
+      install-cfg        - install both sample config scripts.
+      install-clientcfg  - install client sample config script.
+      install-servercfg  - install server sample config script.
+      install-initscript - install system init script.
+      install-docs       - install all documentation.
+
+    additionally on rpm-based systems only:
+      rpmcheck           - check whether rpms may be built.
+      srcrpm             - build only source rpm.
+      rpms               - build source and binary rpms.
+
+------------------------------------------------------------"
 

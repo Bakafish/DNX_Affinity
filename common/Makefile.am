@@ -1,3 +1,7 @@
+if ENABLE_DEBUG_HEAP
+  dbgheap_srcs = dnxHeap.c
+endif
+
 noinst_LTLIBRARIES = libcmn.la
 
 noinst_HEADERS =\
@@ -20,7 +24,6 @@ noinst_HEADERS =\
 libcmn_la_SOURCES =\
  dnxCfgParser.c\
  dnxError.c\
- dnxHeap.c\
  dnxLogging.c\
  dnxMsgQ.c\
  dnxProtocol.c\
@@ -29,7 +32,8 @@ libcmn_la_SOURCES =\
  dnxTransport.c\
  dnxUdp.c\
  dnxXml.c\
- pfopen.c
+ pfopen.c\
+ $(dbgheap_srcs)
 
 # ---------------------------------------------------------------------------
 # common code unit tests
@@ -37,9 +41,9 @@ libcmn_la_SOURCES =\
 TESTS = dnxCfgParserTest dnxXmlTest
 check_PROGRAMS = dnxCfgParserTest dnxXmlTest
 
-dnxCfgParserTest_SOURCES = dnxCfgParser.c dnxError.c dnxHeap.c
+dnxCfgParserTest_SOURCES = dnxCfgParser.c dnxError.c $(dbgheap_srcs)
 dnxCfgParserTest_CPPFLAGS = -DDNX_CFGPARSER_TEST
 
-dnxXmlTest_SOURCES = dnxXml.c dnxError.c dnxHeap.c
+dnxXmlTest_SOURCES = dnxXml.c dnxError.c $(dbgheap_srcs)
 dnxXmlTest_CPPFLAGS = -DDNX_XML_TEST
 
