@@ -1,0 +1,61 @@
+#
+# spec file for package dnx (Version 0.15)  
+#
+# Please submit bugfixes or comments via http://dnx.sourceforge.net
+#
+Name:           dnx
+Version:        @VERSION@
+Release:        1
+License:        GPL
+BuildRoot:      %{_tmppath}/%{name}-%{version}-build
+BuildRequires:  
+Group:          Productivity/Security
+Summary:        Distributed Nagios eXecutor (DNX)
+Url:            http://openxdas.sourceforge.net
+Source:         %{name}-%{version}.tar.gz
+
+%description
+The Distributed Nagios eXecutor (DNX) package provides a Nagios Event Broker
+(NEB) module and a client daemon process. DNX distributes the work of Nagios
+checks across a network of client nodes, thus providing significant scalability
+to the Natios monitoring software package.
+
+%prep
+%setup
+
+%build
+%configure
+make
+make check
+
+%install
+rm -rf %{buildroot}
+%makeinstall
+mkdir -p $RPM_BUILD_ROOT/etc/init.d
+mkdir -p $RPM_BUILD_ROOT/usr/sbin
+install -m 755 xdasd.init $RPM_BUILD_ROOT/etc/init.d/xdasd
+ln -sf ../../etc/init.d/xdasd $RPM_BUILD_ROOT/usr/sbin/rcxdasd
+ln -sf %{name}-%{version}.jar $RPM_BUILD_ROOT/%{_datadir}/java/%{name}.jar
+
+%post
+%{fillup_and_insserv -f dnxd}
+
+%preun
+%stop_on_removal dnxClient
+
+%postun
+%restart_on_update dnxClient
+%insserv_cleanup
+
+%clean
+rm -rf "$RPM_BUILD_ROOT"
+
+%files
+%defattr(-,root,root)
+%doc AUTHORS COPYING ChangeLog NEWS README
+%config /etc/init.d/dnxClient
+%dir %{_libdir}/%{name}
+/usr/sbin/dnxClient
+/usr/sbin/rcdnxClient
+%{_libdir}/dnxServer.so
+
