@@ -81,7 +81,7 @@
 // specify event broker API version (required)
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);
 
-/** The payload of a new job object. */
+/** The internal structure of a new job payload object. */
 typedef struct DnxJobData
 {
    service * svc;                   //!< The nagios service check structure.
@@ -109,6 +109,7 @@ typedef struct DnxServerCfg
 
 // module static data
 static DnxServerCfg cfg;            //!< The server configuration parameters.
+static DnxCfgParser * parser;       //!< The system configuration parser.
 static DnxJobList * joblist;        //!< The master job list.
 static DnxRegistrar * registrar;    //!< The client node registrar.
 static DnxDispatcher * dispatcher;  //!< The job list dispatcher.
@@ -118,35 +119,6 @@ static void * myHandle;             //!< Private NEB module handle.
 static regex_t regEx;               //!< Compiled regular expression structure.
 static int dnxLogFacility;          //!< The syslog logging facility code.
 static int auditLogFacility;        //!< The syslog audit facility code.
-
-/** The system default configuration parameters. */
-static char * cfgdefs[] =
-{
-   "channelDispatcher   = udp://0:12480",
-   "channelCollector    = udp://0:12481",
-   "maxNodeRequests     = 0x7FFFFFFF",
-   "minServiceSlots     = 100",
-   "expirePollInterval  = 5",
-   "logFacility         = LOG_LOCAL7",
-   0,
-};
-
-/** The configuration parser dictionary. */
-static DnxCfgDict dict[] = 
-{
-   { "channelDispatcher",   DNX_CFG_URL      },
-   { "channelCollector",    DNX_CFG_URL      },
-   { "authWorkerNodes",     DNX_CFG_STRING   },
-   { "maxNodeRequests",     DNX_CFG_UNSIGNED },
-   { "minServiceSlots",     DNX_CFG_UNSIGNED },
-   { "expirePollInterval",  DNX_CFG_UNSIGNED },
-   { "localCheckPattern",   DNX_CFG_STRING   },
-   { "syncScript",          DNX_CFG_FSPATH   },
-   { "logFacility",         DNX_CFG_STRING   },
-   { "auditWorkerJobs",     DNX_CFG_STRING   },
-   { "debugLevel",          DNX_CFG_UNSIGNED },
-   { 0 },
-};
 
 /** The array of cfg variable addresses for the configuration parser. */
 static void * ppvals[] =
@@ -200,6 +172,18 @@ static int verifyFacility(char * szFacility, int * nFacility)
 
 //----------------------------------------------------------------------------
 
+/** Cleanup the config file parser. */
+static void releaseConfig(void) 
+{
+   if (cfg.localCheckPattern)
+      regfree(&regEx);
+
+   dnxCfgParserFreeCfgValues(parser, ppvals);
+   dnxCfgParserDestroy(parser);
+}
+
+//----------------------------------------------------------------------------
+
 /** Read and parse the dnxServer configuration file.
  * 
  * @param[in] ConfigFile - the configuration file to be read.
@@ -208,10 +192,39 @@ static int verifyFacility(char * szFacility, int * nFacility)
  */
 static int initConfig(char * ConfigFile)
 {
+   static char * cfgdefs[] =
+   {
+      "channelDispatcher   = udp://0:12480",
+      "channelCollector    = udp://0:12481",
+      "maxNodeRequests     = 0x7FFFFFFF",
+      "minServiceSlots     = 100",
+      "expirePollInterval  = 5",
+      "logFacility         = LOG_LOCAL7",
+      0,
+   };
+   static DnxCfgDict dict[] = 
+   {
+      { "channelDispatcher",   DNX_CFG_URL      },
+      { "channelCollector",    DNX_CFG_URL      },
+      { "authWorkerNodes",     DNX_CFG_STRING   },
+      { "maxNodeRequests",     DNX_CFG_UNSIGNED },
+      { "minServiceSlots",     DNX_CFG_UNSIGNED },
+      { "expirePollInterval",  DNX_CFG_UNSIGNED },
+      { "localCheckPattern",   DNX_CFG_STRING   },
+      { "syncScript",          DNX_CFG_FSPATH   },
+      { "logFacility",         DNX_CFG_STRING   },
+      { "auditWorkerJobs",     DNX_CFG_STRING   },
+      { "debugLevel",          DNX_CFG_UNSIGNED },
+      { 0 },
+   };
    int ret;
 
+   // create global configuration parser object
+   if ((ret = dnxCfgParserCreate(ConfigFile, cfgdefs, dict, &parser)) != 0)
+      return ret;
+
    // parse configuration file; pass defaults
-   if ((ret = dnxParseCfgFile(ConfigFile, cfgdefs, dict, ppvals)) == 0)
+   if ((ret = dnxCfgParserParse(parser, ppvals)) == 0)
    {
       int err;
 
@@ -253,20 +266,9 @@ static int initConfig(char * ConfigFile)
    }
 
    if (ret != DNX_OK)
-      dnxFreeCfgValues(dict, ppvals);
+      dnxCfgParserFreeCfgValues(parser, ppvals);
    
    return ret;
-}
-
-//----------------------------------------------------------------------------
-
-/** Cleanup the config file parser. */
-void releaseConfig(void) 
-{
-   if (cfg.localCheckPattern)
-      regfree(&regEx);
-
-   dnxFreeCfgValues(dict, ppvals);
 }
 
 //----------------------------------------------------------------------------
@@ -275,8 +277,7 @@ void releaseConfig(void)
  *
  * @return The number of services configured in Nagios.
  * 
- * @todo This routine should be in nagios code. Add it to the dnx patch files
- * for nagios 2.7 and 2.9, and export it from nagios so we can call it.
+ * @todo This routine should be in nagios code.
  */
 static int nagiosGetServiceCount(void)
 {
@@ -312,7 +313,6 @@ static int nagiosGetServiceCount(void)
 static int nagios2xPostResult(service * svc, time_t start_time, 
       int early_timeout, int res_code, char * res_data)
 {
-
    extern circular_buffer service_result_buffer;
    extern int check_result_buffer_slots;
 
@@ -468,7 +468,7 @@ int dnxPostResult(void * data, time_t start_time, unsigned delta,
       res_code = STATE_UNKNOWN;
 
    /** @todo Nagios 3.x: Collect a better value for exited_ok. */
-   /** @todo Nagiod 3.x: Collect a better value for check_type. */
+   /** @todo Nagios 3.x: Collect a better value for check_type. */
 
 #if CURRENT_NEB_API_VERSION == 2
 

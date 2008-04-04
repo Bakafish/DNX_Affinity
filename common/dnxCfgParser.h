@@ -72,6 +72,39 @@ typedef struct DnxCfgDict
    DnxCfgType type;           //!< The type of the variable.
 } DnxCfgDict;
 
+/** An abstraction data type for the DNX configuration parser. */
+typedef struct { int unused; } DnxCfgParser;
+
+/** Create a new configuration parser object.
+ * 
+ * A configuration parser is used to read and parse a specified configuration 
+ * file using a user-provided configuration variable dictionary to validate 
+ * and convert the string values into usable data values.
+ * 
+ * A null-terminated array of pointers to configuration strings containing 
+ * default values may optionally be passed in the @p cfgdefs parameter. The 
+ * @p cfgdefs array strings contain configuration file entries that should be 
+ * parsed before the actual file is parsed. Thus, configuration file entries 
+ * override default array entries.
+ * 
+ * @param[in] cfgfile - the path name of the config file to be parsed.
+ * @param[in] cfgdefs - an array of pointers to default config file entries.
+ *    Elements of @p ppvals are initialized to these defaults before @p cfgfile
+ *    is parsed. The format of the strings in @cfgdefs is identical to that 
+ *    of the configuration file itself. The pointer array must be null-
+ *    terminated. This parameter is optional and may be passed as NULL.
+ * @param[in] dict - an array of DnxCfgDict objects, each of which defines a 
+ *    valid configuration variable name and type for this parser. The @p dict
+ *    array should be terminated with NULL field values (a NULL pointer in the 
+ *    @em varname field, and DNX_CFG_NULL in the @em type field).
+ * @param[out] cpp - the address of storage for the newly created 
+ *    configuration parser object.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxCfgParserCreate(char * cfgfile, char * cfgdefs[], DnxCfgDict * dict, 
+      DnxCfgParser ** cpp);
+
 /** Parse a configuration file into a value array.
  * 
  * A configuration parser is used to read and parse a specified configuration 
@@ -91,16 +124,7 @@ typedef struct DnxCfgDict
  * config value is set by value; if the type is, say &char*, then, the config
  * value is allocated and returned by reference.
  * 
- * @param[in] cfgfile - the path name of the config file to be parsed.
- * @param[in] cfgdefs - an array of pointers to default config file entries.
- *    Elements of @p ppvals are initialized to these defaults before @p cfgfile
- *    is parsed. The format of the strings in @cfgdefs is identical to that 
- *    of the configuration file itself. The pointer array must be null-
- *    terminated. This parameter is optional and may be passed as NULL.
- * @param[in] dict - an array of DnxCfgDict objects, each of which defines a 
- *    valid configuration variable name and type for this parser. The @p dict
- *    array should be terminated with NULL field values (a NULL pointer in the 
- *    @em varname field, and DNX_CFG_NULL in the @em type field).
+ * @param[in] cp - the configuration parser object on which to run the parser.
  * @param[out] ppvals - an array of opaque pointers to storage locations for 
  *    the values parsed from @p cfgfile. Each element of the array is the 
  *    address of storage for either the actual value or the address of 
@@ -113,8 +137,7 @@ typedef struct DnxCfgDict
  * values include DNX_OK (on success), DNX_ERR_ACCESS, DNX_ERR_NOTFOUND, 
  * DNX_ERR_SYNTAX or DNX_ERR_MEMORY.
  */
-int dnxParseCfgFile(char * cfgfile, char * cfgdefs[], DnxCfgDict * dict,
-      void * ppvals[]);
+int dnxCfgParserParse(DnxCfgParser * cp, void * ppvals[]);
 
 /** Free memory in all pointer types in a value array; zero addresses.
  * 
@@ -126,7 +149,13 @@ int dnxParseCfgFile(char * cfgfile, char * cfgdefs[], DnxCfgDict * dict,
  *    address of allocated storage. The fields in @p ppvals are typed by the
  *    corresponding type fields in the @p dict array.
  */
-void dnxFreeCfgValues(DnxCfgDict * dict, void * ppvals[]);
+void dnxCfgParserFreeCfgValues(DnxCfgParser * cp, void * ppvals[]);
+
+/** Destroy a previously created configuration parser object.
+ * 
+ * @param[in] cp - the configuration parser object to be destroyed.
+ */
+void dnxCfgParserDestroy(DnxCfgParser * cp);
 
 #endif   /* _DXCFGPARSER_H_ */
 

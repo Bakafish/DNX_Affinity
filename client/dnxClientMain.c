@@ -77,6 +77,7 @@ typedef struct DnxCfgData
 
 // module statics
 static DnxCfgData s_cfg;         //!< The system configuration parameters.
+static DnxCfgParser * s_parser;  //!< The system configuration parser.
 static DnxWlm * s_wlm;           //!< The system worker thread pool.
 static DnxChannel * s_agent;     //!< The agent management channel.
 static char * s_progname;        //!< The base program name.
@@ -87,46 +88,6 @@ static int s_reconfig = 0;       //!< The reconfigure signal flag.
 static int s_debugsig = 0;       //!< The debug toggle signal flag.
 static int s_lockfd = -1;        //!< The system PID file descriptor.
 static int s_logFacility;        //!< The syslog facility code as an int.
-
-/** The system default configuration parameters. */
-static char * s_cfgdefs[] = 
-{
-   "channelAgent           = udp://0:12480",
-   "poolInitial            = 20",
-   "poolMin                = 20",
-   "poolMax                = 300",
-   "poolGrow               = 10",
-   "wlmPollInterval        = 2",
-   "wlmShutdownGracePeriod = 35",
-   "threadRequestTimeout   = 5",
-   "threadMaxRetries       = 12",
-   "threadTtlBackoff       = 1",
-   "maxResultBuffer        = 1024",
-   "logFacility            = LOG_LOCAL7",
-   0,
-};
-
-/** The configuration parser dictionary. */
-static DnxCfgDict s_dict[] = 
-{
-   { "channelAgent",           DNX_CFG_URL      },
-   { "channelDispatcher",      DNX_CFG_URL      },
-   { "channelCollector",       DNX_CFG_URL      },
-   { "poolInitial",            DNX_CFG_UNSIGNED },
-   { "poolMin",                DNX_CFG_UNSIGNED },
-   { "poolMax",                DNX_CFG_UNSIGNED },
-   { "poolGrow",               DNX_CFG_UNSIGNED },
-   { "wlmPollInterval",        DNX_CFG_UNSIGNED },
-   { "wlmShutdownGracePeriod", DNX_CFG_UNSIGNED },
-   { "threadRequestTimeout",   DNX_CFG_UNSIGNED },
-   { "threadMaxRetries",       DNX_CFG_UNSIGNED },
-   { "threadTtlBackoff",       DNX_CFG_UNSIGNED },
-   { "maxResultBuffer",        DNX_CFG_UNSIGNED },
-   { "logFacility",            DNX_CFG_STRING   },
-   { "pluginPath",             DNX_CFG_FSPATH   },
-   { "debugLevel",             DNX_CFG_UNSIGNED },
-   { 0 },
-};
 
 /** The array of cfg variable addresses for the configuration parser. */
 static void * s_ppvals[] =
@@ -293,28 +254,70 @@ static int validateCfg(DnxCfgData * pcfg, int * plogfac)
 
 //----------------------------------------------------------------------------
 
+/** Cleanup the config file parser. */
+static void releaseConfig(void) 
+{
+   dnxCfgParserFreeCfgValues(s_parser, s_ppvals);
+   dnxCfgParserDestroy(s_parser);
+}
+
+//----------------------------------------------------------------------------
+
 /** Read and parse the dnxClient configuration file.
  * 
  * @return Zero on success, or a non-zero error value.
  */
 static int initConfig(void)
 {
+   static char * s_cfgdefs[] = 
+   {
+      "channelAgent           = udp://0:12480",
+      "poolInitial            = 20",
+      "poolMin                = 20",
+      "poolMax                = 300",
+      "poolGrow               = 10",
+      "wlmPollInterval        = 2",
+      "wlmShutdownGracePeriod = 35",
+      "threadRequestTimeout   = 5",
+      "threadMaxRetries       = 12",
+      "threadTtlBackoff       = 1",
+      "maxResultBuffer        = 1024",
+      "logFacility            = LOG_LOCAL7",
+      0,
+   };
+   static DnxCfgDict s_dict[] = 
+   {
+      { "channelAgent",           DNX_CFG_URL      },
+      { "channelDispatcher",      DNX_CFG_URL      },
+      { "channelCollector",       DNX_CFG_URL      },
+      { "poolInitial",            DNX_CFG_UNSIGNED },
+      { "poolMin",                DNX_CFG_UNSIGNED },
+      { "poolMax",                DNX_CFG_UNSIGNED },
+      { "poolGrow",               DNX_CFG_UNSIGNED },
+      { "wlmPollInterval",        DNX_CFG_UNSIGNED },
+      { "wlmShutdownGracePeriod", DNX_CFG_UNSIGNED },
+      { "threadRequestTimeout",   DNX_CFG_UNSIGNED },
+      { "threadMaxRetries",       DNX_CFG_UNSIGNED },
+      { "threadTtlBackoff",       DNX_CFG_UNSIGNED },
+      { "maxResultBuffer",        DNX_CFG_UNSIGNED },
+      { "logFacility",            DNX_CFG_STRING   },
+      { "pluginPath",             DNX_CFG_FSPATH   },
+      { "debugLevel",             DNX_CFG_UNSIGNED },
+      { 0 },
+   };
+   
    int ret;
 
-   // parse config file; pass default values
-   if ((ret = dnxParseCfgFile(s_cfgfile, s_cfgdefs, s_dict, s_ppvals)) == 0
-         && (ret = validateCfg(&s_cfg, &s_logFacility)) != 0)
-      dnxFreeCfgValues(s_dict, s_ppvals);
+   // create global configuration parser object
+   if ((ret = dnxCfgParserCreate(s_cfgfile, s_cfgdefs, s_dict, &s_parser)) != 0)
+      return ret;
+
+   // parse config file
+   if ((ret = dnxCfgParserParse(s_parser, s_ppvals)) != 0
+         || (ret = validateCfg(&s_cfg, &s_logFacility)) != 0)
+      releaseConfig();
 
    return ret;
-}
-
-//----------------------------------------------------------------------------
-
-/** Cleanup the config file parser. */
-void releaseConfig(void) 
-{
-   dnxFreeCfgValues(s_dict, s_ppvals);
 }
 
 //----------------------------------------------------------------------------
@@ -587,18 +590,18 @@ static int processCommands(void)
 
          dnxSyslog(LOG_ERR, "Agent: Received RECONFIGURE request. Reconfiguring...");
 
-         // reparse config file into a temporary cfg structure and validate
-         if ((ret = dnxParseCfgFile(s_cfgfile, s_cfgdefs, s_dict, tmp_ppvals)) == 0
-               && (ret = validateCfg(&s_cfg, &logfac)) != 0)
-            dnxFreeCfgValues(s_dict, tmp_ppvals);
+         // reparse config file into temporary cfg structure and validate
+         if ((ret = dnxCfgParserParse(s_parser, tmp_ppvals)) == 0
+               && (ret = validateCfg(&tmp_cfg, &logfac)) != 0)
+            dnxCfgParserFreeCfgValues(s_parser, tmp_ppvals);
          else if ((ret = dnxWlmReconfigure(s_wlm, &tmp_cfg.wlm)) == 0)
          {
-            // reconfigure completed successfully - 
+            // reconfigure completed successfully - log diffs; 
             //    free old values and reassign to new values.
 
             logGblConfigChanges(&s_cfg, &tmp_cfg);
 
-            dnxFreeCfgValues(s_dict, s_ppvals);
+            dnxCfgParserFreeCfgValues(s_parser, s_ppvals);
             s_cfg = tmp_cfg;
             s_logFacility = logfac;
          }

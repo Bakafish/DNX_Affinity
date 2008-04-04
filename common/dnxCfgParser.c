@@ -60,6 +60,14 @@
 
 #define DNX_MAX_CFG_LINE   2048     //!< Longest allowed config file line.
 
+/** The internal type of a DNX configuration parser object. */
+typedef struct iDnxCfgParser
+{
+   char * cfgfile;
+   char ** cfgdefs;
+   DnxCfgDict * dict;
+} iDnxCfgParser;
+
 /** A typedef describing a single type variable parser. */
 typedef int dnxVarParser_t(char * val, DnxCfgType type, void * prval);
    
@@ -551,20 +559,46 @@ static int dnxInitCfgDefaults(char * cfgdefs[], DnxCfgDict * dict,
                                  INTERFACE
   --------------------------------------------------------------------------*/
 
-int dnxParseCfgFile(char * cfgfile, char * cfgdefs[], DnxCfgDict * dict, 
-      void * ppvals[])
+int dnxCfgParserCreate(char * cfgfile, char * cfgdefs[], DnxCfgDict * dict, 
+      DnxCfgParser ** cpp)
 {
-   FILE * fp;
-   int ret = DNX_OK, line = 0;
+   iDnxCfgParser * icp;
+
+   assert(cfgfile && *cfgfile && dict && cpp);
+
+   if ((icp = (iDnxCfgParser *)xmalloc(sizeof *icp)) == 0)
+      return DNX_ERR_MEMORY;
+   memset(icp, 0, sizeof *icp);
+
+   if ((icp->cfgfile = xstrdup(cfgfile)) == 0)
+   {
+      xfree(icp);
+      return DNX_ERR_MEMORY;
+   }
+   icp->cfgdefs = cfgdefs;
+   icp->dict = dict;
+
+   *cpp = (DnxCfgParser *)icp;
+
+   return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
+int dnxCfgParserParse(DnxCfgParser * cp, void * ppvals[])
+{
+   iDnxCfgParser * icp = (iDnxCfgParser *)cp;
    char buf[DNX_MAX_CFG_LINE];
+   int ret = DNX_OK, line = 0;
+   FILE * fp;
 
-   assert(cfgfile && *cfgfile && dict && ppvals);
+   assert(cp && ppvals);
 
-   clearPtrValues(dict, ppvals);
-   if ((ret = dnxInitCfgDefaults(cfgdefs, dict, ppvals)) != 0)
+   clearPtrValues(icp->dict, ppvals);
+   if ((ret = dnxInitCfgDefaults(icp->cfgdefs, icp->dict, ppvals)) != 0)
       return ret;
 
-   if ((fp = fopen(cfgfile, "r")) == 0)
+   if ((fp = fopen(icp->cfgfile, "r")) == 0)
       ret = errno == EACCES? DNX_ERR_ACCESS : DNX_ERR_NOTFOUND;
    else
    {
@@ -572,10 +606,10 @@ int dnxParseCfgFile(char * cfgfile, char * cfgdefs[], DnxCfgDict * dict,
       {
          int err;
          line++;
-         if ((err = dnxParseCfgLine(buf, dict, ppvals)) != 0)
+         if ((err = dnxParseCfgLine(buf, icp->dict, ppvals)) != 0)
          {
             dnxSyslog(LOG_ERR, "cfgParser [%s]: Syntax error on line %d: %s", 
-                  cfgfile, line, dnxErrorString(err));
+                  icp->cfgfile, line, dnxErrorString(err));
             if (!ret) ret = err; // return only the first error
          }
       }
@@ -583,24 +617,39 @@ int dnxParseCfgFile(char * cfgfile, char * cfgdefs[], DnxCfgDict * dict,
    }
 
    if (ret != 0)
-      dnxFreeCfgValues(dict, ppvals);
+      dnxCfgParserFreeCfgValues(cp, ppvals);
 
    return ret;
 }
 
 //----------------------------------------------------------------------------
 
-void dnxFreeCfgValues(DnxCfgDict * dict, void * ppvals[])
+void dnxCfgParserFreeCfgValues(DnxCfgParser * cp, void * ppvals[])
 {
+   iDnxCfgParser * icp = (iDnxCfgParser *)cp;
    unsigned i, j;
 
-   for (i = 0; dict[i].varname; i++)
+   assert(cp && ppvals);
+
+   for (i = 0; icp->dict[i].varname; i++)
       for (j = 0; j < elemcount(ptrtypes); j++)
-         if (dict[i].type == ptrtypes[j])
+         if (icp->dict[i].type == ptrtypes[j])
          {
             xfree(*(void **)ppvals[i]);
             break;
          }
+}
+
+//----------------------------------------------------------------------------
+
+void dnxCfgParserDestroy(DnxCfgParser * cp)
+{
+   iDnxCfgParser * icp = (iDnxCfgParser *)cp;
+
+   assert(cp);
+
+   xfree(icp->cfgfile);
+   xfree(icp);
 }
 
 /*--------------------------------------------------------------------------
@@ -693,6 +742,7 @@ int main(int argc, char ** argv)
 
    int i;
    FILE * fp;
+   DnxCfgParser * cp;
 
    char Addr_cmp[]       = {0,0,127,0,0,1};
    char AddrArray1_cmp[] = {0,0,10,1,1,1};
@@ -706,7 +756,9 @@ int main(int argc, char ** argv)
    fputs(TEST_FILE_CONTENTS, fp);      
    fclose(fp);
 
-   CHECK_ZERO(dnxParseCfgFile(TEST_FILE_NAME, defs, dict, pvals));
+   CHECK_ZERO(dnxCfgParserCreate(TEST_FILE_NAME, defs, dict, &cp));
+
+   CHECK_ZERO(dnxCfgParserParse(cp, pvals));
 
    CHECK_TRUE(strcmp(testCfgString, "some string") == 0);
    for (i = 0; i < elemcount(StrArray_cmp); i++)
@@ -752,7 +804,8 @@ int main(int argc, char ** argv)
 
    // test reparse here...
    
-   dnxFreeCfgValues(dict, pvals);
+   dnxCfgParserFreeCfgValues(cp, pvals);
+   dnxCfgParserDestroy(cp);
 
    remove(TEST_FILE_NAME);
 
