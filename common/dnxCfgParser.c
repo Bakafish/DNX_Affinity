@@ -47,6 +47,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
@@ -159,7 +160,7 @@ static DnxCfgDict * copyDictionary(DnxCfgDict * dict, unsigned * dictszp)
    // store parameter-based return values; return count of real elements
    *dictszp = --cnt;
 
-   // copy the dictionary
+   // copy the dictionary; zero pointer values
    cpy[cnt].varname = 0;
    while (cnt--)
    {
@@ -168,7 +169,8 @@ static DnxCfgDict * copyDictionary(DnxCfgDict * dict, unsigned * dictszp)
       cpy[cnt].varname = sptr;
       cpy[cnt].type = dict[cnt].type;
       cpy[cnt].valptr = dict[cnt].valptr;
-      *(void **)cpy[cnt].valptr = 0;
+      if (cpy[cnt].type != DNX_CFG_INT && cpy[cnt].type != DNX_CFG_UNSIGNED)
+         *(void **)cpy[cnt].valptr = 0;
       sptr += strsz;
    }
    return cpy;
@@ -425,7 +427,7 @@ static int dnxParseCfgVar(char * var, char * val, DnxCfgDict * dict,
  * @return Zero on success, or a non-zero error value. Possible error 
  * values include DNX_OK (on success), DNX_ERR_SYNTAX or DNX_ERR_MEMORY.
  */
-static int dnxParseCfgLine(char * s, DnxCfgDict * dict, void * vptrs)
+static int dnxParseCfgLine(char * s, DnxCfgDict * dict, void ** vptrs)
 {
    char * cpy, * val;
    int ret;
@@ -508,18 +510,13 @@ static int applyCfgSetString(char ** sap, DnxCfgDict * dict, void ** vptrs)
  */
 static void freeArrayPtrs(DnxCfgDict * dict, void ** vptrs)
 {
-   static DnxCfgType ptrtypes[] = { DNX_CFG_STRING, DNX_CFG_STRING_ARRAY, 
-         DNX_CFG_INT_ARRAY, DNX_CFG_UNSIGNED_ARRAY, 
-         DNX_CFG_URL, DNX_CFG_FSPATH };
-
    unsigned i, j;
 
    assert(dict);
 
    for (i = 0; dict[i].varname; i++)
-      for (j = 0; j < elemcount(ptrtypes); j++)
-         if (dict[i].type == ptrtypes[j])
-            xfree(vptrs? vptrs[i]: *(void **)dict[i].valptr);
+      if (dict[i].type != DNX_CFG_INT && dict[i].type != DNX_CFG_UNSIGNED)
+         xfree(vptrs? vptrs[i]: *(void **)dict[i].valptr);
 }
 
 //----------------------------------------------------------------------------
@@ -795,6 +792,9 @@ int dnxCfgParserParse(DnxCfgParser * cp, void * passthru)
       }
    }
 
+#define INTSWAP(a,b) do { int n = (a); (a) = (int)(intptr_t)(b); (b) = (void *)(intptr_t)n; } while(0)
+#define PTRSWAP(a,b) do { void * p = (a); (a) = (b); (b) = p; } while (0)
+
    // apply command line overrides; validate configuration; store values
    if (!ret && (ret = applyCfgSetString(icp->cmdover, icp->dict, vptrs)) == 0
          && (!icp->vfp || (ret = icp->vfp(icp->dict, vptrs, passthru)) == 0))
@@ -803,11 +803,10 @@ int dnxCfgParserParse(DnxCfgParser * cp, void * passthru)
 
       // swap new for old values in vptrs
       for (i = 0; i < icp->dictsz; i++)
-      {
-         void * tmp = *(void **)icp->dict[i].valptr;
-         *(void **)icp->dict[i].valptr = vptrs[i];
-         vptrs[i] = tmp;
-      }
+         if (icp->dict[i].type == DNX_CFG_INT || icp->dict[i].type == DNX_CFG_UNSIGNED)
+            INTSWAP(*(int *)icp->dict[i].valptr, vptrs[i]);
+         else
+            PTRSWAP(*(void **)icp->dict[i].valptr, vptrs[i]);
 
       // free current config cache string
       xfree(icp->curcfg);

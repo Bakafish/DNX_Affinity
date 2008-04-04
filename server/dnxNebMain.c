@@ -153,18 +153,18 @@ static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
    assert(dict && vptrs && passthru);
 
    // setup data structure so we can use the same functionality we had before
-   cfg.dispatcherUrl      = (char   *)vptrs[ 0];
-   cfg.collectorUrl       = (char   *)vptrs[ 1];
-   cfg.authWorkerNodes    = (char   *)vptrs[ 2];
-   cfg.maxNodeRequests    = (unsigned)vptrs[ 3];
-   cfg.minServiceSlots    = (unsigned)vptrs[ 4];
-   cfg.expirePollInterval = (unsigned)vptrs[ 5];
-   cfg.localCheckPattern  = (char   *)vptrs[ 6];
-   cfg.syncScript         = (char   *)vptrs[ 7];
-   cfg.logFilePath        = (char   *)vptrs[ 8];
-   cfg.debugFilePath      = (char   *)vptrs[ 9];
-   cfg.auditFilePath      = (char   *)vptrs[10];
-   cfg.debugLevel         = (unsigned)vptrs[11];
+   cfg.dispatcherUrl      = (char *)vptrs[ 0];
+   cfg.collectorUrl       = (char *)vptrs[ 1];
+   cfg.authWorkerNodes    = (char *)vptrs[ 2];
+   cfg.maxNodeRequests    = (unsigned)(intptr_t)vptrs[ 3];
+   cfg.minServiceSlots    = (unsigned)(intptr_t)vptrs[ 4];
+   cfg.expirePollInterval = (unsigned)(intptr_t)vptrs[ 5];
+   cfg.localCheckPattern  = (char *)vptrs[ 6];
+   cfg.syncScript         = (char *)vptrs[ 7];
+   cfg.logFilePath        = (char *)vptrs[ 8];
+   cfg.debugFilePath      = (char *)vptrs[ 9];
+   cfg.auditFilePath      = (char *)vptrs[10];
+   cfg.debugLevel         = (unsigned)(intptr_t)vptrs[11];
 
    // validate configuration items in context
    if (!cfg.dispatcherUrl)

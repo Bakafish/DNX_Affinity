@@ -44,6 +44,7 @@
 #include <sys/file.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
@@ -299,23 +300,23 @@ static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
    DnxCfgData cfg;
 
    // setup data structure so we can use the same functionality we had before
-   cfg.channelAgent      = (char   *)vptrs[ 0];
-   cfg.logFilePath       = (char   *)vptrs[ 1];
-   cfg.debugFilePath     = (char   *)vptrs[ 2];
-   cfg.pluginPath        = (char   *)vptrs[ 3];
-   cfg.debugLevel        = (unsigned)vptrs[ 4];
-   cfg.wlm.dispatcher    = (char   *)vptrs[ 5];
-   cfg.wlm.collector     = (char   *)vptrs[ 6];
-   cfg.wlm.poolInitial   = (unsigned)vptrs[ 7];
-   cfg.wlm.poolMin       = (unsigned)vptrs[ 8];
-   cfg.wlm.poolMax       = (unsigned)vptrs[ 9];
-   cfg.wlm.poolGrow      = (unsigned)vptrs[10];
-   cfg.wlm.pollInterval  = (unsigned)vptrs[11];
-   cfg.wlm.shutdownGrace = (unsigned)vptrs[12];
-   cfg.wlm.reqTimeout    = (unsigned)vptrs[13];
-   cfg.wlm.maxRetries    = (unsigned)vptrs[14];
-   cfg.wlm.ttlBackoff    = (unsigned)vptrs[15];
-   cfg.wlm.maxResults    = (unsigned)vptrs[16];
+   cfg.channelAgent      = (char *)vptrs[ 0];
+   cfg.logFilePath       = (char *)vptrs[ 1];
+   cfg.debugFilePath     = (char *)vptrs[ 2];
+   cfg.pluginPath        = (char *)vptrs[ 3];
+   cfg.debugLevel        = (unsigned)(intptr_t)vptrs[ 4];
+   cfg.wlm.dispatcher    = (char *)vptrs[ 5];
+   cfg.wlm.collector     = (char *)vptrs[ 6];
+   cfg.wlm.poolInitial   = (unsigned)(intptr_t)vptrs[ 7];
+   cfg.wlm.poolMin       = (unsigned)(intptr_t)vptrs[ 8];
+   cfg.wlm.poolMax       = (unsigned)(intptr_t)vptrs[ 9];
+   cfg.wlm.poolGrow      = (unsigned)(intptr_t)vptrs[10];
+   cfg.wlm.pollInterval  = (unsigned)(intptr_t)vptrs[11];
+   cfg.wlm.shutdownGrace = (unsigned)(intptr_t)vptrs[12];
+   cfg.wlm.reqTimeout    = (unsigned)(intptr_t)vptrs[13];
+   cfg.wlm.maxRetries    = (unsigned)(intptr_t)vptrs[14];
+   cfg.wlm.ttlBackoff    = (unsigned)(intptr_t)vptrs[15];
+   cfg.wlm.maxResults    = (unsigned)(intptr_t)vptrs[16];
 
    if (!cfg.wlm.dispatcher)
       dnxLog("config: Missing channelDispatcher parameter.");
