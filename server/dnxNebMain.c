@@ -230,7 +230,8 @@ static int initConfig(char * cfgfile)
       "maxNodeRequests = 0x7FFFFFFF\n"
       "minServiceSlots = 100\n"
       "expirePollInterval = 5\n"
-      "logFile = " DNX_DEFAULT_LOG "\n";
+      "logFile = " DNX_DEFAULT_LOG "\n"
+      "debugFile = " DNX_DEFAULT_DBGLOG "\n";
 
    int ret;
    regex_t re;
@@ -920,7 +921,7 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
    dnxLog("Configuration file: %s.", args);
    if (cfg.auditFilePath)
       dnxLog("Auditing enabled to %s.", cfg.auditFilePath);
-   if (cfg.debugFilePath)
+   if (cfg.debugLevel)
       dnxLog("Debug logging enabled at level %d to %s.", 
             cfg.debugLevel, cfg.debugFilePath);
 
