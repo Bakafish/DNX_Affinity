@@ -1,0 +1,458 @@
+=============================================================================
+DNX Change Log
+--------------
+Please make entries to this log (in addition to the SVN log) that describe 
+major changes to the DNX code base. All entries should be separated by
+blank lines and include the date, developer's name, and change description.
+=============================================================================
+
+*** Revision 217: Released dnx-0.16: 05-FEB-08 jcalcote
+
+* Revision: 217-211: 05-MAR-08 jcalcote 
+Updated ChangeLog again. Updated ChangeLog. Updated NEWS file for 0.16 
+release. Fixed issue with no debug log being created in server. Changed 
+spec file for log directory change. Changed a few undetected instances of 
+sysrunpath to sysrundir, etc. Updated make system to install to correct 
+directories, and to set owner and group if running as root. 
+
+* Revision: 210-208: 04-MAR-08 jcalcote 
+Made all install targets working correctly. Moved test directories to 
+oldtests under client and server so we can begin rigorous testing in test 
+directories. Moved client load/unload test to new test directory. Added 
+call to dnxstats to client test script. Configure log files to end up in 
+the correct directories. 
+
+* Revision: 207: 03-MAR-08 jcalcote 
+Updated package version to 0.16. 
+
+* Revision: 206-202: 28-FEB-08 jcalcote 
+More doxygen input file changes - tweaked exclude list to be more 
+accurate. Forgot to add dnxcld.generic-init to the etc/Makefile.am clean 
+list. Okay, added back in doxyfile exclusion specifically for dnx-version 
+directory, in case it exists. Removed build dir from doxyfile.in; causes 
+doc to break when builddir is the same as sourcedir. Fixed dnxWLM.c to run 
+correctly under obs. Added generic init script for non-suse platforms. 
+
+* Revision: 201: 27-FEB-08 jcalcote 
+Updated website to reflect new version of dnx - 0.15.1. 
+
+*** Revision 200: Released dnx-0.15.1: 27-FEB-08 jcalcote
+
+* Revision: 200-198: 27-FEB-08 jcalcote 
+Updated ChangeLog. Added client process test. Fix timing defects related 
+to interrupts on select. Reduce timeouts to minimum. Fix WLM shutdown 
+logic. 
+
+* Revision: 197: 26-FEB-08 jcalcote 
+Fixed segfault in runpath check in parse command line routine. 
+
+* Revision: 196-194: 20-FEB-08 jcalcote 
+Removed note regarding release numbers on doxygen doc. Added Church logo 
+to sponsors list. Added doxygen tarball link to documentation page. 
+Updated website to reflect 0.15 release. 
+
+*** Revision 193: Released dnx-0.15: 19-FEB-08 jcalcote
+
+* Revision: 193-191: 19-FEB-08 jcalcote 
+Updated ChangeLog. Modified Makefiles and rpm spec file to allow for non
+rpm targets that chown files and rpm targets that don't. Updated ChangeLog.
+Added installation targets to allow separate installation of client and 
+server pieces via make install. 
+
+* Revision: 190: 19-FEB-08 jcalcote
+Removed config change branch. 
+
+* Revision: 189-188: 15-FEB-08 jcalcote 
+Copied doxyfile.in updates to static doxyfile (dnx.dxy). Fixed something 
+in the doxyfile so that doxygen doesn't crash on Fedora 8 - don't know 
+what. 
+
+* Revision: 187: 13-FEB-08 jcalcote 
+Getting really close now with OBS builds. More changes to OBS control 
+files, and to configure.ac and Makefile.am's so that we have more control 
+over package builds from spec files and such. Added code to drop 
+privileges in daemon. Added better help and version screen output. 
+
+* Revision: 186: 11-FEB-08 jcalcote 
+Modified rpm build system in preparation for OSB builds. 
+
+* Revision: 185-184: 06-FEB-08 jcalcote 
+Forgot to add sync_plugins.pl as an rpm product. Moved deb files into rpm 
+directory; renamed rpm directory to obs (opensuse build system), as that's 
+what these files are really for. 
+
+* Revision: 183-179: 05-FEB-08 jcalcote 
+Forgot to actually ADD the Makefile.am! Needed to add a Makefile.am to the 
+deb directory to catch non-input files. Fixed bug in configure.ac - I had 
+.in after new additions to output file list. (oops). Made debian spec 
+files autoconf input files so we could write the current version into 
+these files. Added debian spec files for opensuse build system. 
+
+* Revision: 178-176: 04-FEB-08 jcalcote 
+Fixed bug in cfg parser on systems where pointer is larger than 
+int/unsigned. This will have to be reconsidered. Modified init script to 
+indicate dnxClient only needs to start in levels 3 and 5. Changed default 
+max pool threads to 100 in sample config file and dnxClientMain.c. Removed 
+address types from config parser - we weren't using them anyway. Added 
+current config string generation code to cfg parser; added code to client 
+to send current configuration in dnxstats response. Added checks in 
+configure.ac for getopt_long; added code to client to conditionally use 
+getopt_long. Fixed a minor display bug in dnxHeap.c. 
+
+* Revision: 175-174: 31-JAN-08 jcalcote 
+Updated rpm spec file for new dnxstats binary. Added help text to 
+management commands; increased max msg length to 4k for help and config 
+text. 
+
+* Revision: 173: 30-JAN-08 jcalcote 
+Pushed config validation inside of the CfgParser object; this allows us to 
+encapsulate more junk related to config file management. 
+
+* Revision: 172-169: 29-JAN-08 jcalcote 
+Updated ChangeLog. Added nagios 3.0 rc2 patch. Removed old makefiles. 
+Added dnxstats program as a management tool. 
+
+* Revision: 168-164: 24-JAN-08 jcalcote 
+Fixed logging system logic bug in dnxLogInit. Fixed memory leak in WLM. 
+Added dynamic run path for pid file to command line parameters for client; 
+allows for better unit testing. Fixed strcmp case issue in dnxLogging.c. 
+Fixed double free bug in dnxTransport.c. Fixed makefiles for make check 
+with debug heap enabled. Fixed segfault in config parser - free variables 
+code. Fixed problems with building checks with debug heap enabled. 
+
+* Revision: 163-162: 23-JAN-08 jcalcote 
+Changed logging/auditing interface to be file based. This change touches 
+90 percent of the source code because the name of the logging function was 
+changed. Added code to copy config dictionary, rather than just store the 
+user-supplied pointer. 
+
+* Revision: 161-159: 22-JAN-08 jcalcote 
+Fixed strdup bug in new config parser code - should have been xstrdup. 
+Enhanced configuration parser to handle command line overrides; passed 
+null cmd line override strings in dnxNebMain.c and dnxClientMain.c for 
+now. Added configuration parser object so we could localize the 
+initialization data for a configuration parser. This is also in 
+preparation to adding command-line overrides of configuration file 
+parameters. 
+
+* Revision: 158: 21-JAN-08 jcalcote 
+Abstracted away all knowledge of nagios internal data structures from any 
+file except dnxNebMain.c. Refactored results posting code for nagios 2.x 
+and nagios 3.x. 
+
+* Revision: 157: 20-JAN-08 jcalcote 
+Slight change to nagios 3 patch. 
+
+* Revision: 156-155: 19-JAN-08 jcalcote 
+Updated ChangeLog. Renamed nagios 2.x patch so it's obvious that it works 
+against nagios 2.8, 9 and 10; updated the nagios read me file. 
+
+* Revision: 154: 18-JAN-08 jcalcote 
+Added conditional code to make dnx compile and work under nagios 3.x 
+
+* Revision: 153: 17-JAN-08 jcalcote 
+Modified nagios directory structure; only require one set of Nagios 2.x 
+header files and 2 patch files for all Nagios 2.x releases. 
+
+* Revision: 152-149: 16-JAN-08 jcalcote 
+Added code to log individual configuration changes. Removed prefix from 
+/etc reference in dnxcld.init.in Repointed PID file at /var/run - this IS 
+the global state directory for all running instances. Added mkdir for 
+process state directory in case prefix is /usr/local. 
+
+* Revision: 148-147: 14-JAN-08 jcalcote 
+Fixed debug format string in dnxClientMain.c. Added some startup messages 
+to the client - config file, various important parameters; fix local 
+interface lookup code in the WLM. Fixed a few minor issues in the example 
+config files. 
+
+* Revision: 146: 12-JAN-08 jcalcote 
+Reworked the configuration parser to deal with default parameters cleanly; 
+reworked reconfiguration of the client such that nothing is overwritten if 
+any portion of the reconfig process fails; changed some text in the 
+example configuration files; changed the name of the debug parameter to 
+debugLevel in both client and server; changed the name of the maxTimeouts 
+parameter to maxRetries. 
+
+* Revision: 145-144: 10-JAN-08 jcalcote 
+Now return better errors from config parser; added code to log config 
+changes in WLM. Ran dos2unix on dnx*.cfg files in etc. 
+
+* Revision: 143-140: 09-JAN-08 jcalcote 
+Added configured sysconfdir to client and server for default configuration 
+file paths. Fix a few rpm spec file and init script errors. Fix memcmp of 
+XID's in dnxJobList.c - XID fields are padded on 64-bit machines making 
+memcmp a bad way to compare XID's. Added rpm/ to location of spec file in 
+Makefile.am for rpm build. 
+
+* Revision: 139: 08-JAN-08 jcalcote 
+Added code to configure.ac and Makefile.am to get rpm build working from 
+make. 
+
+* Revision: 138: 07-JAN-08 jcalcote 
+Fixed lookup bug in XID management of node requests and registrar; Fixed 
+job syslog and debug messages throughout; added code to cache proper local 
+ip node address in both binary and string format. 
+
+* Revision: 137-136: 04-JAN-08 jcalcote 
+Updated ChangeLog. Removed work load manager thread; pushed all pool 
+management onto workers. Changed debug levels for most dnxDebug messages 
+so they are a bit more spread out; level 1 is now reasonable to watch in 
+the log file. 
+
+* Revision: 135-131: 03-JAN-08 jcalcote 
+Switched back to second resolution on the WLM wakeup timer - it appears 
+that pthread_cond_timedwait doesn't much care for milliseconds. Changed 
+WLM poll interval to use millisecond resolution instead of second 
+resolution. Increased queue size to twice service queue size in order to 
+handle bursts. (last checkin) reorganized entire transport subsystem such 
+that transports can be loaded and configured at runtime if desired now. 
+(this checkin) changed protocol slightly to allow for backward 
+compatibility between server and client. Ensured that all serial-slot 
+messages were printed in the same format. 
+
+* Revision: 130: 01-JAN-08 jcalcote 
+Cleaned up protocol module. Cleaned up xml module; added dnxXmlCmpStr to 
+avoid allocation management for strings we're just verifying and throwing 
+away. 
+
+* Revision: 129: 31-DEC-07 jcalcote 
+Combined dnxConnect.h into dnxTransport.h; internalized data structures 
+and static functions in transport module. 
+
+* Revision: 128-127: 30-DEC-07 jcalcote 
+Added utesthelp.h to common/Makefile.am noinst_HEADERS. Added registrar 
+unit tests; cleaned up service check handler a little. 
+
+* Revision: 126-123: 29-DEC-07 jcalcote 
+Added dispatcher unit tests. Added utesthelp.h to manage unit test CHECK 
+macros. Added unit test to dnxCollector.c. Updated other unit tests to use 
+utesthelp.h. Set client worker thread receive timeout back to 1 times the 
+configured value. Fixed a bug in the config parser that was not allowing 
+default values to carry through; objectized plugin module and xml module; 
+wrote unit tests for xml module; general cleanup. 
+
+* Revision: 122: 17-DEC-07 jcalcote 
+Finished up index.html web page; Added team photos to about.html page. 
+
+* Revision: 121-118: 15-DEC-07 jcalcote 
+Made minor updates to the about.html page. Updated contributing.html and 
+added content to about.html. Fixed one doxygen bug in logging interfaces. 
+Added contributing.html content to web site; Fixed up formatting for 
+doxygen source comments for some of the source files. 
+
+* Revision: 117-111: 12-DEC-07 jcalcote 
+Updated ChangeLog. Changed dnxExecuteJob to display local node address 
+rather than remote job source address in DNX results messages. Add node 
+address to (DNX: *) results output by the DNX client. Added a debug 
+message about job completion status to dnxExecuteJob. Fixed segfault in 
+dnxPlugin; was due to recent changes in dnxPlugin.c. Converted neb module 
+to new config parser. Cleaned up doxygen comments in neb module source 
+files. Cleaned up dnxPlugin; fixed doxygen errors throughout. 
+
+* Revision: 110: 11-DEC-07 jcalcote
+Finished client rework; reorganized work load manager and worker thread 
+pool. Added new config parser; added reconfig logic (via SIGHUP). 
+
+* Revision: 109-107: 10-DEC-07 jcalcote
+WLM changes complete. Intermediate commit; Change dnxChannel to 
+DnxChannel; cleaned up client main code; objectized the work load manager. 
+Generisized logging functionality - commit in preparation for move to 
+common directory. 
+
+* Revision: 106: 07-DEC-07 jcalcote
+Changed all references to "GUID/Guid/guid" to "XID/xid" (except for xml 
+wire buffer attribute names - that would break client/server compatibility 
+- we'll do it at the last minute before the release.) Cleaned up a few 
+doxygen issues. Fixed a logging/return value error in the registrar. 
+
+* Revision: 105-100: 06-DEC-07 jcalcote
+Fixed a few cancellation issues in the 4 server threads. Added 
+cancelability back into dispatcher and collector threads. Added 
+cancelability back to registrar thread. Added cancelability back into 
+timer thread. Changed timer resolution to milliseconds (mostly for 
+testing). Added nagios 2.10 to the nagios target list - configure 
+--with-nagios-2_10. Added dnxQueue.c unit tests. 
+
+* Revision: 99-95: 05-DEC-07 jcalcote
+Added unit tests for dnxTimer.c; incorporated them into build system check 
+target. Completely abstracted DnxJobList away from nagios by replacing the 
+service member of the DnxNewJob structure with a void * payload member. 
+Added DnxJobList unit tests to dnxJobList.c and added appropriate 
+autotools infrastructure to build and run the test. Temporarily removed 
+thread cancellation logic; replaced with shutdown flags in thread 
+procedure loops. Ensured all kernel waits were timed so these flags would 
+take effect. Debugged shutdown logic; ensured that all threads and objects 
+were cleaning up properly on shutdown. Fixed memory leak in xml buffer 
+code. Commonized nagiosPostResults functions found in timer and collector. 
+Moved common version into dnxNebMain.c in preparation for moving it into 
+the dnx nagios patch. 
+
+* Revision: 96: 03-DEC-07 jcalcote
+Added debug heap; enable with -DDEBUG_HEAP on the compiler command line. 
+
+* Revision: 95-91: 30-NOV-07 jcalcote 
+Updated ChangeLog. Forgot to add new Makefile.am. Fixed a few issues with 
+distcheck target; fixed a few runtime issues due to code churn. 
+Instrumented code for debug heap. Cleanup DnxJobList object. Moved timer 
+into job list as an aggragated sub-component. Cleaned up nebmain a bit 
+more - ensured that cleanup was done in opposite order of init. 
+
+* Revision: 90-84: 29-NOV-07 jcalcote
+Fixed a few doxygen comment headers to reflect parameter changes. 
+Objectized collector. Cleaned up dnxNebMain.c. Got rid of most of the 
+globals. Objectized the dispatcher service. Also added node address to DNX 
+Service Check Timeout message in dnxTimer.c. Objectized job expiration 
+timer. Enhanced rpm.spec.in file. Objectized DnxQueue. Abstracted the 
+queue data type by hiding the implementation. Registrar is the only object 
+to use the queue, so moved queue management completely under registrar. 
+Added rpm directory to root Makefile.am as extra dist. 
+
+* Revision: 83-80: 28-NOV-07 jcalcote
+Updated dnxClient init script to be lsb compliant. Added code to build 
+system to generate client init script based on install prefix. Objectized 
+the registrar. Fixed one typo, and included assert.h in several common 
+files after adding doxygen function headers in common code. Added doxygen 
+function headers to common code modules. General cleanup in common code. 
+
+* Revision: 79-74: 27-NOV-07 jcalcote
+Added one doc parameter to dnxNebMain.c. Fixed static function ordering in 
+dnxNebMain.c. Added doxygen headers to dnx server functions and 
+procedures. Changed DNX server (service check) timeouts from critical to 
+unknown. Changed DNX client (plugin) timeouts from unknown to critical. 
+Fixed a couple of compile defects since adding doxygen comments to 
+functions in client code - all in client/dnxConfig.cpp. Add doxygen 
+comment headers to all procedures and functions in the client. 
+
+* Revision: 73-69: 26-NOV-07 jcalcote
+Fixed typo in VerifyFacility. Cleaned up dnxClientMain.c a bit, added some 
+information to message output in dnxDebug.h. Added dnxDebug.h to 
+dnx/common/Makefile.am. Fixed typo in dnxClientMain.c. Added pthread debug 
+routines in dnxDebug.h in dnx/common. Modified all pthread_mutex calls and 
+some pthread_cond calls to use debug versions. 
+
+* Revision: 68-66: 24-NOV-07 jcalcote
+Added build script code to allow building against a particular set of 
+nagios header files. Modified nagios-2.9 headers to be patched with the 
+dnx patch file. Modified autotools build system to not build doxygen 
+automatically, but only on doxygen target specification. Added\ doxygen 
+build code to autotools build scripts. 
+
+* Revision: 65-64: 23-NOV-07 jcalcote
+Added nagios-2.9/include directory. Added nagios-2.9 patch contributed by 
+Mike Gerber on 23 Nov 2007. 
+
+* Revision: 63-53: 21-NOV-07 jcalcote
+Added basic spec file (dnx.spec.in) as input file to autoconf. Made 
+"Project" page reference open in new tab on web site pages. Added a 
+paragraph to the Developer section of the documentation.html page which 
+references the workflow pdf doc. Renamed Developer section to Contributor 
+section in documentation.html page. Added a Developer section targeted to 
+code developers using doxygen docs to learn the code base. Minor change to 
+documentation page on web site - reference doxygen index.html from html 
+directory instead of doxy directory. Add web pages; fill in documentation 
+page. Reformat all web pages, convert tabs to spaces. Convert old TODO 
+messages to doxygen @todo messages. Add a few missing header files after 
+autonomy check. Rearrange header file inclusions to ensure header file 
+autonomy. Add Makefile.am to doc directory. Tweak doxygen comments to 
+remove all doxygen warning output. Added doxygen configuration files. More 
+general file header cleanup. Added doxygen file header comments to every 
+source module. 
+
+* Revision: 52-47: 20-NOV-07 jcalcote
+Added a null statement (;) after two labels in the threadpool - new C99 
+rules. Remove old copyright headers, change original copyright holder to 
+author. tabs to spaces throughout. Add Intellectual Reserve copyright 
+header; standardize footer for all c and h files. A 5 seconds to job 
+expiration time in dnxNebMain.c; swap checks in if statement in 
+dnxJobList.c to make the check more efficient. Backing up to revision 12 - 
+we can't change things that dramatically. 
+
+* Revision: 46-41: 19-NOV-07 jcalcote
+Completed conversion of client to new config system. Config feature is now 
+complete. Source tweaks to get the build to work after switching server 
+over to new config system. Build changes to configure.ac and autogen.sh 
+related to file name changes. Begin to consume new configuration subsystem 
+on server side. Finalize code changes for server configuration manager. 
+Compile fixes to dsConfig.c to get the unit test to compile. 
+
+* Revision: 40: 18-NOV-07 jcalcote
+Almost finished with dsConfig. Fixed up all files in client and server 
+directories to include proper header names. Upgraded doxygen input files. 
+
+* Revision: 39-37: 17-NOV-07 jcalcote
+Rename client files: files begin with dc and follow camel case. Complete 
+the rename process - new names begin with ds and follow camel case 
+conventions. Intermediate rename so we can change the case of the 
+filenames in the server directory. 
+
+Revision: 36-29: 16-NOV-07 jcalcote
+More intermediate config changes - cleaned up common code a bit more. 
+Updated all common files to reflect new include file names. Also changed 
+some file header comments and include guard text in header files. Updated 
+common/Makefile.am to reflect new files names. Finalized dxCfgParser.* 
+changes. Renamed common files from dnx* to dx*. Renamed dxconfig.* to 
+dxCfgParser.*. Partial update - add dxconfig files to common directory. 
+Final fixes to dsconfig - unit tests working now. Creating private branch 
+for configuration system mods. 
+
+* Revision: 28: 16-NOV-07 jcalcote
+Moved trunk@27 to branch cfg-mods; reverted trunk@HEAD to trunk@17. 
+
+* Revision: 26-16: 15-NOV-07 jcalcote
+Partial update - rename server configuration header file; change 
+references to new name (dsconfig.h). Partial update - move config.h header 
+from common to server and client. Later we'll commonize it if possible. 
+Partial update - fix all file rename issues in server directory. Partial 
+update - update include file names in server code. Partial update - 
+complete name change of server files by changing Makefile.am. Partial 
+update - added dsaudit files. Partial update - renamed server files from 
+dnx* to ds* so there can be uniqueness among filenames in the project. 
+Partial change set - restructure configuration, auditing and NEB main 
+functionality. Tabs to spaces, fix up file endings in test directories 
+(touches ~90% of source files). Remove ampersand from job list passed to 
+dnxTimerInit. More source cleanup - fix end-of-file (touches ~90% of the 
+files). 
+
+* Revision: 15-14: 14-NOV-07 jcalcote
+Fix line endings in source files (affects nearly all of them). Add doxygen 
+configuration files to doc directory; add doxygen comments to joblist and 
+timer modules. Restructure joblist to be more modular. Add debugging 
+macros for pthread_mutex calls (dnxDebug.h). 
+
+* Revision: 13: 06-NOV-07 jcalcote
+Add basic pages to web site. Add project link to main menu that links to 
+sf.net main project page. 
+
+* Revision: 12: 02-NOV-07 jcalcote
+Changed copyright headers to Intellectual Reserve. General cleanup. 
+Temporarily removed Church logo from web site. Updated TODO list. 
+
+* Revision: 11-10: 31-OCT-07 jcalcote
+Added base sf.net web site content. Cleaned up some autotools build system 
+details: Removed LICENSE file (now called COPYING). Added additional 
+extra_dist files to various Makefile.am files. Moved old CHANGELOG 
+contents to NEWS. Updated README file. Reset next version to 0.15. Added a 
+few lines to TODO list. Moved installation instructions to INSTALL and 
+updated them to match autotools build system. 
+
+* Revision: 9-8: 30-OCT-07 jcalcote
+Added autotools versioning to dnxClient. Moved condition variable signals 
+and broadcasts within mutex lock on both client and server. Added 
+autotools versioning to server. 
+
+* Revision: 7-5: 26-OCT-07 jcalcote
+Changed installation directory for client from bin to sbin - it's a 
+daemon, after all. Added README.nagios, and moved patch file into 
+nagios-2.7 directory for encapsulation of nagios-specific data by version. 
+Modified AUTHORS. 
+
+* Revision: 4-2: 25-OCT-07 jcalcote
+Added dnxConfig.h to makefile noinst headers. Changed build system over to 
+autotools. Changed name of neb module from dnxServer.o to dnxServer.so. 
+
+* Revision: 1: 24-OCT-07 jcalcote
+Initial import of dnx source - beginning at revision 0.13 +. 
+
+--- NOTE: Previous ChangeLog information moved into NEWS file ---
+

@@ -1,0 +1,162 @@
+#!/bin/sh
+#
+# /etc/init.d/dnxcld
+#   and its symbolic link
+# /usr/sbin/rcdnxcld
+#
+# System startup script for Distributed Nagios eXecutor (DNX) Client
+#
+# LSB compatible service control script; see http://www.linuxbase.org/spec/
+# 
+### BEGIN INIT INFO
+# Provides:          dnxcld
+# Required-Start:    $local_fs
+# Should-Start:      $time $network $remote_fs
+# Required-Stop:     $local_fs
+# Should-Stop:       $time $network $remote_fs
+# Default-Start:     3 5
+# Default-Stop:      0 6
+# Short-Description: DNX dnxClient daemon providing Nagios check distribution
+# Description:       Start dnxClient to allow this host to act as a node in 
+#                    a network of distributed Nagios check servers.
+### END INIT INFO
+#
+# Note on runlevels:
+# 0 - halt/poweroff 			6 - reboot
+# 1 - single user			2 - multiuser without network exported
+# 3 - multiuser w/ network (text mode)  5 - multiuser w/ network and X11 (xdm)
+# 
+# Note on script names:
+# http://www.linuxbase.org/spec/refspecs/LSB_1.3.0/gLSB/gLSB/scrptnames.html
+# A registry has been set up to manage the init script namespace.
+# http://www.lanana.org/
+# Please use the names already registered or register one or use a
+# vendor prefix.
+
+# Setup service-specific environment
+SERVICE=dnxClient
+SERVICE_CFG="@sysconfdir@/$SERVICE.cfg"
+SERVICE_PID="@sysrundir@/$SERVICE.pid"
+SERVICE_LCK="@sysrundir@/$SERVICE.lck"
+SERVICE_BIN="@prefix@/sbin/$SERVICE"
+SERVICE_CMD="$SERVICE_BIN -c $SERVICE_CFG"
+
+# Check for missing binaries (stale symlinks should not happen)
+# Note: Special treatment of stop for LSB conformance
+test -x $SERVICE_BIN || { echo "$SERVICE not installed"; 
+	if [ "$1" = "stop" ]; then exit 0;
+	else exit 5; fi; }
+
+# Source in rc.status for rc shell functions
+. /etc/rc.status
+
+# Reset status of this service
+rc_reset
+
+case "$1" in
+    start)
+	echo -n "Starting $SERVICE "
+	## Start daemon with startproc(8). If this fails
+	## the return value is set appropriately by startproc.
+
+	/sbin/startproc $SERVICE_CMD
+
+	# Remember status and be verbose
+	rc_status -v
+	;;
+    stop)
+	echo -n "Shutting down $SERVICE "
+	## Stop daemon with killproc(8) and if this fails
+	## killproc sets the return value according to LSB.
+
+	/sbin/killproc -TERM $SERVICE_BIN
+
+	# Remember status and be verbose
+	rc_status -v
+	;;
+    try-restart|condrestart)
+	## Do a restart only if the service was active before.
+	## Note: try-restart is now part of LSB (as of 1.9).
+	## RH has a similar command named condrestart.
+	if test "$1" = "condrestart"; then
+		echo "${attn} Use try-restart ${done}(LSB)${attn} rather than condrestart ${warn}(RH)${norm}"
+	fi
+	$0 status
+	if test $? = 0; then
+		$0 restart
+	else
+		rc_reset	# Not running is not a failure.
+	fi
+	# Remember status and be quiet
+	rc_status
+	;;
+    restart)
+	## Stop the service and regardless of whether it was
+	## running or not, start it again.
+	$0 stop
+	$0 start
+
+	# Remember status and be quiet
+	rc_status
+	;;
+    force-reload)
+	## Signal the daemon to reload its config. Most daemons
+	## do this on signal 1 (SIGHUP).
+	## If it does not support it, restart the service if it
+	## is running.
+
+	echo -n "Reload service $SERVICE "
+	## if it supports it:
+	/sbin/killproc -HUP $SERVICE_BIN
+	#touch $SERVICE_PID
+	rc_status -v
+
+	## Otherwise:
+	#$0 try-restart
+	#rc_status
+	;;
+    reload)
+	## Like force-reload, but if daemon does not support
+	## signaling, do nothing (!)
+
+	# If it supports signaling:
+	echo -n "Reload service $SERVICE "
+	/sbin/killproc -HUP $SERVICE_BIN
+	#touch $SERVICE_PID
+	rc_status -v
+	
+	## Otherwise if it does not support reload:
+	#rc_failed 3
+	#rc_status -v
+	;;
+    status)
+	echo -n "Checking for service $SERVICE "
+	## Check status with checkproc(8), if process is running
+	## checkproc will return with exit status 0.
+
+	# Return value is slightly different for the status command:
+	# 0 - service up and running
+	# 1 - service dead, but $SERVICE_PID file exists
+	# 2 - service dead, but $SERVICE_LCK file exists
+	# 3 - service not running (unused)
+	# 4 - service status unknown :-(
+	# 5--199 reserved (5--99 LSB, 100--149 distro, 150--199 appl.)
+	
+	# NOTE: checkproc returns LSB compliant status values.
+	/sbin/checkproc $SERVICE_BIN
+	# NOTE: rc_status knows that we called this init script with
+	# "status" option and adapts its messages accordingly.
+	rc_status -v
+	;;
+    probe)
+	test $SERVICE_CFG -nt $SERVICE_PID && echo reload
+	;;
+    *)
+	echo "Usage: $0 {start|stop|status|try-restart|restart|force-reload|reload|probe}"
+	exit 1
+	;;
+esac
+rc_exit
+
+# End of this script
+

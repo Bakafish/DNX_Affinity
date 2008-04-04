@@ -1,0 +1,176 @@
+#
+# spec file for package @PACKAGE@ (Version @PACKAGE_VERSION@)
+#
+# Copyright (c) 2007 Intellectual Reserve, Inc.
+# This file and all modifications and additions to the pristine
+# package are under the same license as the package itself.
+#
+# Please submit bug fixes or comments via http://dnx.sourceforge.net
+#
+
+# norootforbuild
+
+Name:           @PACKAGE_TARNAME@
+Summary:        Distributed Nagios eXecutor for Nagios versions 2.x and 3.x
+Version:        @PACKAGE_VERSION@
+Release:        1
+Group:          System/Monitoring
+License:        GNU General Public License (GPL)
+URL:            http://dnx.sourceforge.net
+Autoreqprov:    on
+Source:         %{name}-%{version}.tar.gz
+Requires:       %{name}-client = %{version}
+Requires:       %{name}-server = %{version}
+BuildRoot:      %{_tmppath}/%{name}-%{version}-build
+BuildRequires:  doxygen
+
+%define nagiosuser      nagios
+%define nagiosgroup     nagios
+%define dnxuser         %{nagiosuser}
+%define dnxgroup        %{nagiosgroup}
+%define dnxrundir       /var/run/%{name}
+%define dnxlogdir       /var/log
+
+%define nnmmsg          logger -t %{name}/rpm
+
+%description
+The Distributed Nagios eXecutor (DNX) package provides a Nagios Event Broker
+(NEB) module and a client daemon process. DNX distributes the work of Nagios
+checks across a network of client nodes, thus providing significant scalability
+to the Natios monitoring software package. This package contains the software
+for both the client daemon and the server (NEB module).
+
+Authors:
+--------
+   Robert W. Ingraham <dnx-devel@lists.sourceforge.net>
+   John Calcote <jcalcote@users.sourceforge.net>
+   Adam Augustine <dnx-devel@lists.sourceforge.net>
+
+%package doc
+Summary:        Full DNX Documentation
+Group:          Documentation/Other
+
+%description doc
+This package contains the OpenOffice and PDF documentation for the DNX package.
+
+Authors:
+--------
+   John Calcote <jcalcote@users.sourceforge.net>
+   Adam Augustine <dnx-devel@lists.sourceforge.net>
+
+%package client
+Summary:        DNX client daemon
+Group:          System/Monitoring
+
+%description client
+This package contains the Distributed Nagios eXecutor client daemon and sample
+configuration files.
+
+Authors:
+--------
+   Robert W. Ingraham <dnx-devel@lists.sourceforge.net>
+   John Calcote <jcalcote@users.sourceforge.net>
+
+%package server
+Summary:        DNX Nagios Event Broker (NEB) module.
+Group:          System/Monitoring
+Requires:       nagios
+
+%description server
+This package contains the Distributed Nagios eXecutor NEB module, which is a 
+shared library that Nagios loads dynamically when configured to do so. It
+redirects nagios service checks to remote DNX clients. This package also 
+contains the sample configuration file for the DNX NEB module. This package 
+also contains the dnxstats utility, which can be used to query and control
+a dnx client process remotely.
+
+Authors:
+--------
+   Robert W. Ingraham <dnx-devel@lists.sourceforge.net>
+   John Calcote <jcalcote@users.sourceforge.net>
+
+%prep
+%setup
+
+%build
+CFLAGS="%{optflags}" ./configure \
+   --with-run-dir=%{dnxrundir} \
+   --with-log-dir=%{dnxlogdir} \
+   --with-nagios-user=%{nagiosuser} \
+   --with-nagios-group=%{nagiosgroup} \
+   --with-dnx-user=%{dnxuser} \
+   --with-dnx-group=%{dnxgroup} \
+   --prefix=%{_prefix} \
+   --exec-prefix=%{_exec_prefix} \
+   --bindir=%{_bindir} \
+   --sbindir=%{_sbindir} \
+   --libexecdir=%{_libdir}/nagios/plugins \
+   --datadir=%{_prefix}/share/nagios \
+   --sysconfdir=/etc/nagios \
+   --with-init-dir=%{_initrddir} \
+   --libdir=%{_libdir}/nagios/brokers \
+   --localstatedir=%{_var}/%{_lib}/nagios
+
+%{__make} DESTDIR=%{buildroot} all docs
+
+%check
+%{__make} DESTDIR=%{buildroot} check
+
+%install
+%{__make} DESTDIR=%{buildroot} install install-cfg install-initscript
+
+%pre client
+# Create dnx client group if necessary
+if getent group %{dnxgroup} >/dev/null;
+then : OK group %{dnxgroup} already present;
+else
+   groupadd -r %{dnxgroup} 2>/dev/null \
+      && %nnmmsg "Added group %{dnxgroup} for package %{name}";
+fi
+
+# Create dnx client user if necessary
+if id %{dnxuser} > /dev/null 2>&1;
+then : OK user %{dnxuser} already present;
+else
+   useradd  -r -o -g %{dnxuser} -s /bin/false \
+      -c "User for %{name}" -d /var/lib/%{name} %{dnxuser} 2> /dev/null \
+      && %nnmmsg "Added user %{dnxuser} for package %{name}";
+fi
+
+%post client
+%{fillup_and_insserv -f dnxcld}
+
+%preun client
+%{stop_on_removal dnxcld}
+
+%postun client
+%{restart_on_update dnxcld}
+%{insserv_cleanup}
+
+%clean
+%{__rm} -rf %{buildroot}
+
+%files doc
+%defattr(-,root,root)
+%doc AUTHORS COPYING ChangeLog NEWS README
+%doc doc/DNX_Workflow.pdf
+%doc doc/%{name}-doxy-%{version}.tar.gz
+
+%files server
+%defattr(0644,%{nagiosusr},%{nagiosgroup})
+%config(noreplace) /etc/nagios/dnxServer.cfg
+%{_libdir}/nagios/brokers/dnxServer.so
+%{_libdir}/nagios/plugins/sync_plugins.pl
+%defattr(0755,root,root)
+%{_prefix}/bin/dnxstats
+
+%files client
+%defattr(0644,%{dnxuser},%{dnxgroup})
+%config(noreplace) /etc/nagios/dnxClient.cfg
+%defattr(0755,root,root)
+%{_initrddir}/dnxcld
+%{_sbindir}/dnxClient
+%{_sbindir}/rcdnxcld
+
+%changelog
+

@@ -1,0 +1,63 @@
+THE NAGIOS INCLUDE DIRECTORY
+----------------------------
+This directory contains information external to, but required by the dnx 
+project build system. Nagios 2.x apparently does not provide a devel package
+for popular Linux distros, so the required header files were not available
+except by downloading the Nagios source code and copying the include directory
+into this project. To alleviate this issue, we've provided the Nagios event
+broker interface header files necessary to build dnx against Nagios 2.x
+releases (2.7, 2.8, 2.9 and 2.10). These files are found in: 
+
+   dnx/nagios/nagios-2.x/include
+
+In addition to event broker interface header files, the nagios-2.x directory
+also contains patches for 2.x versions of Nagios which allows dnx to build 
+and execute correctly under Nagios 2.x releases. nagios-2.7-dnx.patch is 
+especially for Nagios 2.7. nagios-2.8plus-dnx.patch can be used against 
+Nagios versions 2.8, 2.9, 2.10 and 2.11.
+
+In 3.0, most of the changes provided by these patches have been directly
+incorporated into the mainline Nagios source code. Nagios 3.0 release,
+however still has a few minor quirks that need to be addressed. We're 
+hoping to get the Nagios folks to agree with us on the contents of the
+single change presented by the patch file nagios-3.0-dnx.patch, and apply
+this patch to the nagios 3.1 code base. Until this time, Nagios 3 may be 
+used with DNX after the application of this patch.
+
+Additionally, until the nagios-devel package is completed and widely
+distributed nagios 3.x header files can be found in:
+
+   dnx/nagios/nagios-3.x/include
+
+These files are currently used by default when targeting Nagios 3.
+
+APPLYING THE NAGIOS DNX PATCHES
+-------------------------------
+The following instructions use Nagios 2.11 as an example target distribution, 
+and assume that nagios-2.8plus-dnx.patch is sitting next to nagios-2.11.tar.gz
+in a directory of your choice in your file system. 
+
+To apply the patch files, unpack the source distribution (nagios-2.11.tar.gz), 
+change into the root of the unpack directory (nagios-2.11/) and run the 
+following command:
+
+   $ patch -p1 <../nagios-2.8plus-dnx.patch
+
+Then build the patched version of Nagios as usual:
+
+   $ ./configure; make nagios
+
+BUILDING DNX AGAINST NAGIOS HEADERS
+-----------------------------------
+To build dnx against the Nagios 2.x header files found in the nagios/include
+directory, just build using the default configuration:
+
+   $ ./configure
+   $ make
+
+To build against Nagios 3.x header files, use the --with-nagios3x option. 
+
+Currently, Nagios 2.x is the default configuration. However, it is anticipated
+that when Nagios 3.x becomes the more popular version, the option will change 
+such that Nagios 2.x will require an option and 3.x will become the default.
+ 

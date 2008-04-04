@@ -1,0 +1,58 @@
+#!/bin/sh
+#
+# Script to start DNX Client -- Distributed Nagios eXecutor --
+#
+# chkconfig: 2345 80 30
+# description: The Distributed Nagios eXecutor (DNX) distributes Nagios checks evenly among a network of worker nodes.
+# Copyright (c) 2006-2008 Intellectual Reserve. All rights reserved.
+# processname: dnxClient
+
+
+# Source function library
+if [ -f /etc/rc.d/init.d/functions ]; then
+. /etc/rc.d/init.d/functions
+elif [ -f /etc/init.d/functions ]; then
+. /etc/init.d/functions
+elif [ -f /etc/rc.d/functions ]; then
+. /etc/rc.d/functions
+fi
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 0
+
+DnxcldBin=@prefix@/sbin/dnxClient
+DnxcldCfg=@sysconfdir@/dnxClient.cfg
+LockFile=@sysrundir@/dnxClient.pid
+
+# See how we were called.
+case "$1" in
+  start)
+        # Start daemons.
+        echo -n "Starting dnxClient: "
+        daemon $DnxcldBin -c $DnxcldCfg
+        echo
+        touch $LockFile
+        ;;
+  stop)
+        # Stop daemons.
+        echo -n "Shutting down dnxClient: "
+        killproc dnxClient
+        echo
+        rm -f $LockFile
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        ;;
+  status)
+        status dnxClient
+        ;;
+  *)
+        echo "Usage: dnxcld {start|stop|restart|status}"
+        exit 1
+esac
+
+exit 0 
