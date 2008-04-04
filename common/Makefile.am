@@ -3,7 +3,6 @@ noinst_LTLIBRARIES = libcmn.la
 noinst_HEADERS =\
  dnxDebug.h\
  dnxChannel.h\
- dnxConfig.h\
  dnxError.h\
  dnxLogging.h\
  dnxMsgQ.h\

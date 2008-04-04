@@ -4,6 +4,7 @@ sbin_PROGRAMS = dnxClient
 
 noinst_HEADERS =\
  dnxClientMain.h\
+ dnxConfig.h\
  dnxPlugin.h\
  dnxWLM.h\
  dnxWorker.h

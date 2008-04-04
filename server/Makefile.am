@@ -5,6 +5,7 @@ pkglib_LTLIBRARIES = dnxServer.la
 noinst_HEADERS =\
  dsaudit.h\
  dscollector.h\
+ dsconfig.h\
  dsdispatcher.h\
  dsjoblist.h\
  dsnebmain.h\
