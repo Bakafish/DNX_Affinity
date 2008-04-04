@@ -20,6 +20,12 @@ AC_ARG_WITH([nagios-2_9],
             [nagios_target=2.9],
             [nagios_target=2.7])
 
+AC_ARG_WITH([nagios-2_10],
+            [AS_HELP_STRING([--with-nagios-2_10],
+              [build against nagios 2.10 header files (default: 2.7)])],
+            [nagios_target=2.10],
+            [nagios_target=2.7])
+
 AC_SUBST(nagios_target)
 
 # Checks for libraries.
