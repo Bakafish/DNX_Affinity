@@ -11,6 +11,8 @@ AC_CONFIG_HEADER([config.h])
 AC_PROG_LIBTOOL
 AC_PROG_CC
 AC_PROG_MAKE_SET
+AC_CHECK_PROG(DOXYGEN_INSTALLED, doxygen, yes)
+AM_CONDITIONAL(DO_DOXYGEN, [test x$DOXYGEN_INSTALLED = xyes])
 
 # Checks for libraries.
 AC_CHECK_LIB([pthread], [pthread_create])
@@ -37,6 +39,9 @@ AC_FUNC_STRTOD
 AC_CHECK_FUNCS([dup2 gethostbyname gettimeofday memmove memset regcomp select socket strchr strdup strerror strrchr strtol strtoul])
 
 AC_CONFIG_FILES([Makefile
+		 rpm/dnx.spec
+		 doc/doxyfile
+		 doc/Makefile
                  common/Makefile
                  server/Makefile
                  client/Makefile])
