@@ -128,7 +128,9 @@ static char ** strToStrArray(char * str, char delim)
  
 /** Make a dynamic copy of a dnx configuration dictionary.
  * 
- * Also clears all values referred to by the @em valptr fields.
+ * Also clears all values referred to by the @em valptr fields. This system
+ * really only supports two data types: int and pointer. If a value is not
+ * one of the int types, then it's a pointer type.
  *
  * @param[in] dict - the dictionary describing the field value types.
  * @param[out] dictszp - the address of storage for the counted size of the
@@ -160,7 +162,7 @@ static DnxCfgDict * copyDictionary(DnxCfgDict * dict, unsigned * dictszp)
    // store parameter-based return values; return count of real elements
    *dictszp = --cnt;
 
-   // copy the dictionary; zero pointer values
+   // copy the dictionary; zero user values
    cpy[cnt].varname = 0;
    while (cnt--)
    {
@@ -172,6 +174,8 @@ static DnxCfgDict * copyDictionary(DnxCfgDict * dict, unsigned * dictszp)
       if (cpy[cnt].type != DNX_CFG_INT && cpy[cnt].type != DNX_CFG_UNSIGNED 
             && cpy[cnt].type != DNX_CFG_BOOL)
          *(void **)cpy[cnt].valptr = 0;
+      else
+         *(unsigned *)cpy[cnt].valptr = 0;
       sptr += strsz;
    }
    return cpy;
@@ -617,7 +621,7 @@ static char * formatStringArray(char * var, DnxCfgType type, char ** prval)
 
 //----------------------------------------------------------------------------
 
-/** Format an  int or unsigned configuration value.
+/** Format an int or unsigned configuration value.
  * 
  * @param[in] var - the variable name to be used during formatting.
  * @param[in] type - the type of the variable to be formatted.
@@ -861,7 +865,8 @@ int dnxCfgParserParse(DnxCfgParser * cp, void * passthru)
       // swap new for old values in vptrs
       for (i = 0; i < icp->dictsz; i++)
          if (icp->dict[i].type == DNX_CFG_INT 
-               || icp->dict[i].type == DNX_CFG_UNSIGNED)
+               || icp->dict[i].type == DNX_CFG_UNSIGNED
+               || icp->dict[i].type == DNX_CFG_BOOL)
             INTSWAP(*(int *)icp->dict[i].valptr, vptrs[i]);
          else
             PTRSWAP(*(void **)icp->dict[i].valptr, vptrs[i]);
@@ -970,7 +975,7 @@ void dnxCfgParserDestroy(DnxCfgParser * cp)
    "testCfgFSPath=/some/path\n"                                               \
    "testCfgBool=YES"
      
-static verbose;
+static int verbose;
 
 IMPLEMENT_DNX_SYSLOG(verbose);
 IMPLEMENT_DNX_DEBUG(verbose);
@@ -1008,7 +1013,11 @@ int main(int argc, char ** argv)
    };
    char * defs = "testCfgInt2 = 82\ntestCfgInt3 = -67\ntestCfgInt4 = 101";
    char * cmds = "testCfgInt4 = 102\n";
+
    char * StrArray_cmp[] = {"This is","a test","of the","string array."};
+   int IntArray_cmp[] = {11,-1,87,3,2,32,3,1,-23,-112,2,234};
+   int UnsignedArray_cmp[] = {7,2342,234,234,4,2342,2342,234234};
+
    char test_cfg[] = TEST_CFG_CONTENTS;
 
    int i;
@@ -1024,41 +1033,25 @@ int main(int argc, char ** argv)
    fclose(fp);
 
    CHECK_ZERO(dnxCfgParserCreate(defs, TEST_FILE_NAME, cmds, dict, 0, &cp));
-
    CHECK_ZERO(dnxCfgParserParse(cp, 0));
 
    CHECK_TRUE(strcmp(testCfgString, "some string") == 0);
+
    for (i = 0; i < elemcount(StrArray_cmp); i++)
       CHECK_TRUE(strcmp(testCfgStringArray[i], StrArray_cmp[i]) == 0);
-   CHECK_TRUE(testCfgStringArray[i] == 0);
-   
+
    CHECK_TRUE(testCfgInt1 == -10024);
    CHECK_TRUE(testCfgInt2 == 82);
    CHECK_TRUE(testCfgInt3 == -57);
    CHECK_TRUE(testCfgInt4 == 102);
-   CHECK_TRUE(testCfgIntArray[0] == 11);
-   CHECK_TRUE(testCfgIntArray[1] == -1);
-   CHECK_TRUE(testCfgIntArray[2] == 87);
-   CHECK_TRUE(testCfgIntArray[3] == 3);
-   CHECK_TRUE(testCfgIntArray[4] == 2);
-   CHECK_TRUE(testCfgIntArray[5] == 32);
-   CHECK_TRUE(testCfgIntArray[6] == 3);
-   CHECK_TRUE(testCfgIntArray[7] == 1);
-   CHECK_TRUE(testCfgIntArray[8] == -23);
-   CHECK_TRUE(testCfgIntArray[9] == -112);
-   CHECK_TRUE(testCfgIntArray[10] == 2);
-   CHECK_TRUE(testCfgIntArray[11] == 234);
+
+   for (i = 0; i < elemcount(IntArray_cmp); i++)
+      CHECK_TRUE(testCfgIntArray[i] == IntArray_cmp[i]);
 
    CHECK_TRUE(testCfgUnsigned == 332245235);
 
-   CHECK_TRUE(testCfgUnsignedArray[0] == 7);
-   CHECK_TRUE(testCfgUnsignedArray[1] == 2342);
-   CHECK_TRUE(testCfgUnsignedArray[2] == 234);
-   CHECK_TRUE(testCfgUnsignedArray[3] == 234);
-   CHECK_TRUE(testCfgUnsignedArray[4] == 4);
-   CHECK_TRUE(testCfgUnsignedArray[5] == 2342);
-   CHECK_TRUE(testCfgUnsignedArray[6] == 2342);
-   CHECK_TRUE(testCfgUnsignedArray[7] == 234234);
+   for (i = 0; i < elemcount(UnsignedArray_cmp); i++)
+      CHECK_TRUE(testCfgUnsignedArray[i] == UnsignedArray_cmp[i]);
 
    CHECK_ZERO(strcmp(testCfgUrl, "http://www.example.com"));
    CHECK_ZERO(strcmp(testCfgFSPath, "/some/path"));
