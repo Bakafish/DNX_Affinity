@@ -6,6 +6,36 @@ major changes to the DNX code base. All entries should be separated by
 blank lines and include the date, developer's name, and change description.
 =============================================================================
 
+*** Revision 200: Released dnx-0.16: 05-FEB-08 jcalcote
+
+* Revision: 216-211: 05-MAR-08 jcalcote 
+Updated ChangeLog. Updated NEWS file for 0.16 release. Fixed issue with no 
+debug log being created in server. Changed spec file for log directory 
+change. Changed a few undetected instances of sysrunpath to sysrundir, 
+etc. Updated make system to install to correct directories, and to set 
+owner and group if running as root. 
+
+* Revision: 210-208: 04-MAR-08 jcalcote 
+Made all install targets working correctly. Moved test directories to 
+oldtests under client and server so we can begin rigorous testing in test 
+directories. Moved client load/unload test to new test directory. Added 
+call to dnxstats to client test script. Configure log files to end up in 
+the correct directories. 
+
+* Revision: 207: 03-MAR-08 jcalcote 
+Updated package version to 0.16. 
+
+* Revision: 206-202: 28-FEB-08 jcalcote 
+More doxygen input file changes - tweaked exclude list to be more 
+accurate. Forgot to add dnxcld.generic-init to the etc/Makefile.am clean 
+list. Okay, added back in doxyfile exclusion specifically for dnx-version 
+directory, in case it exists. Removed build dir from doxyfile.in; causes 
+doc to break when builddir is the same as sourcedir. Fixed dnxWLM.c to run 
+correctly under obs. Added generic init script for non-suse platforms. 
+
+* Revision: 201: 27-FEB-08 jcalcote 
+Updated website to reflect new version of dnx - 0.15.1. 
+
 *** Revision 200: Released dnx-0.15.1: 27-FEB-08 jcalcote
 
 * Revision: 200-198: 27-FEB-08 jcalcote 
