@@ -177,7 +177,7 @@ fi
 
 echo "
   Now type 'make @<:@prefix=<user-prefix>@:>@ @<:@<target>@:>@'
-    where the optional <target> is:
+    where the optional <target> is one or more of:
       all                - build all binaries (default).
       docs               - build doxygen documentation.
       install            - install all binaries and data.
@@ -190,7 +190,7 @@ echo "
       install-docs       - install all documentation."
 
 echo "
-  additionally on rpm-based systems only:
+    additionally, on rpm-based systems only:
       rpmcheck           - check whether rpms may be built.
       srcrpm             - build only source rpm.
       rpms               - build source and binary rpms."
