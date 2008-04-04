@@ -218,7 +218,7 @@ void *dnxWLM (void *data)
    }
 
 
-abend:
+abend:;
 
    // Remove thread cleanup handler
    pthread_cleanup_pop(1);
