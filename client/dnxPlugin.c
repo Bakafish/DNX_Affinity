@@ -28,6 +28,7 @@
 #include "dnxPlugin.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "pfopen.h"
 
 #include <sys/types.h>
@@ -98,7 +99,7 @@ int dnxPluginInit(char * pluginPath)
 
       // Ensure that plugin path has trailing '/'
       extra = (pluginPath[len-1] == '/') ? 0 : 1;
-      if ((gPluginPath = (char *)malloc(len+1+extra)) == NULL)
+      if ((gPluginPath = (char *)xmalloc(len+1+extra)) == NULL)
          return DNX_ERR_MEMORY;
       strcpy(gPluginPath, pluginPath);
       if (extra)
@@ -125,7 +126,7 @@ int dnxPluginRelease(void)
 
    if (gPluginPath)
    {
-      free(gPluginPath);
+      xfree(gPluginPath);
       gPluginPath = NULL;
    }
 
@@ -701,7 +702,7 @@ int dnxPluginVector(char * command, int * argc, char ** argv, int max)
          break;   // No more tokens
 
       // Add this token to the arg vector array
-      if ((argv[idx] = (char *)malloc((ep-cp)+1)) == NULL)
+      if ((argv[idx] = (char *)xmalloc((ep-cp)+1)) == NULL)
       {
          ret = DNX_ERR_MEMORY;
          break;

@@ -120,20 +120,18 @@ int dnxTcpNew(dnxChannel ** channel, char * url)
       return DNX_ERR_BADURL;
 
    // Allocate a new channel structure
-   if ((*channel = (dnxChannel *)malloc(sizeof(dnxChannel))) == NULL)
-   {
-      dnxSyslog(LOG_ERR, "dnxTcpNew: Out of Memory: malloc(dnxChannel)");
+   if ((*channel = (dnxChannel *)xmalloc(sizeof(dnxChannel))) == NULL)
       return DNX_ERR_MEMORY;  // Memory allocation error
-   }
+
    memset(*channel, 0, sizeof(dnxChannel));
 
    // Save host name and port
    (*channel)->type = DNX_CHAN_TCP;
    (*channel)->name = NULL;
-   if (((*channel)->host = strdup(cp)) == NULL)
+   if (((*channel)->host = xstrdup(cp)) == NULL)
    {
       dnxSyslog(LOG_ERR, "dnxTcpNew: Out of Memory: strdup(channel->host)");
-      free(*channel);
+      xfree(*channel);
       *channel = NULL;
       return DNX_ERR_MEMORY;  // Memory allocation error
    }
@@ -167,11 +165,11 @@ int dnxTcpDelete(dnxChannel * channel)
       dnxTcpClose(channel);
 
    // Release host name string
-   if (channel->host) free(channel->host);
+   if (channel->host) xfree(channel->host);
 
    // Release channel memory
    memset(channel, 0, sizeof(dnxChannel));
-   free(channel);
+   xfree(channel);
 
    return DNX_OK;
 }

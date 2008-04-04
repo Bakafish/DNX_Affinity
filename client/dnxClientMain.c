@@ -394,7 +394,7 @@ static int processCommands(DnxGlobalData * gData)
          }
 
          // Free message string
-         if (Msg.action) free(Msg.action);
+         if (Msg.action) xfree(Msg.action);
       }
    }
 

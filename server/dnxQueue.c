@@ -74,7 +74,7 @@ int dnxQueuePut(DnxQueue * queue, void * pPayload)
    assert(queue);
    
    // create structure with new request
-   if ((item = (iDnxQueueEntry *)malloc(sizeof *item)) == NULL)
+   if ((item = (iDnxQueueEntry *)xmalloc(sizeof *item)) == NULL)
       return DNX_ERR_MEMORY;
    
    dnxDebug(10, "dnxQueuePut: Malloc(item=%p, pPayload=%p)", item, pPayload);
@@ -115,11 +115,11 @@ int dnxQueuePut(DnxQueue * queue, void * pPayload)
       if (item->pPayload)
       {
          dnxDebug(10, "dnxQueuePut: Free(item->pPayload=%p)", item->pPayload);
-         free(item->pPayload);
+         xfree(item->pPayload);
       }
 
       dnxDebug(10, "dnxQueuePut: Free(item=%p)", item);
-      free(item);
+      xfree(item);
    }
    
    // signal the condition variable - there's a new request to handle
@@ -172,7 +172,7 @@ int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
    {
       *ppPayload = item->pPayload;
       dnxDebug(10, "dnxQueueGet: Free(item=%p, *ppPayload=%p)", item, *ppPayload);
-      free(item);
+      xfree(item);
       return DNX_OK;
    }
 
@@ -236,7 +236,7 @@ DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload,
    if (bFound == DNX_QRES_FOUND)
    {
       dnxDebug(10, "dnxQueueRemove: Free(item=%p)", item);
-      free(item);       // free the queue entry wrapper object
+      xfree(item);       // free the queue entry wrapper object
    }
    return bFound;
 }
@@ -293,7 +293,7 @@ int dnxQueueGetWait(DnxQueue * queue, void ** ppPayload)
    {
       *ppPayload = item->pPayload;
       dnxDebug(10, "dnxQueueGetWait: Free(item=%p, *ppPayload=%p)", item, *ppPayload);
-      free(item);
+      xfree(item);
       return DNX_OK;
    }
 
@@ -422,7 +422,7 @@ int dnxQueueCreate(int max_size, DnxQueue ** pqueue)
 
    assert(max_size > 0 && pqueue);
    
-   if ((iqueue = (iDnxQueue *)malloc(sizeof *iqueue)) == NULL)
+   if ((iqueue = (iDnxQueue *)xmalloc(sizeof *iqueue)) == NULL)
       return DNX_ERR_MEMORY;
    
    dnxDebug(10, "dnxQueueInit: Malloc(*ppQueue=%p)", iqueue);
@@ -465,7 +465,7 @@ void dnxQueueDestroy(DnxQueue * queue)
    while (item != NULL) 
    {
       iDnxQueueEntry * next = item->next;
-      free(item);
+      xfree(item);
       item = next;
    }
    
@@ -475,7 +475,7 @@ void dnxQueueDestroy(DnxQueue * queue)
    pthread_cond_destroy(&iqueue->cv);
 
    dnxDebug(10, "dnxQueueDelete: Free(queue=%p)", iqueue);
-   free(iqueue);
+   xfree(iqueue);
 }
 
 /*--------------------------------------------------------------------------*/

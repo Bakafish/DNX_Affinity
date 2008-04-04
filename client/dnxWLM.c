@@ -137,7 +137,7 @@ static void dnxWLMCleanup(void * data)
       deleteThreadPool(gData);
 
       // Release thread pool tracking array
-      free(gData->tPool);
+      xfree(gData->tPool);
    }
    syslog(LOG_INFO, "dnxWLMCleanup[%lx]: WLM thread "
                     "termination complete", pthread_self());
@@ -326,7 +326,7 @@ void * dnxWLM(void * data)
    }
 
    // Create worker thread pool tracking array
-   if ((gData->tPool = (DnxWorkerStatus *)calloc((size_t)(gData->poolMax), sizeof(DnxWorkerStatus))) == NULL)
+   if ((gData->tPool = (DnxWorkerStatus *)xcalloc((size_t)(gData->poolMax), sizeof(DnxWorkerStatus))) == NULL)
    {
       syslog(LOG_ERR, "dnxWLM[%lx]: Unable to allocate memory for thread pool", pthread_self());
       goto abend;

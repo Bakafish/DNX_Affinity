@@ -27,6 +27,8 @@
 
 #include "pfopen.h"
 
+#include "dnxDebug.h"
+
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,7 +71,7 @@ PFILE * pfopen(const char * cmdstring, const char * type)
    assert((type[0] == 'r' || type[0] == 'w') &&  type[1] == 0);
    
    /* Allocate a PFILE structure */
-   if ((pfile = (PFILE *)malloc(sizeof(PFILE))) == NULL)
+   if ((pfile = (PFILE *)xmalloc(sizeof(PFILE))) == NULL)
    {
       errno = ENOMEM;
       return NULL;

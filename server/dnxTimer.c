@@ -74,7 +74,7 @@ static int nagiosExpireJob(service * svc, time_t start_time, char * msg)
 
    service_message * new_message;
 
-   if ((new_message = (service_message *)malloc(sizeof *new_message)) == NULL)
+   if ((new_message = (service_message *)xmalloc(sizeof *new_message)) == NULL)
       return DNX_ERR_MEMORY;
 
    // Copy the expired job's data to the message buffer
@@ -224,7 +224,7 @@ int dnxTimerCreate(DnxJobList * joblist, DnxTimer ** ptimer)
 
    assert(ptimer);
 
-   if ((itimer = (iDnxTimer *)malloc(sizeof *itimer)) == 0)
+   if ((itimer = (iDnxTimer *)xmalloc(sizeof *itimer)) == 0)
       return DNX_ERR_MEMORY;
 
    itimer->joblist = joblist;
@@ -233,7 +233,7 @@ int dnxTimerCreate(DnxJobList * joblist, DnxTimer ** ptimer)
    if ((ret = pthread_create(&itimer->tid, NULL, dnxTimer, itimer)) != 0)
    {
       dnxSyslog(LOG_ERR, "Timer: thread creation failed: %d", ret);
-      free(itimer);
+      xfree(itimer);
       return DNX_ERR_THREAD;
    }
 
@@ -255,7 +255,7 @@ void dnxTimerDestroy(DnxTimer * timer)
    pthread_cancel(itimer->tid);
    pthread_join(itimer->tid, NULL);
 
-   free(itimer);
+   xfree(itimer);
 }
 
 /*--------------------------------------------------------------------------*/

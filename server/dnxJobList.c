@@ -239,7 +239,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 
    // make a copy for the Dispatcher
    memcpy(pJob, &ilist->pList[current], sizeof(DnxNewJob));
-   //pJob->cmd = strdup(pJob->cmd); // BUG: This causes a memory leak!
+   //pJob->cmd = xstrdup(pJob->cmd); // BUG: This causes a memory leak!
 
    // update the dispatch head
    if (ilist->dhead != ilist->tail)
@@ -346,10 +346,10 @@ int dnxJobListCreate(DnxJobList ** ppJobList, unsigned long size)
 
    assert(ppJobList && size);
 
-   if ((ilist = (iDnxJobList *)malloc(sizeof *ilist)) == 0
-         || (ilist->pList = (DnxNewJob *)malloc(sizeof *ilist->pList * size)) == 0)
+   if ((ilist = (iDnxJobList *)xmalloc(sizeof *ilist)) == 0
+         || (ilist->pList = (DnxNewJob *)xmalloc(sizeof *ilist->pList * size)) == 0)
    {
-      free(ilist);
+      xfree(ilist);
       return DNX_ERR_MEMORY;
    }
    memset(ilist, 0, sizeof *ilist);
@@ -364,8 +364,8 @@ int dnxJobListCreate(DnxJobList ** ppJobList, unsigned long size)
    {
       DNX_PT_COND_DESTROY(&ilist->cond);
       DNX_PT_MUTEX_DESTROY(&ilist->mut);
-      free(ilist->pList);
-      free(ilist);
+      xfree(ilist->pList);
+      xfree(ilist);
       return ret;
    }
 
@@ -394,8 +394,8 @@ void dnxJobListDestroy(DnxJobList * pJobList)
    DNX_PT_COND_DESTROY(&ilist->cond);
    DNX_PT_MUTEX_DESTROY(&ilist->mut);
 
-   free(ilist->pList);
-   free(ilist);
+   xfree(ilist->pList);
+   xfree(ilist);
 }
 
 /*--------------------------------------------------------------------------*/

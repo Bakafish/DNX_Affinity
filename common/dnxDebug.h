@@ -82,5 +82,22 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
 # define DNX_PT_COND_DESTROY(cvp)   pthread_cond_destroy(cvp)
 #endif   /* ?DEBUG */
 
+#ifdef DEBUG_HEAP
+# include "dnxHeap.h"
+# define xmalloc(sz)    dnxMalloc((sz), __FILE__, __LINE__)
+# define xcalloc(n,sz)  dnxCalloc((n), (sz), __FILE__, __LINE__)
+# define xrealloc(p,sz) dnxRealloc((p), (sz), __FILE__, __LINE__)
+# define xstrdup(str)   dnxStrdup((str), __FILE__, __LINE__)
+# define xfree          dnxFree
+#else
+# include <stdlib.h>
+# include <string.h>
+# define xmalloc        malloc
+# define xcalloc        calloc
+# define xrealloc       realloc
+# define xstrdup        strdup
+# define xfree          free
+#endif
+
 #endif   /* !?_DXDEBUG_H_ */
 

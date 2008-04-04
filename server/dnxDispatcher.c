@@ -226,11 +226,11 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
    iDnxDispatcher * idisp;
    int ret;
 
-   if ((idisp = (iDnxDispatcher *)malloc(sizeof *idisp)) == 0)
+   if ((idisp = (iDnxDispatcher *)xmalloc(sizeof *idisp)) == 0)
       return DNX_ERR_MEMORY;
 
-   idisp->chname = strdup(chname);
-   idisp->url = strdup(dispurl);
+   idisp->chname = xstrdup(chname);
+   idisp->url = xstrdup(dispurl);
    idisp->joblist = joblist;
    idisp->debug = debug;
    idisp->channel = 0;
@@ -238,7 +238,7 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
 
    if (!idisp->url || idisp->chname)
    {
-      free(idisp);
+      xfree(idisp);
       return DNX_ERR_MEMORY;
    }
 
@@ -275,9 +275,9 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
 
 e3:dnxDisconnect(idisp->channel);
 e2:dnxChanMapDelete(idisp->chname);
-e1:free(idisp->url);
-   free(idisp->chname);
-   free(idisp);
+e1:xfree(idisp->url);
+   xfree(idisp->chname);
+   xfree(idisp);
 
    return ret;
 }
@@ -298,9 +298,9 @@ void dnxDispatcherDestroy(DnxDispatcher * disp)
    dnxDisconnect(idisp->channel);
    dnxChanMapDelete(idisp->chname);
 
-   free(idisp->url);
-   free(idisp->chname);
-   free(idisp);
+   xfree(idisp->url);
+   xfree(idisp->chname);
+   xfree(idisp);
 }
 
 /*--------------------------------------------------------------------------*/

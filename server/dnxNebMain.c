@@ -269,7 +269,7 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
    // Fill-in the job structure with the necessary information
    dnxMakeGuid(&Job.guid, DNX_OBJ_JOB, serial, 0);
    Job.svc        = svc;
-   Job.cmd        = strdup(ds->command_line);
+   Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
    Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
@@ -302,14 +302,14 @@ int dnxJobCleanup(DnxNewJob * pJob)
       // Free the Pending Job command string
       if (pJob->cmd)
       {
-         free(pJob->cmd);
+         xfree(pJob->cmd);
          pJob->cmd = NULL;
       }
 
       // Free the node request message
       if (pJob->pNode)
       {
-         free(pJob->pNode);
+         xfree(pJob->pNode);
          pJob->pNode = NULL;
       }
    }

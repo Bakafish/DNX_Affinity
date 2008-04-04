@@ -28,6 +28,7 @@
 #include "dnxMsgQ.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -115,7 +116,7 @@ int dnxMsgQNew(dnxChannel ** channel, char * url)
       return DNX_ERR_BADURL;
 
    // Allocate a new channel structure
-   if ((*channel = (dnxChannel *)malloc(sizeof(dnxChannel))) == NULL)
+   if ((*channel = (dnxChannel *)xmalloc(sizeof(dnxChannel))) == NULL)
       return DNX_ERR_MEMORY;  // Memory allocation error
    memset(*channel, 0, sizeof(dnxChannel));
 
@@ -154,7 +155,7 @@ int dnxMsgQDelete(dnxChannel * channel)
 
    // Release channel memory
    memset(channel, 0, sizeof(dnxChannel));
-   free(channel);
+   xfree(channel);
 
    return DNX_OK;
 }

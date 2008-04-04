@@ -28,6 +28,7 @@
 #include "dnxConfig.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxChannel.h"
 #include "dnxNebMain.h"
 #include "dnxLogging.h"
@@ -102,7 +103,7 @@ int validateVariable(char * szVar, char * szVal)
    switch (pMap->varType)
    {
    case DNX_VAR_STR:
-      *((char **)(pMap->varStorage)) = strdup(szVal);
+      *((char **)(pMap->varStorage)) = xstrdup(szVal);
       break;
    case DNX_VAR_INT:
       errno = 0;

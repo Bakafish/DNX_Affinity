@@ -146,9 +146,9 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
    // Search for and remove this node from the Node Request List
    if (dnxQueueRemove(ireg->rqueue, (void **)&pReq, 
          dnxCompareNodeReq) == DNX_QRES_FOUND)
-      free(pReq);       // free the dequeued DnxNodeRequest message
+      xfree(pReq);       // free the dequeued DnxNodeRequest message
 
-   free(pMsg);          // free the Deregister resquest message
+   xfree(pMsg);          // free the Deregister resquest message
 
    return DNX_OK;
 }
@@ -169,7 +169,7 @@ static int dnxDeregisterAllNodes(iDnxRegistrar * ireg)
    // Search for and remove this node from the Node Request List
    while (dnxQueueRemove(ireg->rqueue, (void **)&pReq, 
          dnxRemoveNode) == DNX_QRES_FOUND)
-      free(pReq);    // free the dequeued DnxNodeRequest message
+      xfree(pReq);    // free the dequeued DnxNodeRequest message
 
    return DNX_OK;
 }
@@ -190,7 +190,7 @@ static int dnxProcessNodeRequest(iDnxRegistrar * ireg)
 
    assert(ireg);
 
-   if ((pMsg = (DnxNodeRequest *)malloc(sizeof *pMsg)) == NULL)
+   if ((pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg)) == NULL)
       return DNX_ERR_MEMORY;
    dnxDebug(10, "dnxProcessNodeRequest: Malloc(pMsg=%p)", pMsg);
 
@@ -222,7 +222,7 @@ static int dnxProcessNodeRequest(iDnxRegistrar * ireg)
 
       // Free message struct if things didn't work out
       dnxDebug(10, "dnxProcessNodeRequest: Free(pMsg=%p)", pMsg);
-      free(pMsg);
+      xfree(pMsg);
    }
    return ret;
 }
@@ -320,7 +320,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       discard_count++;
 
       // Discard this expired request
-      free(*ppNode);
+      xfree(*ppNode);
       *ppNode = NULL;
    }
 
@@ -353,7 +353,7 @@ int dnxRegistrarCreate(long * debug, int queuesz,
 
    assert(debug && dispchan && preg);
 
-   if ((ireg = (iDnxRegistrar *)malloc(sizeof *ireg)) == 0)
+   if ((ireg = (iDnxRegistrar *)xmalloc(sizeof *ireg)) == 0)
       return DNX_ERR_MEMORY;
 
    ireg->debug = debug;
@@ -362,7 +362,7 @@ int dnxRegistrarCreate(long * debug, int queuesz,
 
    if ((ret = dnxQueueCreate(queuesz, &ireg->rqueue)) != 0)
    {
-      free(ireg);
+      xfree(ireg);
       return ret;
    }
 
@@ -370,7 +370,7 @@ int dnxRegistrarCreate(long * debug, int queuesz,
    {
       dnxSyslog(LOG_ERR, "Registrar: thread creation failed: (%d) %s", 
             ret, strerror(ret));
-      free(ireg);
+      xfree(ireg);
       return DNX_ERR_THREAD;
    }
 
@@ -397,7 +397,7 @@ void dnxRegistrarDestroy(DnxRegistrar * reg)
 
    dnxQueueDestroy(ireg->rqueue);
 
-   free(ireg);
+   xfree(ireg);
 }
 
 /*--------------------------------------------------------------------------*/

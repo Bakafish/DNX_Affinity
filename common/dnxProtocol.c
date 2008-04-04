@@ -39,6 +39,7 @@
 #include "dnxProtocol.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxTransport.h"
 #include "dnxXml.h"
 #include "dnxLogging.h"
@@ -193,8 +194,7 @@ abend:;
 
    // Check for abend condition
    if (ret != DNX_OK)
-      if (msg) 
-         free(msg);
+      xfree(msg);
 
    return ret;
 }
@@ -304,8 +304,8 @@ abend:;
    // Check for abend condition
    if (ret != DNX_OK)
    {
-      if (msg) free(msg);
-      if (pJob->cmd) free(pJob->cmd);
+      if (msg) xfree(msg);
+      if (pJob->cmd) xfree(pJob->cmd);
    }
    return ret;
 }
@@ -429,8 +429,8 @@ abend:;
    // Check for abend condition
    if (ret != DNX_OK)
    {
-      if (msg) free(msg);
-      if (pResult->resData) free(pResult->resData);
+      if (msg) xfree(msg);
+      if (pResult->resData) xfree(pResult->resData);
    }
    return ret;
 }
@@ -541,8 +541,8 @@ abend:;
    // Check for abend condition
    if (ret != DNX_OK)
    {
-      if (msg) free(msg);
-      if (pRequest->action) free(pRequest->action);
+      if (msg) xfree(msg);
+      if (pRequest->action) xfree(pRequest->action);
    }
    return ret;
 }

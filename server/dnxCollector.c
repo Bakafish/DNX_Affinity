@@ -79,7 +79,7 @@ static int nagiosPostResult(iDnxCollector * icoll, service * svc,
 
    service_message * new_message;
 
-   if ((new_message = (service_message *)malloc(sizeof(service_message))) == NULL)
+   if ((new_message = (service_message *)xmalloc(sizeof(service_message))) == NULL)
    {
       dnxSyslog(LOG_ERR, "dnxCollector[%lx]: nagiosPostResult: "
                          "Memory allocation failure", pthread_self());
@@ -196,7 +196,7 @@ static void * dnxCollector(void * data)
 
             // free result output memory (now that it's been copied into new_message)
             /** @todo Wrapper release DnxResult structure. */
-            free(sResult.resData);
+            xfree(sResult.resData);
 
             dnxDebug(1, "dnxCollector[%lx]: Posted result [%lu,%lu]: %d", 
                   pthread_self(), sResult.guid.objSerial, 
@@ -239,11 +239,11 @@ int dnxCollectorCreate(long * debug, char * chname, char * dispurl,
    iDnxCollector * icoll;
    int ret;
 
-   if ((icoll = (iDnxCollector *)malloc(sizeof *icoll)) == 0)
+   if ((icoll = (iDnxCollector *)xmalloc(sizeof *icoll)) == 0)
       return DNX_ERR_MEMORY;
 
-   icoll->chname = strdup(chname);
-   icoll->url = strdup(dispurl);
+   icoll->chname = xstrdup(chname);
+   icoll->url = xstrdup(dispurl);
    icoll->joblist = joblist;
    icoll->debug = debug;
    icoll->channel = 0;
@@ -251,7 +251,7 @@ int dnxCollectorCreate(long * debug, char * chname, char * dispurl,
 
    if (!icoll->url || icoll->chname)
    {
-      free(icoll);
+      xfree(icoll);
       return DNX_ERR_MEMORY;
    }
 
@@ -288,9 +288,9 @@ int dnxCollectorCreate(long * debug, char * chname, char * dispurl,
 
 e3:dnxDisconnect(icoll->channel);
 e2:dnxChanMapDelete(icoll->chname);
-e1:free(icoll->url);
-   free(icoll->chname);
-   free(icoll);
+e1:xfree(icoll->url);
+   xfree(icoll->chname);
+   xxfree(icoll);
 
    return ret;
 }
@@ -311,9 +311,9 @@ void dnxCollectorDestroy(DnxCollector  * coll)
    dnxDisconnect(icoll->channel);
    dnxChanMapDelete(icoll->chname);
 
-   free(icoll->url);
-   free(icoll->chname);
-   free(icoll);
+   xfree(icoll->url);
+   xfree(icoll->chname);
+   xfree(icoll);
 }
 
 /*--------------------------------------------------------------------------*/

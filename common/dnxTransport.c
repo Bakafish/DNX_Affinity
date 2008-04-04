@@ -262,8 +262,8 @@ int dnxChanMapRelease(void)
    {
       if (gChannelMap[i].name)
       {
-         free(gChannelMap[i].name);
-         if (gChannelMap[i].url)  free(gChannelMap[i].url);
+         xfree(gChannelMap[i].name);
+         if (gChannelMap[i].url) xfree(gChannelMap[i].url);
       }
    }
 
@@ -320,7 +320,7 @@ int dnxChanMapAdd(char * name, char * url)
    // Set the name, unless we are overriding and existing channel
    if (!(chanMap->name))
    {
-      if ((chanMap->name = strdup(name)) == NULL)
+      if ((chanMap->name = xstrdup(name)) == NULL)
       {
          dnxSyslog(LOG_ERR, "dnxChanMapAdd: Out of Memory: chanMap->name");
          ret = DNX_ERR_MEMORY;
@@ -329,11 +329,11 @@ int dnxChanMapAdd(char * name, char * url)
    }
 
    // Set the url
-   if (chanMap->url) free(chanMap->url);  // Free any prior value
-   if ((chanMap->url = strdup(url)) == NULL)
+   if (chanMap->url) xfree(chanMap->url);  // Free any prior value
+   if ((chanMap->url = xstrdup(url)) == NULL)
    {
       dnxSyslog(LOG_ERR, "dnxChanMapAdd: Out of Memory: chanMap->url");
-      free(chanMap->name);
+      xfree(chanMap->name);
       ret = DNX_ERR_MEMORY;
    }
 
@@ -443,8 +443,8 @@ int dnxChanMapDelete(char * name)
    if ((ret = dnxChanMapFindName(name, &chanMap)) == DNX_OK)
    {
       // Release allocated variables
-      free(chanMap->name);
-      if (chanMap->url)  free(chanMap->url);
+      xfree(chanMap->name);
+      if (chanMap->url)  xfree(chanMap->url);
       memset(chanMap, 0, sizeof(dnxChanMap));
       chanMap->type = DNX_CHAN_UNKNOWN;
    }

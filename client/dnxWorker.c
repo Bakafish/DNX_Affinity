@@ -35,6 +35,7 @@
 #include "dnxWorker.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxClientMain.h"
 #include "dnxTransport.h"
 #include "dnxProtocol.h"
@@ -219,7 +220,7 @@ static int dnxExecuteJob(DnxWorkerStatus * tData, DnxJob * pJob,
    pResult->delta = time(NULL) - tData->tJobStart;
 
    // Store dynamic copy of the result string
-   if (resData[0] && (pResult->resData = strdup(resData)) == NULL)
+   if (resData[0] && (pResult->resData = xstrdup(resData)) == NULL)
    {
       syslog(LOG_ERR, "dnxExecuteJob[%lx]: Out of Memory: null result string for job [%lu,%lu]: %s", pthread_self(), pJob->guid.objSerial, pJob->guid.objSlot, pJob->cmd);
       ret = DNX_ERR_MEMORY;

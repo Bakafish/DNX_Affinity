@@ -28,6 +28,7 @@
 #include "dnxXml.h"
 
 #include "dnxError.h"
+#include "dnxDebug.h"
 #include "dnxLogging.h"
 
 #include <stdio.h>
@@ -338,7 +339,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          break;
 
       case DNX_XML_STR:
-         if ((*((char **)xData) = strdup(buf)) == NULL)
+         if ((*((char **)xData) = xstrdup(buf)) == NULL)
          {
             dnxSyslog(LOG_ERR, "dnxXmlGet: DNX_XML_STR: Out of Memory");
             ret = DNX_ERR_MEMORY;
