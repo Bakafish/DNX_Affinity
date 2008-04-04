@@ -14,7 +14,7 @@ Installation:
 2. Untar DNX source on the Nagios server, and on each client node.
 
 3. On the Nagios server, cd into one of the Nagios 2.7, 2.8, 2.9, 2.10, or 
-   3.0rc2 source directories and patch it with the appropriate DNX-specific 
+   3.0rc2/rc3 source directories and patch it with the appropriate DNX-specific 
    patches found in the dnx/nagios/nagios-*/nagios-*.patch files.
 
    The 2.x versions of these patches with patch six Nagios 2.x source
@@ -30,9 +30,9 @@ Installation:
    Most of the dnx patches have been accepted by the Nagios development
    team into the main Nagios code base, however there are still a few 
    issues we're hoping to work out before the final release of Nagios
-   3.0. The 3.x patch will patch the following file:
+   3.0. The 3.x patch will patch the following 3.0rc2 or 3.0rc3 file:
 
-   - nagios-3.0rc2/base/checks.c
+   - nagios-3.0rc3/base/checks.c
 
 4. Build and install the patched Nagios package as usual:
 

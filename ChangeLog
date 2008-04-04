@@ -6,6 +6,21 @@ major changes to the DNX code base. All entries should be separated by
 blank lines and include the date, developer's name, and change description.
 =============================================================================
 
+*** Revision 200: Released dnx-0.15.1: 27-FEB-08 jcalcote
+
+* Revision: 200-198: 27-FEB-08 jcalcote 
+Updated ChangeLog. Added client process test. Fix timing defects related 
+to interrupts on select. Reduce timeouts to minimum. Fix WLM shutdown 
+logic. 
+
+* Revision: 197: 26-FEB-08 jcalcote 
+Fixed segfault in runpath check in parse command line routine. 
+
+* Revision: 196-194: 20-FEB-08 jcalcote 
+Removed note regarding release numbers on doxygen doc. Added Church logo 
+to sponsors list. Added doxygen tarball link to documentation page. 
+Updated website to reflect 0.15 release. 
+
 *** Revision 193: Released dnx-0.15: 19-FEB-08 jcalcote
 
 * Revision: 193-191: 19-FEB-08 jcalcote 
