@@ -1,4 +1,4 @@
-EXTRA_DIST = LEGAL TODO etc nagios
+EXTRA_DIST = LEGAL TODO etc rpm nagios
 
 if DO_DOXYGEN
   OPT_DOXYGEN = doc
