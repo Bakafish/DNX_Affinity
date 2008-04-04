@@ -8,6 +8,41 @@ blank lines and include the date, developer's name, and change description.
 
 *** Revision xx: Released dnx-0.15: dd-mmm-yy jcalcote
 
+* Revision: 172-169: 29-JAN-08 jcalcote 
+Updated ChangeLog.  Added nagios 3.0 rc2 patch.  Removed old makefiles.  
+Added dnxstats program as a management tool.  
+
+* Revision: 168-164: 24-JAN-08 jcalcote 
+Fixed logging system logic bug in dnxLogInit.  Fixed memory leak in WLM.  
+Added dynamic run path for pid file to command line parameters for client; 
+allows for better unit testing.  Fixed strcmp case issue in dnxLogging.c.  
+Fixed double free bug in dnxTransport.c.  Fixed makefiles for make check 
+with debug heap enabled.  Fixed segfault in config parser - free variables 
+code.  Fixed problems with building checks with debug heap enabled.  
+
+* Revision: 163-162: 23-JAN-08 jcalcote 
+Changed logging/auditing interface to be file based.  This change touches 
+90 percent of the source code because the name of the logging function was 
+changed.  Added code to copy config dictionary, rather than just store the 
+user-supplied pointer.  
+
+* Revision: 161-159: 22-JAN-08 jcalcote 
+Fixed strdup bug in new config parser code - should have been xstrdup.  
+Enhanced configuration parser to handle command line overrides; passed 
+null cmd line override strings in dnxNebMain.c and dnxClientMain.c for 
+now.  Added configuration parser object so we could localize the 
+initialization data for a configuration parser.  This is also in 
+preparation to adding command-line overrides of configuration file 
+parameters.  
+
+* Revision: 158: 21-JAN-08 jcalcote 
+Abstracted away all knowledge of nagios internal data structures from any 
+file except dnxNebMain.c.  Refactored results posting code for nagios 2.x 
+and nagios 3.x.  
+
+* Revision: 157: 20-JAN-08 jcalcote 
+Slight change to nagios 3 patch.
+
 * Revision: 156-155: 19-JAN-08 jcalcote 
 Updated ChangeLog.  Renamed nagios 2.x patch so it's obvious that it works 
 against nagios 2.8, 9 and 10; updated the nagios read me file.  
