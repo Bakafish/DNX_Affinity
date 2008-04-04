@@ -39,7 +39,7 @@
 
 extern DnxGlobalData dnxGlobalData;
 
-/*--------------------------------------------------------------------------*/
+//----------------------------------------------------------------------------
 
 /** Log a parameterized message to the dnx system log file.
  * 
@@ -75,7 +75,7 @@ int dnxSyslog(int priority, char * fmt, ...)
    return DNX_OK;
 }
 
-/*--------------------------------------------------------------------------*/
+//----------------------------------------------------------------------------
 
 /** Log a parameterized message to the dnx DEBUG log.
  * 

@@ -259,17 +259,15 @@ int parseFile(char * szFile)
       lineNo = 0; // Clear line counter
 
       while (fgets(szLine, sizeof(szLine), fp) != NULL)
-      {
          if ((ret = parseLine(szFile, lineNo, szLine)) != 0)
             break;   // Encountered error condition
-      }
 
       // Close config file
       fclose(fp);
    }
    else
    {
-      fprintf(stderr, "readCfg: Unable to open %s: %s\n", szFile, strerror(errno));
+      fprintf(stderr, "readCfg: Unable to open %s: %s\n", szFile, strerror(errno)); 
       ret = 2;
    }
    return ret;

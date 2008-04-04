@@ -58,158 +58,36 @@ extern DnxGlobalData dnxGlobalData;
 
 static DnxVarMap DnxVarDictionary[] = 
 {
-   { "channelDispatcher",    DNX_VAR_STR, NULL },
-   { "channelCollector",     DNX_VAR_STR, NULL },
-   { "authWorkerNodes",      DNX_VAR_STR, NULL },
-   { "maxNodeRequests",      DNX_VAR_INT, NULL },
-   { "minServiceSlots",      DNX_VAR_INT, NULL },
-   { "expirePollInterval",   DNX_VAR_INT, NULL },
-   { "localCheckPattern",    DNX_VAR_STR, NULL },
-   { "syncScript",           DNX_VAR_STR, NULL },
-   { "logFacility",          DNX_VAR_STR, NULL },
-   { "auditWorkerJobs",      DNX_VAR_STR, NULL },
-   { "debug",                DNX_VAR_INT, NULL },
-   { NULL, DNX_VAR_ERR, NULL }
+   { "channelDispatcher",  DNX_VAR_STR, NULL },
+   { "channelCollector",   DNX_VAR_STR, NULL },
+   { "authWorkerNodes",    DNX_VAR_STR, NULL },
+   { "maxNodeRequests",    DNX_VAR_INT, NULL },
+   { "minServiceSlots",    DNX_VAR_INT, NULL },
+   { "expirePollInterval", DNX_VAR_INT, NULL },
+   { "localCheckPattern",  DNX_VAR_STR, NULL },
+   { "syncScript",         DNX_VAR_STR, NULL },
+   { "logFacility",        DNX_VAR_STR, NULL },
+   { "auditWorkerJobs",    DNX_VAR_STR, NULL },
+   { "debug",              DNX_VAR_INT, NULL },
+   { NULL,                 DNX_VAR_ERR, NULL }
 };
 
-void displayGlobals (char *title);
-int parseLine (char *szFile, int lineNo, char *szLine);
-int validateVariable (char *szVar, char *szVal);
-int strTrim (char *szLine);
-
 //----------------------------------------------------------------------------
 
-void initGlobals (void)
+/** Validate the format of a single variable with its value.
+ * 
+ * This routine also parses the value of a variable into its proper type in 
+ * the global variable storage table.
+ *
+ * @param[in] szVar - the name of the variable being validated.
+ * @param[in] szVal - the value string of the variable being validated.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int validateVariable(char * szVar, char * szVal)
 {
-   // 'cause C doesn't allow non-constant initializers in static structures
-   DnxVarDictionary[ 0].varStorage = &(dnxGlobalData.channelDispatcher);
-   DnxVarDictionary[ 1].varStorage = &(dnxGlobalData.channelCollector);
-   DnxVarDictionary[ 2].varStorage = &(dnxGlobalData.authWorkerNodes);
-   DnxVarDictionary[ 3].varStorage = &(dnxGlobalData.maxNodeRequests);
-   DnxVarDictionary[ 4].varStorage = &(dnxGlobalData.minServiceSlots);
-   DnxVarDictionary[ 5].varStorage = &(dnxGlobalData.expirePollInterval);
-   DnxVarDictionary[ 6].varStorage = &(dnxGlobalData.localCheckPattern);
-   DnxVarDictionary[ 7].varStorage = &(dnxGlobalData.syncScript);
-   DnxVarDictionary[ 8].varStorage = &(dnxGlobalData.logFacility);
-   DnxVarDictionary[ 9].varStorage = &(dnxGlobalData.auditWorkerJobs);
-   DnxVarDictionary[10].varStorage = &(dnxGlobalData.debug);
-}
-
-//----------------------------------------------------------------------------
-
-void displayGlobals (char *title)
-{
-   static char *varFormat[] = { "ERROR", "%s", "%ld", "%f" };
-   DnxVarMap *pMap;
-
-   // Display title, if specified
-   if (title)
-      puts(title);
-
-   // Dump values of global variables
-   for (pMap = DnxVarDictionary; pMap->szVar; pMap++)
-   {
-      printf("%s = ", pMap->szVar);
-      switch (pMap->varType)
-      {
-      case DNX_VAR_STR:
-         printf(varFormat[pMap->varType], *((char **)(pMap->varStorage)));
-         break;
-      case DNX_VAR_INT:
-         printf(varFormat[pMap->varType], *((long *)pMap->varStorage));
-         break;
-      case DNX_VAR_DBL:
-         printf(varFormat[pMap->varType], *((double *)pMap->varStorage));
-         break;
-      default:
-         printf("UNKNOWN-VAR-TYPE");
-      }
-      printf("\n");
-   }
-}
-
-//----------------------------------------------------------------------------
-
-int parseFile (char *szFile)
-{
-   char szLine[DNX_MAX_CFG_LINE];
-   FILE *fp;
-   int lineNo;
-   int ret = 0;
-
-   // Open the config file
-   if ((fp = fopen(szFile, "r")) != NULL)
-   {
-      lineNo = 0; // Clear line counter
-
-      while (fgets(szLine, sizeof(szLine), fp) != NULL)
-      {
-         if ((ret = parseLine(szFile, lineNo, szLine)) != 0)
-            break;   // Encountered error condition
-      }
-
-      // Close config file
-      fclose(fp);
-   }
-   else
-   {
-      dnxSyslog(LOG_ERR, "readCfg: Unable to open %s: %s", szFile, strerror(errno));
-      ret = 2;
-   }
-
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-int parseLine (char *szFile, int lineNo, char *szLine)
-{
-   char *szVar, *szVal;
-   char *cp;
-
-   // Strip comments
-   if ((cp = strchr(szLine, '#')) != NULL)
-      *cp = '\0';
-
-   // Strip trailing whitespace
-   strTrim(szLine);
-
-   // Check for blank lines
-   if (!*szLine)
-      return 0;
-
-   // Look for equivalence delimiter
-   if ((cp = strchr(szLine, '=')) == NULL)
-   {
-      dnxSyslog(LOG_ERR, "parseLine: Missing '=' equivalence operator");
-      return 1;   // Parse error: no delimiter
-   }
-   *cp++ = '\0';
-
-   for (szVar = szLine; *szVar && *szVar <= ' '; szVar++);
-   if (strTrim(szVar) < 1)
-   {
-      dnxSyslog(LOG_ERR, "%s: Line %d: Missing or invalid variable", szFile, lineNo);
-      return 1;
-   }
-
-   for (szVal = cp; *szVal && *szVal <= ' '; szVal++);
-   if (strTrim(szVal) < 1)
-   {
-      dnxSyslog(LOG_ERR, "%s: Line %d: Missing or invalid assignment value", szFile, lineNo);
-      return 1;
-   }
-
-   // Validate the variable and its value
-   return validateVariable(szVar, szVal);
-}
-
-//----------------------------------------------------------------------------
-
-int validateVariable (char *szVar, char *szVal)
-{
-   DnxVarMap *pMap;
-   char *eptr;
+   DnxVarMap * pMap;
+   char * eptr;
    int ret = 0;
 
    // Validate input paramters
@@ -256,14 +134,171 @@ int validateVariable (char *szVar, char *szVal)
 
 //----------------------------------------------------------------------------
 
-int strTrim (char *szLine)
+/** Trim the trailing white space from a specified string.
+ * 
+ * Zero terminate the string after the last non-white-space character.
+ * 
+ * @param[in,out] szLine - a buffer containing the string to be trimmed.
+ *    On exit, the string contains no trailing white space.
+ * 
+ * @return The new length of @p szLine.
+ */
+int strTrim(char * szLine)
 {
-   char *cp;
+   char * cp;
 
    // Strip trailing whitespace
-   for (cp = szLine + strlen(szLine) - 1; cp >= szLine && *cp <= ' '; cp--) *cp = '\0';
+   for (cp = szLine + strlen(szLine) - 1; cp >= szLine && *cp <= ' '; cp--) 
+      *cp = '\0';
 
    return strlen(szLine);
+}
+
+//----------------------------------------------------------------------------
+
+/** Parse a single line from a dnx configuration file.
+ * 
+ * @param[in] szFile - the name of the file being parsed.
+ * @param[in] lineNo - the line number currently being parsed.
+ * @param[in] szLine - a buffer containing the text of the line being parsed.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int parseLine (char *szFile, int lineNo, char *szLine)
+{
+   char *szVar, *szVal;
+   char *cp;
+
+   // Strip comments
+   if ((cp = strchr(szLine, '#')) != NULL)
+      *cp = '\0';
+
+   // Strip trailing whitespace
+   strTrim(szLine);
+
+   // Check for blank lines
+   if (!*szLine)
+      return 0;
+
+   // Look for equivalence delimiter
+   if ((cp = strchr(szLine, '=')) == NULL)
+   {
+      dnxSyslog(LOG_ERR, "parseLine: Missing '=' equivalence operator");
+      return 1;   // Parse error: no delimiter
+   }
+   *cp++ = '\0';
+
+   for (szVar = szLine; *szVar && *szVar <= ' '; szVar++);
+   if (strTrim(szVar) < 1)
+   {
+      dnxSyslog(LOG_ERR, "%s: Line %d: Missing or invalid variable", szFile, lineNo);
+      return 1;
+   }
+
+   for (szVal = cp; *szVal && *szVal <= ' '; szVal++);
+   if (strTrim(szVal) < 1)
+   {
+      dnxSyslog(LOG_ERR, "%s: Line %d: Missing or invalid assignment value", szFile, lineNo);
+      return 1;
+   }
+
+   // Validate the variable and its value
+   return validateVariable(szVar, szVal);
+}
+
+//----------------------------------------------------------------------------
+
+/** Initialize configuration sub-system global variables.
+ */
+void initGlobals(void)
+{
+   // 'cause C doesn't allow non-constant initializers in static structures
+   DnxVarDictionary[ 0].varStorage = &(dnxGlobalData.channelDispatcher);
+   DnxVarDictionary[ 1].varStorage = &(dnxGlobalData.channelCollector);
+   DnxVarDictionary[ 2].varStorage = &(dnxGlobalData.authWorkerNodes);
+   DnxVarDictionary[ 3].varStorage = &(dnxGlobalData.maxNodeRequests);
+   DnxVarDictionary[ 4].varStorage = &(dnxGlobalData.minServiceSlots);
+   DnxVarDictionary[ 5].varStorage = &(dnxGlobalData.expirePollInterval);
+   DnxVarDictionary[ 6].varStorage = &(dnxGlobalData.localCheckPattern);
+   DnxVarDictionary[ 7].varStorage = &(dnxGlobalData.syncScript);
+   DnxVarDictionary[ 8].varStorage = &(dnxGlobalData.logFacility);
+   DnxVarDictionary[ 9].varStorage = &(dnxGlobalData.auditWorkerJobs);
+   DnxVarDictionary[10].varStorage = &(dnxGlobalData.debug);
+}
+
+//----------------------------------------------------------------------------
+
+/** Parse a dnx configuration file into global variable storage.
+ * 
+ * @param[in] szFile - the name of the file to be parsed.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+int parseFile(char * szFile)
+{
+   char szLine[DNX_MAX_CFG_LINE];
+   FILE * fp;
+   int lineNo;
+   int ret = 0;
+
+   // Open the config file
+   if ((fp = fopen(szFile, "r")) != NULL)
+   {
+      lineNo = 0; // Clear line counter
+
+      while (fgets(szLine, sizeof(szLine), fp) != NULL)
+         if ((ret = parseLine(szFile, lineNo, szLine)) != 0)
+            break;   // Encountered error condition
+
+      // Close config file
+      fclose(fp);
+   }
+   else
+   {
+      dnxSyslog(LOG_ERR, "readCfg: Unable to open %s: %s", szFile, strerror(errno));
+      ret = 2;
+   }
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Display the contents of the global variable table to STDOUT. [DEBUG CODE]
+ * 
+ * @param[in] title - an optional title to be displayed before the table.
+ */
+void displayGlobals(char * title)
+{
+   static char * varFormat[] = { "ERROR", "%s", "%ld", "%f" };
+   DnxVarMap * pMap;
+
+   // Display title, if specified
+   if (title)
+      puts(title);
+
+   // Dump values of global variables
+   for (pMap = DnxVarDictionary; pMap->szVar; pMap++)
+   {
+      printf("%s = ", pMap->szVar);
+      switch (pMap->varType)
+      {
+         case DNX_VAR_STR:
+            printf(varFormat[pMap->varType], *((char **)(pMap->varStorage)));
+            break;
+
+         case DNX_VAR_INT:
+            printf(varFormat[pMap->varType], *((long *)pMap->varStorage));
+            break;
+
+         case DNX_VAR_DBL:
+            printf(varFormat[pMap->varType], *((double *)pMap->varStorage));
+            break;
+
+         default:
+            printf("UNKNOWN-VAR-TYPE");
+      }
+      printf("\n");
+   }
 }
 
 /*--------------------------------------------------------------------------*/

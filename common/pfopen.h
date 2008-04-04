@@ -48,6 +48,7 @@
 #ifndef _PFOPEN_H_
 #define _PFOPEN_H_
 
+#include <sys/types.h>  // for pid_t on some systems
 #include <unistd.h>
 #include <stdio.h>
 

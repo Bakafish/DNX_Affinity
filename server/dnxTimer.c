@@ -42,16 +42,112 @@
 
 #include <assert.h>
 
-#define MAX_EXPIRED     10
-
-static void dnxTimerCleanup (void *data);
-static int dnxExpireJob (DnxNewJob *pExpire);
+#define MAX_EXPIRED 10
 
 //----------------------------------------------------------------------------
 
-void *dnxTimer (void *data)
+/** Timer thread clean-up routine.
+ * 
+ * @param[in] data - an opaque pointer to thread data for the dying thread.
+ */
+static void dnxTimerCleanup(void * data)
 {
-   DnxGlobalData *gData = (DnxGlobalData *)data;
+   DnxGlobalData * gData = (DnxGlobalData *)data;
+
+   assert(data);
+
+   // Unlock the Go signal mutex
+   /** @todo Fix this - we should know the state of our mutexes. */
+   if (&(gData->tmGo))
+      pthread_mutex_unlock(&(gData->tmGo));
+}
+
+//----------------------------------------------------------------------------
+
+/** Post an expired service request to the Nagios service result buffer.
+ * 
+ * @param[in] pExpire - the job to be expired.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dnxExpireJob(DnxNewJob * pExpire)
+{
+   extern circular_buffer service_result_buffer;
+   extern int check_result_buffer_slots;
+
+   service_message * new_message;
+
+   // Allocate memory for the message
+   if ((new_message = (service_message *)malloc(sizeof(service_message))) == NULL)
+   {
+      dnxSyslog(LOG_ERR, "dnxExpireJob: Memory allocation failure");
+      return DNX_ERR_MEMORY;
+   }
+
+   // Copy the expired job's data to the message buffer
+   gettimeofday(&(new_message->finish_time), NULL);
+   strncpy(new_message->host_name, pExpire->svc->host_name, 
+         sizeof(new_message->host_name)-1);
+   new_message->host_name[sizeof(new_message->host_name)-1] = '\0';
+   strncpy(new_message->description, pExpire->svc->description, 
+         sizeof(new_message->description)-1);
+   new_message->description[sizeof(new_message->description)-1] = '\0';
+   new_message->return_code = STATE_UNKNOWN;
+   new_message->exited_ok = TRUE;
+   new_message->check_type = SERVICE_CHECK_ACTIVE;
+   new_message-> parallelized = pExpire->svc->parallelize;
+   new_message->start_time.tv_sec = pExpire->start_time;
+   new_message->start_time.tv_usec = 0L;
+   new_message->early_timeout = TRUE;
+   strcpy(new_message->output, "(DNX Service Check Timed Out)");
+
+   // Obtain a lock for writing to the buffer
+   DNX_PT_MUTEX_LOCK(&service_result_buffer.buffer_lock);
+
+   // Handle overflow conditions
+   if (service_result_buffer.items == check_result_buffer_slots)
+   {
+      // Record overflow
+      service_result_buffer.overflow++;
+
+      // Update tail pointer
+      service_result_buffer.tail = (service_result_buffer.tail + 1) 
+            % check_result_buffer_slots;
+
+      dnxSyslog(LOG_ERR, "dnxExpireJob: Service result buffer overflow = %lu", 
+            service_result_buffer.overflow);
+   }
+
+   // Save the data to the buffer
+   ((service_message **)service_result_buffer.buffer)
+         [service_result_buffer.head] = new_message;
+
+   // Increment the head counter and items
+   service_result_buffer.head = (service_result_buffer.head + 1) 
+         % check_result_buffer_slots;
+   if (service_result_buffer.items < check_result_buffer_slots)
+      service_result_buffer.items++;
+   if(service_result_buffer.items>service_result_buffer.high)
+      service_result_buffer.high=service_result_buffer.items;
+
+   // Release lock on buffer
+   DNX_PT_MUTEX_UNLOCK(&service_result_buffer.buffer_lock);
+
+   return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** The main timer thread procedure entry point.
+ * 
+ * @param[in] data - an opaque pointer to thread data for the timer thread.
+ *    This is actually the dnx server global data object.
+ * 
+ * @return Always returns NULL.
+ */
+void * dnxTimer(void * data)
+{
+   DnxGlobalData * gData = (DnxGlobalData *)data;
    DnxNewJob ExpiredList[MAX_EXPIRED];
    int i, totalExpired;
    int ret = 0;
@@ -65,7 +161,8 @@ void *dnxTimer (void *data)
    // Set thread cleanup handler
    pthread_cleanup_push(dnxTimerCleanup, data);
 
-   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Waiting on the Go signal...", pthread_self());
+   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Waiting on the Go signal...", 
+         pthread_self());
 
    // Wait for Go signal from dnxNebMain
    DNX_PT_MUTEX_LOCK(&gData->tmGo);
@@ -84,7 +181,8 @@ void *dnxTimer (void *data)
    // Release the lock
    DNX_PT_MUTEX_UNLOCK(&gData->tmGo);
 
-   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Watching for expired jobs...", pthread_self());
+   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Watching for expired jobs...", 
+         pthread_self());
 
    // Wait for new service checks or cancellation
    while (1)
@@ -95,11 +193,13 @@ void *dnxTimer (void *data)
 
       // Search for expired jobs in the Pending Queue
       totalExpired = MAX_EXPIRED;
-      if ((ret = dnxJobListExpire(gData->JobList, ExpiredList, &totalExpired)) == DNX_OK && totalExpired > 0)
+      if ((ret = dnxJobListExpire(gData->JobList, ExpiredList, 
+            &totalExpired)) == DNX_OK && totalExpired > 0)
       {
          for (i=0; i < totalExpired; i++)
          {
-            dnxDebug(1, "dnxTimer[%lx]: Expiring Job: %s", pthread_self(), ExpiredList[i].cmd);
+            dnxDebug(1, "dnxTimer[%lx]: Expiring Job: %s", 
+                  pthread_self(), ExpiredList[i].cmd);
 
             // Worker Audit Logging
             dnxAuditJob(&ExpiredList[i], "EXPIRE");
@@ -113,39 +213,32 @@ void *dnxTimer (void *data)
       }
 
       if (totalExpired > 0 || ret != DNX_OK)
-         dnxDebug(1, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d", pthread_self(), totalExpired, ret);
+         dnxDebug(1, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d", 
+               pthread_self(), totalExpired, ret);
 
       // Test for thread cancellation
       pthread_testcancel();
    }
 
    // Note that the Timer thread is exiting
-   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Exiting with ret code = %d", pthread_self(), ret);
+   dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Exiting with ret code = %d", 
+         pthread_self(), ret);
 
    // Remove thread cleanup handler
    pthread_cleanup_pop(1);
 
-   // Terminate this thread
-   pthread_exit(NULL);
-}
-
-//----------------------------------------------------------------------------
-// Dispatch thread clean-up routine
-
-static void dnxTimerCleanup (void *data)
-{
-   DnxGlobalData *gData = (DnxGlobalData *)data;
-   assert(data);
-
-   // Unlock the Go signal mutex
-   /** @todo Fix this - we should know the state of our mutexes. */
-   if (&(gData->tmGo))
-      pthread_mutex_unlock(&(gData->tmGo));
+   return 0;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxThreadSleep (int seconds)
+/** A thread sleep routine - just in case sleep is not a cancellation point.
+ * 
+ * @param[in] seconds - the number of seconds this thread should sleep.
+ * 
+ * @return Zero on success or a non-zero error value.
+ */
+int dnxThreadSleep(int seconds)
 {
    pthread_mutex_t timerMutex = PTHREAD_MUTEX_INITIALIZER;
    pthread_cond_t  timerCond  = PTHREAD_COND_INITIALIZER;
@@ -177,73 +270,9 @@ int dnxThreadSleep (int seconds)
    }
 
    if ((ret = pthread_mutex_unlock(&timerMutex)) != 0)
-   {
       dnxSyslog(LOG_ERR, "dnxThreadSleep: Failed to unlock timerMutex: %d", ret);
-   }
 
    return ret;
-}
-
-//----------------------------------------------------------------------------
-// Posts an expired service request to the Nagios service result buffer
-
-static int dnxExpireJob (DnxNewJob *pExpire)
-{
-   extern circular_buffer service_result_buffer;
-   extern int check_result_buffer_slots;
-   service_message *new_message;
-
-   // Allocate memory for the message
-   if ((new_message = (service_message *)malloc(sizeof(service_message))) == NULL)
-   {
-      dnxSyslog(LOG_ERR, "dnxExpireJob: Memory allocation failure");
-      return DNX_ERR_MEMORY;
-   }
-
-   // Copy the expired job's data to the message buffer
-   gettimeofday(&(new_message->finish_time), NULL);
-   strncpy(new_message->host_name, pExpire->svc->host_name, sizeof(new_message->host_name)-1);
-   new_message->host_name[sizeof(new_message->host_name)-1] = '\0';
-   strncpy(new_message->description, pExpire->svc->description, sizeof(new_message->description)-1);
-   new_message->description[sizeof(new_message->description)-1] = '\0';
-   new_message->return_code = STATE_UNKNOWN;
-   new_message->exited_ok = TRUE;
-   new_message->check_type = SERVICE_CHECK_ACTIVE;
-   new_message-> parallelized = pExpire->svc->parallelize;
-   new_message->start_time.tv_sec = pExpire->start_time;
-   new_message->start_time.tv_usec = 0L;
-   new_message->early_timeout = TRUE;
-   strcpy(new_message->output, "(DNX Service Check Timed Out)");
-
-   // Obtain a lock for writing to the buffer
-   DNX_PT_MUTEX_LOCK(&service_result_buffer.buffer_lock);
-
-   // Handle overflow conditions
-   if (service_result_buffer.items == check_result_buffer_slots)
-   {
-      // Record overflow
-      service_result_buffer.overflow++;
-
-      // Update tail pointer
-      service_result_buffer.tail = (service_result_buffer.tail + 1) % check_result_buffer_slots;
-
-      dnxSyslog(LOG_ERR, "dnxExpireJob: Service result buffer overflow = %lu", service_result_buffer.overflow);
-   }
-
-   // Save the data to the buffer
-   ((service_message **)service_result_buffer.buffer)[service_result_buffer.head] = new_message;
-
-   // Increment the head counter and items
-   service_result_buffer.head = (service_result_buffer.head + 1) % check_result_buffer_slots;
-   if (service_result_buffer.items < check_result_buffer_slots)
-      service_result_buffer.items++;
-   if(service_result_buffer.items>service_result_buffer.high)
-      service_result_buffer.high=service_result_buffer.items;
-
-   // Release lock on buffer
-   DNX_PT_MUTEX_UNLOCK(&service_result_buffer.buffer_lock);
-
-   return DNX_OK;
 }
 
 /*--------------------------------------------------------------------------*/

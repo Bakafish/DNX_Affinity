@@ -45,13 +45,103 @@
 
 #include <assert.h>
 
-static void dnxDispatcherCleanup (void *data);
-static int dnxDispatchJob (DnxGlobalData *gData, DnxNewJob *pSvcReq);
-static int dnxSendJob (DnxGlobalData *gData, DnxNewJob *pSvcReq, DnxNodeRequest *pNode);
+//----------------------------------------------------------------------------
+
+/** Dispatcher thread clean-up routine.
+ * 
+ * @param[in] data - an opaque pointer to the dispatcher thread data 
+ *    structure. This is actually a pointer to the global data structure.
+ */
+static void dnxDispatcherCleanup(void * data)
+{
+   DnxGlobalData * gData = (DnxGlobalData *)data;
+
+   assert(data);
+
+   // Unlock the Go signal mutex
+   /** @todo Fix this - we should always know the state of our mutexes. */
+   if (&gData->tmGo)
+      pthread_mutex_unlock(&gData->tmGo);
+}
 
 //----------------------------------------------------------------------------
 
-void *dnxDispatcher (void *data)
+/** Send a job to a designated client node.
+ * 
+ * @param[in] gData - the global data structure.
+ * @param[in] pSvcReq - the service request block belonging to the client 
+ *    node we're targeting.
+ * @param[in] pNode - the dnx request node to be sent.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dnxSendJob(DnxGlobalData * gData, DnxNewJob * pSvcReq, 
+      DnxNodeRequest * pNode)
+{
+   DnxJob job;
+   int ret;
+
+   // Debug tracking
+   dnxDebug(1, "dnxDispatcher[%lx]: dnxSendJob: Dispatching "
+               "job %lu to worker node: %s",
+         pthread_self(), pSvcReq->guid.objSerial, pSvcReq->cmd);
+
+   // Initialize the job structure message
+   memset(&job, 0, sizeof(job));
+   job.guid     = pSvcReq->guid;
+   job.state    = DNX_JOB_PENDING;
+   job.priority = 1;
+   job.timeout  = pSvcReq->timeout;
+   job.cmd      = pSvcReq->cmd;
+
+   // Transmit the job
+   if ((ret = dnxPutJob(gData->pDispatch, &job, pNode->address)) != DNX_OK)
+      dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxSendJob: Unable to "
+                         "send job %lu to worker node (%d): %s",
+            pthread_self(), pSvcReq->guid.objSerial, ret, pSvcReq->cmd);
+
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Send a service request to the appropriate worker node.
+ * 
+ * @param[in] gData - the global data structure.
+ * @param[in] pSvcReq - the service request to be dispatched.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dnxDispatchJob(DnxGlobalData * gData, DnxNewJob * pSvcReq)
+{
+   DnxNodeRequest * pNode;
+   int ret;
+
+   // Get the worker thread request
+   pNode = pSvcReq->pNode;
+
+   // Send this job to the selected worker node
+   if ((ret = dnxSendJob(gData, pSvcReq, pNode)) != DNX_OK)
+      dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxDispatchJob: "
+                         "dnxSendJob failed: %d", 
+            pthread_self(), ret);
+
+   /** @todo Implement the fork-error re-scheduling logic as 
+    * found in run_service_check() in checks.c. 
+    */
+
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** The dispatcher thread entry point.
+ * 
+ * @param[in] data - an opaque pointer to the dispatcher thread data structure.
+ * 
+ * @return Always returns NULL.
+ */
+void * dnxDispatcher(void * data)
 {
    DnxGlobalData *gData = (DnxGlobalData *)data;
    DnxNewJob SvcReq;
@@ -116,71 +206,7 @@ void *dnxDispatcher (void *data)
    // Remove thread cleanup handler
    pthread_cleanup_pop(1);
 
-   // Terminate this thread
-   pthread_exit(NULL);
-}
-
-//----------------------------------------------------------------------------
-// Dispatch thread clean-up routine
-
-static void dnxDispatcherCleanup (void *data)
-{
-   DnxGlobalData *gData = (DnxGlobalData *)data;
-   assert(data);
-
-   // Unlock the Go signal mutex
-   /** @todo Fix this - we should always know the state of our mutexes. */
-   if (&(gData->tmGo))
-      pthread_mutex_unlock(&(gData->tmGo));
-}
-
-//----------------------------------------------------------------------------
-// Sends a service request to the appropriate worker node
-
-static int dnxDispatchJob (DnxGlobalData *gData, DnxNewJob *pSvcReq)
-{
-   DnxNodeRequest *pNode;
-   int ret;
-
-   // Get the worker thread request
-   pNode = pSvcReq->pNode;
-
-   // Send this job to the selected worker node
-   if ((ret = dnxSendJob(gData, pSvcReq, pNode)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxDispatchJob: dnxSendJob failed: %d", pthread_self(), ret);
-
-   /** @todo Implement the fork-error re-scheduling logic as 
-    * found in run_service_check() in checks.c. 
-    */
-
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-static int dnxSendJob (DnxGlobalData *gData, DnxNewJob *pSvcReq, DnxNodeRequest *pNode)
-{
-   DnxJob job;
-   int ret;
-
-   // Debug tracking
-   dnxDebug(1, "dnxDispatcher[%lx]: dnxSendJob: Dispatching job %lu to worker node: %s",
-      pthread_self(), pSvcReq->guid.objSerial, pSvcReq->cmd);
-
-   // Initialize the job structure message
-   memset(&job, 0, sizeof(job));
-   job.guid     = pSvcReq->guid;
-   job.state    = DNX_JOB_PENDING;
-   job.priority = 1;
-   job.timeout  = pSvcReq->timeout;
-   job.cmd      = pSvcReq->cmd;
-
-   // Transmit the job
-   if ((ret = dnxPutJob(gData->pDispatch, &job, pNode->address)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxSendJob: Unable to send job %lu to worker node (%d): %s",
-         pthread_self(), pSvcReq->guid.objSerial, ret, pSvcReq->cmd);
-
-   return ret;
+   return 0;
 }
 
 /*--------------------------------------------------------------------------*/

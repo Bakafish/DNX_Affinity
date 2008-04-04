@@ -169,7 +169,7 @@ static int verifyFacility(char * szFacility, int * nFacility)
 /** Read and parse the dnxClient configuration file.
  * 
  * @param[in] gData - the global data structure to be populated with 
- *    configuration data frm the dnxClient configuration file.
+ *    configuration data from the dnxClient configuration file.
  * 
  * @return Zero on success, or a non-zero error value.
  */

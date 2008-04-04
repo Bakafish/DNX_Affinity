@@ -36,45 +36,19 @@
 
 extern DnxGlobalData dnxGlobalData;    // Private module data
 
-/*--------------------------------------------------------------------------*/
+//----------------------------------------------------------------------------
 
-#if 0
-// Variadic logging function - wrapper for NEB logging function
-int nebLog (char *fmt, ...)
+/** Log a parameterized message to the dnx system log file.
+ * 
+ * @param[in] priority - a priority value for the log message.
+ * @param[in] fmt - a format specifier string similar to that of printf.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxSyslog(int priority, char * fmt, ...)
 {
    va_list ap;
-   char sbuf[MAX_LOG_LINE+1];
-
-   // Validate input parameters
-   if (!fmt)
-      return DNX_ERR_INVALID;
-
-   // See if we need formatting
-   if (strchr(fmt, '%'))
-   {
-      // Format the string
-      va_start(ap, fmt);
-      vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
-      va_end(ap);
-   }
-   else
-      strncpy(sbuf, fmt, MAX_LOG_LINE);
-   sbuf[MAX_LOG_LINE] = '\0';
-
-   // Publish the results
-   /** @todo Need to make this thread-safe... */
-   write_to_all_logs(sbuf, NSLOG_INFO_MESSAGE);
-
-   return DNX_OK;
-}
-#endif
-
-/*--------------------------------------------------------------------------*/
-
-int dnxSyslog (int priority, char *fmt, ...)
-{
-   va_list ap;
-   char sbuf[MAX_LOG_LINE+1];
+   char sbuf[MAX_LOG_LINE + 1];
 
    // Validate input parameters
    if (!fmt)
@@ -98,9 +72,19 @@ int dnxSyslog (int priority, char *fmt, ...)
    return DNX_OK;
 }
 
-/*--------------------------------------------------------------------------*/
+//----------------------------------------------------------------------------
 
-int dnxDebug (int level, char *fmt, ...)
+/** Log a parameterized message to the dnx DEBUG log.
+ * 
+ * This routine logs a debug message if the current global (configured) 
+ * debug level is greater than or equal the value of @p level.
+ * 
+ * @param[in] level - the debug level at which to log the message.
+ * @param[in] fmt - a format specifier string similar to that of printf.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxDebug(int level, char * fmt, ...)
 {
    va_list ap;
    char sbuf[MAX_LOG_LINE+1];

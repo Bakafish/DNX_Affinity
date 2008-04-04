@@ -46,15 +46,84 @@
 
 #define DNX_REGISTRAR_REQUEST_TIMEOUT  30
 
-static void dnxRegistrarCleanup (void *data);
-static DnxQueueResult dnxCompareNodeReq (void *pLeft, void *pRight);
-static DnxQueueResult dnxRemoveNode (void *pLeft, void *pRight);
+//----------------------------------------------------------------------------
+
+/** Registrar thread clean-up routine.
+ * 
+ * @param[in] data - an opaque pointer to registrar thread data. This is 
+ *    actually a pointer to the dnx server global data structure.
+ */
+static void dnxRegistrarCleanup(void * data)
+{
+   DnxGlobalData * gData = (DnxGlobalData *)data;
+
+   assert(data);
+
+   // Release all remaining Worker Node channels
+   dnxDeregisterAllNodes(gData);
+
+   // Unlock the Worker Node Request Queue mutex
+   /** @todo Fix this - we should always know the state of our mutexes. */
+   if (&(gData->tmReq))
+      pthread_mutex_unlock(&(gData->tmReq));
+
+   // Unlock the Go signal mutex
+   if (&(gData->tmGo))
+      pthread_mutex_unlock(&(gData->tmGo));
+}
 
 //----------------------------------------------------------------------------
 
-void *dnxRegistrar (void *data)
+/** Compare two node "request for work" requests for equality.
+ * 
+ * @param[in] pLeft - the left node to be compared.
+ * @param[in] pRight - the right node to be compared.
+ * 
+ * @return DNX_QRES_FOUND on match; DNX_QRES_CONTINUE if no match.
+ */
+static DnxQueueResult dnxCompareNodeReq(void * pLeft, void * pRight)
 {
-   DnxGlobalData *gData = (DnxGlobalData *)data;
+   assert(pLeft && pRight);
+
+   return
+      (
+         (((DnxNodeRequest *)pLeft)->guid.objType   == ((DnxNodeRequest *)pRight)->guid.objType) 
+      && (((DnxNodeRequest *)pLeft)->guid.objSerial == ((DnxNodeRequest *)pRight)->guid.objSerial)
+      ) ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
+}
+
+//----------------------------------------------------------------------------
+
+/** A node compare routine that always returns DNX_QRES_FOUND.
+ * 
+ * This no-op comparison routine allows the list walker to return success
+ * for every node in the list - that way every node may be processed by 
+ * simply continuing after each match.
+ * 
+ * @param[in] pLeft - the left node to be compared - not used.
+ * @param[in] pRight - the right node to be compared - not used.
+ * 
+ * @return Always returns DNX_QRES_FOUND.
+ */
+static DnxQueueResult dnxRemoveNode(void * pLeft, void * pRight)
+{
+   assert(pLeft && pRight);
+
+   return DNX_QRES_FOUND;
+}
+
+//----------------------------------------------------------------------------
+
+/** The main thread entry point procedure for the registrar thread.
+ * 
+ * @param[in] data - an opaque pointer to registrar thread data. This is 
+ *    actually a pointer to the dnx server global data structure.
+ * 
+ * @return Always returns NULL.
+ */
+void * dnxRegistrar(void * data)
+{
+   DnxGlobalData * gData = (DnxGlobalData *)data;
    int ret = 0;
 
    assert(data);
@@ -105,34 +174,20 @@ void *dnxRegistrar (void *data)
    // Remove thread cleanup handler
    pthread_cleanup_pop(1);
 
-   // Terminate this thread
-   pthread_exit(NULL);
-}
-
-//----------------------------------------------------------------------------
-// Registrar thread clean-up routine
-
-static void dnxRegistrarCleanup (void *data)
-{
-   DnxGlobalData *gData = (DnxGlobalData *)data;
-   assert(data);
-
-   // Release all remaining Worker Node channels
-   dnxDeregisterAllNodes(gData);
-
-   // Unlock the Worker Node Request Queue mutex
-   /** @todo Fix this - we should always know the state of our mutexes. */
-   if (&(gData->tmReq))
-      pthread_mutex_unlock(&(gData->tmReq));
-
-   // Unlock the Go signal mutex
-   if (&(gData->tmGo))
-      pthread_mutex_unlock(&(gData->tmGo));
+   return 0;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxGetNodeRequest (DnxGlobalData *gData, DnxNodeRequest **ppNode)
+/** Return an available node "request for work" object pointer.
+ * 
+ * @param[in] gData - the dnx server global data structure.
+ * @param[out] ppNode - the address of storage in which to return the located
+ *    request node.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxGetNodeRequest(DnxGlobalData * gData, DnxNodeRequest ** ppNode)
 {
    int discard_count = 0;
    time_t now;
@@ -176,9 +231,15 @@ int dnxGetNodeRequest (DnxGlobalData *gData, DnxNodeRequest **ppNode)
 
 //----------------------------------------------------------------------------
 
-int dnxProcessNodeRequest (DnxGlobalData *gData)
+/** Process a "request for work" request from a dnx client node.
+ * 
+ * @param[in] gData - the dnx server global data structure.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxProcessNodeRequest(DnxGlobalData * gData)
 {
-   DnxNodeRequest *pMsg;
+   DnxNodeRequest * pMsg;
    int ret;
 
    assert(gData);
@@ -222,7 +283,14 @@ int dnxProcessNodeRequest (DnxGlobalData *gData)
 
 //----------------------------------------------------------------------------
 
-int dnxRegisterNode (DnxGlobalData *gData, DnxNodeRequest *pMsg)
+/** Register a new client node "request for work" request.
+ * 
+ * @param[in] gData - the dnx server global data structure.
+ * @param[in] pMsg - the dnx client request node to be registered.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int dnxRegisterNode(DnxGlobalData * gData, DnxNodeRequest * pMsg)
 {
    time_t now;
    int ret;
@@ -246,9 +314,16 @@ int dnxRegisterNode (DnxGlobalData *gData, DnxNodeRequest *pMsg)
 
 //----------------------------------------------------------------------------
 
-int dnxDeregisterNode (DnxGlobalData *gData, DnxNodeRequest *pMsg)
+/** Deregister a node "request for work" request.
+ * 
+ * @param[in] gData - the dnx server global data structure.
+ * @param[in] pMsg - the dnx client request node to be deregistered.
+ * 
+ * @return Always returns zero.
+ */
+int dnxDeregisterNode(DnxGlobalData * gData, DnxNodeRequest * pMsg)
 {
-   DnxNodeRequest *pReq = pMsg;
+   DnxNodeRequest * pReq = pMsg;
 
    // Search for and remove this node from the Node Request List
    if (dnxQueueRemove(gData->qReq, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
@@ -261,39 +336,21 @@ int dnxDeregisterNode (DnxGlobalData *gData, DnxNodeRequest *pMsg)
 
 //----------------------------------------------------------------------------
 
-static DnxQueueResult dnxCompareNodeReq (void *pLeft, void *pRight)
+/** Deregister all nodes in a node list.
+ * 
+ * @param[in] gData - the dnx server global data structure.
+ * 
+ * @return Always returns zero.
+ */
+int dnxDeregisterAllNodes(DnxGlobalData * gData)
 {
-   assert(pLeft && pRight);
-
-   return (
-    (
-    (((DnxNodeRequest *)pLeft)->guid.objType   == ((DnxNodeRequest *)pRight)->guid.objType) &&
-    (((DnxNodeRequest *)pLeft)->guid.objSerial == ((DnxNodeRequest *)pRight)->guid.objSerial)
-    ) ? DNX_QRES_FOUND : DNX_QRES_CONTINUE
-          );
-}
-
-
-//----------------------------------------------------------------------------
-
-int dnxDeregisterAllNodes (DnxGlobalData *gData)
-{
-   DnxNodeRequest dummy, *pReq = &dummy;
+   DnxNodeRequest dummy, * pReq = &dummy;
 
    // Search for and remove this node from the Node Request List
    while (dnxQueueRemove(gData->qReq, (void **)&pReq, dnxRemoveNode) == DNX_QRES_FOUND)
       free(pReq);    // Free the dequeued DnxNodeRequest message
 
    return DNX_OK;
-}
-//----------------------------------------------------------------------------
-
-static DnxQueueResult dnxRemoveNode (void *pLeft, void *pRight)
-{
-   assert(pLeft && pRight);
-
-   // Always return FOUND - This essentially allows us to walk the list
-   return (DNX_QRES_FOUND);
 }
 
 /*--------------------------------------------------------------------------*/

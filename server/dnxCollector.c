@@ -45,88 +45,16 @@
 
 #define DNX_COLLECTOR_TIMEOUT 30
 
-static void dnxCollectorCleanup (void *data);
-static int dnxPostResult (DnxGlobalData *gData, DnxNewJob *pJob, DnxResult *pResult);
-
 //----------------------------------------------------------------------------
 
-void *dnxCollector (void *data)
+/** Collector thread clean-up routine.
+ * 
+ * @param[in] data - an opaque pointer to the thread data to be cleaned up.
+ */
+static void dnxCollectorCleanup(void * data)
 {
-   DnxGlobalData *gData = (DnxGlobalData *)data;
-   DnxResult sResult;
-   DnxNewJob Job;
-   int ret = 0;
+   DnxGlobalData * gData = (DnxGlobalData *)data;
 
-   assert(data);
-
-   // Set my cancel state to 'enabled', and cancel type to 'deferred'
-   pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-   pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
-
-   // Set thread cleanup handler
-   pthread_cleanup_push(dnxCollectorCleanup, data);
-
-   // Wait for Go signal from dnxNebMain
-   DNX_PT_MUTEX_LOCK(&gData->tmGo);
-
-   // See if the go signal has already been broadcast
-   if (gData->isGo == 0)
-   {
-      // Nope.  Wait for the synchronization signal
-      if (pthread_cond_wait(&(gData->tcGo), &(gData->tmGo)) != 0)
-      {
-         // pthread_mutex_unlock(&(gData->tmGo));
-         pthread_exit(NULL);
-      }
-   }
-
-   // Release the lock
-   DNX_PT_MUTEX_UNLOCK(&gData->tmGo);
-
-   dnxSyslog(LOG_INFO, "dnxCollector[%lx]: Awaiting service check results", pthread_self());
-
-   // Wait for new service checks or cancellation
-   while (1)
-   {
-      // Test for thread cancellation
-      pthread_testcancel();
-
-      // Wait for Worker Node Results
-      if ((ret = dnxGetResult(gData->pCollect, &sResult, sResult.address, DNX_COLLECTOR_TIMEOUT)) == DNX_OK)
-      {
-         dnxDebug(1, "dnxCollector[%lx]: Received result for [%lu,%lu]: %s", pthread_self(), sResult.guid.objSerial, sResult.guid.objSlot, sResult.resData);
-
-         // Dequeue the matching service request from the Pending Job Queue
-         if (dnxJobListCollect(gData->JobList, &(sResult.guid), &Job) == DNX_OK)
-         {
-            // Post the results to the Nagios service request buffer
-            ret = dnxPostResult(gData, &Job, &sResult);
-
-            dnxDebug(1, "dnxCollector[%lx]: Posted result [%lu,%lu]: %d", pthread_self(), sResult.guid.objSerial, sResult.guid.objSlot, ret);
-
-            // Worker Audit Logging
-            dnxAuditJob(&Job, "COLLECT");
-
-            // Release this Job's resources
-            dnxJobCleanup(&Job);
-         }
-         else
-            dnxSyslog(LOG_WARNING, "dnxCollector[%lx]: Unable to dequeue completed job: %d", pthread_self(), ret);
-      }
-      else if (ret != DNX_ERR_TIMEOUT)
-         dnxSyslog(LOG_ERR, "dnxCollector[%lx]: Failure to read result message from Collector channel: %d", pthread_self(), ret);
-   }
-
-   // Remove thread cleanup handler
-   pthread_cleanup_pop(1);
-}
-
-//----------------------------------------------------------------------------
-// Dispatch thread clean-up routine
-
-static void dnxCollectorCleanup (void *data)
-{
-   DnxGlobalData *gData = (DnxGlobalData *)data;
    assert(data);
 
    // Unlock the Go signal mutex - Don't use the error check macro
@@ -136,26 +64,38 @@ static void dnxCollectorCleanup (void *data)
 }
 
 //----------------------------------------------------------------------------
-// Posts a completed service request to the Nagios service result buffer
 
-static int dnxPostResult (DnxGlobalData *gData, DnxNewJob *pJob, DnxResult *pResult)
+/** Post a completed service request to the Nagios service result buffer.
+ * 
+ * @param[in] gData - the global data structure.
+ * @param[in] pJob - the job object whose results are to be posted.
+ * @param[in] pResult - the job result data to be posted.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+static int dnxPostResult(DnxGlobalData * gData, DnxNewJob * pJob, 
+      DnxResult * pResult)
 {
    extern circular_buffer service_result_buffer;
    extern int check_result_buffer_slots;
-   service_message *new_message;
+
+   service_message * new_message;
 
    // Allocate memory for the message
    if ((new_message = (service_message *)malloc(sizeof(service_message))) == NULL)
    {
-      dnxSyslog(LOG_ERR, "dnxCollector[%lx]: dnxPostResult: Memory allocation failure", pthread_self());
+      dnxSyslog(LOG_ERR, "dnxCollector[%lx]: dnxPostResult: "
+                         "Memory allocation failure", pthread_self());
       return DNX_ERR_MEMORY;
    }
 
    // Copy the completed job's data to the message buffer
    gettimeofday(&(new_message->finish_time), NULL);
-   strncpy(new_message->host_name, pJob->svc->host_name, sizeof(new_message->host_name)-1);
+   strncpy(new_message->host_name, pJob->svc->host_name, 
+         sizeof(new_message->host_name)-1);
    new_message->host_name[sizeof(new_message->host_name)-1] = '\0';
-   strncpy(new_message->description, pJob->svc->description, sizeof(new_message->description)-1);
+   strncpy(new_message->description, pJob->svc->description, 
+         sizeof(new_message->description)-1);
    new_message->description[sizeof(new_message->description)-1] = '\0';
    new_message->return_code = pResult->resCode;
    new_message->exited_ok = TRUE;
@@ -181,16 +121,21 @@ static int dnxPostResult (DnxGlobalData *gData, DnxNewJob *pJob, DnxResult *pRes
       service_result_buffer.overflow++;
 
       // Update tail pointer
-      service_result_buffer.tail = (service_result_buffer.tail + 1) % check_result_buffer_slots;
+      service_result_buffer.tail = (service_result_buffer.tail + 1) 
+            % check_result_buffer_slots;
 
-      dnxSyslog(LOG_ERR, "dnxCollector[%lx]: dnxPostResult: Service result buffer overflow = %lu", pthread_self(), service_result_buffer.overflow);
+      dnxSyslog(LOG_ERR, "dnxCollector[%lx]: dnxPostResult: "
+                         "Service result buffer overflow = %lu", 
+            pthread_self(), service_result_buffer.overflow);
    }
 
    // Save the data to the buffer
-   ((service_message **)service_result_buffer.buffer)[service_result_buffer.head] = new_message;
+   ((service_message **)service_result_buffer.buffer)
+         [service_result_buffer.head] = new_message;
 
    // Increment the head counter and items
-   service_result_buffer.head = (service_result_buffer.head + 1) % check_result_buffer_slots;
+   service_result_buffer.head = (service_result_buffer.head + 1) 
+         % check_result_buffer_slots;
    if (service_result_buffer.items < check_result_buffer_slots)
       service_result_buffer.items++;
    if (service_result_buffer.items > service_result_buffer.high)
@@ -200,6 +145,96 @@ static int dnxPostResult (DnxGlobalData *gData, DnxNewJob *pJob, DnxResult *pRes
    DNX_PT_MUTEX_UNLOCK(&service_result_buffer.buffer_lock);
 
    return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** The collector thread main entry point procedure.
+ * 
+ * @param[in] data - an opaque pointer to the collector thread data structure,
+ *    which is actually a DnxGlobalData object (the dnxServer global data 
+ *    structure).
+ * 
+ * @return Always returns NULL.
+ */
+void * dnxCollector(void * data)
+{
+   DnxGlobalData * gData = (DnxGlobalData *)data;
+   DnxResult sResult;
+   DnxNewJob Job;
+   int ret = 0;
+
+   assert(data);
+
+   // Set my cancel state to 'enabled', and cancel type to 'deferred'
+   pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+   pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+
+   // Set thread cleanup handler
+   pthread_cleanup_push(dnxCollectorCleanup, data);
+
+   // Wait for Go signal from dnxNebMain
+   DNX_PT_MUTEX_LOCK(&gData->tmGo);
+
+   if (gData->isGo == 0)
+   {
+      // Nope.  Wait for the synchronization signal
+      if (pthread_cond_wait(&(gData->tcGo), &(gData->tmGo)) != 0)
+      {
+         // pthread_mutex_unlock(&(gData->tmGo));
+         pthread_exit(NULL);
+      }
+   }
+
+   DNX_PT_MUTEX_UNLOCK(&gData->tmGo);
+
+   dnxSyslog(LOG_INFO, "dnxCollector[%lx]: Awaiting service check results", 
+         pthread_self());
+
+   // Wait for new service checks or cancellation
+   while (1)
+   {
+      // Test for thread cancellation
+      pthread_testcancel();
+
+      // Wait for Worker Node Results
+      if ((ret = dnxGetResult(gData->pCollect, &sResult, sResult.address, 
+            DNX_COLLECTOR_TIMEOUT)) == DNX_OK)
+      {
+         dnxDebug(1, "dnxCollector[%lx]: Received result for [%lu,%lu]: %s", 
+               pthread_self(), sResult.guid.objSerial, sResult.guid.objSlot, 
+               sResult.resData);
+
+         // Dequeue the matching service request from the Pending Job Queue
+         if (dnxJobListCollect(gData->JobList, &(sResult.guid), &Job) == DNX_OK)
+         {
+            // Post the results to the Nagios service request buffer
+            ret = dnxPostResult(gData, &Job, &sResult);
+
+            dnxDebug(1, "dnxCollector[%lx]: Posted result [%lu,%lu]: %d", 
+                  pthread_self(), sResult.guid.objSerial, 
+                  sResult.guid.objSlot, ret);
+
+            // Worker Audit Logging
+            dnxAuditJob(&Job, "COLLECT");
+
+            // Release this Job's resources
+            dnxJobCleanup(&Job);
+         }
+         else
+            dnxSyslog(LOG_WARNING, "dnxCollector[%lx]: Unable to dequeue "
+                                   "completed job: %d", pthread_self(), ret);
+      }
+      else if (ret != DNX_ERR_TIMEOUT)
+         dnxSyslog(LOG_ERR, "dnxCollector[%lx]: Failure to read result "
+                            "message from Collector channel: %d", 
+               pthread_self(), ret);
+   }
+
+   // Remove thread cleanup handler
+   pthread_cleanup_pop(1);
+
+   return 0;
 }
 
 /*--------------------------------------------------------------------------*/
