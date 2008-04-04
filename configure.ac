@@ -55,6 +55,17 @@ AC_FUNC_STRTOD
 AC_CHECK_FUNCS([dup2 gethostbyname gettimeofday memmove memset regcomp \
    nanosleep select socket strchr strdup strerror strrchr strtol strtoul])
 
+# Export RPM build architecture
+which rpm > /dev/null; \
+if [[ $? -eq 0 ]]; then \
+   BUILDARCH=`rpm --showrc | grep ^build\ arch | sed 's/\(.*: \)\(.*\)/\2/'`; \
+else \
+   BUILDARCH=$build_cpu; \
+fi
+AC_SUBST(BUILDARCH)
+AC_DEFINE_UNQUOTED(BUILDARCH, ["$BUILDARCH"],
+        [The build architecture of this build.])
+
 AC_CONFIG_FILES([Makefile
 		 rpm/dnx.spec
 		 doc/Makefile

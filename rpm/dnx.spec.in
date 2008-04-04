@@ -1,12 +1,19 @@
 #
-# spec file for package dnx (Version 0.15)  
+# spec file for package dnx (Version @VERSION@)
 #
-# Please submit bugfixes or comments via http://dnx.sourceforge.net
+# Copyright (c) 2007 Intellectual Reserve, Inc.
+# This file and all modifications and additions to the pristine
+# package are under the same license as the package itself.
+#
+# Please submit bug fixes or comments via http://dnx.sourceforge.net
+#
+# norootforbuild
 #
 Name:           dnx
 Version:        @VERSION@
 Release:        1
 License:        GPL
+Autoreqprov:    on
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 BuildRequires:  gcc
 Group:          Productivity/Security
@@ -33,7 +40,7 @@ rm -rf %{buildroot}
 %makeinstall
 mkdir -p $RPM_BUILD_ROOT/etc/init.d
 mkdir -p $RPM_BUILD_ROOT/usr/sbin
-install -m 755 dnxcld.init $RPM_BUILD_ROOT/etc/init.d/dnxcld
+install -m 755 etc/dnxcld.init $RPM_BUILD_ROOT/etc/init.d/dnxcld
 ln -sf ../../etc/init.d/dnxcld $RPM_BUILD_ROOT/usr/sbin/rcdnxcld
 
 %post
@@ -53,8 +60,13 @@ rm -rf "$RPM_BUILD_ROOT"
 %defattr(-,root,root)
 %doc AUTHORS COPYING ChangeLog NEWS README
 %config /etc/init.d/dnxcld
+%config /etc/dnxClient.cfg
+%config /etc/dnxServer.cfg
 %dir %{_libdir}/%{name}
-/usr/sbin/dnxClient
-/usr/sbin/rcdnxcld
-%{_libdir}/dnxServer.so
+%{_prefix}/sbin/dnxClient
+%{_prefix}/sbin/rcdnxcld
+%{_libdir}/%{name}/dnxServer.a
+%{_libdir}/%{name}/dnxServer.la
+%{_libdir}/%{name}/dnxServer.so
+
 
