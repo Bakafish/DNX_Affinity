@@ -43,6 +43,7 @@
 #include "dnxJobList.h"
 #include "dnxLogging.h"
 
+#include <netinet/in.h>
 #include <assert.h>
 
 /** The implementation data structure for a dispatcher object. */

@@ -40,9 +40,6 @@ typedef struct DnxNewJob
    time_t start_time;      // Service check start time
    int timeout;            // Service check timeout in seconds
    time_t expires;         // Expiration time
-   int chkopts;            // nagios check options
-   int sched_flag;         // nagios schedule flag
-   int resched_flag;       // nagios reschedule flag
    void * payload;         // job payload (service check structure)
    DnxNodeRequest * pNode; // Worker Request that will handle this Job
 } DnxNewJob;

@@ -45,6 +45,7 @@
 # include "config.h"
 #endif
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -130,9 +131,8 @@ static void * dnxTimer(void * data)
                   job->pNode->address);
 
             // report the expired job to Nagios
-            ret = nagiosPostResult((service *)job->payload, job->chkopts, 
-                  job->sched_flag, job->resched_flag, job->start_time, 
-                  time(0) - job->start_time, TRUE, STATE_UNKNOWN, msg);
+            ret = dnxPostResult(job->payload, job->start_time, 
+                  time(0) - job->start_time, 1, 0, msg);
 
             dnxJobCleanup(job);
          }
@@ -239,14 +239,13 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
    entered_dnxJobListExpire = 1;
    return 0;
 }
-int nagiosPostResult(service * svc, int chkopts, int sched, int resched, 
-      time_t start_time, unsigned delta, int early_timeout, 
-      int res_code, char * res_data)
+int dnxPostResult(void * payload, time_t start_time, unsigned delta, 
+      int early_timeout, int res_code, char * res_data)
 {
-   CHECK_TRUE(svc == (service *)&fakepayload);
+   CHECK_TRUE(payload == &fakepayload);
    CHECK_TRUE(start_time == 100);
    CHECK_TRUE(early_timeout != 0);
-   CHECK_TRUE(res_code == STATE_UNKNOWN);
+   CHECK_TRUE(res_code == 0);
    CHECK_ZERO(memcmp(res_data, "(DNX Service", 12));
    return 0;
 }

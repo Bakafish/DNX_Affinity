@@ -96,10 +96,8 @@ static void * dnxCollector(void * data)
          // dequeue the matching service request from the pending job queue
          if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
          {
-            ret = nagiosPostResult((service *)Job.payload, 
-                  Job.chkopts, Job.sched_flag, Job.resched_flag, 
-                  Job.start_time, sResult.delta, FALSE, 
-                  sResult.resCode, sResult.resData);
+            ret = dnxPostResult(Job.payload, Job.start_time, sResult.delta, 
+                  0, sResult.resCode, sResult.resData);
 
             /** @todo Wrapper release DnxResult structure. */
             xfree(sResult.resData);
@@ -292,11 +290,10 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    return 0; 
 }
 
-int nagiosPostResult(service * svc, int chkopts, int sched, int resched,
-      time_t start_time, unsigned delta, int early_timeout, 
-      int res_code, char * res_data)
+int dnxPostResult(void * payload, time_t start_time, unsigned delta, 
+      int early_timeout, int res_code, char * res_data)
 {
-   CHECK_TRUE(svc == (service *)&test_payload);
+   CHECK_TRUE(payload == &test_payload);
    return 0;
 }
 

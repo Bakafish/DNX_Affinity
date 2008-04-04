@@ -30,12 +30,6 @@
 
 #include "dnxJobList.h"
 
-#ifndef NSCORE
-# define NSCORE
-#endif
-#include "nagios.h"     // for STATE_* definitions
-#include "objects.h"    // for nagios service data type
-
 #include <time.h>
 
 #define DNX_DISPATH_PORT   12480
@@ -44,10 +38,11 @@
 
 /** Post a completed service request to the Nagios service result buffer.
  * 
- * @param[in] svc - the nagios service object from which results are taken.
- * @param[in] chkopts - nagios check options.
- * @param[in] sched - nagios schedule flag.
- * @param[in] resched - nagios reschedule flag.
+ * If @p early_timeout is true (1), then @p res_code will be reset to 
+ * STATE_UNKNOWN, so you might as well pass zero for @p res_code.
+ * 
+ * @param[in] data - An opaque pointer to the nagios service structure and
+ *    other relevant results data.
  * @param[in] start_time - the nagios service object start time.
  * @param[in] delta - the running time of the nagios service object in seconds.
  * @param[in] early_timeout - boolean; true means the job DID time out.
@@ -55,13 +50,9 @@
  * @param[in] res_data - the resulting STDOUT output text of this job.
  * 
  * @return Zero on success, or a non-zero error code.
- * 
- * @todo This routine should be in nagios code. Add it to the dnx patch files
- * for nagios 2.7 and 2.9, and export it from nagios so we can call it.
  */
-int nagiosPostResult(service * svc, int chkopts, int sched, int resched,
-      time_t start_time, unsigned delta, int early_timeout, 
-      int res_code, char * res_data);
+int dnxPostResult(void * data, time_t start_time, unsigned delta, 
+      int early_timeout, int res_code, char * res_data);
 
 /** Release all resources associated with a job object.
  * 

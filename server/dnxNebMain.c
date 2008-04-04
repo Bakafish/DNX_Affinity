@@ -57,6 +57,7 @@
 # define NSCORE
 #endif
 #include "nagios.h"
+#include "objects.h"    // for nagios service data type
 #include "nebmodules.h"
 #include "nebstructs.h"
 #include "nebcallbacks.h"
@@ -79,6 +80,16 @@
 
 // specify event broker API version (required)
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);
+
+/** The payload of a new job object. */
+typedef struct DnxJobData
+{
+   service * svc;                   //!< The nagios service check structure.
+   int chkopts;                     //!< The nagios 3.x check options.
+   int schedule;                    //!< The nagios 3.x schedule flag.
+   int reschedule;                  //!< The nagios 3.x reschedule flag.
+   double latency;                  //!< The nagios 3.x results latency value.
+} DnxJobData;
 
 /** The internal server module configuration data structure. */
 typedef struct DnxServerCfg
@@ -282,14 +293,25 @@ static int nagiosGetServiceCount(void)
    return total_services;
 }
 
+#if CURRENT_NEB_API_VERSION == 2
+
 //----------------------------------------------------------------------------
 
-int nagiosPostResult(service * svc, int chkopts, int sched, int resched,
-      time_t start_time, unsigned delta, int early_timeout, 
-      int res_code, char * res_data)
+/** Post job result information to Nagios 2.x.
+ * 
+ * @param[in] svc - the nagios service to which the results belong.
+ * @param[in] start_time - the check start time in seconds.
+ * @param[in] early_timeout - boolean; true (!0) means the service timed out.
+ * @param[in] res_code - the check result code.
+ * @param[in] res_data - the check result data.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ * 
+ * @todo This routine should be in nagios code.
+ */
+static int nagios2xPostResult(service * svc, time_t start_time, 
+      int early_timeout, int res_code, char * res_data)
 {
-
-#if CURRENT_NEB_API_VERSION == 2
 
    extern circular_buffer service_result_buffer;
    extern int check_result_buffer_slots;
@@ -341,8 +363,39 @@ int nagiosPostResult(service * svc, int chkopts, int sched, int resched,
 
    pthread_mutex_unlock(&service_result_buffer.buffer_lock);
 
-#elif CURRENT_NEB_API_VERSION == 3
+   return 0;
+}
 
+#endif   // CURRENT_NEB_API_VERSION == 2
+
+#if CURRENT_NEB_API_VERSION == 3
+
+//----------------------------------------------------------------------------
+
+/** Post job result information to Nagios 3.x.
+ * 
+ * @param[in] svc - the nagios service to which the results belong.
+ * @param[in] check_type - nagios 3.x check type value.
+ * @param[in] check_options - nagios 3.x bit-wise check options.
+ * @param[in] schedule - boolean; nagios 3.x schedule flag.
+ * @param[in] reschedule - boolean; nagios 3.x reschedule flag.
+ * @param[in] latency - nagios 3.x latency value.
+ * @param[in] start_time - the check start time in seconds.
+ * @param[in] finish_time - the check finish time in seconds.
+ * @param[in] early_timeout - boolean; true (!0) means the service timed out.
+ * @param[in] exited_ok - boolean; true (!0) if the external check exited ok.
+ * @param[in] res_code - the check result code.
+ * @param[in] res_data - the check result data.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ * 
+ * @todo This routine should be in nagios code.
+ */
+static int nagios3xPostResult(service * svc, int check_type, 
+      int check_options, int schedule, int reschedule, double latency, 
+      time_t start_time, time_t finish_time, int early_timeout, 
+      int exited_ok, int res_code, char * res_data)
+{
    /** @todo Invent a different temp path strategy. */
 
    // a nagios 3.x global variable
@@ -380,15 +433,15 @@ int nagiosPostResult(service * svc, int chkopts, int sched, int resched,
    fprintf(fp, "# Time: %s", ctime(&start_time));
    fprintf(fp, "host_name=%s\n", svc->host_name);
    fprintf(fp, "service_description=%s\n", svc->description);
-   fprintf(fp, "check_type=%d\n", SERVICE_CHECK_ACTIVE);
-   fprintf(fp, "check_options=%d\n", chkopts);
-   fprintf(fp, "scheduled_check=%d\n", sched);
-   fprintf(fp, "reschedule_check=%d\n", resched);
-   fprintf(fp, "latency=%f\n", svc->latency);
-   fprintf(fp, "start_time=%lu.0\n", start_time);
-   fprintf(fp, "finish_time=%lu.%lu\n", start_time + delta);
+   fprintf(fp, "check_type=%d\n", check_type);
+   fprintf(fp, "check_options=%d\n", check_options);
+   fprintf(fp, "scheduled_check=%d\n", schedule);
+   fprintf(fp, "reschedule_check=%d\n", reschedule);
+   fprintf(fp, "latency=%f\n", latency);
+   fprintf(fp, "start_time=%lu.0\n", (unsigned long)start_time);
+   fprintf(fp, "finish_time=%lu.%lu\n", (unsigned long)finish_time);
    fprintf(fp, "early_timeout=%d\n", early_timeout);
-   fprintf(fp, "exited_ok=1\n");
+   fprintf(fp, "exited_ok=%d\n", exited_ok);
    fprintf(fp, "return_code=%d\n", res_code);
    fprintf(fp, "output=%s\n", escaped_res_data);
 
@@ -399,11 +452,39 @@ int nagiosPostResult(service * svc, int chkopts, int sched, int resched,
    // a nagios 3.x core function
    move_check_result_to_queue(filename);
 
+   return 0;
+}
+
+#endif   // CURRENT_NEB_API_VERSION == 3
+
+//----------------------------------------------------------------------------
+
+int dnxPostResult(void * data, time_t start_time, unsigned delta, 
+      int early_timeout, int res_code, char * res_data)
+{
+   DnxJobData * jdp = (DnxJobData *)data;
+
+   if (early_timeout)
+      res_code = STATE_UNKNOWN;
+
+   /** @todo Nagios 3.x: Collect a better value for exited_ok. */
+   /** @todo Nagiod 3.x: Collect a better value for check_type. */
+
+#if CURRENT_NEB_API_VERSION == 2
+
+   return nagios2xPostResult(jdp->svc, start_time, early_timeout, 
+         res_code, res_data);
+
+#elif CURRENT_NEB_API_VERSION == 3
+
+   return nagios3xPostResult(jdp->svc, SERVICE_CHECK_ACTIVE, 
+         jdp->chkopts, jdp->schedule, jdp->reschedule, jdp->latency, 
+         start_time, start_time + delta, early_timeout, 
+         1, res_code, res_data);
+
 #else
 # error Unsupported NEB API version.
 #endif
-
-   return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -457,10 +538,8 @@ static int dnxCalculateJobListSize(void)
  * 
  * @param[in] joblist - the job list to which the new job should be posted.
  * @param[in] serial - the serial number of the new job.
+ * @param[in] jdp - a pointer to a job data structure.
  * @param[in] ds - a pointer to the nagios job that's being posted.
- * @param[in] chkopts - nagios check options.
- * @param[in] sched - nagios schedule flag.
- * @param[in] resched - nagios reschedule flag.
  * @param[in] pNode - a dnxClient node request structure that is being 
  *    posted with this job. The dispatcher thread will send the job to the
  *    associated node.
@@ -468,32 +547,20 @@ static int dnxCalculateJobListSize(void)
  * @return Zero on success, or a non-zero error value.
  */
 static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial, 
-      nebstruct_service_check_data * ds, int chkopts, int sched, int resched, 
+      DnxJobData * jdp, nebstruct_service_check_data * ds, 
       DnxNodeRequest * pNode)
 {
-   service * svc;
    DnxNewJob Job;
    int ret;
 
-   // obtain a pointer to the Nagios service definition structure
-   if ((svc = (service *)(ds->OBJECT_FIELD_NAME)) == 0)
-   {
-      dnxSyslog(LOG_ERR, "dnxPostNewJob: Could not find service %s for host %s",
-            ds->service_description, ds->host_name);
-      return DNX_ERR_INVALID;
-   }
-
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
-   Job.payload       = svc;
-   Job.chkopts       = chkopts;
-   Job.sched_flag    = sched;
-   Job.resched_flag  = resched;
-   Job.cmd           = xstrdup(ds->command_line);
-   Job.start_time    = ds->start_time.tv_sec;
-   Job.timeout       = ds->timeout;
-   Job.expires       = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
-   Job.pNode         = pNode;
+   Job.payload    = jdp;
+   Job.cmd        = xstrdup(ds->command_line);
+   Job.start_time = ds->start_time.tv_sec;
+   Job.timeout    = ds->timeout;
+   Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
+   Job.pNode      = pNode;
 
    dnxDebug(2, "DnxNebMain: Posting Job [%lu]: %s", serial, Job.cmd);
 
@@ -523,8 +590,8 @@ static int ehSvcCheck(int event_type, void * data)
    static unsigned long serial = 0; // the number of service checks processed
 
    nebstruct_service_check_data * svcdata = (nebstruct_service_check_data *)data;
-   int chkopts = 0, sched = 0, resched = 0;     // nagios 3.x only
    DnxNodeRequest * pNode;
+   DnxJobData * jdp;
    int ret;
 
    if (event_type != NEBCALLBACK_SERVICE_CHECK_DATA)
@@ -557,24 +624,36 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
+   // allocate and populate a new job payload object
+   if ((jdp = (DnxJobData *)xmalloc(sizeof *jdp)) == 0)
+   {
+      dnxDebug(1, "ehSvcCheck: Out of memory!");
+      return OK;
+   }
+   memset(jdp, 0, sizeof *jdp);
+   jdp->svc = (service *)svcdata->OBJECT_FIELD_NAME;
+
+   assert(jdp->svc);
+
 #if CURRENT_NEB_API_VERSION == 3
    {
-      /** @todo patch nagios to pass these values to the event handler. */
-
       // a nagios 3.x global variable
       extern check_result check_result_info;
 
-      chkopts  = check_result_info.check_options;
-      sched    = check_result_info.scheduled_check;
-      resched  = check_result_info.reschedule_check;
+      /** @todo patch nagios to pass these values to the event handler. */
+
+      jdp->chkopts    = check_result_info.check_options;
+      jdp->schedule   = check_result_info.scheduled_check;
+      jdp->reschedule = check_result_info.reschedule_check;
+      jdp->latency    = jdp->svc->latency;
    }
 #endif
 
-   if ((ret = dnxPostNewJob(joblist, serial, svcdata, 
-         chkopts, sched, resched, pNode)) != DNX_OK)
+   if ((ret = dnxPostNewJob(joblist, serial, jdp, svcdata, pNode)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "dnxServer: Unable to post job [%lu]: %s", 
             serial, dnxErrorString(ret));
+      xfree(jdp);
       return OK;     // tell nagios execute locally
    }
 
@@ -768,19 +847,9 @@ void dnxJobCleanup(DnxNewJob * pJob)
 {
    if (pJob)
    {
-      // Free the Pending Job command string
-      if (pJob->cmd)
-      {
-         xfree(pJob->cmd);
-         pJob->cmd = 0;
-      }
-
-      // Free the node request message
-      if (pJob->pNode)
-      {
-         xfree(pJob->pNode);
-         pJob->pNode = 0;
-      }
+      xfree(pJob->cmd);
+      xfree(pJob->payload);
+      xfree(pJob->pNode);
    }
 }
 
