@@ -518,7 +518,7 @@ static int dnxParseCfgLine(char * s, DnxCfgDict * dict, void * ppvals[])
       return DNX_ERR_SYNTAX;
 
    // make a working copy of the remaining buffer text
-   if ((cpy = strdup(s)) == 0)
+   if ((cpy = xstrdup(s)) == 0)
       return DNX_ERR_MEMORY;
 
    // copy remaining text; reset val ptr; terminate copy at '='
@@ -713,6 +713,7 @@ void dnxCfgParserDestroy(DnxCfgParser * cp)
 static verbose;
 
 IMPLEMENT_DNX_SYSLOG(verbose);
+IMPLEMENT_DNX_DEBUG(verbose);
 
 int main(int argc, char ** argv)
 {
