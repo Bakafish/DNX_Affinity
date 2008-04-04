@@ -17,25 +17,24 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxProtocol.c
-//
-// This module contains all of the communications methods for
-// the Distributed Nagios eXecutive.
-//
-// Exports:
-//
-//    - dnxRegisterDispatcher
-//    - dnxDeregisterDispatcher
-//    - dnxGetJob
-//    - dnxPutJob
-//    - dnxGetResult
-//    - dnxPutResult
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-09-26
-
+/** Implements the DNX communications methods.
+ *
+ * This module contains all of the 
+ * 
+ * Exports:
+ * 
+ *    - dnxRegisterDispatcher
+ *    - dnxDeregisterDispatcher
+ *    - dnxGetJob
+ *    - dnxPutJob
+ *    - dnxGetResult
+ *    - dnxPutResult
+ * 
+ * @file dnxProtocol.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IMPL
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,27 +47,6 @@
 #include "dnxXml.h"
 #include "dnxProtocol.h"
 #include "dnxLogging.h"
-
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
 
 //----------------------------------------------------------------------------
 // CLIENT: Use to register with Registrar

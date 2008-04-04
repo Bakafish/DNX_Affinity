@@ -17,34 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-/* pfopen.c
+/** Implements the DNX Client logging functions.
  *
- * Alternative to popen(2) that allows reading from both stdout and stderr
- * of the child shell process.  Functionally the same as popen(2) when writing
- * to the stdin of the child shell process.
- *
- * Works similarly to popen(2) except that it returns a PFILE * instead of
- * the standard FILE *.  This allows us to supply multiple I/O streams for
- * reading.  It also contains the pid of the child process, which is used
- * by the complementary pfclose() function for shutting down the pipe.
- *
- * The other difference is that when using the PFILE * with the standard
- * I/O functions (e.g., fgets, fprintf, etc.) you must use the supplied
- * macros in pfopen.h in order to obtain the underlying FILE * for use
- * with the stdio functions.
- *
- * These macros are:
- *
- *  PF_IN(p)  - Retrieves FILE * handle for writing to child process' stdin
- *  PF_OUT(p) - Retrieves FILE * handle for reading from child process' stdout
- *  PF_ERR(p) - Retrieves FILE * handle for reading from child process' stderr
- *
- * Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
- *
- * First Written:   2006-09-05
- * Last Modified:   2007-03-21
+ * @file pfopen.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IMPL
  */
-
 
 #include <sys/types.h>
 #include <stdio.h>
@@ -59,21 +38,18 @@
 #include "pfopen.h"
 
 #if 0
-#define PF_IN(pf) ((pf)->fp[0])
-#define PF_OUT(pf)   ((pf)->fp[1])
-#define PF_ERR(pf)   ((pf)->fp[2])
+# define PF_IN(pf)   ((pf)->fp[0])
+# define PF_OUT(pf)  ((pf)->fp[1])
+# define PF_ERR(pf)  ((pf)->fp[2])
 
-
-typedef struct _pfile_ {
-    FILE *fp[3];
-    pid_t pid;
+typedef struct _pfile_ 
+{
+   FILE * fp[3];
+   pid_t pid;
 } PFILE;
 #endif
 
-
-
-PFILE *
-pfopen(const char *cmdstring, const char *type)
+PFILE * pfopen(const char * cmdstring, const char * type)
 {
     PFILE  *pfile;
     int     pfd1[2];

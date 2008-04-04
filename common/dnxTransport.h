@@ -17,63 +17,41 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxTransport.h
-//
-// Function prototypes for DNx transport layer.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-
+/** Types and definitions for DNX transport layer.
+ * 
+ * @file dnxTransport.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IFC
+ */
 
 #ifndef _DNXTRANSPORT_H_
 #define _DNXTRANSPORT_H_
 
-// Obtain definitions of dnxChanType, dnxChanMap and dnxChannel
 #include "dnxChannel.h"
-
-
-//
-// Constants
-//
 
 #define DNX_MAX_CHAN_MAP   1000
 
-
-//
-// Structures
-//
-
-typedef struct _dnxChanMap_ {
-   char *name;       // Channel name, as read from configuration file
-   char *url;        // Channel connection specification
+typedef struct _dnxChanMap_ 
+{
+   char * name;         // Channel name, as read from configuration file
+   char * url;          // Channel connection specification
    dnxChanType type;    // Channel type: which transport to use
-   int (*txAlloc) (dnxChannel **channel, char *url);  // Transport's channel factory
+   int (*txAlloc) (dnxChannel ** channel, char * url);  // Transport's channel factory
 } dnxChanMap;
 
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-int dnxChanMapInit (char *fileName);
-int dnxChanMapRelease (void);
-int dnxChanMapAdd (char *name, char *url);
-int dnxChanMapUrlParse (dnxChanMap *chanMap, char *url);
-int dnxChanMapDelete (char *name);
-int dnxChanMapFindSlot (dnxChanMap **chanMap);
-int dnxChanMapFindName (char *name, dnxChanMap **chanMap);
-int dnxConnect (char *name, dnxChannel **channel, dnxChanMode mode);
-int dnxDisconnect (dnxChannel *channel);
-int dnxGet (dnxChannel *channel, char *buf, int *size, int timeout, char *src);
-int dnxPut (dnxChannel *channel, char *buf, int size, int timeout, char *dst);
-int dnxChannelDebug (dnxChannel *channel, int doDebug);
+int dnxChanMapInit(char * fileName);
+int dnxChanMapRelease(void);
+int dnxChanMapAdd(char * name, char * url);
+int dnxChanMapUrlParse(dnxChanMap * chanMap, char * url);
+int dnxChanMapDelete(char * name);
+int dnxChanMapFindSlot(dnxChanMap ** chanMap);
+int dnxChanMapFindName(char * name, dnxChanMap ** chanMap);
+int dnxConnect(char * name, dnxChannel ** channel, dnxChanMode mode);
+int dnxDisconnect(dnxChannel * channel);
+int dnxGet(dnxChannel * channel, char * buf, int * size, int timeout, char * src);
+int dnxPut(dnxChannel * channel, char * buf, int size, int timeout, char * dst);
+int dnxChannelDebug(dnxChannel * channel, int doDebug);
 
 #endif   /* _DNXTRANSPORT_H_ */
 

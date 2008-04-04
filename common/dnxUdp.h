@@ -17,50 +17,27 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxUdp.h
-//
-// Defintions and prototypes for UDP transport layer.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-
+/** Types and definitions for UDP transport layer.
+ * 
+ * @file dnxUdp.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IFC
+ */
 
 #ifndef _DNXUDP_H_
 #define _DNXUDP_H_
 
-// Obtain definition of dnxChannel
 #include "dnxChannel.h"
 
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-int dnxUdpInit (void);
-int dnxUdpDeInit (void);
-int dnxUdpNew (dnxChannel **channel, char *url);
-int dnxUdpDelete (dnxChannel *channel);
-int dnxUdpOpen (dnxChannel *channel, dnxChanMode mode);
-int dnxUdpClose (dnxChannel *channel);
-int dnxUdpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *src);
-int dnxUdpWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst);
+int dnxUdpInit(void);
+int dnxUdpDeInit(void);
+int dnxUdpNew(dnxChannel ** channel, char * url);
+int dnxUdpDelete(dnxChannel * channel);
+int dnxUdpOpen(dnxChannel * channel, dnxChanMode mode);
+int dnxUdpClose(dnxChannel * channel);
+int dnxUdpRead(dnxChannel * channel, char * buf, int * size, int timeout, char * src);
+int dnxUdpWrite(dnxChannel * channel, char * buf, int size, int timeout, char * dst);
 
 #endif   /* _DNXUDP_H_ */
 

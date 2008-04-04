@@ -17,10 +17,8 @@
  
   --------------------------------------------------------------------------*/
 
-/* pfopen.h
- *
- * Header file for pfopen.c
- *
+/** Types and definitions for child process Open + I/O redirection.
+ * 
  * Alternative to popen(2) that allows reading from both stdout and stderr
  * of the child shell process.  Functionally the same as popen(2) when writing
  * to the stdin of the child shell process.
@@ -41,31 +39,28 @@
  *  PF_OUT(p) - Retrieves FILE * handle for reading from child process' stdout
  *  PF_ERR(p) - Retrieves FILE * handle for reading from child process' stderr
  *
- * Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
- *
- * First Written:   2006-09-05
- * Last Modified:   2007-03-21
+ * @file pfopen.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IFC
  */
-
 
 #ifndef _PFOPEN_H_
 #define _PFOPEN_H_
 
-#define PF_IN(pf) ((pf)->fp[0])
+#define PF_IN(pf)    ((pf)->fp[0])
 #define PF_OUT(pf)   ((pf)->fp[1])
 #define PF_ERR(pf)   ((pf)->fp[2])
 
-
-typedef struct _pfile_ {
-    FILE *fp[3];
-    pid_t pid;
+typedef struct _pfile_ 
+{
+   FILE * fp[3];
+   pid_t pid;
 } PFILE;
 
-
-
-PFILE *pfopen(const char *cmdstring, const char *type);
-int pfclose(PFILE *pfile);
-int pfkill(PFILE *pfile, int sig);
+PFILE * pfopen(const char * cmdstring, const char * type);
+int pfclose(PFILE * pfile);
+int pfkill(PFILE * pfile, int sig);
 
 #endif   /* _PFOPEN_H_ */
 

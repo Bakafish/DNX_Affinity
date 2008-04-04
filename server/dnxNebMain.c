@@ -17,23 +17,16 @@
  
   --------------------------------------------------------------------------*/
 
-/*****************************************************************************
+/** Implements the main entry point for the Distributed Nagios eXecutor (DNX).
  *
- * dnxNebMain.c - NEB Module providing the main entry point for the
- *                Distributed Nagios eXecutive (DNX).
- *
- * Description:
- *
- * Intercepts all service checks and dispatches them to distributed worker
- * nodes.
- *
- * Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
- *
- * First Written: 2006-06-25  R.W.Ingraham
- * Last Modified: 2007-09-25
- *
- *****************************************************************************/
-
+ * Intercepts all service checks and dispatches them to distributed 
+ * worker nodes.
+ * 
+ * @file dnxNebMain.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IMPL
+ */
 
 #include "dnxNebMain.h"
 #include "dnxConfig.h"
@@ -82,7 +75,6 @@ static int releaseQueues (void);
 static int initComm (void);
 static int releaseComm (void);
 static int launchScript (char *script);
-
 
 /*--------------------------------------------------------------------------*/
 

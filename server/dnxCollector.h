@@ -17,45 +17,24 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxCollector.h
-//
-// This file implements the DNX Collector thread.
-//
-// The purpose of this thread is to collect service check
-// completion results from the worker nodes.  When a service
-// check result is collected, this thread dequeues the service
-// check from the Jobs queue and posts the result to the existing
-// Nagios service_result_buffer.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-07-11
-// Last Modified:   2007-02-08
-
+/** Definitions and prototypes for the DNX Collector thread.
+ *
+ * The purpose of this thread is to collect service check
+ * completion results from the worker nodes.  When a service
+ * check result is collected, this thread dequeues the service
+ * check from the Jobs queue and posts the result to the existing
+ * Nagios service_result_buffer.
+ * 
+ * @file dnxCollector.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IFC
+ */
 
 #ifndef _DNXCOLLECTOR_H_
 #define _DNXCOLLECTOR_H_
 
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-void *dnxCollector (void *data);
+void * dnxCollector(void * data);
 
 #endif   /* _DNXCOLLECTOR_H_ */
 

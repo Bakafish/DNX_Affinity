@@ -17,24 +17,20 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxWLM.c
-//
-// Distributed Nagios Client
-//
-// This program implements the Work Load Manager functionality.
-//
-// Functions:
-//
-//    1. Started by the DNX Client main
-//    2. Creates the initial thread pool
-//    3. Monitors the thread pool for the need to increase worker thread count
-//    4. Cleans-up worker threads upon shutdown
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-08-18
-
+/** Implements the Work Load Manager functionality.
+ *
+ * Functions:
+ *
+ *    1. Started by the DNX Client main
+ *    2. Creates the initial thread pool
+ *    3. Monitors the thread pool for the need to increase worker thread count
+ *    4. Cleans-up worker threads upon shutdown
+ *
+ * @file dnxWLM.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_CLIENT_IMPL
+ */
 
 #include <sys/time.h>
 #include <stdio.h>
@@ -50,26 +46,6 @@
 #include "dnxWLM.h"
 #include "dnxWorker.h"
 
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 
 static void dnxWLMCleanup (void *data);
@@ -77,7 +53,6 @@ static int createThreadPool (DnxGlobalData *gData);
 static int deleteThreadPool (DnxGlobalData *gData);
 static int growThreadPool (DnxGlobalData *gData, int gThreads);
 static int scanThreadPool (DnxGlobalData *gData, int *activeThreads);
-
 
 //----------------------------------------------------------------------------
 

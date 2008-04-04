@@ -17,15 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxPlugin.c
-//
-// Utility routines to support plugin loading and execution.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-09-09
-// Last Modified:   2007-03-21
-
+/** Utility routines to support plugin loading and execution.
+ *
+ * @file dnxPlugin.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_CLIENT_IMPL
+ */
 
 #include <sys/types.h>
 #include <time.h>
@@ -41,36 +39,16 @@
 #include "dnxPlugin.h"
 #include "pfopen.h"
 
-
-//
-// Constants
-//
-
 #define MAX_PLUGIN_PREFIX  1024
 #define MAX_PLUGIN_PATH    2048
 #define DNX_MAX_ARGV    256
 #define MAX_INPUT_BUFFER   1024
 #define DNX_MAX_PLUGIN_NAME   255
 
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-static DNX_MODULE *gModules;  // Module Chain
-static DNX_MODULE *gPlugins;  // Plugin Chain
-static char *gPluginPath;     // Plugin Path
-static int gInitialized = 0;  // Initialization flag
-
-
-//
-// Prototypes
-//
+static DNX_MODULE * gModules;    // Module Chain
+static DNX_MODULE * gPlugins;    // Plugin Chain
+static char * gPluginPath;       // Plugin Path
+static int gInitialized = 0;     // Initialization flag
 
 // HACK: The NRPE module is hardwired for now...
 #ifdef USE_NRPE_MODULE
@@ -78,7 +56,6 @@ extern int mod_nrpe(int argc, char **argv, char *resData);
 #endif
 
 static void strip (char *buffer);
-
 
 //----------------------------------------------------------------------------
 // Initializes the plugin utility library

@@ -17,22 +17,20 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxDispatcher.c
-//
-// This file implements the DNX Dispatcher thread.
-//
-// The purpose of this thread is to dispatch service check jobs to the
-// registered worker nodes for execution.  It accomplishes this by
-// accepting work node registrations and then dispatching service check
-// jobs to registered worker nodes using a weighted-round-robin algorithm.
-// The algorithm's weighting is based upon the number of jobs-per-second
-// throughput rating of each worker node.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written: 2006-07-11  R.W.Ingraham
-// Last Modified: 2007-08-22
-
+/** Implements the DNX Dispatcher thread.
+ *
+ * The purpose of this thread is to dispatch service check jobs to the
+ * registered worker nodes for execution.  It accomplishes this by
+ * accepting work node registrations and then dispatching service check
+ * jobs to registered worker nodes using a weighted-round-robin algorithm.
+ * The algorithm's weighting is based upon the number of jobs-per-second
+ * throughput rating of each worker node.
+ * 
+ * @file dnxDispatcher.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IMPL
+ */
 
 #include <assert.h>
 
@@ -44,30 +42,9 @@
 #include "dnxJobList.h"
 #include "dnxLogging.h"
 
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
 static void dnxDispatcherCleanup (void *data);
 static int dnxDispatchJob (DnxGlobalData *gData, DnxNewJob *pSvcReq);
 static int dnxSendJob (DnxGlobalData *gData, DnxNewJob *pSvcReq, DnxNodeRequest *pNode);
-
 
 //----------------------------------------------------------------------------
 

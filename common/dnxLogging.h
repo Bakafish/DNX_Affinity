@@ -17,38 +17,19 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxLogging.h
-//
-// DNX Server Logging Functions
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-08-22
-// Last Modified:   2007-08-22
-
+/** Types and definitions for DNX Server Logging functionality.
+ * 
+ * @file dnxLogging.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IFC
+ */
 
 #ifndef _DNXLOGGING_H_
 #define _DNXLOGGING_H_
 
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Prototypes
-//
-
-#if 0
-int nebLog (char *fmt, ...);
-#endif
-int dnxSyslog (int priority, char *fmt, ...);
-int dnxDebug (int level, char *fmt, ...);
+int dnxSyslog(int priority, char * fmt, ...);
+int dnxDebug(int level, char * fmt, ...);
 
 #endif   /* _DNXLOGGING_H_ */
 

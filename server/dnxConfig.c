@@ -17,15 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxConfig.c
-//
-// Parses DNX Server config file.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-07-11
-// Last Modified:   2007-08-22
-
+/** Parses DNX Server config file.
+ *
+ * @file dnxConfig.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IMPL
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,58 +36,45 @@
 #include "dnxNebMain.h"
 #include "dnxLogging.h"
 
-
-//
-// Constants
-//
-
 #define DNX_MAX_CFG_LINE   2048
 
+typedef enum _DnxVarType_ 
+{ 
+   DNX_VAR_ERR = 0, 
+   DNX_VAR_STR, 
+   DNX_VAR_INT, 
+   DNX_VAR_DBL 
+} DnxVarType;
 
-//
-// Structures
-//
-
-typedef enum _DnxVarType_ { DNX_VAR_ERR = 0, DNX_VAR_STR, DNX_VAR_INT, DNX_VAR_DBL } DnxVarType;
-
-typedef struct _DnxVarMap_ {
-   char *szVar;
+typedef struct _DnxVarMap_ 
+{
+   char * szVar;
    DnxVarType varType;
-   void *varStorage;
+   void * varStorage;
 } DnxVarMap;
-
-
-//
-// Globals
-//
 
 extern DnxGlobalData dnxGlobalData;
 
-static DnxVarMap DnxVarDictionary[] = {
-{ "channelDispatcher",    DNX_VAR_STR, NULL },
-{ "channelCollector",     DNX_VAR_STR, NULL },
-{ "authWorkerNodes",      DNX_VAR_STR, NULL },
-{ "maxNodeRequests",      DNX_VAR_INT, NULL },
-{ "minServiceSlots",      DNX_VAR_INT, NULL },
-{ "expirePollInterval",   DNX_VAR_INT, NULL },
-{ "localCheckPattern",    DNX_VAR_STR, NULL },
-{ "syncScript",           DNX_VAR_STR, NULL },
-{ "logFacility",          DNX_VAR_STR, NULL },
-{ "auditWorkerJobs",      DNX_VAR_STR, NULL },
-{ "debug",                DNX_VAR_INT, NULL },
-{ NULL, DNX_VAR_ERR, NULL }
+static DnxVarMap DnxVarDictionary[] = 
+{
+   { "channelDispatcher",    DNX_VAR_STR, NULL },
+   { "channelCollector",     DNX_VAR_STR, NULL },
+   { "authWorkerNodes",      DNX_VAR_STR, NULL },
+   { "maxNodeRequests",      DNX_VAR_INT, NULL },
+   { "minServiceSlots",      DNX_VAR_INT, NULL },
+   { "expirePollInterval",   DNX_VAR_INT, NULL },
+   { "localCheckPattern",    DNX_VAR_STR, NULL },
+   { "syncScript",           DNX_VAR_STR, NULL },
+   { "logFacility",          DNX_VAR_STR, NULL },
+   { "auditWorkerJobs",      DNX_VAR_STR, NULL },
+   { "debug",                DNX_VAR_INT, NULL },
+   { NULL, DNX_VAR_ERR, NULL }
 };
-
-
-//
-// Prototypes
-//
 
 void displayGlobals (char *title);
 int parseLine (char *szFile, int lineNo, char *szLine);
 int validateVariable (char *szVar, char *szVal);
 int strTrim (char *szLine);
-
 
 //----------------------------------------------------------------------------
 

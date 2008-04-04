@@ -17,154 +17,152 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxTransport.c
-//
-// Provides encapsulated communications transport functions.
-//
-// Exports:
-//
-//    1. dnxConnect (char *channel_name, ...)
-//    2. dnxDisconnect (dnxChannel *channel)
-//    3. dnxGet (dnxChannel *channel, dnxRequest *req, dnxMsg **msg, int timeout)
-//    4. dnxPut (dnxChannel *channel, dnxRequest req, dnxMsg *msg, int timeout)
-//    5. dnxChannelDebug (dnxChannel *channel, int doDebug)
-//
-// Connection targets for dnxConnect are specified as Message Queue Names.
-//
-// Message Queue Names are specified in the configuration file and by DNX_MSG_REGISTER messages.
-// The specification is of the form:
-//
-//    [MessageQueues]
-//       MessageQueueName = URL
-//
-// The currently supported URLs are:
-//
-//    1. tcp://hostname:port/
-//    2. udp://hostname:port/
-//    3. msgq://message-queue-ID/
-//
-// Currently recognized Message Queue Names are:
-//
-//    1. Scheduler   - Dispatchers use this to communicate with the Nagios Scheduler
-//    2. Jobs        - Workers use this to receive Jobs from Dispatchers and the WLM (for shutdown)
-//    3. Results     - Workers use this to post completed Jobs to the Collector
-//    4. Collector   - Local Collectors use this to communicate with the Master Collector
-//
-//    Note: Can multiple heavy processes write to the same inherited socket descriptor?
-//
-// DNX messages are transport independent and have the following properties:
-//
-//    1. dnxRequest - enumerated constant identifying the message payload
-//    2. XML (REST-style) body
-//
-// Currently supported DNX messages are:
-//
-//    1. DNX_MSG_REGISTER
-//    2. DNX_MSG_DEREGISTER
-//    3. DNX_MSG_GET_JOB
-//    4. DNX_MSG_PUT_JOB
-//    5. DNX_MSG_GET_RESULT
-//    6. DNX_MSG_PUT_RESULT
-//
-// Structure: DNX_MSG_REGISTER
-// Issued By: Dispatcher
-// Issued To: Scheduler
-//
-//    <dnxMessage>
-//       <Request>Register</Request>
-//       <GUID>123456789</GUID>
-//    </dnxMessage>
-//
-// Structure: DNX_MSG_DEREGISTER
-// Issued By: Dispatcher
-// Issued To: Scheduler
-//
-//    <dnxMessage>
-//       <Request>Deregister</Request>
-//       <GUID>123456789</GUID>
-//    </dnxMessage>
-//
-// Structure: DNX_MSG_GET_JOB
-// Issued By: Dispatcher, Worker
-// Issued To: Scheduler, Dispatcher
-//
-//    <dnxMessage>
-//       <Request>GetJob</Request>
-//       <JobCapacity>5</JobCapacity>
-//    </dnxMessage>
-//
-// DNX_MSG_PUT_JOB Structure
-// Issued By: Scheduler, Dispatcher
-// Issued To: Dispatcher, Worker
-//
-//    <dnxMessage>
-//       <Request>PutJob</Request>
-//       <GUID>abc123</GUID>
-//       <State>Pending</State>
-//       <Command>check_spam</Command>
-//       <Param>param1</Param>
-//       <Param>param2</Param>
-//       <StartTime>2006-06-20 15:00:00</StartTime>
-//    </dnxMessage>
-//
-// DNX_MSG_PUT_RESULT Structure
-// Issued By: Worker, Collector
-// Issued To: Collector, Reaper
-//
-//    <dnxMessage>
-//       <Request>PutResult</Request>
-//       <GUID>abc123</GUID>
-//       <State>Completed</State>
-//       <EndTime>2006-06-20 15:00:05</EndTime>
-//       <ResultCode>0</ResultCode>
-//       <ResultData>OK: Everything's okie-dokie!</ResultData>
-//    </dnxMessage>
-//
-// DNX_MSG_GET_RESULT Structure
-// Issued By: Reaper
-// Issued To: Collector
-//
-//    <dnxMessage>
-//       <Request>GetResult</Request>
-//       <GUID>abc123</GUID>
-//    </dnxMessage>
-//
-// The DNX Objects are:
-//
-//    1. DNX_JOB
-//    2. DNX_RESULT
-//    3. DNX_AGENT
-//
-// Each DNX Job Object has:
-//
-//    1. GUID - Assigned at Job creation by the Scheduler
-//    2. State: Pending, Executing, Completed, Cancelled
-//    3. Execution Command
-//    4. Execution Parameters
-//    5. Execution Start Time
-//    5. Execution End Time
-//    6. Result Code
-//    7. Result Data
-//
-// When and object is serialized and transmitted, only those relevant portions of the object
-// are transmitted - order to optimize bandwith usage and processing time.
-//
-// For example, a DNX Job object as transmitted to a Dispatcher, via a DNX_MSG_PUT_JOB, will
-// only include the following DNX Job attributes:
-//
-//    GUID, State, Execution Command, Execution Parameters and Execution Start Time.
-//
-// Conversely, a DNX Job object as transmitted to a Collector, via a DNS_PUT_RESULT, will
-// only include the following DNX Job attributes:
-//
-//    GUID, State, Execution Start Time, Execution End Time, Result Code, Result Data
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-09-25
-
-
+/** Implements encapsulated communications transport functions.
+ *
+ * Exports:
+ * 
+ *    1. dnxConnect (char *channel_name, ...)
+ *    2. dnxDisconnect (dnxChannel *channel)
+ *    3. dnxGet (dnxChannel *channel, dnxRequest *req, dnxMsg **msg, int timeout)
+ *    4. dnxPut (dnxChannel *channel, dnxRequest req, dnxMsg *msg, int timeout)
+ *    5. dnxChannelDebug (dnxChannel *channel, int doDebug)
+ * 
+ * Connection targets for dnxConnect are specified as Message Queue Names.
+ * 
+ * Message Queue Names are specified in the configuration file and by DNX_MSG_REGISTER messages.
+ * The specification is of the form:
+ * 
+ *    [MessageQueues]
+ *       MessageQueueName = URL
+ * 
+ * The currently supported URLs are:
+ * 
+ *    1. tcp://hostname:port/
+ *    2. udp://hostname:port/
+ *    3. msgq://message-queue-ID/
+ * 
+ * Currently recognized Message Queue Names are:
+ * 
+ *    1. Scheduler   - Dispatchers use this to communicate with the Nagios Scheduler
+ *    2. Jobs        - Workers use this to receive Jobs from Dispatchers and the WLM (for shutdown)
+ *    3. Results     - Workers use this to post completed Jobs to the Collector
+ *    4. Collector   - Local Collectors use this to communicate with the Master Collector
+ * 
+ *    Note: Can multiple heavy processes write to the same inherited socket descriptor?
+ * 
+ * DNX messages are transport independent and have the following properties:
+ * 
+ *    1. dnxRequest - enumerated constant identifying the message payload
+ *    2. XML (REST-style) body
+ * 
+ * Currently supported DNX messages are:
+ * 
+ *    1. DNX_MSG_REGISTER
+ *    2. DNX_MSG_DEREGISTER
+ *    3. DNX_MSG_GET_JOB
+ *    4. DNX_MSG_PUT_JOB
+ *    5. DNX_MSG_GET_RESULT
+ *    6. DNX_MSG_PUT_RESULT
+ * 
+ * Structure: DNX_MSG_REGISTER
+ * Issued By: Dispatcher
+ * Issued To: Scheduler
+ * 
+ *    <dnxMessage>
+ *       <Request>Register</Request>
+ *       <GUID>123456789</GUID>
+ *    </dnxMessage>
+ * 
+ * Structure: DNX_MSG_DEREGISTER
+ * Issued By: Dispatcher
+ * Issued To: Scheduler
+ * 
+ *    <dnxMessage>
+ *       <Request>Deregister</Request>
+ *       <GUID>123456789</GUID>
+ *    </dnxMessage>
+ * 
+ * Structure: DNX_MSG_GET_JOB
+ * Issued By: Dispatcher, Worker
+ * Issued To: Scheduler, Dispatcher
+ * 
+ *    <dnxMessage>
+ *       <Request>GetJob</Request>
+ *       <JobCapacity>5</JobCapacity>
+ *    </dnxMessage>
+ * 
+ * DNX_MSG_PUT_JOB Structure
+ * Issued By: Scheduler, Dispatcher
+ * Issued To: Dispatcher, Worker
+ * 
+ *    <dnxMessage>
+ *       <Request>PutJob</Request>
+ *       <GUID>abc123</GUID>
+ *       <State>Pending</State>
+ *       <Command>check_spam</Command>
+ *       <Param>param1</Param>
+ *       <Param>param2</Param>
+ *       <StartTime>2006-06-20 15:00:00</StartTime>
+ *    </dnxMessage>
+ * 
+ * DNX_MSG_PUT_RESULT Structure
+ * Issued By: Worker, Collector
+ * Issued To: Collector, Reaper
+ * 
+ *    <dnxMessage>
+ *       <Request>PutResult</Request>
+ *       <GUID>abc123</GUID>
+ *       <State>Completed</State>
+ *       <EndTime>2006-06-20 15:00:05</EndTime>
+ *       <ResultCode>0</ResultCode>
+ *       <ResultData>OK: Everything's okie-dokie!</ResultData>
+ *    </dnxMessage>
+ * 
+ * DNX_MSG_GET_RESULT Structure
+ * Issued By: Reaper
+ * Issued To: Collector
+ * 
+ *    <dnxMessage>
+ *       <Request>GetResult</Request>
+ *       <GUID>abc123</GUID>
+ *    </dnxMessage>
+ * 
+ * The DNX Objects are:
+ * 
+ *    1. DNX_JOB
+ *    2. DNX_RESULT
+ *    3. DNX_AGENT
+ * 
+ * Each DNX Job Object has:
+ * 
+ *    1. GUID - Assigned at Job creation by the Scheduler
+ *    2. State: Pending, Executing, Completed, Cancelled
+ *    3. Execution Command
+ *    4. Execution Parameters
+ *    5. Execution Start Time
+ *    5. Execution End Time
+ *    6. Result Code
+ *    7. Result Data
+ * 
+ * When and object is serialized and transmitted, only those relevant portions of the object
+ * are transmitted - order to optimize bandwith usage and processing time.
+ * 
+ * For example, a DNX Job object as transmitted to a Dispatcher, via a DNX_MSG_PUT_JOB, will
+ * only include the following DNX Job attributes:
+ * 
+ *    GUID, State, Execution Command, Execution Parameters and Execution Start Time.
+ * 
+ * Conversely, a DNX Job object as transmitted to a Collector, via a DNS_PUT_RESULT, will
+ * only include the following DNX Job attributes:
+ * 
+ *    GUID, State, Execution Start Time, Execution End Time, Result Code, Result Data
+ * 
+ * @file dnxTransport.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IMPL
+ */
+ 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -179,27 +177,19 @@
 //#include "dnxTcp.h"
 //#include "dnxMsgQ.h"
 
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-typedef struct _urlTypeMap_ {
-   char *name;       // Transport name: Currently only tcp, udp or msgq
-   dnxChanType type; // Transport type
+typedef struct _urlTypeMap_ 
+{
+   char * name;         // Transport name: Currently only tcp, udp or msgq
+   dnxChanType type;    // Transport type
 } urlTypeMap;
 
-
-//
-// Globals
-//
-
-static urlTypeMap gTypeMap[] = { { "tcp", DNX_CHAN_TCP }, { "udp", DNX_CHAN_UDP }, { "msgq", DNX_CHAN_MSGQ }, { NULL, DNX_CHAN_UNKNOWN } };
+static urlTypeMap gTypeMap[] = 
+{
+   { "tcp", DNX_CHAN_TCP }, 
+   { "udp", DNX_CHAN_UDP }, 
+   { "msgq", DNX_CHAN_MSGQ }, 
+   { NULL, DNX_CHAN_UNKNOWN } 
+};
 
 static dnxChanMap gChannelMap[DNX_MAX_CHAN_MAP];
 
@@ -207,11 +197,6 @@ static int dnxInit = 0;
 
 static pthread_mutex_t chanMutex;
 static pthread_mutexattr_t chanMutexAttr;
-
-
-//
-// Prototypes
-//
 
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 
@@ -229,8 +214,6 @@ extern int dnxUdpNew (dnxChannel **channel, char *url);
 extern int dnxMsgQInit (void);
 extern int dnxMsgQDeInit (void);
 extern int dnxMsgQNew (dnxChannel **channel, char *url);
-
-
 
 //----------------------------------------------------------------------------
 

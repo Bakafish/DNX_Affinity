@@ -17,40 +17,19 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxWorker.h
-//
-// Header file for Worker process.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-
+/** Types and definitions for worker thread processes.
+ * 
+ * @file dnxWorker.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_CLIENT_IFC
+ */
 
 #ifndef _DNXWORKER_H_
 #define _DNXWORKER_H_
 
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-void *dnxWorker (void *data);
-int dnxThreadSleep (int seconds);
+void * dnxWorker(void * data);
+int dnxThreadSleep(int seconds);
 
 #endif   /* _DNXWORKER_H_ */
 

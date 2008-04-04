@@ -17,13 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxXml.c
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-09-26
-
+/** Implements DNX XML functionality.
+ *
+ * @file dnxXml.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IMPL
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,34 +35,14 @@
 #include "dnxXml.h"
 #include "dnxLogging.h"
 
-
-//
-// Constants
-//
-
 #define DNX_XML_MIN_HEADER 32
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
 
 int dnxXmlToString (DnxXmlType xType, void *xData, char *buf, int size);
 int dnxXmlGetTagValue (DnxXmlBuf *xbuf, char *xTag, DnxXmlType xType, char *buf, int size);
-#if 0
-int dnxXmlTypeSize (DnxXmlType); // TODO
-#endif
 
+#if 0
+int dnxXmlTypeSize (DnxXmlType); /** @todo Implement dnxXmlTypeSize. */
+#endif
 
 //----------------------------------------------------------------------------
 

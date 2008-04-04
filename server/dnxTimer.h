@@ -17,49 +17,27 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxTimer.h
-//
-// This file implements the DNX Timer thread.
-//
-// The purpose of this thread is to monitor the age of service requests
-// which are being actively executed by the worker nodes.
-//
-// This requires access to the global Pending queue (which is also
-// manipulated by the Dispatcher and Collector threads.)
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written: 2006-07-11  R.W.Ingraham
-// Last Modified: 2007-02-08
-
+/** Definitions and prototypes for the DNX Timer thread.
+ *
+ * The purpose of this thread is to monitor the age of service requests
+ * which are being actively executed by the worker nodes.
+ * 
+ * This requires access to the global Pending queue (which is also
+ * manipulated by the Dispatcher and Collector threads.)
+ *
+ * @file dnxTimer.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IFC
+ */
 
 #ifndef _DNXTIMER_H_
 #define _DNXTIMER_H_
 
-
-//
-// Constants
-//
-
 #define DNX_TIMER_SLEEP    5
 
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-void *dnxTimer (void *data);
-int dnxThreadSleep (int seconds);
+void * dnxTimer(void * data);
+int dnxThreadSleep(int seconds);
 
 #endif   /* _DNXTIMER_H_ */
 

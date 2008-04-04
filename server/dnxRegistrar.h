@@ -17,53 +17,31 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxRegistrar.h
-//
-// This file implements the DNX Registrar thread.
-//
-// The purpose of this thread is to manage Worker Node registrations.
-// When a Worker Node wants to receive ervice check jobs from the
-// Scheduler Node, it must first register itself with the Scheduler
-// Node by sending a TCP-based registration message to it.
-//
-// The Registrar thread manages this registration process on behalf
-// of the Scheduler.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written: 2006-07-11  R.W.Ingraham
-// Last Modified: 2007-02-08
-
+/** Definitions and prototypes for the DNX Registrar thread.
+ *
+ * The purpose of this thread is to manage Worker Node registrations.
+ * When a Worker Node wants to receive ervice check jobs from the
+ * Scheduler Node, it must first register itself with the Scheduler
+ * Node by sending a TCP-based registration message to it.
+ * 
+ * The Registrar thread manages this registration process on behalf
+ * of the Scheduler.
+ *
+ * @file dnxRegistrar.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IFC
+ */
 
 #ifndef _DNXREGISTRAR_H_
 #define _DNXREGISTRAR_H_
 
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-void *dnxRegistrar (void *data);
-int dnxGetNodeRequest (DnxGlobalData *gData, DnxNodeRequest **ppNode);
-int dnxProcessNodeRequest (DnxGlobalData *gData);
-int dnxRegisterNode (DnxGlobalData *gData, DnxNodeRequest *pMsg);
-int dnxDeregisterNode (DnxGlobalData *gData, DnxNodeRequest *pMsg);
-int dnxDeregisterAllNodes (DnxGlobalData *gData);
+void * dnxRegistrar(void * data);
+int dnxGetNodeRequest(DnxGlobalData * gData, DnxNodeRequest ** ppNode);
+int dnxProcessNodeRequest(DnxGlobalData * gData);
+int dnxRegisterNode(DnxGlobalData * gData, DnxNodeRequest * pMsg);
+int dnxDeregisterNode(DnxGlobalData * gData, DnxNodeRequest * pMsg);
+int dnxDeregisterAllNodes(DnxGlobalData * gData);
 
 #endif   /* _DNXREGISTRAR_H_ */
 

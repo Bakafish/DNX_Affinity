@@ -17,21 +17,19 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxNebMain.h
-//
-// Header file for global structures associated with the DNX Server.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written: 2006-07-11  R.W.Ingraham
-// Last Modified: 2007-02-08
-
+/** Definitions and prototypes for main module functionality.
+ *
+ * @file dnxNebMain.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IFC
+ */
 
 #ifndef _DNXNEBMAIN_H_
 #define _DNXNEBMAIN_H_
 
 #ifndef NSCORE
-#define NSCORE
+# define NSCORE
 #endif
 
 /* include (minimum required) event broker header files */
@@ -56,107 +54,87 @@
 #include "dnxProtocol.h"
 #include "dnxQueue.h"   // For dnxQueue definition
 
-
-//
-// Constants
-//
-
 #define DNX_DISPATH_PORT   12480
 #define DNX_COLLECT_PORT   12481
 #define DNX_TCP_LISTEN     5
 
 #define DNX_MAX_NODE_REQUESTS 1024
 
-
-//
-// Structures
-//
-
-typedef struct _DnxNewJob_ {
+typedef struct _DnxNewJob_ 
+{
    DnxJobState state;      // Job state
-   DnxGuid  guid;       // Service Request Serial No.
-   char    *cmd;        // Processed check command
-   time_t   start_time; // Service check start time
-   int      timeout;    // Service check timeout in seconds
-   time_t   expires;    // Expiration time
-   service *svc;        // Service check structure
-   DnxNodeRequest *pNode;  // Worker Request that will handle this Job
+   DnxGuid guid;           // Service Request Serial No.
+   char * cmd;             // Processed check command
+   time_t start_time;      // Service check start time
+   int timeout;            // Service check timeout in seconds
+   time_t expires;         // Expiration time
+   service * svc;          // Service check structure
+   DnxNodeRequest * pNode; // Worker Request that will handle this Job
    // service_message msg;
 } DnxNewJob;
 
-
-typedef struct _DnxJobList_ {
-   DnxNewJob *pList; // Array of Job Structures
-   unsigned long size;  // Number of elements
-   unsigned long head;  // List head
-   unsigned long tail;  // List tail
-   unsigned long dhead; // Head of waiting jobs
+typedef struct _DnxJobList_ 
+{
+   DnxNewJob * pList;      // Array of Job Structures
+   unsigned long size;     // Number of elements
+   unsigned long head;     // List head
+   unsigned long tail;     // List tail
+   unsigned long dhead;    // Head of waiting jobs
 
    // pthread mutex and condition-variable for Job List access
    pthread_mutex_t mut;
    pthread_mutexattr_t mut_attr;
-   pthread_cond_t  cond;
+   pthread_cond_t cond;
 } DnxJobList;
 
-
-typedef struct _DnxGlobalData_ {
+typedef struct _DnxGlobalData_ 
+{
    unsigned long serialNo; // Number of service checks processed
-   time_t tStart;       // Module start time
+   time_t tStart;          // Module start time
 
-   pthread_cond_t tcGo; // ShowStart condition variable
+   pthread_cond_t tcGo;    // ShowStart condition variable
    pthread_mutex_t tmGo;   // ShowStart mutex
    int isGo;               // ShowStart flag: 0=No, 1=Yes
 
-   DnxJobList *JobList; // Master Job List
+   DnxJobList * JobList;   // Master Job List
 
    pthread_cond_t tcReq;   // Request Queue condition variable
    pthread_mutex_t tmReq;  // Request Queue mutex
-   DnxQueue *qReq;         // Registered Worker Node Requests
+   DnxQueue * qReq;        // Registered Worker Node Requests
 
    pthread_t tDispatcher;  // Dispatcher thread ID
    pthread_t tRegistrar;   // Registrar thread ID
    pthread_t tCollector;   // Collector thread ID
-   pthread_t tTimer;    // Timer thread ID
+   pthread_t tTimer;       // Timer thread ID
 
-   dnxChannel *pDispatch;  // Dispatch communications channel
-   dnxChannel *pCollect;   // Collector communications channel
+   dnxChannel * pDispatch; // Dispatch communications channel
+   dnxChannel * pCollect;  // Collector communications channel
 
-   regex_t regEx;       // Compiled Regular Expression structure
+   regex_t regEx;          // Compiled Regular Expression structure
 
-   int  dnxLogFacility; // DNX syslog facility
+   int  dnxLogFacility;    // DNX syslog facility
    int  auditLogFacility;  // Worker Audit syslog facility
 
    // Configuration File properties
-   char *channelDispatcher;
-   char *channelCollector;
-   char *authWorkerNodes;
+   char * channelDispatcher;
+   char * channelCollector;
+   char * authWorkerNodes;
    long  maxNodeRequests;  // Max number of node requests we will accept
    long  minServiceSlots;
    long  expirePollInterval;
-   char *localCheckPattern;
-   char *syncScript;
-   char *logFacility;
-   char *auditWorkerJobs;
-   long  debug;
+   char * localCheckPattern;
+   char * syncScript;
+   char * logFacility;
+   char * auditWorkerJobs;
+   long debug;
 
-   int isActive;        // Boolean: Is this module active?
+   int isActive;           // Boolean: Is this module active?
 } DnxGlobalData;
 
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-int nebmodule_init(int flags, char *args, nebmodule *handle);
-int nebmodule_deinit (int flags, int reason);
-int dnxJobCleanup (DnxNewJob *pJob);
-int dnxAuditJob (DnxNewJob *pJob, char *action);
+int nebmodule_init(int flags, char * args, nebmodule * handle);
+int nebmodule_deinit(int flags, int reason);
+int dnxJobCleanup(DnxNewJob * pJob);
+int dnxAuditJob(DnxNewJob * pJob, char * action);
 
 #endif   /* _DNXNEBMAIN_H_ */
 

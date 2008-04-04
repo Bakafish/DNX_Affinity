@@ -17,15 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxLogging.c
-//
-// This file implements the DNX Client logging functions.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-08-22
-// Last Modified:   2007-08-24
-
+/** Implements the DNX Client logging functions.
+ *
+ * @file dnxLogging.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_CLIENT_IMPL
+ */
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -36,30 +34,9 @@
 #include "dnxError.h"
 #include "dnxLogging.h"
 
-
-//
-// Constants
-//
-
 #define MAX_LOG_LINE 1023
 
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
 extern DnxGlobalData dnxGlobalData;    // Private module data
-
-
-//
-// Prototypes
-//
-
 
 /*--------------------------------------------------------------------------*/
 

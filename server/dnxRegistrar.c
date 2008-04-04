@@ -17,23 +17,21 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxRegistrar.c
-//
-// This file implements the DNX Registrar thread.
-//
-// The purpose of this thread is to manage Worker Node registrations.
-// When a Worker Node wants to receive service check jobs from the
-// Scheduler Node, it must first register itself with the Scheduler
-// Node by sending a UDP-based registration message to it.
-//
-// The Registrar thread manages this registration process on behalf
-// of the Scheduler.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written: 2006-07-11  R.W.Ingraham
-// Last Modified: 2007-08-22
-
+/** Implements the DNX Registrar thread.
+ *
+ * The purpose of this thread is to manage Worker Node registrations.
+ * When a Worker Node wants to receive service check jobs from the
+ * Scheduler Node, it must first register itself with the Scheduler
+ * Node by sending a UDP-based registration message to it.
+ * 
+ * The Registrar thread manages this registration process on behalf
+ * of the Scheduler.
+ * 
+ * @file dnxRegistrar.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IMPL
+ */
 
 #include "dnxNebMain.h"
 #include "dnxError.h"
@@ -44,32 +42,11 @@
 
 #include <assert.h>
 
-
-//
-// Constants
-//
-
 #define DNX_REGISTRAR_REQUEST_TIMEOUT  30
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
 
 static void dnxRegistrarCleanup (void *data);
 static DnxQueueResult dnxCompareNodeReq (void *pLeft, void *pRight);
 static DnxQueueResult dnxRemoveNode (void *pLeft, void *pRight);
-
 
 //----------------------------------------------------------------------------
 

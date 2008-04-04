@@ -17,52 +17,29 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxTcp.h
-//
-// Defintions and prototypes for TCP transport layer.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-
+/** Types and definitions for TCP transport layer.
+ * 
+ * @file dnxTcp.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IFC
+ */
 
 #ifndef _DNXTCP_H_
 #define _DNXTCP_H_
 
-// Obtain definition of dnxChannel
 #include "dnxChannel.h"
-
-
-//
-// Constants
-//
 
 #define DNX_TCP_LISTEN  5
 
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-int dnxTcpInit (void);
-int dnxTcpDeInit (void);
-int dnxTcpNew (dnxChannel **channel, char *url);
-int dnxTcpDelete (dnxChannel *channel);
-int dnxTcpOpen (dnxChannel *channel, dnxChanMode mode);
-int dnxTcpClose (dnxChannel *channel);
-int dnxTcpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *src);
-int dnxTcpWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst);
+int dnxTcpInit(void);
+int dnxTcpDeInit(void);
+int dnxTcpNew(dnxChannel ** channel, char * url);
+int dnxTcpDelete(dnxChannel * channel);
+int dnxTcpOpen(dnxChannel * channel, dnxChanMode mode);
+int dnxTcpClose(dnxChannel * channel);
+int dnxTcpRead(dnxChannel * channel, char * buf, int * size, int timeout, char * src);
+int dnxTcpWrite(dnxChannel * channel, char * buf, int size, int timeout, char * dst);
 
 #endif   /* _DNXTCP_H_ */
 

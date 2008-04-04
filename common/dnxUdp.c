@@ -17,14 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxUdp.c
-//
-// Implements the UDP Tranport Layer
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-09-26
+/** Implements the DNX UDP Tranport Layer.
+ *
+ * @file dnxUdp.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IMPL
+ */
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -44,31 +43,10 @@
 #include "dnxUdp.h"
 #include "dnxLogging.h"
 
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
 static pthread_mutex_t udpMutex;
 static pthread_mutexattr_t udpMutexAttr;
 
-
-//
-// Prototypes
-//
-
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
-
 
 //----------------------------------------------------------------------------
 

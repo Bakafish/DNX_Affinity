@@ -17,19 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxClientMain.h
-//
-// Distributed Nagios Client
-//
-// This program implements the worker node functionality.
-//
-// Implements a distributed, dynamic thread pool model.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-08-22
-
+/** Main header file for DNX Client.
+ * 
+ * @file dnxClientMain.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_CLIENT_IFC
+ */
 
 #ifndef _DNXMAIN_H_
 #define _DNXMAIN_H_
@@ -41,69 +35,62 @@
 #include "dnxError.h"
 #include "dnxChannel.h"
 
-
-//
-// Constants
-//
-
 #define DNX_NODE_CONFIG "dnxNode.cfg"
 
-typedef enum _DnxThreadState_ {
+typedef enum _DnxThreadState_ 
+{
    DNX_THREAD_DEAD = 0,
    DNX_THREAD_RUNNING,
    DNX_THREAD_ZOMBIE
 } DnxThreadState;
 
-
-//
-// Structures
-//
-
-typedef struct _DnxWorkerStatus_ {
-   DnxThreadState state;   // Thread state
-   pthread_t tid;       // Thread ID
-   dnxChannel *pDispatch;  // Thread job request channel
-   dnxChannel *pCollect;   // Thread job reply channel
-   time_t tThreadStart; // Thread start time
-   time_t tJobStart;    // Current job start time
-   time_t tJobTime;     // Total amount of time spent in job processing
-   unsigned jobsOk;     // Total jobs completed
-   unsigned jobsFail;      // Total jobs not completed
-   unsigned retries;    // Total communications retries
-   void *data;          // Global data (Points to parent DnxGlobalData structure)
+typedef struct _DnxWorkerStatus_ 
+{
+   DnxThreadState state;         // Thread state
+   pthread_t tid;                // Thread ID
+   dnxChannel * pDispatch;       // Thread job request channel
+   dnxChannel * pCollect;        // Thread job reply channel
+   time_t tThreadStart;          // Thread start time
+   time_t tJobStart;             // Current job start time
+   time_t tJobTime;              // Total amount of time spent in job processing
+   unsigned jobsOk;              // Total jobs completed
+   unsigned jobsFail;            // Total jobs not completed
+   unsigned retries;             // Total communications retries
+   void * data;                  // Global data (Points to parent DnxGlobalData structure)
    unsigned long requestSerial;  // Request tracking serial number
 } DnxWorkerStatus;
 
-typedef struct _DnxGlobalData_ {
+typedef struct _DnxGlobalData_ 
+{
    // Configuration File properties
-   char *channelAgent;
-   char *channelDispatcher;
-   char *channelCollector;
-   long  poolInitial;
-   long  poolMin;
-   long  poolMax;
-   long  poolGrow;
-   long  wlmPollInterval;
-   long  wlmShutdownGracePeriod;
-   long  threadRequestTimeout;
-   long  threadMaxTimeouts;
-   long  threadTtlBackoff;
-   char *logFacility;
-   char *pluginPath;
-   long  maxResultBuffer;
+   char * channelAgent;
+   char * channelDispatcher;
+   char * channelCollector;
+   long poolInitial;
+   long poolMin;
+   long poolMax;
+   long poolGrow;
+   long wlmPollInterval;
+   long wlmShutdownGracePeriod;
+   long threadRequestTimeout;
+   long threadMaxTimeouts;
+   long threadTtlBackoff;
+   char * logFacility;
+   char * pluginPath;
+   long maxResultBuffer;
    long debug;
 
-   dnxChannel *pAgent;  // Agent communications channel
+   dnxChannel * pAgent;          // Agent communications channel
 
-   pthread_t tWLM;      // Work Load Manager thread handle
+   pthread_t tWLM;               // Work Load Manager thread handle
    pthread_cond_t wlmCond;
    pthread_mutex_t wlmMutex;
    pthread_mutexattr_t wlmMutexAttr;
-   int terminate;    // Thread pool termination flag
-   time_t noLaterThan;  // Wait no later than this epoch time to terminate all threads
+   int terminate;                // Thread pool termination flag
+   time_t noLaterThan;           // Wait no later than this epoch time to terminate all threads
 
    // Job Capacity management
-   DnxWorkerStatus *tPool;
+   DnxWorkerStatus * tPool;
    int threadsActive;
    int threadsCreated;
    int threadsDestroyed;
@@ -116,35 +103,23 @@ typedef struct _DnxGlobalData_ {
    pthread_mutex_t jobMutex;
    pthread_mutexattr_t jobMutexAttr;
 
-   int  dnxLogFacility; // DNX syslog facility
-
+   int  dnxLogFacility;          // DNX syslog facility
 } DnxGlobalData;
-
 
 #ifdef _SEM_SEMUN_UNDEFINED
 union semun
 {
-   int val;                   // value for SETVAL
-   struct semid_ds *buf;      // buffer for IPC_STAT & IPC_SET
-   unsigned short int *array; // array for GETALL & SETALL
-   struct seminfo *__buf;     // buffer for IPC_INFO
+   int val;                      // value for SETVAL
+   struct semid_ds * buf;        // buffer for IPC_STAT & IPC_SET
+   unsigned short int * array;   // array for GETALL & SETALL
+   struct seminfo * __buf;       // buffer for IPC_INFO
 };
 #endif
 
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-int dnxGetThreadsActive (void);
-int dnxSetThreadsActive (int value);
-int dnxGetJobsActive (void);
-int dnxSetJobsActive (int value);
+int dnxGetThreadsActive(void);
+int dnxSetThreadsActive(int value);
+int dnxGetJobsActive(void);
+int dnxSetJobsActive(int value);
 
 #endif   /* _DNXMAIN_H_ */
 

@@ -17,21 +17,19 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxCollector.c
-//
-// This file implements the DNX Collector thread.
-//
-// The purpose of this thread is to collect service check
-// completion results from the worker nodes.  When a service
-// check result is collected, this thread dequeues the service
-// check from the Jobs queue and posts the result to the existing
-// Nagios service_result_buffer.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-07-11
-// Last Modified:   2007-08-16
-
+/** Implements the DNX Collector thread.
+ *
+ * The purpose of this thread is to collect service check
+ * completion results from the worker nodes.  When a service
+ * check result is collected, this thread dequeues the service
+ * check from the Jobs queue and posts the result to the existing
+ * Nagios service_result_buffer.
+ * 
+ * @file dnxCollector.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IMPL
+ */
 
 #include "dnxNebMain.h"
 #include "dnxError.h"
@@ -43,31 +41,10 @@
 
 #include <assert.h>
 
-
-//
-// Constants
-//
-
 #define DNX_COLLECTOR_TIMEOUT 30
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
 
 static void dnxCollectorCleanup (void *data);
 static int dnxPostResult (DnxGlobalData *gData, DnxNewJob *pJob, DnxResult *pResult);
-
 
 //----------------------------------------------------------------------------
 

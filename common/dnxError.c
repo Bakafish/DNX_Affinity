@@ -17,32 +17,15 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxError.c
-//
-// DNX Error Reporting functions.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-
+/** Implements the DNX Error Reporting functions.
+ *
+ * @file dnxError.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IMPL
+ */
 
 #include "dnxError.h"
-
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
 
 static dnxError gLastError = DNX_OK;      // Last known error code
 
@@ -50,7 +33,8 @@ static dnxError gLastError = DNX_OK;      // Last known error code
 static char gLastErrStr[MAX_ERR_STR+1];      // Last error message
 #endif
 
-static char * gErrCatalog[] = {
+static char * gErrCatalog[] = 
+{
    "A-OK, Okey-Dokey, Rock-On",
    "Invalid arguments or parameters",
    "Resource is exhausted",
@@ -68,13 +52,7 @@ static char * gErrCatalog[] = {
    "Incorrect or invalid XML message"
 };
 
-
-//
-// Prototypes
-//
-
-
-// TODO: Create mechanism for preserving error stack details
+/** @todo Create mechanism for preserving error stack details. */
 
 //----------------------------------------------------------------------------
 

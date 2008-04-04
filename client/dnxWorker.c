@@ -17,24 +17,20 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxWorker.c
-//
-// Distributed Nagios Client
-//
-// This program implements the worker thread functionality.
-//
-// Functions:
-//
-//    1. Requests a Job from the DNX Registrar
-//    2. Retrieves Job and executes it
-//    3. Posts Results to DNX Collector
-//    4. Wash, rinse, repeat
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-09-26
-
+/** Implements the worker thread functionality.
+ *
+ * Functions:
+ * 
+ *    1. Requests a Job from the DNX Registrar
+ *    2. Retrieves Job and executes it
+ *    3. Posts Results to DNX Collector
+ *    4. Wash, rinse, repeat
+ *
+ * @file dnxWorker.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_CLIENT_IMPL
+ */
 
 #include <sys/time.h>
 #include <stdio.h>
@@ -53,34 +49,13 @@
 #include "dnxWorker.h"
 #include "dnxPlugin.h"
 
-
-//
-// Constants
-//
-
-// TODO: Dynamically allocate based upon config file maxResultBuffer setting
+/** @todo Dynamically allocate based upon config file maxResultBuffer setting */
 #define MAX_RESULT_DATA 1024
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
 
 static void dnxWorkerCleanup (void *data);
 static int initWorkerComm (DnxWorkerStatus *tData);
 static int releaseWorkerComm (DnxWorkerStatus *tData);
 static int dnxExecuteJob (DnxWorkerStatus *tData, DnxJob *pJob, DnxResult *pResult);
-
 
 //----------------------------------------------------------------------------
 

@@ -17,39 +17,18 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxWLM.h
-//
-// Header file for Work Load Manager thread.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-
+/** Types and definitions for work load manager thread.
+ * 
+ * @file dnxWLM.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_CLIENT_IFC
+ */
 
 #ifndef _DNXWLM_H_
 #define _DNXWLM_H_
 
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-void *dnxWLM (void *data);
+void * dnxWLM(void * data);
 
 #endif   /* _DNXWLM_H_ */
 

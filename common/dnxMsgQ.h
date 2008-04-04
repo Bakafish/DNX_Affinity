@@ -17,50 +17,27 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxMsgQ.h
-//
-// Defintions and prototypes for SysV Message Queue transport layer.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-
+/** Types and definitions for SysV Message Queue transport layer.
+ * 
+ * @file dnxMsgQ.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IFC
+ */
 
 #ifndef _DNXMSGQ_H_
 #define _DNXMSGQ_H_
 
-// Obtain definition of dnxChannel
 #include "dnxChannel.h"
 
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-int dnxMsgQInit (void);
-int dnxMsgQDeInit (void);
-int dnxMsgQNew (dnxChannel **channel, char *url);
-int dnxMsgQDelete (dnxChannel *channel);
-int dnxMsgQOpen (dnxChannel *channel, dnxChanMode mode);
-int dnxMsgQClose (dnxChannel *channel);
-int dnxMsgQRead (dnxChannel *channel, char *buf, int *size, int timeout, char *src);
-int dnxMsgQWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst);
+int dnxMsgQInit(void);
+int dnxMsgQDeInit(void);
+int dnxMsgQNew(dnxChannel ** channel, char * url);
+int dnxMsgQDelete(dnxChannel * channel);
+int dnxMsgQOpen(dnxChannel * channel, dnxChanMode mode);
+int dnxMsgQClose(dnxChannel * channel);
+int dnxMsgQRead(dnxChannel * channel, char * buf, int * size, int timeout, char * src);
+int dnxMsgQWrite(dnxChannel * channel, char * buf, int size, int timeout, char * dst);
 
 #endif   /* _DNXMSGQ_H_ */
 

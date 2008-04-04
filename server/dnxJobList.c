@@ -17,44 +17,18 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxJobList.c
-//
-// Implements the DNX Job List mechanism.
-//
-// Tastes great and is less filling!
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written: 2006-07-11  R.W.Ingraham
-// Last Modified: 2007-08-22
-
+/** Implements the DNX Job List mechanism.
+ *
+ * @file dnxJobList.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IMPL
+ */
 
 #include "dnxJobList.h"
 #include "dnxLogging.h"
 
-
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
-
 
 //----------------------------------------------------------------------------
 // This routine is invoked by the DNX NEB module's initialization routine

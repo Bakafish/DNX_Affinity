@@ -17,47 +17,25 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxDispatcher.h
-//
-// This file implements the DNX Dispatcher thread.
-//
-// The purpose of this thread is to dispatch service check jobs to the
-// registered worker nodes for execution.  It accomplishes this by
-// accepting work node registrations and then dispatching service check
-// jobs to registered worker nodes using a weighted-round-robin algorithm.
-// The algorithm's weighting is based upon the number of jobs-per-second
-// throughput rating of each worker node.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written: 2006-07-11  R.W.Ingraham
-// Last Modified: 2007-02-08
-
+/** Definitions and prototypes for the DNX Dispatcher thread.
+ *
+ * The purpose of this thread is to dispatch service check jobs to the
+ * registered worker nodes for execution.  It accomplishes this by
+ * accepting work node registrations and then dispatching service check
+ * jobs to registered worker nodes using a weighted-round-robin algorithm.
+ * The algorithm's weighting is based upon the number of jobs-per-second
+ * throughput rating of each worker node.
+ * 
+ * @file dnxDispatcher.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IFC
+ */
 
 #ifndef _DNXDISPATCHER_H_
 #define _DNXDISPATCHER_H_
 
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-void *dnxDispatcher (void *data);
+void * dnxDispatcher(void * data);
 
 #endif   /* _DNXDISPATCHER_H_ */
 

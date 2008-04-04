@@ -17,31 +17,22 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxXml.h
-//
-// DNX XML definitions.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-// 
-
+/** Types and definitions for DNX XML functionality.
+ *
+ * @file dnxXml.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IFC
+ */
 
 #ifndef _DNXXML_H_
 #define _DNXXML_H_
 
-// Obtain definition of DNX_MAX_MSG constant
 #include "dnxChannel.h"
-// Obtain definition of DnxGuid
 #include "dnxProtocol.h"
 
-
-//
-// Constants
-//
-
-typedef enum _DnxXmlMsg_ {
+typedef enum _DnxXmlMsg_ 
+{
    DNX_XML_UNKNOWN = 0,
    DNX_XML_SHORT,
    DNX_XML_USHORT,
@@ -53,30 +44,18 @@ typedef enum _DnxXmlMsg_ {
    DNX_XML_GUID
 } DnxXmlType;
 
-//
-// Structures
-//
-
-typedef struct _DnxXmlBuf_ {
+typedef struct _DnxXmlBuf_ 
+{
    char buf[DNX_MAX_MSG];
    unsigned size;
 } DnxXmlBuf;
 
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-int dnxXmlOpen (DnxXmlBuf *xbuf, char *tag);
-int dnxXmlAdd  (DnxXmlBuf *xbuf, char *xTag, DnxXmlType xType, void *xData);
-int dnxXmlGet  (DnxXmlBuf *xbuf, char *xTag, DnxXmlType xType, void *xData);
-int dnxXmlClose(DnxXmlBuf *xbuf);
-int dnxMakeGuid (DnxGuid *pGuid, DnxObjType xType, unsigned long xSerial, unsigned long xSlot);
+int dnxXmlOpen(DnxXmlBuf * xbuf, char * tag);
+int dnxXmlAdd(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData);
+int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData);
+int dnxXmlClose(DnxXmlBuf * xbuf);
+int dnxMakeGuid(DnxGuid * pGuid, DnxObjType xType, unsigned long xSerial, 
+      unsigned long xSlot);
 
 #endif   /* _DNXXML_H_ */
 

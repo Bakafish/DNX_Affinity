@@ -17,50 +17,25 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxJobList.h
-//
-// Implements the DNX Job List mechanism.
-//
-// Tastes great and is less filling!
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written: 2006-07-11  R.W.Ingraham
-// Last Modified: 2007-02-08
-
+/** Definitions and prototypes for the DNX Job List mechanism.
+ *
+ * @file dnxJobList.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IFC
+ */
 
 #ifndef _DNXJOBLIST_H_
 #define _DNXJOBLIST_H_
 
 #include "dnxNebMain.h"
 
-
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-int dnxJobListInit (DnxJobList **ppJobList, unsigned long size);
-int dnxJobListWhack (DnxJobList **ppJobList);
-int dnxJobListAdd (DnxJobList *pJobList, DnxNewJob *pJob);
-int dnxJobListExpire (DnxJobList *pJobList, DnxNewJob *pExpiredJobs, int *totalJobs);
-int dnxJobListDispatch (DnxJobList *pJobList, DnxNewJob *pJob);
-int dnxJobListCollect (DnxJobList *pJobList, DnxGuid *pGuid, DnxNewJob *pJob);
+int dnxJobListInit(DnxJobList ** ppJobList, unsigned long size);
+int dnxJobListWhack(DnxJobList ** ppJobList);
+int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob);
+int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs);
+int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob);
+int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob);
 
 #endif   /* _DNXJOBLIST_H_ */
 

@@ -17,15 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxConfig.c
-//
-// Parses DNX Worker Node config file.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-26
-
+/** Parses DNX Worker Node config file.
+ *
+ * @file dnxConfig.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_CLIENT_IMPL
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,63 +35,47 @@
 #include "dnxConfig.h"
 #include "dnxClientMain.h"
 
-
-//
-// Constants
-//
-
 #define DNX_MAX_CFG_LINE   2048
 
+typedef enum _DnxVarType_ 
+{ 
+   DNX_VAR_ERR = 0, DNX_VAR_STR, DNX_VAR_INT, DNX_VAR_DBL 
+} DnxVarType;
 
-//
-// Structures
-//
-
-typedef enum _DnxVarType_ { DNX_VAR_ERR = 0, DNX_VAR_STR, DNX_VAR_INT, DNX_VAR_DBL } DnxVarType;
-
-typedef struct _DnxVarMap_ {
-   char *szVar;
+typedef struct _DnxVarMap_ 
+{
+   char * szVar;
    DnxVarType varType;
-   void *varStorage;
+   void * varStorage;
 } DnxVarMap;
-
-
-//
-// Globals
-//
 
 extern DnxGlobalData dnxGlobalData;
 
-static DnxVarMap DnxVarDictionary[] = {
-{ "channelAgent",         DNX_VAR_STR, NULL },
-{ "channelDispatcher",    DNX_VAR_STR, NULL },
-{ "channelCollector",     DNX_VAR_STR, NULL },
-{ "poolInitial",          DNX_VAR_INT, NULL },
-{ "poolMin",              DNX_VAR_INT, NULL },
-{ "poolMax",              DNX_VAR_INT, NULL },
-{ "poolGrow",             DNX_VAR_INT, NULL },
-{ "wlmPollInterval",      DNX_VAR_INT, NULL },
-{ "wlmShutdownGracePeriod", DNX_VAR_INT, NULL },
-{ "threadRequestTimeout", DNX_VAR_INT, NULL },
-{ "threadMaxTimeouts",    DNX_VAR_INT, NULL },
-{ "threadTtlBackoff",     DNX_VAR_INT, NULL },
-{ "logFacility",          DNX_VAR_STR, NULL },
-{ "pluginPath",           DNX_VAR_STR, NULL },
-{ "maxResultBuffer",      DNX_VAR_INT, NULL },
-{ "debug",                DNX_VAR_INT, NULL },
-{ NULL, DNX_VAR_ERR, NULL }
+static DnxVarMap DnxVarDictionary[] = 
+{
+   { "channelAgent",         DNX_VAR_STR, NULL },
+   { "channelDispatcher",    DNX_VAR_STR, NULL },
+   { "channelCollector",     DNX_VAR_STR, NULL },
+   { "poolInitial",          DNX_VAR_INT, NULL },
+   { "poolMin",              DNX_VAR_INT, NULL },
+   { "poolMax",              DNX_VAR_INT, NULL },
+   { "poolGrow",             DNX_VAR_INT, NULL },
+   { "wlmPollInterval",      DNX_VAR_INT, NULL },
+   { "wlmShutdownGracePeriod", DNX_VAR_INT, NULL },
+   { "threadRequestTimeout", DNX_VAR_INT, NULL },
+   { "threadMaxTimeouts",    DNX_VAR_INT, NULL },
+   { "threadTtlBackoff",     DNX_VAR_INT, NULL },
+   { "logFacility",          DNX_VAR_STR, NULL },
+   { "pluginPath",           DNX_VAR_STR, NULL },
+   { "maxResultBuffer",      DNX_VAR_INT, NULL },
+   { "debug",                DNX_VAR_INT, NULL },
+   { NULL, DNX_VAR_ERR, NULL }
 };
-
-
-//
-// Prototypes
-//
 
 void displayGlobals (char *title);
 int parseLine (char *szFile, int lineNo, char *szLine);
 int validateVariable (char *szVar, char *szVal);
 int strTrim (char *szLine);
-
 
 //----------------------------------------------------------------------------
 

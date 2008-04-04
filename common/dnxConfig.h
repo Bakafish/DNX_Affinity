@@ -17,40 +17,19 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxConfig.h
-//
-// Parses DNX Worker Node config file.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-
+/** Types and definitions for parsing DNX Worker Node config file.
+ *
+ * @file dnxConfig.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IFC
+ */
 
 #ifndef _DNXCONFIG_H_
 #define _DNXCONFIG_H_
 
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-void initGlobals (void);
-int parseFile (char *szFile);
+void initGlobals(void);
+int parseFile(char * szFile);
 
 #endif   /* _DNXCONFIG_H_ */
 

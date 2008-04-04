@@ -17,15 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxMsgQ.c
-//
-// Implements the System V Message Queue IPC Tranport Layer
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-
+/** Implements the System V Message Queue IPC Tranport Layer.
+ *
+ * @file dnxMsgQ.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IMPL
+ */
 
 #include <sys/types.h>
 #include <sys/ipc.h>
@@ -38,32 +36,13 @@
 #include "dnxError.h"
 #include "dnxMsgQ.h"
 
-//
-// Constants
-//
-
 #define DNX_MSGQ_STANDARD  1  // Message type
 
-
-//
-// Structures
-//
-
-typedef struct _dnxMsgBuf_ {
-   long mtype;    /* message type, must be > 0 */
-   char *mtext;   /* message data */
+typedef struct _dnxMsgBuf_ 
+{
+   long mtype;       /* message type, must be > 0 */
+   char * mtext;     /* message data */
 } dnxMsgBuf;
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
 
 //----------------------------------------------------------------------------
 

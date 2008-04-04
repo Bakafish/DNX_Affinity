@@ -17,30 +17,23 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxProtocol.h
-//
-// Structure and prototypes for DNX messaging protocol.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-02-08
-
+/** Types and definitions for DNX messaging protocol.
+ * 
+ * @file dnxProtocol.h
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IFC
+ */
 
 #ifndef _DNXPROTOCOL_H_
 #define _DNXPROTOCOL_H_
 
 #include <time.h>
 
-// Obtain definition of dnxChannel
 #include "dnxChannel.h"
 
-
-//
-// Constants
-//
-
-typedef enum _DnxObjType_ {
+typedef enum _DnxObjType_ 
+{
    DNX_OBJ_SCHEDULER = 0,
    DNX_OBJ_DISPATCHER,
    DNX_OBJ_WORKER,
@@ -51,82 +44,86 @@ typedef enum _DnxObjType_ {
    DNX_OBJ_MAX
 } DnxObjType;
 
-typedef enum _DnxReqType_ { DNX_REQ_REGISTER = 0, DNX_REQ_DEREGISTER, DNX_REQ_ACK, DNX_REQ_NAK } DnxReqType;
+typedef enum _DnxReqType_ 
+{
+   DNX_REQ_REGISTER = 0, 
+   DNX_REQ_DEREGISTER, 
+   DNX_REQ_ACK, 
+   DNX_REQ_NAK 
+} DnxReqType;
 
-typedef enum _DnxJobState_ { DNX_JOB_NULL = 0, DNX_JOB_PENDING, DNX_JOB_INPROGRESS, DNX_JOB_COMPLETE, DNX_JOB_EXPIRED } DnxJobState;
+typedef enum _DnxJobState_ 
+{
+   DNX_JOB_NULL = 0, 
+   DNX_JOB_PENDING, 
+   DNX_JOB_INPROGRESS, 
+   DNX_JOB_COMPLETE, 
+   DNX_JOB_EXPIRED 
+} DnxJobState;
 
 #define DNX_MAX_ADDRESS 64
 
-
-//
-// Structures
-//
-
-typedef struct _DnxGuid_ {
-   DnxObjType    objType;
+typedef struct _DnxGuid_ 
+{
+   DnxObjType objType;
    unsigned long objSerial;
    unsigned long objSlot;
 } DnxGuid;
 
-typedef struct _DnxNodeRequest_ {
-   DnxGuid guid;        // Worker Node GUID
+typedef struct _DnxNodeRequest_ 
+{
+   DnxGuid guid;           // Worker Node GUID
    DnxReqType reqType;     // Request type
-   unsigned int jobCap; // Job capacity
-   unsigned int ttl;    // Request Time-To-Live (in seconds)
+   unsigned int jobCap;    // Job capacity
+   unsigned int ttl;       // Request Time-To-Live (in seconds)
    time_t expires;         // Job expiration time (not transmitted)
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxNodeRequest;
 
-typedef struct _DnxJob_ {
-   DnxGuid guid;     // Job GUID
-   DnxJobState state;   // Job state
-   int priority;     // Execution Priority
-   int timeout;      // Max job execution time
-   char *cmd;        // Contains command plus arguments
+typedef struct _DnxJob_ 
+{
+   DnxGuid guid;           // Job GUID
+   DnxJobState state;      // Job state
+   int priority;           // Execution Priority
+   int timeout;            // Max job execution time
+   char * cmd;             // Contains command plus arguments
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxJob;
 
-typedef struct _DnxResult_ {
-   DnxGuid guid;     // Job GUID
-   DnxJobState state;   // Job state
-   unsigned int delta;  // Job execution time delta
-   int resCode;      // Job result code
-   char *resData;    // Job result data
+typedef struct _DnxResult_ 
+{
+   DnxGuid guid;           // Job GUID
+   DnxJobState state;      // Job state
+   unsigned int delta;     // Job execution time delta
+   int resCode;            // Job result code
+   char * resData;         // Job result data
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxResult;
 
-typedef struct _DnxMgmtRequest_ {
-   DnxGuid guid;     // Manager GUID
-   char *action;     // Request: SHUTDOWN, RELOAD, STATUS
+typedef struct _DnxMgmtRequest_ 
+{
+   DnxGuid guid;           // Manager GUID
+   char * action;          // Request: SHUTDOWN, RELOAD, STATUS
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxMgmtRequest;
 
-typedef struct _DnxMgmtReply_ {
-   DnxGuid guid;     // Client GUID
-   DnxReqType status;   // Request status: ACK or NAK
-   char *reply;      // Reply data (only valid for STATUS request)
+typedef struct _DnxMgmtReply_ 
+{
+   DnxGuid guid;           // Client GUID
+   DnxReqType status;      // Request status: ACK or NAK
+   char * reply;           // Reply data (only valid for STATUS request)
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxMgmtReply;
 
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
-
-int dnxRegister (dnxChannel *channel, DnxNodeRequest *pReg, char *address);
-int dnxDeRegister (dnxChannel *channel, DnxNodeRequest *pReg, char *address);
-int dnxWaitForNodeRequest (dnxChannel *channel, DnxNodeRequest *pReg, char *address, int timeout);
-int dnxWantJob (dnxChannel *channel, DnxNodeRequest *pReq, char *address);
-int dnxGetJob (dnxChannel *channel, DnxJob *pJob, char *address, int timeout);
-int dnxPutJob (dnxChannel *channel, DnxJob *pJob, char *address);
-int dnxGetResult (dnxChannel *channel, DnxResult *pResult, char *address, int timeout);
-int dnxPutResult (dnxChannel *channel, DnxResult *pResult, char *address);
-int dnxGetMgmtRequest (dnxChannel *channel, DnxMgmtRequest *pRequest, char *address, int timeout);
+int dnxRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address);
+int dnxDeRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address);
+int dnxWaitForNodeRequest(dnxChannel * channel, DnxNodeRequest * pReg, char * address, int timeout);
+int dnxWantJob(dnxChannel * channel, DnxNodeRequest * pReq, char * address);
+int dnxGetJob(dnxChannel * channel, DnxJob * pJob, char * address, int timeout);
+int dnxPutJob(dnxChannel * channel, DnxJob * pJob, char * address);
+int dnxGetResult(dnxChannel * channel, DnxResult * pResult, char * address, int timeout);
+int dnxPutResult(dnxChannel * channel, DnxResult * pResult, char * address);
+int dnxGetMgmtRequest(dnxChannel * channel, DnxMgmtRequest * pRequest, char * address, int timeout);
 
 #endif   /* _DNXPROTOCOL_H_ */
 

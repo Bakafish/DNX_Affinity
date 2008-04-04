@@ -17,15 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxQueue.c
-//
-// Implements thread-safe queues for DNX.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written: 2006-07-11  R.W.Ingraham
-// Last Modified: 2007-08-22
-
+/** Implements thread-safe queues for DNX.
+ *
+ * @file dnxQueue.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IMPL
+ */
 
 #include <stdlib.h>     // malloc() and free()
 #include <assert.h>     // assert()
@@ -34,7 +32,6 @@
 #include "dnxError.h"
 #include "dnxQueue.h"   // dnxQueue definitions and prototypes
 #include "dnxLogging.h"
-
 
 //----------------------------------------------------------------------------
 

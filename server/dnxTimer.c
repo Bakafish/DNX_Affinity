@@ -17,21 +17,19 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxTimer.c
-//
-// This file implements the DNX Timer thread.
-//
-// The purpose of this thread is to monitor the age of service requests
-// which are being actively executed by the worker nodes.
-//
-// This requires access to the global Pending queue (which is also
-// manipulated by the Dispatcher and Collector threads.)
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-07-11
-// Last Modified:   2007-08-22
-
+/** Implements the DNX Timer thread.
+ *
+ * The purpose of this thread is to monitor the age of service requests
+ * which are being actively executed by the worker nodes.
+ * 
+ * This requires access to the global Pending queue (which is also
+ * manipulated by the Dispatcher and Collector threads.)
+ * 
+ * @file dnxTimer.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_SERVER_IMPL
+ */
 
 #include "dnxNebMain.h"
 #include "dnxError.h"
@@ -42,31 +40,10 @@
 
 #include <assert.h>
 
-
-//
-// Constants
-//
-
 #define MAX_EXPIRED     10
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
-
-//
-// Prototypes
-//
 
 static void dnxTimerCleanup (void *data);
 static int dnxExpireJob (DnxNewJob *pExpire);
-
 
 //----------------------------------------------------------------------------
 

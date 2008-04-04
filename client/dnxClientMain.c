@@ -17,19 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxClientMain.c
-//
-// Distributed Nagios Client
-//
-// This program implements the worker node functionality.
-//
-// Implements a distributed, dynamic thread pool model.
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-09-26
-
+/** Main source file for DNX Client.
+ * 
+ * @file dnxClientMain.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_CLIENT_IMPL
+ */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -60,38 +54,18 @@
 # define VERSION  "0.20"
 #endif
 
-//
-// Constants
-//
-
-
 #define MAX_CMD_BUFF 2048
 
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
 DnxGlobalData dnxGlobalData;
-static char *szProg;
-static char *ConfigFile = DNX_NODE_CONFIG;
+static char * szProg;
+static char * ConfigFile = DNX_NODE_CONFIG;
 
 static int Debug = 0;
 static int gotSig = 0;
 static int lockFd = -1;
 
-extern char *optarg;
+extern char * optarg;
 extern int optind, opterr, optopt;
-
-
-//
-// Prototypes
-//
 
 extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
 
@@ -110,7 +84,6 @@ static void removePidFile (char *base);
 static void sig_debug (int sig);
 static void usage (void);
 static void version (void);
-
 
 //----------------------------------------------------------------------------
 

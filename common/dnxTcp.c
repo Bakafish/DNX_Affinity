@@ -17,15 +17,13 @@
  
   --------------------------------------------------------------------------*/
 
-// dnxTcp.c
-//
-// Implements the TCP Tranport Layer
-//
-// Author: Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
-//
-// First Written:   2006-06-19
-// Last Modified:   2007-09-26
-
+/** Implements the TCP Tranport Layer.
+ *
+ * @file dnxTcp.c
+ * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+ * @attention Please submit patches to http://dnx.sourceforge.net
+ * @ingroup DNX_COMMON_IMPL
+ */
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -45,31 +43,10 @@
 #include "dnxTcp.h"
 #include "dnxLogging.h"
 
-
-//
-// Constants
-//
-
-
-//
-// Structures
-//
-
-
-//
-// Globals
-//
-
 static pthread_mutex_t tcpMutex;
 static pthread_mutexattr_t tcpMutexAttr;
 
-
-//
-// Prototypes
-//
-
-extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
-
+extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
 
 //----------------------------------------------------------------------------
 
