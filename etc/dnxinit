@@ -1,0 +1,110 @@
+#!/bin/sh
+# 
+### BEGIN INIT INFO
+# Provides: dnxinit
+# Required-Start: $network $syslog
+# Required-Stop: $network $syslog
+# Default-Start: 3 5
+# Default-Stop: 0 1 2 6
+# Description: Distributed Nagios eXecutor-Client
+### END INIT INFO
+#
+# File : dnxinit
+#
+# Author : Marlo Bell (marlobello@msn.com)
+# 
+# Changelog :
+#
+# 2007-01-30 Marlo Bell <marlobello@msn.com>
+#  - Initial Implementation
+#
+# Description: Starts and stops the DNX Client.
+#
+  
+status_dnx ()
+{
+
+	if test ! -f $DNXRunFile; then
+		echo "No lock file found in $DNXRunFile"
+		return 1
+	else
+		DNXPID=`head -n 1 $DNXRunFile`
+		echo "dnxClient running with PID: $DNXPID"
+		return 0
+	fi
+}
+
+
+killproc_dnx ()
+{
+
+	if test ! -f $DNXRunFile; then
+		echo "No lock file found in $DNXRunFile"
+		return 1
+	fi
+
+	DNXPID=`head -n 1 $DNXRunFile`
+	kill $2 $DNXPID
+
+}
+
+
+# Source function library
+# Solaris doesn't have an rc.d directory, so do a test first
+if [ -f /etc/rc.d/init.d/functions ]; then
+	. /etc/rc.d/init.d/functions
+elif [ -f /etc/init.d/functions ]; then
+	. /etc/init.d/functions
+fi
+
+prefix=/usr/local/nagios
+exec_prefix=${prefix}
+DNXBin=${exec_prefix}/bin/dnxClient
+DNXCfgFile=${prefix}/etc/dnxClient.cfg
+DNXRunFile=/var/run/dnxClient.pid
+NagiosUser=nagios
+NagiosGroup=nagios
+          
+
+# Check that dnx exists.
+if [ ! -f $DNXBin ]; then
+    echo "Executable file $DNXBin not found.  Exiting."
+    exit 1
+fi
+
+# Check that dnx.cfg exists.
+if [ ! -f $DNXCfgFile ]; then
+    echo "Configuration file $DNXCfgFile not found.  Exiting."
+    exit 1
+fi
+          
+# See how we were called.
+case "$1" in
+
+	start)
+		echo "Starting DNX Client: dnxClient"
+		touch $DNXRunFile
+		chown $NagiosUser:$NagiosGroup $DNXRunFile
+		$DNXBin -c $DNXCfgFile
+		exit 0
+		;;
+
+	stop)
+
+		echo "Stopping DNX Client: dnxClient"
+		killproc_dnx
+		rm -f $DNXRunFile 
+		;;
+
+	status)
+		status_dnx
+		;;
+
+	*)
+		echo "Usage: dnxinit {start|stop|status}"
+		exit 1
+		;;
+
+esac
+  
+# End of this script

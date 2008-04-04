@@ -1,293 +1,264 @@
-/*--------------------------------------------------------------------------
- 
-   Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
- 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as 
-   published by the Free Software Foundation.
- 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
-  --------------------------------------------------------------------------*/
-
-/** Implements the DNX System V Message Queue IPC Transport Layer.
- *
- * @file dnxMsgQ.c
- * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
- * @attention Please submit patches to http://dnx.sourceforge.net
- * @ingroup DNX_COMMON_IMPL
- */
-
-#include "dnxMsgQ.h"    // temporary
-#include "dnxTSPI.h"
-
-#include "dnxTransport.h"
-#include "dnxError.h"
-#include "dnxDebug.h"
-#include "dnxLogging.h"
+//	dnxMsgQ.c
+//
+//	Implements the System V Message Queue IPC Tranport Layer
+//
+//	Copyright (c) 2006-2007 Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+//
+//	First Written:   2006-06-19
+//	Last Modified:   2007-02-08
+//
+//	License:
+//
+//	This program is free software; you can redistribute it and/or modify
+//	it under the terms of the GNU General Public License version 2 as
+//	published by the Free Software Foundation.
+//
+//	This program is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//	GNU General Public License for more details.
+//
+//	You should have received a copy of the GNU General Public License
+//	along with this program; if not, write to the Free Software
+//	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+//
 
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <stdio.h>
-#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <assert.h>
 
-#define DNX_MSGQ_STANDARD  1  // Message type
+#include "dnxError.h"
+#include "dnxMsgQ.h"
 
-typedef struct _dnxMsgBuf_ 
-{
-   long mtype;       /* message type, must be > 0 */
-   char * mtext;     /* message data */
+//
+//	Constants
+//
+
+#define DNX_MSGQ_STANDARD	1	// Message type
+
+
+//
+//	Structures
+//
+
+typedef struct _dnxMsgBuf_ {
+	long mtype;		/* message type, must be > 0 */
+	char *mtext;	/* message data */
 } dnxMsgBuf;
 
-/** The implementation of the UDP low-level I/O transport. */
-typedef struct iDnxMsgQChannel_
+
+//
+//	Globals
+//
+
+
+//
+//	Prototypes
+//
+
+
+//----------------------------------------------------------------------------
+
+int dnxMsgQInit (void)
 {
-   key_t queuekey;      //!< Channel transport message queue key.
-   int queueid;         //!< Channel transport message queue ID.
-   iDnxChannel ichan;   //!< Channel transport I/O (TSPI) methods.
-} iDnxMsgQChannel;
+	// Could use this routine to loop through the global channel map
+	// and create all message queues found therein (or error out if
+	// any of them are already in use...)
 
-/*--------------------------------------------------------------------------
-                  TRANSPORT SERVICE PROVIDER INTERFACE
-  --------------------------------------------------------------------------*/
-
-/** Open a MSGQ channel object.
- * 
- * @param[in] icp - the UDP channel object to be opened.
- * @param[in] active - boolean; true (1) indicates the transport will be used
- *    in active mode (as a client); false (0) indicates the transport will be 
- *    used in passive mode (as a server listen point).
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int dnxMsgQOpen(iDnxChannel * icp, int active)
-{
-   iDnxMsgQChannel * imcp = (iDnxMsgQChannel *)
-         ((char *)icp - offsetof(iDnxMsgQChannel, ichan));
-   int qid;
-
-   assert(icp && imcp->queuekey > 0);
-
-   // attempt to create/open the message queue
-   if ((qid = msgget(imcp->queuekey, IPC_CREAT | 0x660)) == (key_t)(-1))
-      return DNX_ERR_OPEN;
-
-   imcp->queueid = qid;
-
-   return DNX_OK;
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Close a MSGQ channel object.
- * 
- * @param[in] icp - the UDP channel object to be closed.
- * 
- * @return Always returns zero.
- */
-static int dnxMsgQClose(iDnxChannel * icp)
+int dnxMsgQDeInit (void)
 {
-   iDnxMsgQChannel * imcp = (iDnxMsgQChannel *)
-         ((char *)icp - offsetof(iDnxMsgQChannel, ichan));
+	// Could use this routine to remove all of our own message queues
+	// from the system IPC space.
 
-   assert(icp && imcp->queueid);
-
-   // This is really a NOP, since we don't "close" our handle to the message queue.
-   //
-   // However, the message queue should be deleted when no longer in use by
-   // any process; but that will have to be implemented in dnxMsgQDeinit().
-
-   imcp->queueid = 0;      // temporary till we get global close implemented
-
-   return DNX_OK;
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Read data from a MSGQ channel object.
- * 
- * @param[in] icp - the MSGQ channel object from which to read data.
- * @param[out] buf - the address of storage into which data should be read.
- * @param[in,out] size - on entry, the maximum number of bytes that may be 
- *    read into @p buf; on exit, returns the number of bytes stored in @p buf.
- * @param[in] timeout - the maximum number of seconds we're willing to wait
- *    for data to become available on @p icp without returning a timeout
- *    error.
- * @param[out] src - the address of storage for the sender's address if 
- *    desired. This parameter is not used by this transport, however, it's
- *    optional, and so it may be passed as NULL by the caller.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int dnxMsgQRead(iDnxChannel * icp, char * buf, int * size, 
-      int timeout, char * src)
+int dnxMsgQNew (dnxChannel **channel, char *url)
 {
-   iDnxMsgQChannel * imcp = (iDnxMsgQChannel *)
-         ((char *)icp - offsetof(iDnxMsgQChannel, ichan));
-   dnxMsgBuf msg;
+	char tmpUrl[DNX_MAX_URL+1];
+	char *cp, *ep, *lastchar;
+	long port;
 
-   assert(icp && imcp->queueid && buf && size && *size > 0);
+	// Validate parameters
+	if (!channel || !url || !*url || strlen(url) > DNX_MAX_URL)
+		return DNX_ERR_INVALID;
 
-   msg.mtext = buf;
+	*channel = NULL;
 
-   // wait for a message, truncate if larger than the specified buffer size
-   if ((*size = (int)msgrcv(imcp->queueid, &msg, *size, 0L, MSG_NOERROR)) == -1)
-      return DNX_ERR_RECEIVE;
-   
-   /** @todo Implement timeout logic. */
+	// Make a working copy of the URL
+	strcpy(tmpUrl, url);
 
-   return DNX_OK;
+	// Look for transport prefix: '[type]://'
+	if ((ep = strchr(tmpUrl, ':')) == NULL || *(ep+1) != '/' || *(ep+2) != '/')
+		return DNX_ERR_BADURL;
+	*ep = '\0';
+	cp = ep + 3;	// Set to beginning of destination portion of the URL
+
+	// Get the message queue ID
+	errno = 0;
+	if ((port = strtol(cp, &lastchar, 0)) < 1 || errno == ERANGE || (*lastchar && *lastchar != '/'))
+		return DNX_ERR_BADURL;
+
+	// No private keys are allowed
+	if ((key_t)port == IPC_PRIVATE)
+		return DNX_ERR_BADURL;
+
+	// Allocate a new channel structure
+	if ((*channel = (dnxChannel *)malloc(sizeof(dnxChannel))) == NULL)
+		return DNX_ERR_MEMORY;	// Memory allocation error
+	memset(*channel, 0, sizeof(dnxChannel));
+
+	// Save host name and port
+	(*channel)->type = DNX_CHAN_MSGQ;
+	(*channel)->name = NULL;
+	(*channel)->host = NULL;
+	(*channel)->port = (int)port;	// This is really the Message Queue ID
+	(*channel)->state = DNX_CHAN_CLOSED;
+
+	// Set I/O methods
+	(*channel)->dnxOpen  = dnxMsgQOpen;
+	(*channel)->dnxClose = dnxMsgQClose;
+	(*channel)->dnxRead  = dnxMsgQRead;
+	(*channel)->dnxWrite = dnxMsgQWrite;
+	(*channel)->txDelete = dnxMsgQDelete;
+
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Write data to a MSGQ channel object.
- * 
- * @param[in] icp - the MSGQ channel object on which to write data.
- * @param[in] buf - a pointer to the data to be written.
- * @param[in] size - the number of bytes to be written on @p icp.
- * @param[in] timeout - the maximum number of seconds to wait for the write
- *    operation to complete without returning a timeout error.
- * @param[in] dst - the address to which the data in @p buf should be sent
- *    using this channel. This parameter is not used by this transport, 
- *    however, it's optional, and so it may be passed as NULL by the caller.
- *
- * @return Zero on success, or a non-zero error value.
- */
-static int dnxMsgQWrite(iDnxChannel * icp, char * buf, int size, 
-      int timeout, char * dst)
+int dnxMsgQDelete (dnxChannel *channel)
 {
-   iDnxMsgQChannel * imcp = (iDnxMsgQChannel *)
-         ((char *)icp - offsetof(iDnxMsgQChannel, ichan));
-   dnxMsgBuf msg;
+	// Validate parameters
+	if (!channel || channel->type != DNX_CHAN_MSGQ)
+		return DNX_ERR_INVALID;
 
-   assert(icp && imcp->queueid && buf && size > 0);
+	// Make sure this channel is closed
+	if (channel->state == DNX_CHAN_OPEN)
+		dnxMsgQClose(channel);
 
-   msg.mtype = (long)DNX_MSGQ_STANDARD;
-   msg.mtext = buf;
+	// Release channel memory
+	memset(channel, 0, sizeof(dnxChannel));
+	free(channel);
 
-   // send the message
-   if (msgsnd(imcp->queueid, &msg, size, 0) == -1)
-      return DNX_ERR_SEND;
-   
-   /** @todo Implement timeout logic. */
-
-   return DNX_OK;
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Delete a MSGQ channel object.
- * 
- * @param[in] icp - the MSGQ channel object to be deleted.
- */
-static void dnxMsgQDelete(iDnxChannel * icp)
+int dnxMsgQOpen (dnxChannel *channel, dnxChanMode mode)
 {
-   iDnxMsgQChannel * imcp = (iDnxMsgQChannel *)
-         ((char *)icp - offsetof(iDnxMsgQChannel, ichan));
+	int qid;
 
-   assert(icp && imcp->queueid == 0);
+	// Validate parameters
+	if (!channel || channel->type != DNX_CHAN_MSGQ || channel->port < 1)
+		return DNX_ERR_INVALID;
 
-   xfree(icp);
+	// Make sure this channel isn't already open
+	if (channel->state != DNX_CHAN_CLOSED)
+		return DNX_ERR_ALREADY;
+
+	// Attempt to create/open the message queue
+	if ((qid = msgget((key_t)(channel->port), (IPC_CREAT | 0x660))) == (key_t)(-1))
+		return DNX_ERR_OPEN;
+
+	// Mark the channel as open
+	channel->chan  = qid;
+	channel->state = DNX_CHAN_OPEN;
+
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Create a new UDP transport.
- * 
- * @param[in] url - the URL containing the host name and port number.
- * @param[out] icpp - the address of storage for returning the new low-
- *    level UDP transport object (as a generic transport object).
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int dnxMsgQNew(char * url, iDnxChannel ** icpp)
+int dnxMsgQClose (dnxChannel *channel)
 {
-   char * cp, * ep, * lastchar;
-   iDnxMsgQChannel * imcp;
-   long queuekey;
+	// Validate parameters
+	if (!channel || channel->type != DNX_CHAN_MSGQ)
+		return DNX_ERR_INVALID;
 
-   assert(icpp && url && *url);
+	// Make sure this channel isn't already closed
+	if (channel->state != DNX_CHAN_OPEN)
+		return DNX_ERR_ALREADY;
 
-   // search for messageqid in URL
-   if ((cp = strstr(url, "://")) == 0)
-      return DNX_ERR_BADURL;
-   cp += 3;
+	// This is really a NOP, since we don't "close" our handle to the message queue.
+	//
+	// However, the message queue should be deleted when no longer in use by
+	// any process; but that will have to be implemented in dnxMsgQDeinit().
 
-   // get the message queue ID
-   errno = 0;
-   if ((queuekey = strtol(cp, &lastchar, 0)) < 1 || errno == ERANGE 
-         || (*lastchar && *lastchar != '/'))
-      return DNX_ERR_BADURL;
+	// Mark the channel as closed
+	channel->state = DNX_CHAN_CLOSED;
+	channel->chan  = 0;
 
-   // no private keys are allowed
-   if ((key_t)queuekey == IPC_PRIVATE)
-      return DNX_ERR_BADURL;
-
-   // allocate a new iDnxMsgQChannel object
-   if ((imcp = (iDnxMsgQChannel *)xmalloc(sizeof *imcp)) == 0)
-      return DNX_ERR_MEMORY;
-
-   memset(imcp, 0, sizeof *imcp);
-
-   // save message queue ID
-   imcp->queuekey = (key_t)queuekey;
-
-   // set I/O methods
-   imcp->ichan.txOpen   = dnxMsgQOpen;
-   imcp->ichan.txClose  = dnxMsgQClose;
-   imcp->ichan.txRead   = dnxMsgQRead;
-   imcp->ichan.txWrite  = dnxMsgQWrite;
-   imcp->ichan.txDelete = dnxMsgQDelete;
-
-   *icpp = &imcp->ichan;
-
-   return DNX_OK;
-}
-
-/*--------------------------------------------------------------------------
-                           EXPORTED INTERFACE
-  --------------------------------------------------------------------------*/
-
-/** Initialize the MSGQ transport sub-system; return MSGQ channel contructor.
- * 
- * @param[out] ptxAlloc - the address of storage in which to return the 
- *    address of the MSGQ channel object constructor (dnxMsgQNew).
- * 
- * @return Always returns zero.
- */
-int dnxMsgQInit(int (**ptxAlloc)(char * url, iDnxChannel ** icpp))
-{
-   // Could use this routine to loop through the global channel map
-   // and create all message queues found therein (or error out if
-   // any of them are already in use...)
-
-   *ptxAlloc = dnxMsgQNew;
-
-   return DNX_OK;
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Clean up global resources allocated by the MSGQ transport sub-system. 
- */
-void dnxMsgQDeInit(void)
+int dnxMsgQRead (dnxChannel *channel, char *buf, int *size, int timeout, char *src)
 {
-   // Could use this routine to remove all of our own message queues
-   // from the system IPC space.
+	dnxMsgBuf msg;
+
+	// Validate parameters
+	if (!channel || channel->type != DNX_CHAN_MSGQ || !buf || *size < 1)
+		return DNX_ERR_INVALID;
+
+	// Make sure this channel is open
+	if (channel->state != DNX_CHAN_OPEN)
+		return DNX_ERR_OPEN;
+
+	// Prepare the message for transfer
+	msg.mtext = buf;
+
+	// Wait for a message, truncate if larger than the specified buffer size
+	if ((*size = (int)msgrcv(channel->chan, &msg, (size_t)*size, 0L, MSG_NOERROR)) == -1)
+		return DNX_ERR_RECEIVE;
+	
+	// TODO: Implement timeout logic
+
+	return DNX_OK;
 }
 
-/*--------------------------------------------------------------------------*/
+//----------------------------------------------------------------------------
 
+int dnxMsgQWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst)
+{
+	dnxMsgBuf msg;
+
+	// Validate parameters
+	if (!channel || channel->type != DNX_CHAN_MSGQ || !buf)
+		return DNX_ERR_INVALID;
+
+	// Validate that the message size is within bounds
+	if (size < 1 || size > DNX_MAX_MSG)
+		return DNX_ERR_SIZE;
+
+	// Make sure this channel is open
+	if (channel->state != DNX_CHAN_OPEN)
+		return DNX_ERR_OPEN;
+
+	// Prepare the message for transfer
+	msg.mtype = (long)DNX_MSGQ_STANDARD;
+	msg.mtext = buf;
+
+	// Send the message
+	if (msgsnd(channel->chan, &msg, (size_t)size, 0) == -1)
+		return DNX_ERR_SEND;
+	
+	// TODO: Implement timeout logic
+
+	return DNX_OK;
+}
+
+//----------------------------------------------------------------------------

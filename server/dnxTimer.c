@@ -1,304 +1,271 @@
-/*--------------------------------------------------------------------------
- 
-   Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
- 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as 
-   published by the Free Software Foundation.
- 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
-  --------------------------------------------------------------------------*/
+//	dnxTimer.c
+//
+//	This file implements the DNX Timer thread.
+//
+//	The purpose of this thread is to monitor the age of service requests
+//	which are being actively executed by the worker nodes.
+//
+//	This requires access to the global Pending queue (which is also
+//	manipulated by the Dispatcher and Collector threads.)
+//
+//	Copyright (c) 2006-2007 Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+//
+//	First Written:   2006-07-11
+//	Last Modified:   2007-08-22
+//
+//	License:
+//
+//	This program is free software; you can redistribute it and/or modify
+//	it under the terms of the GNU General Public License version 2 as
+//	published by the Free Software Foundation.
+//
+//	This program is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//	GNU General Public License for more details.
+//
+//	You should have received a copy of the GNU General Public License
+//	along with this program; if not, write to the Free Software
+//	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+//
 
-/** Implements the DNX Timer thread.
- *
- * The purpose of this thread is to monitor the age of service requests
- * which are being actively executed by the worker nodes.
- * 
- * This requires access to the global Pending queue (which is also
- * manipulated by the Dispatcher and Collector threads.)
- * 
- * @file dnxTimer.c
- * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
- * @attention Please submit patches to http://dnx.sourceforge.net
- * @ingroup DNX_SERVER_IMPL
- */
-
-#include "dnxTimer.h"
 
 #include "dnxNebMain.h"
 #include "dnxError.h"
-#include "dnxDebug.h"
 #include "dnxProtocol.h"
+#include "dnxTimer.h"
 #include "dnxJobList.h"
 #include "dnxLogging.h"
-#include "dnxSleep.h"
 
-#if HAVE_CONFIG_H
-# include "config.h"
-#endif
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <error.h>
 #include <assert.h>
 
-#define DNX_DEF_TIMER_SLEEP   5000  /*!< Default timer sleep interval. */
-#define MAX_EXPIRED           10    /*!< Maximum expired jobs during interval. */
 
-/** DNX job expiration timer implementation structure. */
-typedef struct iDnxTimer_
+//
+//	Constants
+//
+
+#define MAX_EXPIRED		10
+
+
+//
+//	Structures
+//
+
+
+//
+//	Globals
+//
+
+
+//
+//	Prototypes
+//
+
+static void dnxTimerCleanup (void *data);
+static int dnxExpireJob (DnxNewJob *pExpire);
+
+
+//----------------------------------------------------------------------------
+
+void *dnxTimer (void *data)
 {
-   DnxJobList * joblist;   /*!< Job list to be expired. */
-   pthread_t tid;          /*!< Timer thread ID. */
-   int sleepms;            /*!< Milliseconds to sleep between passes. */
-} iDnxTimer;
+	DnxGlobalData *gData = (DnxGlobalData *)data;
+	DnxNewJob ExpiredList[MAX_EXPIRED];
+	int i, totalExpired;
+	int ret = 0;
 
-/*--------------------------------------------------------------------------
-                              IMPLEMENTATION
-  --------------------------------------------------------------------------*/
+	assert(data);
 
-/** Timer thread clean-up routine.
- * 
- * @param[in] data - an opaque pointer to thread data for the dying thread.
- * 
- * @note Currently, this cleanup routine does nothing. It's here just in case 
- * the timer code is modified to call cancelable kernel or pthread library 
- * routines in the future.
- */
-static void dnxTimerCleanup(void * data)
+	// Set my cancel state to 'enabled', and cancel type to 'deferred'
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+
+	// Set thread cleanup handler
+	pthread_cleanup_push(dnxTimerCleanup, data);
+
+	dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Waiting on the Go signal...", pthread_self());
+
+	// Wait for Go signal from dnxNebMain
+	if (pthread_mutex_lock(&(gData->tmGo)) != 0)
+		pthread_exit(NULL);
+
+	// See if the go signal has already been broadcast
+	if (gData->isGo == 0)
+	{
+		// Nope.  Wait for the synchronization signal
+		if (pthread_cond_wait(&(gData->tcGo), &(gData->tmGo)) != 0)
+		{
+			// pthread_mutex_unlock(&(gData->tmGo));
+			pthread_exit(NULL);
+		}
+	}
+
+	// Release the lock
+	pthread_mutex_unlock(&(gData->tmGo));
+
+	dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Watching for expired jobs...", pthread_self());
+
+	// Wait for new service checks or cancellation
+	while (1)
+	{
+		// Yield control for a few seconds
+		if ((ret = dnxThreadSleep(DNX_TIMER_SLEEP)) != 0)
+			break;
+
+		// Search for expired jobs in the Pending Queue
+		totalExpired = MAX_EXPIRED;
+		if ((ret = dnxJobListExpire(gData->JobList, ExpiredList, &totalExpired)) == DNX_OK && totalExpired > 0)
+		{
+			for (i=0; i < totalExpired; i++)
+			{
+				dnxDebug(1, "dnxTimer[%lx]: Expiring Job: %s", pthread_self(), ExpiredList[i].cmd);
+
+				// Worker Audit Logging
+				dnxAuditJob(&ExpiredList[i], "EXPIRE");
+
+				// Report the expired job to Nagios
+				ret = dnxExpireJob(&ExpiredList[i]);
+
+				// Release this Job's resources
+				dnxJobCleanup(&ExpiredList[i]);
+			}
+		}
+
+		if (totalExpired > 0 || ret != DNX_OK)
+			dnxDebug(1, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d", pthread_self(), totalExpired, ret);
+
+		// Test for thread cancellation
+		pthread_testcancel();
+	}
+
+	// Note that the Timer thread is exiting
+	dnxSyslog(LOG_INFO, "dnxTimer[%lx]: Exiting with ret code = %d", pthread_self(), ret);
+
+	// Remove thread cleanup handler
+	pthread_cleanup_pop(1);
+
+	// Terminate this thread
+	pthread_exit(NULL);
+}
+
+//----------------------------------------------------------------------------
+// Dispatch thread clean-up routine
+
+static void dnxTimerCleanup (void *data)
 {
-   iDnxTimer * itimer = (iDnxTimer *)data;
-   assert(data);
+	DnxGlobalData *gData = (DnxGlobalData *)data;
+	assert(data);
+
+	// Unlock the Go signal mutex
+	if (&(gData->tmGo))
+		pthread_mutex_unlock(&(gData->tmGo));
 }
 
 //----------------------------------------------------------------------------
 
-/** The main timer thread procedure entry point.
- * 
- * @param[in] data - an opaque pointer to thread data for the timer thread.
- *    This is actually the dnx server global data object.
- * 
- * @return Always returns 0.
- */
-static void * dnxTimer(void * data)
+int dnxThreadSleep (int seconds)
 {
-   iDnxTimer * itimer = (iDnxTimer *)data;
-   DnxNewJob ExpiredList[MAX_EXPIRED];
-   int i, totalExpired;
-   int ret = 0;
+	pthread_mutex_t timerMutex = PTHREAD_MUTEX_INITIALIZER;
+	pthread_cond_t  timerCond  = PTHREAD_COND_INITIALIZER;
+	struct timeval  now;            // Time when we started waiting
+	struct timespec timeout;        // Timeout value for the wait function
+	int ret;
 
-   assert(data);
+	// Create temporary mutex for time waits
+	if ((ret = pthread_mutex_lock(&timerMutex)) != 0)
+	{
+		dnxSyslog(LOG_ERR, "dnxThreadSleep: Failed to lock timerMutex: %d", ret);
+		return ret;
+	}
 
-   pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
-   pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
-   pthread_cleanup_push(dnxTimerCleanup, data);
+	gettimeofday(&now, NULL);
 
-   dnxLog("dnxTimer[%lx]: Watching for expired jobs...", pthread_self());
+	// timeval uses micro-seconds.
+	// timespec uses nano-seconds.
+	// 1 micro-second = 1000 nano-seconds.
+	timeout.tv_sec = now.tv_sec + seconds;
+	timeout.tv_nsec = now.tv_usec * 1000;
 
-   while (1)
-   {
-      pthread_testcancel();
+	// Sleep for the specified time
+	if ((ret = pthread_cond_timedwait(&timerCond, &timerMutex, &timeout)) != ETIMEDOUT)
+	{
+		pthread_mutex_unlock(&timerMutex);
+		dnxSyslog(LOG_ERR, "dnxThreadSleep: Failed to wait on timerCondition: %d", ret);
+		return ret;
+	}
 
-      dnxCancelableSleep(itimer->sleepms);
+	if ((ret = pthread_mutex_unlock(&timerMutex)) != 0)
+	{
+		dnxSyslog(LOG_ERR, "dnxThreadSleep: Failed to unlock timerMutex: %d", ret);
+	}
 
-      // search for expired jobs in the pending queue
-      totalExpired = MAX_EXPIRED;
-      if ((ret = dnxJobListExpire(itimer->joblist, ExpiredList, 
-            &totalExpired)) == DNX_OK && totalExpired > 0)
-      {
-         for (i = 0; i < totalExpired; i++)
-         {
-            char msg[128];
-            DnxNewJob * job = &ExpiredList[i];
-
-            dnxDebug(1, "dnxTimer[%lx]: Expiring Job [%lu,%lu]: %s.", 
-                  pthread_self(), job->xid.objSerial, job->xid.objSlot, job->cmd);
-
-            dnxAuditJob(job, "EXPIRE");
-
-            sprintf(msg, "(DNX Service Check Timed Out - Node: %s)", 
-                  job->pNode->address);
-
-            // report the expired job to Nagios
-            ret = dnxPostResult(job->payload, job->start_time, 
-                  time(0) - job->start_time, 1, 0, msg);
-
-            dnxJobCleanup(job);
-         }
-      }
-
-      if (totalExpired > 0 || ret != DNX_OK)
-         dnxDebug(2, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d: %s.", 
-               pthread_self(), totalExpired, ret, dnxErrorString(ret));
-   }
-
-   dnxLog("dnxTimer[%lx]: Terminating: %s.", pthread_self(), dnxErrorString(ret));
-
-   pthread_cleanup_pop(1);
-   return 0;
-}
-
-/*--------------------------------------------------------------------------
-                                 INTERFACE
-  --------------------------------------------------------------------------*/
-
-int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer)
-{
-   iDnxTimer * itimer;
-   int ret;
-
-   assert(joblist && ptimer);
-
-   // don't allow sleep times outside the range 1/10th sec to 5 minutes
-   if (sleeptime < 100 || sleeptime > 300000)
-      sleeptime = DNX_DEF_TIMER_SLEEP;
-
-   if ((itimer = (iDnxTimer *)xmalloc(sizeof *itimer)) == 0)
-      return DNX_ERR_MEMORY;
-
-   // initialize the itimer
-   memset(itimer, 0, sizeof *itimer);
-   itimer->joblist = joblist;
-   itimer->sleepms = sleeptime;
-
-   // create the timer thread
-   if ((ret = pthread_create(&itimer->tid, 0, dnxTimer, itimer)) != 0)
-   {
-      dnxLog("Timer thread creation failed: %s.", dnxErrorString(ret));
-      xfree(itimer);
-      return DNX_ERR_THREAD;
-   }
-
-   *ptimer = (DnxTimer *)itimer;
-
-   return DNX_OK;
+	return ret;
 }
 
 //----------------------------------------------------------------------------
+// Posts an expired service request to the Nagios service result buffer
 
-void dnxTimerDestroy(DnxTimer * timer)
+static int dnxExpireJob (DnxNewJob *pExpire)
 {
-   iDnxTimer * itimer = (iDnxTimer *)timer;
+	extern circular_buffer service_result_buffer;
+	extern int check_result_buffer_slots;
+	service_message *new_message;
 
-   pthread_cancel(itimer->tid);
-   pthread_join(itimer->tid, 0);
+	// Allocate memory for the message
+	if ((new_message = (service_message *)malloc(sizeof(service_message))) == NULL)
+	{
+		dnxSyslog(LOG_ERR, "dnxExpireJob: Memory allocation failure");
+		return DNX_ERR_MEMORY;
+	}
 
-   xfree(itimer);
+	// Copy the expired job's data to the message buffer
+	gettimeofday(&(new_message->finish_time), NULL);
+	strncpy(new_message->host_name, pExpire->svc->host_name, sizeof(new_message->host_name)-1);
+	new_message->host_name[sizeof(new_message->host_name)-1] = '\0';
+	strncpy(new_message->description, pExpire->svc->description, sizeof(new_message->description)-1);
+	new_message->description[sizeof(new_message->description)-1] = '\0';
+#ifdef SERVICE_CHECK_TIMEOUTS_RETURN_UNKNOWN
+	new_message->return_code = STATE_UNKNOWN;
+#else
+	new_message->return_code = STATE_CRITICAL;
+#endif
+	new_message->exited_ok = TRUE;
+	new_message->check_type = SERVICE_CHECK_ACTIVE;
+	new_message-> parallelized = pExpire->svc->parallelize;
+	new_message->start_time.tv_sec = pExpire->start_time;
+	new_message->start_time.tv_usec = 0L;
+	new_message->early_timeout = TRUE;
+	strcpy(new_message->output, "(DNX Service Check Timed Out)");
+
+	// Obtain a lock for writing to the buffer
+	pthread_mutex_lock(&service_result_buffer.buffer_lock);
+
+	// Handle overflow conditions
+	if (service_result_buffer.items == check_result_buffer_slots)
+	{
+		// Record overflow
+		service_result_buffer.overflow++;
+
+		// Update tail pointer
+		service_result_buffer.tail = (service_result_buffer.tail + 1) % check_result_buffer_slots;
+
+		dnxSyslog(LOG_ERR, "dnxExpireJob: Service result buffer overflow = %lu", service_result_buffer.overflow);
+	}
+
+	// Save the data to the buffer
+	((service_message **)service_result_buffer.buffer)[service_result_buffer.head] = new_message;
+
+	// Increment the head counter and items
+	service_result_buffer.head = (service_result_buffer.head + 1) % check_result_buffer_slots;
+	if (service_result_buffer.items < check_result_buffer_slots)
+		service_result_buffer.items++;
+	if(service_result_buffer.items>service_result_buffer.high)
+		service_result_buffer.high=service_result_buffer.items;
+
+	// Release lock on buffer
+	pthread_mutex_unlock(&service_result_buffer.buffer_lock);
+
+	return DNX_OK;
 }
 
-/*--------------------------------------------------------------------------
-                                 UNIT TEST
-
-   From within dnx/server, compile with GNU tools using this command line:
-    
-      gcc -DDEBUG -DDNX_TIMER_TEST -DHAVE_NANOSLEEP -g -O0 -I../common \
-         -I../nagios/nagios-2.7/include dnxTimer.c ../common/dnxSleep.c \
-         ../common/dnxError.c -lpthread -lgcc_s -lrt -o dnxTimerTest
-
-   Note: Leave out -DHAVE_NANOSLEEP if your system doesn't have nanosleep.
-
-  --------------------------------------------------------------------------*/
-
-#ifdef DNX_TIMER_TEST
-
-#include "utesthelp.h"
-#include <time.h>
-
-#define elemcount(x) (sizeof(x)/sizeof(*(x)))
-
-static int verbose;
-static DnxNewJob fakejob;
-static DnxJobList fakejoblist;
-static int fakepayload;
-static DnxNodeRequest fakenode;
-static int entered_dnxJobListExpire;
-
-// functional stubs
-IMPLEMENT_DNX_SYSLOG(verbose);
-IMPLEMENT_DNX_DEBUG(verbose);
-
-int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs)
-{
-   CHECK_TRUE(pJobList == &fakejoblist);
-   CHECK_TRUE(*totalJobs > 0);
-   memcpy(&pExpiredJobs[0], &fakejob, sizeof *pExpiredJobs);
-   *totalJobs = 1;
-   entered_dnxJobListExpire = 1;
-   return 0;
-}
-int dnxPostResult(void * payload, time_t start_time, unsigned delta, 
-      int early_timeout, int res_code, char * res_data)
-{
-   CHECK_TRUE(payload == &fakepayload);
-   CHECK_TRUE(start_time == 100);
-   CHECK_TRUE(early_timeout != 0);
-   CHECK_TRUE(res_code == 0);
-   CHECK_ZERO(memcmp(res_data, "(DNX Service", 12));
-   return 0;
-}
-int dnxAuditJob(DnxNewJob * pJob, char * action) { return 0; }
-void dnxJobCleanup(DnxNewJob * pJob) { }
-
-int main(int argc, char ** argv)
-{
-   DnxTimer * timer;
-   iDnxTimer * itimer;
-
-   verbose = argc > 1? 1: 0;
-
-   // setup test harness
-   fakenode.xid.objType    = DNX_OBJ_JOB;
-   fakenode.xid.objSerial  = 1;
-   fakenode.xid.objSlot    = 2;
-   fakenode.reqType        = DNX_REQ_DEREGISTER;
-   fakenode.jobCap         = 1;
-   fakenode.ttl            = 2;
-   fakenode.expires        = 3;
-   strcpy(fakenode.address, "fake address");
-
-   fakejob.state           = DNX_JOB_INPROGRESS;
-   fakejob.xid.objType     = DNX_OBJ_JOB;
-   fakejob.xid.objSerial   = 1;
-   fakejob.xid.objSlot     = 2;
-   fakejob.cmd             = "fake command line";
-   fakejob.start_time      = 100;
-   fakejob.timeout         = 10;
-   fakejob.expires         = fakejob.start_time + fakejob.timeout;
-   fakejob.payload         = &fakepayload;
-   fakejob.pNode           = &fakenode;
-
-   entered_dnxJobListExpire = 0;
-
-   // create a short timer and reference it as a concrete object for testing
-   CHECK_ZERO(dnxTimerCreate(&fakejoblist, 100, &timer));
-   itimer = (iDnxTimer *)timer;
-
-   // check internal state
-   CHECK_TRUE(itimer->joblist == &fakejoblist);
-   CHECK_TRUE(itimer->tid != 0);
-   CHECK_TRUE(itimer->sleepms == 100);
-
-   // wait for timer to have made one pass though timer thread loop
-   while (!entered_dnxJobListExpire)
-      dnxCancelableSleep(10);
-
-   // shut down
-   dnxTimerDestroy(timer);
-
-   return 0;
-}
-
-#endif   /* DNX_TIMER_TEST */
-
-/*--------------------------------------------------------------------------*/
-
+//----------------------------------------------------------------------------

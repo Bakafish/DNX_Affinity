@@ -1,0 +1,145 @@
+DNX Change Log:
+
+Version 0.13:
+=============
+- Added out-of-memory condition checking for all strdup(3) calls.
+- Fixed DNX communications channel exhaustion bug. This bug occurred when
+  a Client worker thread exited: Although the dispatch and collector channels
+  were properly closed, they weren't released from the DNX Channel Map pool.
+  Since this pool has a finite number of slots, we ran out of slots eventually.
+  Running out of slots then prevented the creation of any additional worker
+  threads.
+- Fixed memory leak in the Client, related to the above problem.
+- Fixed the same DNX communications channel exhaustion bug in the NEB Server
+  module as well. Although, this was not likely to occur very often.
+- Added some additional error and debug logging.
+- Added some graceful handling of NULL strings in the XML protocol messaging.
+
+
+Version 0.12:
+=============
+- Implemented the auditWorkerJobs directive in the server's configuration
+  file. This feature allows you to track which worker nodes are executing
+  which service checks.
+- Fixed negative job counter issue in client.
+- Added debugging level support for the server. Setting the debug flag in
+  the server config file to any positive integer enables debugging. The
+  higher the integer, the more verbose the debugging output.
+- The server module no longer writes messages to nagios.log. All server
+  modules messages are now written to the syslog.
+- Cleaned-up memory leaks in both server and client.
+- Fixed nasty corner-case where a job might be expired and collected at
+  the same time, causing a heap corruption due to the job structure memory
+  being freed twice. Even though this race-condition was properly semaphore-
+  protected, the expiration thread didn't properly mark the expired job
+  as removed from the global job queue. Hence, the collection thread might
+  acquire the semaphore right after the expiration thread released it, and
+  therefore still see the expired job as active. The job would then be
+  "collected", even though it was already "expired".
+  
+
+Version 0.11:
+=============
+- Implemented the localCheckPattern directive in the server's configuration
+  file. This permits you to specify an extended regular expression string which
+  will be used to see if a check command job should execute locally (instead
+  of being sent to a DNX client.)
+
+
+Version 0.10:
+=============
+- Fixed improper XML parsing of command or response values, where the
+  command/response contains embedded XML tags (or even just embedded
+  angle-brackets).  This fix affects both the server and the client,
+  since they share the common XML parsing routines contained in dnxXml.c
+
+
+Version 0.09:
+=============
+- Fixed the killing of plugin-child processes in dnxClient
+- Fixed plugin path directive to work properly
+- Fixed dnxinit script to start up in a more logical order
+- Added missing include statements to dnxClientMain.h to help
+  compilation on FreeBSD
+
+
+Version 0.08:
+=============
+- Removed the use of the internal NRPE module from the DNX Client.
+  The NRPE module is still experimental and will be added back into
+  the DNX distribution once I have fully implemented in-core checks
+  to the DNX Client.
+
+
+Version 0.07:
+=============
+- Fixed re-entrancy problem in dnxUdp.c and dnxTcp.c which manifested itself
+  under heavy thread creation on the DNX Client.  The problem occurred when
+  newly created worker threads sumultaneously invoked gethostbyname(3) - which
+  isn't re-entrant-safe.  I ought to move the name resolution logic for the
+  Dispatcher/Collector names out of the thread creation and into the main
+  configuration validation modules at some point.
+
+  NOTE: Recommend that all users specify IP addresses in the Client config
+  file (instead of host names requiring DNS lookup,) just in case your DNS
+  server fails; which might cause thread creation to suspend for 30 seconds
+  or more.
+
+
+Version 0.06:
+=============
+- Modified the DNX Client to allow worker threads a "shutdown grace period".
+  This is set by the user via the wlmShutdownGracePeriod option in dnxClient.cfg.
+
+  In prior versions, when the DNX Client received the shutdown signal (i.e.,
+  SIGTERM) it immediately cancelled all worker threads, which caused two
+  problems:
+
+    1. If a worker thread had already submitted a job request and was awaiting
+       a reply from the DNX Server when it exited, then the DNX Server might
+       send a job to the (now) non-existent worker thread. The service check
+       would then be "lost" and would eventually show up as a DNX Service Timeout
+       in Nagios.
+
+    2. If a worker thread was in the middle of executing a job it would often
+       be interrupted while awaiting the plugin output.  This also caused the
+       service check to be "lost" and eventually show up as a DNX Service Timeout
+       in Nagios.
+
+  With this modification, upon receipt of the shutdown signal, the DNX Client first
+  issues an "advisory" termination request to all worker threads.  If the worker
+  thread is in a state where can it safely exit without dropping a service check,
+  then it will do so.
+
+  Otherwise, the worker thread will continue executing until it arrives at a safe
+  state to exit.
+
+  However, if any threads have still not exited after wlmShutdownGracePeriod seconds
+  since the advisory shutdown, then those threads will be cancelled according to standard
+  POSIX threads semantics.
+
+- Placed conditional compilation directives around the following non-portable mutex
+  initialization statements in both the DNX Client and Server:
+
+    pthread_mutexattr_settype(&MutexAttr, PTHREAD_MUTEX_ERRORCHECK_NP);
+
+  Apparently, the PTHREAD_MUTEX_ERRORCHECK_NP constant in not supported in all
+  pthreads implementations.  I use this initialization, where available, to allow
+  pthreads to auto-detect potential mutex deadlock situations, if they ever occur.
+
+- Tweaked some of the default parameters in the dnxClient.cfg file.
+
+
+Version 0.05:
+=============
+- Improved how the DNX NEB Module decides whether or not it should accept a service
+  check from Nagios.  It now guarantees that an active worker thread request will be
+  available to execute the service check by "marrying" the service check and the worker
+  thread request *before* it returns control to Nagios.
+
+  This eliminates certain race conditions wherein a service check seemed available but
+  is taken by the dispatcher for some prior job.
+
+- Added a Time-To-Live variable to each worker thread request, which allows the DNX
+  Server to eliminate stale worker thread requests.
+

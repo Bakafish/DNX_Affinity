@@ -1,423 +1,427 @@
-/*--------------------------------------------------------------------------
- 
-   Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
- 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as 
-   published by the Free Software Foundation.
- 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
-  --------------------------------------------------------------------------*/
+//	dnxUdp.c
+//
+//	Implements the UDP Tranport Layer
+//
+//	Copyright (c) 2006-2007 Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+//
+//	First Written:   2006-06-19
+//	Last Modified:   2007-09-26
+//
+//	License:
+//
+//	This program is free software; you can redistribute it and/or modify
+//	it under the terms of the GNU General Public License version 2 as
+//	published by the Free Software Foundation.
+//
+//	This program is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//	GNU General Public License for more details.
+//
+//	You should have received a copy of the GNU General Public License
+//	along with this program; if not, write to the Free Software
+//	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+//
 
-/** Implements the DNX UDP Transport Layer.
- *
- * @file dnxUdp.c
- * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
- * @attention Please submit patches to http://dnx.sourceforge.net
- * @ingroup DNX_COMMON_IMPL
- */
-
-#include "dnxUdp.h"     // temporary
-#include "dnxTSPI.h"
-
-#include "dnxTransport.h"
-#include "dnxError.h"
-#include "dnxDebug.h"
-#include "dnxLogging.h"
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
-#include <string.h>
-#include <errno.h>
-#include <assert.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include <pthread.h>
 #include <syslog.h>
+#include <errno.h>
 
-/** The implementation of the UDP low-level I/O transport. */
-typedef struct iDnxUdpChannel_
-{
-   char * host;         //!< Channel transport host name.
-   int port;            //!< Channel transport port number.
-   int socket;          //!< Channel transport socket.
-   iDnxChannel ichan;   //!< Channel transport I/O (TSPI) methods.
-} iDnxUdpChannel;
+#include "dnxError.h"
+#include "dnxUdp.h"
+#include "dnxLogging.h"
 
-/** @todo Use GNU reentrant resolver extensions on platforms where available. */
+
+//
+//	Constants
+//
+
+
+//
+//	Structures
+//
+
+
+//
+//	Globals
+//
 
 static pthread_mutex_t udpMutex;
+static pthread_mutexattr_t udpMutexAttr;
 
-/*--------------------------------------------------------------------------
-                  TRANSPORT SERVICE PROVIDER INTERFACE
-  --------------------------------------------------------------------------*/
 
-/** Open a UDP channel object.
- * 
- * @param[in] icp - the UDP channel object to be opened.
- * @param[in] active - boolean; true (1) indicates the transport will be used
- *    in active mode (as a client); false (0) indicates the transport will be 
- *    used in passive mode (as a server listen point).
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int dnxUdpOpen(iDnxChannel * icp, int active)
+//
+//	Prototypes
+//
+
+extern int pthread_mutexattr_settype(pthread_mutexattr_t *attr, int kind);
+
+
+//----------------------------------------------------------------------------
+
+int dnxUdpInit (void)
 {
-   iDnxUdpChannel * iucp = (iDnxUdpChannel *)
-         ((char *)icp - offsetof(iDnxUdpChannel, ichan));
-   struct hostent * he;
-   struct sockaddr_in inaddr;
-   int sd;
+	// Create protective mutex for non-reentrant functions (gethostbyname)
+	pthread_mutexattr_init(&udpMutexAttr);
+#ifdef PTHREAD_MUTEX_ERRORCHECK_NP
+	pthread_mutexattr_settype(&udpMutexAttr, PTHREAD_MUTEX_ERRORCHECK_NP);
+#endif
+	pthread_mutex_init(&udpMutex, &udpMutexAttr);
 
-   assert(icp && iucp->port > 0);
-
-   inaddr.sin_family = AF_INET;
-   inaddr.sin_port = (in_port_t)iucp->port;
-   inaddr.sin_port = htons(inaddr.sin_port);
-
-   // see if we are listening on any address
-   if (!strcmp(iucp->host, "INADDR_ANY") 
-         || !strcmp(iucp->host, "0.0.0.0") 
-         || !strcmp(iucp->host, "0"))
-   {
-      // make sure that the request is passive
-      if (active) return DNX_ERR_ADDRESS;
-      inaddr.sin_addr.s_addr = INADDR_ANY;
-   }
-   else  // resolve destination address
-   {
-      DNX_PT_MUTEX_LOCK(&udpMutex);
-      if ((he = gethostbyname(iucp->host)) != 0)
-         memcpy(&inaddr.sin_addr.s_addr, he->h_addr_list[0], he->h_length);
-      DNX_PT_MUTEX_UNLOCK(&udpMutex);
-
-      if (!he) return DNX_ERR_ADDRESS;
-   }
-
-   if ((sd = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
-   {
-      dnxLog("dnxUdpOpen: socket failed: %s.", strerror(errno));
-      return DNX_ERR_OPEN;
-   }
-
-   // determine how to handle socket connectivity based upon open mode
-   if (active)
-   {
-      // for UDP, this sets the default destination address, so we can
-      // now use send() and write() in addition to sendto() and sendmsg()
-      if (connect(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
-      {
-         dnxLog("dnxUdpOpen: connect(%lx) failed: %s.", 
-               (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
-         close(sd);
-         return DNX_ERR_OPEN;
-      }
-   }
-   else
-   {
-      // want to listen for incoming packets, so bind to the
-      // specified local address and port
-      if (bind(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
-      {
-         close(sd);
-         dnxLog("dnxUdpOpen: bind(%lx) failed: %s.", 
-               (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
-         return DNX_ERR_OPEN;
-      }
-   }
-
-   iucp->socket = sd;
-
-   return DNX_OK;
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Close a UDP channel object.
- * 
- * @param[in] icp - the UDP channel object to be closed.
- * 
- * @return Always returns zero.
- */
-static int dnxUdpClose(iDnxChannel * icp)
+int dnxUdpDeInit (void)
 {
-   iDnxUdpChannel * iucp = (iDnxUdpChannel *)
-         ((char *)icp - offsetof(iDnxUdpChannel, ichan));
+	// Destroy the mutex
+	if (pthread_mutex_destroy(&udpMutex) != 0)
+		dnxSyslog(LOG_ERR, "dnxUdpDeInit: Unable to destroy mutex: mutex is in use!");
+	pthread_mutexattr_destroy(&udpMutexAttr);
 
-   assert(icp && iucp->socket);
-
-   close(iucp->socket);
-   iucp->socket = 0;
-
-   return DNX_OK;
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Read data from a UDP channel object.
- * 
- * @param[in] icp - the UDP channel object from which to read data.
- * @param[out] buf - the address of storage into which data should be read.
- * @param[in,out] size - on entry, the maximum number of bytes that may be 
- *    read into @p buf; on exit, returns the number of bytes stored in @p buf.
- * @param[in] timeout - the maximum number of seconds we're willing to wait
- *    for data to become available on @p icp without returning a timeout
- *    error.
- * @param[out] src - the address of storage for the sender's address if 
- *    desired. This parameter is optional, and may be passed as NULL. If
- *    non-NULL, the buffer pointed to by @p src must be at least the size
- *    of a @em sockaddr_in structure.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size, 
-      int timeout, char * src)
+int dnxUdpNew (dnxChannel **channel, char *url)
 {
-   iDnxUdpChannel * iucp = (iDnxUdpChannel *)
-         ((char *)icp - offsetof(iDnxUdpChannel, ichan));
-   struct sockaddr_in bit_bucket;
-   socklen_t slen = sizeof bit_bucket;
-   int mlen;
+	char tmpUrl[DNX_MAX_URL+1];
+	char *cp, *ep, *lastchar;
+	long port;
 
-   assert(icp && iucp->socket && buf && size && *size > 0);
+	// Validate parameters
+	if (!channel || !url || !*url || strlen(url) > DNX_MAX_URL)
+		return DNX_ERR_INVALID;
 
-   // implement timeout logic, if timeout value is greater than zero
-   if (timeout > 0)
-   {
-      struct timeval tv;
-      fd_set fd_rds;
-      int nsd;
+	*channel = NULL;
 
-      FD_ZERO(&fd_rds);
-      FD_SET(iucp->socket, &fd_rds);
+	// Make a working copy of the URL
+	strcpy(tmpUrl, url);
 
-      tv.tv_usec = 0L;
-      tv.tv_sec = timeout;
+	// Look for transport prefix: '[type]://'
+	if ((ep = strchr(tmpUrl, ':')) == NULL || *(ep+1) != '/' || *(ep+2) != '/')
+		return DNX_ERR_BADURL;
+	*ep = '\0';
+	cp = ep + 3;	// Set to beginning of destination portion of the URL
 
-      if ((nsd = select(iucp->socket + 1, &fd_rds, 0, 0, &tv)) == 0)
-         return DNX_ERR_TIMEOUT;
+	// Search for hostname - port separator
+	if ((ep = strchr(cp, ':')) == NULL || ep == cp)
+		return DNX_ERR_BADURL;	// No separator found or empty hostname
+	*ep++ = '\0';
 
-      if (nsd < 0)
-      {
-         if (errno != EINTR) 
-         {
-            dnxLog("dnxUdpRead: select failed: %s.", strerror(errno));
-            return DNX_ERR_RECEIVE;
-         }
-         return DNX_ERR_TIMEOUT;
-      }
-   }
+	// Get the port number
+	errno = 0;
+	if ((port = strtol(ep, &lastchar, 0)) < 1 || port > 65535 || (*lastchar && *lastchar != '/'))
+		return DNX_ERR_BADURL;
 
-   // read the incoming message
-   if (!src) src = (char *)&bit_bucket;
-   if ((mlen = recvfrom(iucp->socket, buf, *size, 0, 
-         (struct sockaddr *)src, &slen)) < 0)
-   {
-      // on "connected" UDP sockets, if the server can't be reached -
-      //    ICMP returned ICMP_UNREACH - we could get notified here.
-      if (errno == ECONNREFUSED)
-         return DNX_ERR_TIMEOUT;
-      dnxDebug(4, "recvfrom failed: %s.", strerror(errno));
-      return DNX_ERR_RECEIVE;
-   }
+	// Allocate a new channel structure
+	if ((*channel = (dnxChannel *)malloc(sizeof(dnxChannel))) == NULL)
+	{
+		dnxSyslog(LOG_ERR, "dnxUdpNew: Out of Memory: malloc(dnxChannel)");
+		return DNX_ERR_MEMORY;	// Memory allocation error
+	}
+	memset(*channel, 0, sizeof(dnxChannel));
 
-   if (mlen < 1 || mlen > DNX_MAX_MSG)
-      return DNX_ERR_RECEIVE;
+	// Save host name and port
+	(*channel)->type = DNX_CHAN_UDP;
+	(*channel)->name = NULL;
+	if (((*channel)->host = strdup(cp)) == NULL)
+	{
+		dnxSyslog(LOG_ERR, "dnxUdpNew: Out of Memory: strdup(channel->host)");
+		free(*channel);
+		*channel = NULL;
+		return DNX_ERR_MEMORY;	// Memory allocation error
+	}
+	(*channel)->port = (int)port;
+	(*channel)->state = DNX_CHAN_CLOSED;
 
-   *size = mlen;
+	// Set I/O methods
+	(*channel)->dnxOpen  = dnxUdpOpen;
+	(*channel)->dnxClose = dnxUdpClose;
+	(*channel)->dnxRead  = dnxUdpRead;
+	(*channel)->dnxWrite = dnxUdpWrite;
+	(*channel)->txDelete = dnxUdpDelete;
 
-   return DNX_OK;
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Write data to a UDP channel object.
- * 
- * @param[in] icp - the UDP channel object on which to write data.
- * @param[in] buf - a pointer to the data to be written.
- * @param[in] size - the number of bytes to be written on @p icp.
- * @param[in] timeout - the maximum number of seconds to wait for the write
- *    operation to complete without returning a timeout error.
- * @param[in] dst - the address to which the data in @p buf should be sent
- *    using this channel. This parameter is ignored for virtual connection
- *    based channels. This parameter is optional and may be passed as NULL. 
- *
- * @return Zero on success, or a non-zero error value.
- * 
- * @note If this is a stream oriented channel, or if NULL is passed for 
- * the @p dst parameter, The channel destination address is used.
- */
-static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size, 
-      int timeout, char * dst)
+int dnxUdpDelete (dnxChannel *channel)
 {
-   iDnxUdpChannel * iucp = (iDnxUdpChannel *)
-         ((char *)icp - offsetof(iDnxUdpChannel, ichan));
-   int ret;
+	// Validate parameters
+	if (!channel || channel->type != DNX_CHAN_UDP)
+		return DNX_ERR_INVALID;
 
-   assert(icp && iucp->socket && buf && size);
+	// Make sure this channel is closed
+	if (channel->state == DNX_CHAN_OPEN)
+		dnxUdpClose(channel);
 
-   // implement timeout logic, if timeout value is greater than zero
-   if (timeout > 0)
-   {
-      struct timeval tv;
-      fd_set fd_wrs;
-      int nsd;
+	// Release host name string
+	if (channel->host) free(channel->host);
 
-      FD_ZERO(&fd_wrs);
-      FD_SET(iucp->socket, &fd_wrs);
+	// Release channel memory
+	memset(channel, 0, sizeof(dnxChannel));
+	free(channel);
 
-      tv.tv_usec = 0L;
-      tv.tv_sec = timeout;
-
-      if ((nsd = select(iucp->socket + 1, 0, &fd_wrs, 0, &tv)) == 0)
-         return DNX_ERR_TIMEOUT;
-
-      if (nsd < 0)
-      {
-         if (errno != EINTR) 
-         {
-            dnxLog("dnxUdpWrite: select failed: %s.", strerror(errno));
-            return DNX_ERR_SEND;
-         }
-         return DNX_ERR_TIMEOUT;
-      }
-   }
-
-   // check for a destination address override
-   if (dst)
-      ret = sendto(iucp->socket, buf, size, 0,
-            (struct sockaddr *)dst, sizeof(struct sockaddr_in));
-   else 
-      ret = write(iucp->socket, buf, size);
-
-   if (ret == -1)
-      dnxDebug(4, "sendto/write failed: %s.", strerror(errno));
-
-   if (ret != size)
-      return DNX_ERR_SEND;
-   
-   return DNX_OK;
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Delete a UDP channel object.
- * 
- * @param[in] icp - the UDP channel object to be deleted.
- */
-static void dnxUdpDelete(iDnxChannel * icp)
+int dnxUdpOpen (dnxChannel *channel, dnxChanMode mode)	// 0=Passive, 1=Active
 {
-   iDnxUdpChannel * iucp = (iDnxUdpChannel *)
-         ((char *)icp - offsetof(iDnxUdpChannel, ichan));
+	struct hostent *he;
+	struct sockaddr_in inaddr;
+	int sd;
 
-   assert(icp && iucp->socket == 0);
-   
-   xfree(iucp->host);
-   xfree(iucp);
+	// Validate parameters
+	if (!channel || channel->type != DNX_CHAN_UDP || channel->port < 1)
+		return DNX_ERR_INVALID;
+
+	// Make sure this channel isn't already open
+	if (channel->state != DNX_CHAN_CLOSED)
+		return DNX_ERR_ALREADY;
+
+	// Setup the socket address structure
+	inaddr.sin_family = AF_INET;
+	inaddr.sin_port = (in_port_t)channel->port;
+	inaddr.sin_port = htons(inaddr.sin_port);
+
+	// See if we are listening on any address
+	if (!strcmp(channel->host, "INADDR_ANY") || !strcmp(channel->host, "0.0.0.0") || !strcmp(channel->host, "0"))
+	{
+		// Make sure that the request is passive
+		if (mode != DNX_CHAN_PASSIVE)
+			return DNX_ERR_ADDRESS;
+
+		inaddr.sin_addr.s_addr = INADDR_ANY;
+	}
+	else	// Resolve destination address
+	{
+		// Acquire the lock
+		if (pthread_mutex_lock(&udpMutex) != 0)
+		{
+			switch (errno)
+			{
+			case EINVAL:	// mutex not initialized
+				dnxSyslog(LOG_ERR, "dnxUdpOpen: mutex_lock: mutex has not been initialized");
+				break;
+			case EDEADLK:	// mutex already locked by this thread
+				dnxSyslog(LOG_ERR, "dnxUdpOpen: mutex_lock: deadlock condition: mutex already locked by this thread!");
+				break;
+			default:		// Unknown condition
+				dnxSyslog(LOG_ERR, "dnxUdpOpen: mutex_lock: unknown error %d: %s", errno, strerror(errno));
+			}
+			return DNX_ERR_THREAD;
+		}
+
+		// Try to resolve this address
+		if ((he = gethostbyname(channel->host)) == NULL)
+		{
+			pthread_mutex_unlock(&udpMutex);
+			return DNX_ERR_ADDRESS;
+		}
+		memcpy(&(inaddr.sin_addr.s_addr), he->h_addr_list[0], he->h_length);
+
+		// Release the lock
+		if (pthread_mutex_unlock(&udpMutex) != 0)
+		{
+			switch (errno)
+			{
+			case EINVAL:	// mutex not initialized
+				dnxSyslog(LOG_ERR, "dnxUdpOpen: mutex_unlock: mutex has not been initialized");
+				break;
+			case EPERM:		// mutex not locked by this thread
+				dnxSyslog(LOG_ERR, "dnxUdpOpen: mutex_unlock: mutex not locked by this thread!");
+				break;
+			default:		// Unknown condition
+				dnxSyslog(LOG_ERR, "dnxUdpOpen: mutex_unlock: unknown error %d: %s", errno, strerror(errno));
+			}
+			return DNX_ERR_THREAD;
+		}
+	}
+
+	// Create a socket
+	if ((sd = socket(PF_INET, SOCK_DGRAM, 0)) < 0)
+	{
+		dnxSyslog(LOG_ERR, "dnxUdpOpen: socket failure: %s", strerror(errno));
+		return DNX_ERR_OPEN;
+	}
+
+	// Determine how to handle socket connectivity based upon mode
+	if (mode == DNX_CHAN_ACTIVE)
+	{
+		// For UDP, this sets the default destination address, so we can
+		// now use send() and write() in addition to sendto() and sendmsg()
+		if (connect(sd, (struct sockaddr *)&inaddr, sizeof(inaddr)) != 0)
+		{
+			close(sd);
+			dnxSyslog(LOG_ERR, "dnxUdpOpen: connect(%lx) failure: %s", (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
+			return DNX_ERR_OPEN;
+		}
+	}
+	else	// DNX_CHAN_PASSIVE
+	{
+		// Want to listen for incoming packets, so bind to the
+ 		// specified local address and port
+		if (bind(sd, (struct sockaddr *)&inaddr, sizeof(inaddr)) != 0)
+		{
+			close(sd);
+			dnxSyslog(LOG_ERR, "dnxUdpOpen: bind(%lx) failure: %s", (unsigned long)inaddr.sin_addr.s_addr, strerror(errno));
+			return DNX_ERR_OPEN;
+		}
+	}
+
+	// Mark the channel as open
+	channel->chan  = sd;
+	channel->state = DNX_CHAN_OPEN;
+
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Create a new UDP transport.
- * 
- * @param[in] url - the URL containing the host name and port number.
- * @param[out] icpp - the address of storage for returning the new low-
- *    level UDP transport object (as a generic transport object).
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int dnxUdpNew(char * url, iDnxChannel ** icpp)
+int dnxUdpClose (dnxChannel *channel)
 {
-   char * cp, * ep, * lastchar;
-   iDnxUdpChannel * iucp;
-   long port;
+	// Validate parameters
+	if (!channel || channel->type != DNX_CHAN_UDP)
+		return DNX_ERR_INVALID;
 
-   assert(icpp && url && *url);
+	// Make sure this channel isn't already closed
+	if (channel->state != DNX_CHAN_OPEN)
+		return DNX_ERR_ALREADY;
 
-   // search for host:port in URL
-   if ((cp = strstr(url, "://")) == 0)
-      return DNX_ERR_BADURL;
-   cp += 3;
+	// Shutdown the communication paths on the socket
+	// shutdown(channel->chan, SHUT_RDWR);
 
-   // find host/port separator ':' - copy host name
-   if ((ep = strchr(cp, ':')) == 0 || ep == cp || ep - cp > HOST_NAME_MAX)
-      return DNX_ERR_BADURL;
+	// Close the socket
+	close(channel->chan);
 
-   // extract port number
-   if ((port = strtol(ep + 1, &lastchar, 0)) < 1 || port > 65535 
-         || (*lastchar && *lastchar != '/'))
-      return DNX_ERR_BADURL;
+	// Mark the channel as closed
+	channel->state = DNX_CHAN_CLOSED;
+	channel->chan  = 0;
 
-   // allocate a new iDnxUdpChannel object
-   if ((iucp = (iDnxUdpChannel *)xmalloc(sizeof *iucp)) == 0)
-      return DNX_ERR_MEMORY;
-
-   memset(iucp, 0, sizeof *iucp);
-
-   // save host name and port
-   if ((iucp->host = (char *)xmalloc(ep - cp + 1)) == 0)
-   {
-      xfree(iucp);
-      return DNX_ERR_MEMORY;
-   }
-   memcpy(iucp->host, cp, ep - cp);
-   iucp->host[ep - cp] = 0;
-   iucp->port = (int)port;
-
-   // set I/O methods
-   iucp->ichan.txOpen   = dnxUdpOpen;
-   iucp->ichan.txClose  = dnxUdpClose;
-   iucp->ichan.txRead   = dnxUdpRead;
-   iucp->ichan.txWrite  = dnxUdpWrite;
-   iucp->ichan.txDelete = dnxUdpDelete;
-
-   *icpp = &iucp->ichan;
-
-   return DNX_OK;
-}
-
-/*--------------------------------------------------------------------------
-                           EXPORTED INTERFACE
-  --------------------------------------------------------------------------*/
-
-/** Initialize the UDP transport sub-system; return UDP channel contructor.
- * 
- * @param[out] ptxAlloc - the address of storage in which to return the 
- *    address of the UDP channel object constructor (dnxUdpNew).
- * 
- * @return Always returns zero.
- */
-int dnxUdpInit(int (**ptxAlloc)(char * url, iDnxChannel ** icpp))
-{
-   DNX_PT_MUTEX_INIT(&udpMutex);
-
-   *ptxAlloc = dnxUdpNew;
-
-   return DNX_OK;
+	return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Clean up global resources allocated by the UDP transport sub-system. 
- */
-void dnxUdpDeInit(void)
+int dnxUdpRead (dnxChannel *channel, char *buf, int *size, int timeout, char *src)
 {
-   DNX_PT_MUTEX_DESTROY(&udpMutex);
+	struct sockaddr_in src_addr;
+	socklen_t slen;
+	int mlen, nsd;
+	fd_set fd_rds;
+	struct timeval tv;
+
+	// Validate parameters
+	if (!channel || channel->type != DNX_CHAN_UDP || !buf || !size || *size < 1)
+		return DNX_ERR_INVALID;
+
+	// Make sure this channel is open
+	if (channel->state != DNX_CHAN_OPEN)
+		return DNX_ERR_OPEN;
+
+	// Implement timeout logic, if timeout value is > 0
+	if (timeout > 0)
+	{
+		FD_ZERO(&fd_rds);
+		FD_SET(channel->chan, &fd_rds);
+		tv.tv_sec = (long)timeout;
+		tv.tv_usec = 0L;
+		if ((nsd = select((channel->chan+1), &fd_rds, NULL, NULL, &tv)) == 0)
+			return DNX_ERR_TIMEOUT;
+		else if (nsd < 0)
+		{
+			dnxSyslog(LOG_ERR, "dnxUdpRead: select failure: %s", strerror(errno));
+			return DNX_ERR_RECEIVE;
+		}
+	}
+
+	// Read the incoming message
+	slen = sizeof(src_addr);
+	if ((mlen = recvfrom(channel->chan, buf, *size, 0, (struct sockaddr *)&src_addr, &slen)) < 0)
+		return DNX_ERR_RECEIVE;
+
+	// Validate the message length
+	if (mlen < 1 || mlen > DNX_MAX_MSG)
+		return DNX_ERR_RECEIVE;
+
+	// Update actual packet data size
+	*size = (int)mlen;
+
+	// Set source IP/port information, if desired
+	if (src)
+		memcpy(src, &src_addr, sizeof(src_addr));
+
+	return DNX_OK;
 }
 
-/*--------------------------------------------------------------------------*/
+//----------------------------------------------------------------------------
 
+int dnxUdpWrite (dnxChannel *channel, char *buf, int size, int timeout, char *dst)
+{
+	struct sockaddr_in dst_addr;
+	fd_set fd_wrs;
+	struct timeval tv;
+	int ret, nsd;
+
+	// Validate parameters
+	if (!channel || channel->type != DNX_CHAN_UDP || !buf)
+		return DNX_ERR_INVALID;
+
+	// Validate that the message size is within bounds
+	if (size < 1 || size > DNX_MAX_MSG)
+		return DNX_ERR_SIZE;
+
+	// Make sure this channel is open
+	if (channel->state != DNX_CHAN_OPEN)
+		return DNX_ERR_OPEN;
+
+	// Implement timeout logic, if timeout value is > 0
+	if (timeout > 0)
+	{
+		FD_ZERO(&fd_wrs);
+		FD_SET(channel->chan, &fd_wrs);
+		tv.tv_sec = (long)timeout;
+		tv.tv_usec = 0L;
+		if ((nsd = select((channel->chan+1), NULL, &fd_wrs, NULL, &tv)) == 0)
+			return DNX_ERR_TIMEOUT;
+		else if (nsd < 0)
+		{
+			dnxSyslog(LOG_ERR, "dnxUdpWrite: select failure: %s", strerror(errno));
+			return DNX_ERR_SEND;
+		}
+	}
+
+	// Check for a destination override
+	if (dst)
+	{
+		memcpy(&dst_addr, dst, sizeof(dst_addr));
+		// Send the message to the specified address
+		ret = sendto(channel->chan, buf, size, 0, (struct sockaddr *)&dst_addr, sizeof(dst_addr));
+	}
+	else	// Send the message to the previously set (via connect(2)) channel address
+		ret = write(channel->chan, buf, size);
+
+	// Check for write error
+	if (ret != size)
+		return DNX_ERR_SEND;
+	
+	return DNX_OK;
+}
+
+//----------------------------------------------------------------------------

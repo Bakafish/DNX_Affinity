@@ -1,77 +1,125 @@
-DNX README File
----------------
-
-DNX - Distributed Nagios eXecutor is a Nagios Event Broker (NEB) plug-in 
-module that distributes checks amongst several servers ("worker nodes") to 
-reduce load and check latency introduced by a large Nagios installation.
-
-DNX exists as two parts:
-
-   - The DNX NEB module itself (dnxServer.so) and
-   - The DNX Client (dnxClient).
-
-dnxServer.so works as any other NEB module would; it is loaded into the same 
-process address space as Nagios upon start up.
-
-dnxClient resides on a separate host and sends requests to the thread started 
-by the DNX NEB module on the Nagios server ("head node") for checks to 
-perform and then returns the status data back to the module for Nagios' 
-interpretation and subsequent actions (alerts, notifcations, etc).
+# Distributed Nagios eXecutor (DNX) is NEB module that distributes checks amongst several
+# servers ("worker nodes") to reduce load and check latency introduced by a large Nagios
+# installation.
+#
+# DNX exists as two parts:
+#
+#    - The NEB module itself (dnxServer.o) and
+#    - The DNX Client (dnxClient).
+#
+# dnxServer.o works as any other NEB module would; it is loaded into the same program space as
+# Nagios upon start up.
+#
+# dnxClient resides on a separate server and sends requests to the thread started by the DNX NEB
+# module on the Nagios server ("head node") for checks to perform and then returns the status data
+# back to the module for Nagios' interpretation and subsequent actions (alerts, notifcations, etc).
 
 
-Advanced Features
------------------
+################## INSTALLATION #####################
 
-Local Execution Only Checks
+# You will need the following source tarballs:
+#
+# 1. Nagios 2.7
+# 2. DNX
+#
+# Installation:
+#
+# 1. Untar Nagios 2.7 source to your favorite place (e.g., /usr/local/nagios-2.7)
+#
+# 2. Untar DNX source to your favorite place (e.g., /usr/local/dnx)
+#
+# 3. Cd into the Nagios source directory and patch it with the DNX-specific patches found
+#    in the /usr/local/dnx/nagios-2.7-dnx.patch file.  This will patch six Nagios source files:
+#
+#    - /usr/local/src/nagios-2.7/base/broker.c
+#    - /usr/local/src/nagios-2.7/base/nebmods.c
+#    - /usr/local/src/nagios-2.7/base/checks.c
+#    - /usr/local/src/nagios-2.7/include/broker.h
+#    - /usr/local/src/nagios-2.7/include/neberrors.h
+#    - /usr/local/src/nagios-2.7/include/nebstructs.h
+#
+# 4. Build and install the patched Nagios 2.7 as usual:
+#
+#    - ./configure --enable-event-broker [Plus your site-specific options]
+#    - make all
+#    - make install
+#
+# 5. Cd into the DNX source directory.  DNX does not yet have a configure script so, we just
+#    run two separate 'make' commands: one for the DNX NEB Module (i.e., the DNX Server) and
+#    one for the DNX Client:
+#
+#    BUILDING THE DNX SERVER:
+#    ------------------------
+#    NOTE: If you don't have Nagios 2.7 installed in /usr/local/src/nagios-2.7, then you will
+#          need to edit the Makefile in /usr/local/src/dnx/server and change the line:
+#
+#              NAGIOS_SRC=/usr/local/src/nagios-2.7
+#
+#          to point to the correct directory for your installation *before* you make the DNX Server.
+#
+#    - cd /usr/local/src/dnx/server
+#    - make
+#
+#    If all goes well, this will produce the dnxServer.o NEB module.
+#
+#
+#    BUILDING THE DNX CLIENT:
+#    ------------------------
+#    To build the DNX client:
+#
+#    - cd /usr/local/src/dnx/client
+#    - make
+#
+#    If all goes well, this will produce the dnxClient executable.
+#
 
-You may have some check which must be run from one host only (firewall 
-issues, SAN connections, proprietary libraries, etc). To accomodate this, 
-you may flag certain checks to not be distributed. They will execute in
-the normal fashion as if DNX was not loaded. This could also be used to
-perform checks on the nagios server itself (check_load, check_nagios, etc). 
-This could be problematic in that it makes it harder to run these same checks
-on the worker nodes. We recommend the use of nrpe for all such checks (nagios
-engine server and worker nodes), if for no other reason than for simplicity. 
-The worker nodes will use nrpe to check the nagios engine server as well as 
-each other.
+################## INSTALL / SETUP ##################
 
-Plug-in Propagation
+# NAGIOS SERVER
+	# Copy dnxServer.o to where ever you deem logical (/usr/local/nagios/bin or /usr/local/nagios/modules come to mind)
+	# Copy dnxServer.cfg to where ever you deem logical (/usr/local/nagios/etc comes to mind)
+	# Edit dnxServer.cfg as needed for your setup.
+	# Edit nagios.cfg to include the broker module (i.e. broker_module=/usr/local/nagios/modules/dnxServer.o /usr/local/nagios/etc/dnxServer.cfg).
+	# Restart Nagios.
 
-One concern with DNX is that the plugins will exist on different servers and 
-must all be identical. Thus, included with DNX is a simple script 
-(sync_plugins.pl) which will run like a plugin that dnxServer.so would execute 
-upon startup. This script provides a mechanism to ensure that all of your 
-plugins exist on each of the worker nodes (this is important because you can't 
-be sure which node will actually perform the checks). The script uses rsync to 
-push all of the plugins in your plugin directory (/usr/local/nagios/libexec, 
-for example) from the nagios engine server (the plugin authority) to each 
-worker node. For this to work you must set up SSH key sharing (as the nagios 
-user) between your servers for the nagios user so that this rsync will work 
-without a password. Note that this could be considered a security risk by some 
-people/organizations. If you do not like this mechanism, you may write your 
-own sync plugin, or disable DNX's interal ability to sync plugins and do so 
-by your own devices.
-
-Also note that each worker node needs to be set up similarly, if not 
-identically to other worker nodes (any external libraries, perl modules, 
-paths, etc). And lastly, you should be aware that the rsync may clobber meta
-data of plugins on the first run, which you may want to fix manually. For 
-example, check_icmp needs to be run as root with the set uid bit, if 
-check_icmp is updated (or moved to the worker node for the first time) by 
-rsync, it will loose ownership by root. Once the plugin is in place with the 
-permissions correct, rsync will leave it alone, however.
+# CLIENT NODES
+	# Copy dnxClient to where ever you deem logical (/usr/local/nagios/bin comes to mind)
+	# Copy dnxClient.cfg to where ever you deem logical (/usr/local/nagios/etc comes to mind)
+	# Edit dnxClient.cfg as needed for you setup.
+	# Add the initscript (dnxinit) to /etc/init.d/ and make it start up automatically with your prefered method (I use chkconfig).
+	# Make sure that the init script is looking in the right place for dnxClient.cfg
+	# Start dnxClient (probably with the init script).
 
 
-Additional Information
-----------------------
+################## ADVANCED FEATURES ###############
 
-For information on building, installation and configuration, please refer to
-the INSTALL file. 
+# LOCAL EXECUTION ONLY CHECKS
 
-For the latest changes, please refer to the NEWS file.
+# You may have some check which must be run from one host only (firewall issues, SAN connections, proprietary
+# libraries, etc). To accomodate this, you may flag certain checks to not be distributed. They will execute in
+# the normal fashion as if DNX was not loaded. This could also be used to perform checks on the nagios server itself
+# (check_load, check_nagios, etc). This could be problematic in that it makes it harder to run these same checks on
+# the worker nodes. I recommend use nrpe for all such checks (nagios engine server and worker nodes) if for no other
+# reason than for simplicity. The worker nodes will use nrpe to check the nagios engine server as well as each other.
 
-For detailed information on source changes between versions, please refer to 
-the ChangeLog file.
 
-Please see the COPYING file for details on the GNU General Public License, 
-under which this software is released.
+# PLUGIN PROPAGATION
+
+# One concern with DNX is that the plugins will exist on different servers and must all be identical. Thus, included
+# with DNX is a simple script (sync_plugins.pl) which will run like a plugin that dnxServer.o will execute upon start
+# up. This script provides a mechanism to ensure that all of your plugins exist on each of the worker nodes (this is
+# important because you can't be sure which node will actually perform the checks). The script uses rsync to push all
+# the plugins in your plugin directory (i.e. /usr/local/nagios/libexec) from the nagios engine server (the plugin authority)
+# to each worker node. For this to work you must set up SSH key sharing (as the nagios user) between your servers
+# for the nagios user so that this rsync will work without a password. Note that this could be considered a security
+# risk by some people/organizations. If you do not like this mechanism, you may write you own sync plugin, or disable
+# DNX's interal abiltiy to sync plugins and do so by your own devices.
+
+# Also note that each worker node needs to be set up similarly, if not identically to other worker
+# nodes (any external libraries, perl modules, paths, etc). And lastly, you should be aware that the rsync may clobber meta
+# data of plugins on the first run, which you may want to fix manually. For example, check_icmp needs to be run as root with
+# the set uid bit, if check_icmp is updated (or moved to the worker node for the first time) by rsync, it will loose ownership
+# by root. Once the plugin is in place with the permissions correct, rsync will leave it alone, however.
+
+################## END ###############
+

@@ -1,554 +1,450 @@
-/*--------------------------------------------------------------------------
- 
-   Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
- 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as 
-   published by the Free Software Foundation.
- 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
- 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
-  --------------------------------------------------------------------------*/
+//	dnxQueue.c
+//
+//	Implements thread-safe queues for DNX.
+//
+//	Copyright (c) 2006-2007 Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
+//
+//	First Written: 2006-07-11	R.W.Ingraham
+//	Last Modified: 2007-08-22
+//
+//	License:
+//
+//	This program is free software; you can redistribute it and/or modify
+//	it under the terms of the GNU General Public License version 2 as
+//	published by the Free Software Foundation.
+//
+//	This program is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//	GNU General Public License for more details.
+//
+//	You should have received a copy of the GNU General Public License
+//	along with this program; if not, write to the Free Software
+//	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+//
 
-/** Implements thread-safe queues for DNX.
- *
- * @file dnxQueue.c
- * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
- * @attention Please submit patches to http://dnx.sourceforge.net
- * @ingroup DNX_SERVER_IMPL
- */
 
-#include "dnxQueue.h"
+#include <stdlib.h>     // malloc() and free()
+#include <assert.h>     // assert()
+#include <syslog.h>
 
 #include "dnxError.h"
-#include "dnxDebug.h"
+#include "dnxQueue.h"   // dnxQueue definitions and prototypes
 #include "dnxLogging.h"
 
-#include <stdlib.h>
-#include <syslog.h>
-#include <assert.h>
-#include <pthread.h>
 
-/** Queue entry wrapper structure - wraps user payload. */
-typedef struct iDnxQueueEntry_ 
-{
-   struct iDnxQueueEntry_ * next;   /*!< Pointer to next entry, 0 if none. */
-   void * pPayload;                 /*!< User payload data. */
-} iDnxQueueEntry;
+//----------------------------------------------------------------------------
 
-/** Queue implementation structure. */
-typedef struct iDnxQueue_ 
-{
-   iDnxQueueEntry * head;           /*!< Head of linked list of items. */
-   iDnxQueueEntry * tail;           /*!< Pointer to last list item. */
-   iDnxQueueEntry * current;        /*!< Circular buffer pointer. */
-   void (*freepayload)(void *);     /*!< Payload destructor (optional). */
-   unsigned size;                   /*!< Number of items in queue. */
-   unsigned maxsz;                  /*!< Maximum number of requests allowed in queue (zero = unlimited). */
-   pthread_mutex_t mutex;           /*!< Queue's mutex. */
-   pthread_cond_t cv;               /*!< Queue's condition variable. */
-} iDnxQueue;
-
-/*--------------------------------------------------------------------------
-                     NON-EXPORTED INTERFACE (not used yet)
-  --------------------------------------------------------------------------*/
-
-/** Waits and returns the first pending item payload from a queue.
- * 
- * Suspends the calling thread if the queue is empty. The returned payload 
- * and its resources becomes the property of the caller.
- * 
- * @param[in] queue - the queue to be waited on.
- * @param[out] ppPayload - the address of storage in which to return the
- *    payload of the first queue item.
- * 
- * @return Zero on success, or DNX_ERR_NOTFOUND if not found.
- * 
- * @note Not currently used (or exported by the dnxQueue.h header file).
- * 
- * @note Cancellation safe.
+/*
+ * function dnxQueueInit(): create a requests queue.
+ * algorithm: creates a request queue structure, initialize with given
+ *            parameters.
+ * input:     queue's mutex, queue's condition variable.
+ * output:    none.
  */
-int dnxQueueGetWait(DnxQueue * queue, void ** ppPayload)
+int dnxQueueInit (DnxQueue **ppQueue, pthread_mutex_t *p_mutex, pthread_cond_t *p_cond_var, int max_size)
 {
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item = 0;
-   
-   assert(queue && ppPayload);
-   
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-   
-   // block this thread until it can dequeue a request
-   while (item == 0) 
-   {
-      // see if we have any queue items already waiting
-      if (iqueue->size > 0) 
-      {
-         item = iqueue->head;
-         iqueue->head = item->next;
-         if (iqueue->current == item)
-            iqueue->current = item->next;
+    // Validate parameters
+    if (!ppQueue || !p_mutex || !p_cond_var || max_size < 0)
+        return DNX_ERR_INVALID;
 
-         // adjust the tail pointer if the queue is now empty
-         if (iqueue->head == 0)
-            iqueue->tail = 0;
-         
-         iqueue->size--;
-      }
-      else     // queue is empty
-         pthread_cond_wait(&iqueue->cv, &iqueue->mutex);
-   }
-   
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-   
-   // return the payload to the caller.
-   if (item) 
-   {
-      *ppPayload = item->pPayload;
-      xfree(item);
-      return DNX_OK;
-   }
+    if ((*ppQueue = (DnxQueue *)malloc(sizeof(DnxQueue))) == NULL)
+        return DNX_ERR_MEMORY;
 
-   return DNX_ERR_NOTFOUND;
+	//dnxDebug(10, "dnxQueueInit: Malloc(*ppQueue=%p)", *ppQueue);
+
+    // Initialize queue
+    (*ppQueue)->head = NULL;
+    (*ppQueue)->tail = NULL;
+    (*ppQueue)->current = NULL;
+    (*ppQueue)->size = 0;
+    (*ppQueue)->max_size = max_size;
+    (*ppQueue)->p_mutex = p_mutex;
+    (*ppQueue)->p_cond_var = p_cond_var;
+
+    return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Return the next item payload without removing it from the queue.
- * 
- * Ownership of the queue item payload does NOT transfer to the caller.
- * 
- * @param[in] queue - the queue from which the next item payload should 
- *    be returned.
- * @param[out] ppPayload - the address of storage in which to return a 
- *    reference to the next item payload.
- * 
- * @return Zero on success, or DNX_ERR_NOTFOUND if there is no next node.
- * 
- * @note Not currently used (or exported by the dnxQueue.h header file).
- * 
- * @note Cancellation safe.
+/*
+ * function dnxQueuePut(): add a request to the requests list
+ * algorithm: creates a request structure, adds to the list, and
+ *            increases number of pending requests by one.
+ * input:     pointer to queue, request number.
+ * output:    none.
  */
-int dnxQueueNext(DnxQueue * queue, void ** ppPayload)
+int dnxQueuePut (DnxQueue *queue, void *pPayload)
 {
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   
-   assert(queue && ppPayload);
-   
-   *ppPayload = 0;
-   
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-   
-   // save pointer to current payload
-   if (iqueue->current) 
-   {
-      *ppPayload = iqueue->current->pPayload;
-      
-      // advance circular buffer pointer
-      if (iqueue->current->next)
-         iqueue->current = iqueue->current->next;
-      else
-         iqueue->current = iqueue->head;
-   }
-   
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-   
-   return *ppPayload ? DNX_OK : DNX_ERR_NOTFOUND;
+    int rc;                     /* return code of pthreads functions.  */
+    DnxQueueEntry * qItem;      /* pointer to newly added request.     */
+
+    /* sanity check - make sure queue is not NULL */
+    assert(queue);
+
+    /* create structure with new request */
+    if ((qItem = (DnxQueueEntry *)malloc(sizeof(DnxQueueEntry ))) == NULL)
+        return DNX_ERR_MEMORY;
+
+	//dnxDebug(10, "dnxQueuePut: Malloc(qItem=%p, pPayload=%p)", qItem, pPayload);
+
+    qItem->pPayload = pPayload;
+    qItem->next = NULL;
+
+    /* lock the mutex, to assure exclusive access to the list */
+    rc = pthread_mutex_lock(queue->p_mutex);
+
+    /* add new request to the end of the list, updating list */
+    /* pointers as required */
+    if (queue->size == 0) { /* special case - list is empty */
+        queue->head = qItem;
+        queue->tail = qItem;
+        queue->current = qItem;
+    }
+    else {
+        queue->tail->next = qItem;
+        queue->tail = qItem;
+    }
+
+    /* increase total number of pending requests by one. */
+    queue->size++;
+
+	/* check for queue overflow if this queue was created with a maximum size */
+	if (queue->max_size > 0 && queue->size > queue->max_size)
+	{
+		/* remove the oldest entry at the queue head */
+        qItem = queue->head;
+        queue->head = qItem->next;
+        if (queue->current == qItem)
+	        queue->current = qItem->next;
+        if (queue->head == NULL) { /* this was last request on the list */
+            queue->tail = NULL;
+        }
+
+        /* decrease the total number of pending requests */
+        queue->size--;
+
+        /* release the qItem payload */
+		if (qItem->pPayload)
+		{
+			//dnxDebug(10, "dnxQueuePut: Free(qItem->pPayload=%p)", qItem->pPayload);
+	        free(qItem->pPayload);	/* NB: Assumes that payload came from the heap! */
+		}
+		//dnxDebug(10, "dnxQueuePut: Free(qItem=%p)", qItem);
+        free(qItem);	/* release the qItem wrapper */
+	}
+
+    /* unlock mutex */
+    rc = pthread_mutex_unlock(queue->p_mutex);
+
+    /* signal the condition variable - there's a new request to handle */
+    rc = pthread_cond_signal(queue->p_cond_var);
+
+    return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-/** Return the number of items in the queue.
- * 
- * @param[in] queue - the queue to be queried for item count.
- * 
- * @return The count of items in the queue.
- * 
- * @note Not currently used (or exported by the dnxQueue.h header file).
- * 
- * @note Cancellation safe.
+/*
+ * function dnxQueueGet(): gets the first pending request from the requests list
+ *                         removing it from the list.
+ * algorithm: creates a request structure, adds to the list, and
+ *            increases number of pending requests by one.
+ * input:     pointer to requests queue.
+ * output:    pointer to the removed request, or NULL if none.
+ * memory:    the returned request needs to be freed by the caller.
  */
-int dnxQueueSize(DnxQueue * queue)
+int dnxQueueGet (DnxQueue *queue, void **ppPayload)
 {
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   int count;
+    int rc;                     /* return code of pthreads functions.  */
+    DnxQueueEntry * qItem;      /* pointer to request.                 */
 
-   assert(queue);
-   
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-   
-   count = (int)iqueue->size;
-   
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-   
-   return count;
-}
+    /* sanity check - make sure queue is not NULL */
+    assert(queue && ppPayload);
 
-/*--------------------------------------------------------------------------
-                                 INTERFACE
-  --------------------------------------------------------------------------*/
+    /* lock the mutex, to assure exclusive access to the list */
+    rc = pthread_mutex_lock(queue->p_mutex);
 
-int dnxQueuePut(DnxQueue * queue, void * pPayload)
-{
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item;
-   
-   assert(queue);
-   
-   // create structure with new request
-   if ((item = (iDnxQueueEntry *)xmalloc(sizeof *item)) == 0)
-      return DNX_ERR_MEMORY;
+    if (queue->size > 0) {
+        qItem = queue->head;
+        queue->head = qItem->next;
+        if (queue->current == qItem)
+	        queue->current = qItem->next;
+        if (queue->head == NULL) { /* this was last request on the list */
+            queue->tail = NULL;
+        }
 
-   item->pPayload = pPayload;
-   item->next = 0;
-   
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
+        /* decrease the total number of pending requests */
+        queue->size--;
+    }
+    else { /* requests list is empty */
+        qItem = NULL;
+    }
 
-   // add new request to end of list, updating list pointers as required
-   if (iqueue->size == 0) // special case - list is empty
-      iqueue->head = iqueue->tail = iqueue->current = item;
-   else 
-   {
-      iqueue->tail->next = item;
-      iqueue->tail = item;
-   }
-   
-   iqueue->size++;
-   
-   // check for queue overflow if this queue was created with a maximum size
-   if (iqueue->maxsz > 0 && iqueue->size > iqueue->maxsz)
-   {
-      // remove the oldest entry at the queue head
-      item = iqueue->head;
-      iqueue->head = item->next;
-      if (iqueue->current == item)
-         iqueue->current = item->next;
+    /* unlock mutex */
+    rc = pthread_mutex_unlock(queue->p_mutex);
 
-      // adjust tail if queue is now empty
-      if (iqueue->head == 0)
-         iqueue->tail = 0;
-      
-      iqueue->size--;
+    /* return the payload to the caller. */
+    if (qItem) {
+        *ppPayload = qItem->pPayload;
+		//dnxDebug(10, "dnxQueueGet: Free(qItem=%p, *ppPayload=%p)", qItem, *ppPayload);
+        free(qItem);    // Release the qItem wrapper
+        rc = DNX_OK;
+    }
+    else {
+        *ppPayload = NULL;
+        rc = DNX_ERR_NOTFOUND;
+    }
 
-      // call item payload destructor, if one was supplied
-      if (iqueue->freepayload)
-         iqueue->freepayload(item->pPayload);
-
-      xfree(item);
-   }
-   
-   // signal any waiters - there's a new item in the queue
-   pthread_cond_signal(&iqueue->cv);
-   
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-   
-   return DNX_OK;
+    return rc;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
+/*
+ * function dnxQueueGetWait(): gets the first pending request from the requests list
+ *                         removing it from the list.  Suspends the calling thread
+ *                         if the queue is empty.
+ * algorithm: creates a request structure, adds to the list, and
+ *            increases number of pending requests by one.
+ * input:     pointer to requests queue.
+ * output:    pointer to the removed request, or NULL if none.
+ * memory:    the returned request need to be freed by the caller.
+ */
+int dnxQueueGetWait (DnxQueue *queue, void **ppPayload)
 {
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item = 0;
-   
-   assert(queue && ppPayload);
-   
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-   
-   if (iqueue->size > 0) 
-   {
-      // remove the 'head' item from the queue
-      item = iqueue->head;
-      iqueue->head = item->next;
-      if (iqueue->current == item)
-         iqueue->current = item->next;
+    int rc;                      /* return code of pthreads functions.  */
+    DnxQueueEntry *qItem = NULL; /* pointer to request.                 */
 
-      // adjust tail pointer if queue is now empty
-      if (iqueue->head == 0)
-         iqueue->tail = 0;
-   
-      iqueue->size--;
-   }
-   
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
+    /* sanity check - make sure queue is not NULL */
+    assert(queue && ppPayload);
 
-   // return the payload to the caller, free queue item
-   if (item) 
-   {
-      *ppPayload = item->pPayload;
-      xfree(item);
-      return DNX_OK;
-   }
+    /* lock the mutex, to assure exclusive access to the list */
+    rc = pthread_mutex_lock(queue->p_mutex);
 
-   return DNX_ERR_NOTFOUND;
+    /* Block this thread until it can dequeue a request */
+    while (rc == 0 && qItem == NULL) {
+
+        /* See if we have any queue items already waiting */
+        if (queue->size > 0) {
+            qItem = queue->head;
+            queue->head = qItem->next;
+            if (queue->current == qItem)
+    	        queue->current = qItem->next;
+            if (queue->head == NULL) { /* this was last request on the list */
+                queue->tail = NULL;
+            }
+
+            /* decrease the total number of pending requests */
+            queue->size--;
+        }
+        else { /* requests list is empty */
+            /* Wait until something is posted to this queue */
+            rc = pthread_cond_wait(queue->p_cond_var, queue->p_mutex);
+        }
+    }
+
+    /* unlock mutex */
+    rc = pthread_mutex_unlock(queue->p_mutex);
+
+    /* return the payload to the caller. */
+    if (qItem) {
+        *ppPayload = qItem->pPayload;
+		//dnxDebug(10, "dnxQueueGetWait: Free(qItem=%p, *ppPayload=%p)", qItem, *ppPayload);
+        free(qItem);    // Release the qItem wrapper
+        rc = DNX_OK;
+    }
+    else {
+        *ppPayload = NULL;
+        rc = DNX_ERR_NOTFOUND;
+    }
+
+    return rc;
 }
 
 //----------------------------------------------------------------------------
 
-DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload, 
-      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
+int dnxQueueNext (DnxQueue *queue, void **ppPayload)
 {
-   DnxQueueResult bFound = DNX_QRES_CONTINUE;
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item, * prev;
+    int rc;
 
-   assert(queue && ppPayload && Compare);
+    /* sanity check - make sure queue is not NULL */
+    assert(queue && ppPayload);
 
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
+    *ppPayload = NULL;
 
-   prev = 0;
-   for (item = iqueue->head; item; item = item->next)
-   {
-      if ((bFound = Compare(*ppPayload, item->pPayload)) != DNX_QRES_CONTINUE)
-      {
-         if (bFound == DNX_QRES_FOUND)
-         {
-            *ppPayload = item->pPayload;
+    /* lock the mutex, to assure exclusive access to the list */
+    rc = pthread_mutex_lock(queue->p_mutex);
 
-            // cross-link previous to next and free current
-            if (prev)
-               prev->next = item->next;
-            else                          // removing the head item
-               iqueue->head = item->next;
+    /* Save pointer to current payload */
+    if (queue->current) {
+        *ppPayload = queue->current->pPayload;
 
-            if (item->next == 0)          // removing the tail item
-               iqueue->tail = prev;
+        /* Advance circular buffer pointer */
+        if (queue->current->next)
+            queue->current = queue->current->next;
+        else
+            queue->current = queue->head;
+    }
 
-            if (iqueue->current == item)  // advance circular pointer
-               if ((iqueue->current = item->next) == 0)
-                  iqueue->current = iqueue->head;
+    /* unlock mutex */
+    rc = pthread_mutex_unlock(queue->p_mutex);
 
-            iqueue->size--;
-         }
-         break;
-      }
-      prev = item;
-   }
-
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-
-   if (bFound == DNX_QRES_FOUND)
-      xfree(item);       // free the queue entry wrapper object
-
-   return bFound;
+    return (*ppPayload ? DNX_OK : DNX_ERR_NOTFOUND);
 }
 
 //----------------------------------------------------------------------------
 
-DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, 
-      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
+DnxQueueResult dnxQueueFind (DnxQueue *queue, void **ppPayload, DnxQueueResult (*Compare)(void *pLeft, void *pRight))
 {
-   DnxQueueResult bFound = DNX_QRES_CONTINUE;
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item;
+    DnxQueueEntry *qItem;
+	DnxQueueResult bFound = DNX_QRES_CONTINUE;
+	int rc;
 
-   assert(queue && ppPayload && Compare);
+	// Validate input parameters
+	if (!queue || !ppPayload || !Compare)
+		return DNX_QRES_ERROR;
 
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
+    /* lock the mutex, to assure exclusive access to the list */
+    rc = pthread_mutex_lock(queue->p_mutex);
 
-   for (item = iqueue->head; item; item = item->next)
-   {
-      if ((bFound = Compare(*ppPayload, item->pPayload)) != DNX_QRES_CONTINUE)
-      {
-         if (bFound == DNX_QRES_FOUND)
-            *ppPayload = item->pPayload;
-         break;
-      }
-   }
+	// Walk the list
+	for (qItem = queue->head; qItem; qItem = qItem->next)
+	{
+		if ((bFound = (*Compare)(*ppPayload, qItem->pPayload)) != DNX_QRES_CONTINUE)
+		{
+			if (bFound == DNX_QRES_FOUND)
+				*ppPayload = qItem->pPayload;
+			break;
+		}
+	}
 
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
+    /* unlock mutex */
+    rc = pthread_mutex_unlock(queue->p_mutex);
 
-   return bFound;
+    return bFound;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxQueueCreate(unsigned maxsz, void (*pldtor)(void *), DnxQueue ** pqueue)
+DnxQueueResult dnxQueueRemove (DnxQueue *queue, void **ppPayload, DnxQueueResult (*Compare)(void *pLeft, void *pRight))
 {
-   iDnxQueue * iqueue;
+    DnxQueueEntry *qItem, *qPrev;
+	DnxQueueResult bFound = DNX_QRES_CONTINUE;
+	int rc;
 
-   assert(pqueue);
-   
-   if ((iqueue = (iDnxQueue *)xmalloc(sizeof *iqueue)) == 0)
-      return DNX_ERR_MEMORY;
-   
-   // initialize queue
-   memset(iqueue, 0, sizeof *iqueue);
-   iqueue->freepayload = pldtor;
-   iqueue->maxsz = maxsz;
+	// Validate input parameters
+	if (!queue || !ppPayload || !Compare)
+		return DNX_QRES_ERROR;
 
-   // initialize thread sync
-   DNX_PT_MUTEX_INIT(&iqueue->mutex);
-   pthread_cond_init(&iqueue->cv, 0);
+    /* lock the mutex, to assure exclusive access to the list */
+    rc = pthread_mutex_lock(queue->p_mutex);
 
-   *pqueue = (DnxQueue *)iqueue;
+	// Walk the list
+	qPrev = NULL;
+	for (qItem = queue->head; qItem; qItem = qItem->next)
+	{
+		if ((bFound = (*Compare)(*ppPayload, qItem->pPayload)) != DNX_QRES_CONTINUE)
+		{
+			if (bFound == DNX_QRES_FOUND)
+			{
+				*ppPayload = qItem->pPayload;
 
-   return DNX_OK;
+				// Cross-link previous to next and free current
+				if (qPrev)
+					qPrev->next = qItem->next;
+				else	// We are removing the head item from the queue
+					queue->head = qItem->next;
+
+				if (qItem->next == NULL)	// We are removing the tail item
+					queue->tail = qPrev;
+	
+				if (queue->current == qItem)	// Advance circular pointer
+				{
+					if ((queue->current = qItem->next) == NULL)
+						queue->current = queue->head;
+				}
+
+				queue->size--;		// Decrement queue size
+			}
+			break;
+		}
+
+		qPrev = qItem;
+	}
+
+    /* unlock mutex */
+    rc = pthread_mutex_unlock(queue->p_mutex);
+
+	if (bFound == DNX_QRES_FOUND)
+	{
+		//dnxDebug(10, "dnxQueueRemove: Free(qItem=%p)", qItem);
+		free(qItem);		// Free the DnxQueueEntry wrapper
+	}
+
+    return bFound;
 }
 
 //----------------------------------------------------------------------------
 
-void dnxQueueDestroy(DnxQueue * queue)
+/*
+ * function dnxQueueSize(): get the number of requests in the list.
+ * input:     pointer to requests queue.
+ * output:    number of pending requests on the queue.
+ */
+int dnxQueueSize (DnxQueue *queue, int *pSize)
 {
-   iDnxQueue * iqueue = (iDnxQueue *)queue;
-   iDnxQueueEntry * item;
-   
-   assert(queue);
-   
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
+    int rc;                     /* return code of pthreads functions.  */
 
-   // first free any requests that might be on the queue
-   item = iqueue->head;
-   while (item != 0) 
-   {
-      iDnxQueueEntry * next = item->next;
-      iqueue->freepayload(item->pPayload);
-      xfree(item);
-      item = next;
-   }
-   
-   DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
-   
-   DNX_PT_MUTEX_DESTROY(&iqueue->mutex);
-   pthread_cond_destroy(&iqueue->cv);
+    /* sanity check */ 
+    assert(queue && pSize);
 
-   xfree(iqueue);
+    /* lock the mutex, to assure exclusive access to the list */
+    rc = pthread_mutex_lock(queue->p_mutex);
+
+    *pSize = queue->size;
+
+    /* unlock mutex */
+    rc = pthread_mutex_unlock(queue->p_mutex);
+
+    return DNX_OK;
 }
 
-/*--------------------------------------------------------------------------
-                                 UNIT TEST
+//----------------------------------------------------------------------------
 
-   From within dnx/server, compile with GNU tools using this command line:
-    
-      gcc -DDEBUG -DDNX_QUEUE_TEST -g -O0 -I../common dnxQueue.c \
-         ../common/dnxError.c -lpthread -lgcc_s -lrt -o dnxQueueTest
-
-   Alternatively, a heap check may be done with the following command line:
-
-      gcc -DDEBUG -DDEBUG_HEAP -DDNX_QUEUE_TEST -g -O0 -I../common \
-         dnxQueue.c ../common/dnxError.c ../common/dnxHeap.c \
-         -lpthread -lgcc_s -lrt -o dnxCfgParserTest 
-
-  --------------------------------------------------------------------------*/
-
-#ifdef DNX_QUEUE_TEST
-
-#include "utesthelp.h"
-#include <time.h>
-
-#define elemcount(x) (sizeof(x)/sizeof(*(x)))
-
-static int free_count;
-static int verbose;
-
-IMPLEMENT_DNX_DEBUG(verbose);
-
-// functional stubs
-static DnxQueueResult qtcmp(void * left, void * right)
-      { return strcmp((char *)left, (char *)right) == 0? 
-            DNX_QRES_FOUND: DNX_QRES_CONTINUE; }
-
-static void qtfree(void * p)
+/*
+ * function dnxQueueDelete(): delete a requests queue.
+ * algorithm: delete a request queue structure, and free all memory it uses.
+ * input:     pointer to requests queue.
+ * output:    success code
+ */
+int dnxQueueDelete (DnxQueue *queue)
 {
-   free_count++;
-   free(p);
+    DnxQueueEntry *qItem, *qNext;      // QueueEntry pointers
+    int rc;                     /* return code of pthreads functions.  */
+
+    /* sanity check - make sure queue is not NULL */
+    assert(queue);
+
+    /* lock the mutex, to assure exclusive access to the list */
+    rc = pthread_mutex_lock(queue->p_mutex);
+
+    /* first free any requests that might be on the queue */
+    qItem = queue->head;
+    while (qItem != NULL) {
+        qNext = qItem->next;
+        free(qItem);
+        qItem = qNext;
+    }
+
+    /* unlock mutex */
+    rc = pthread_mutex_unlock(queue->p_mutex);
+
+    /* finally, free the queue's struct itself */
+	//dnxDebug(10, "dnxQueueDelete: Free(queue=%p)", queue);
+    free(queue);
+
+    return DNX_OK;
 }
 
-int main(int argc, char ** argv)
-{
-   DnxQueue * queue;
-   iDnxQueue * iqueue;
-   DnxQueueResult qres;
-   char * msg100_static = "message 100";
-   char * msg25_static = "message 25";
-   char * msg250_static = "message 250";
-   char * msgs[101];
-   char * msg2;
-   int i;
-
-   verbose = argc > 1? 1: 0;
-
-   // create a new queue and get a concrete reference to it for testing
-   CHECK_ZERO(dnxQueueCreate(100, qtfree, &queue));
-   iqueue = (iDnxQueue *)queue;
-
-   // check internal data structure state
-   CHECK_TRUE(iqueue->head == 0);
-   CHECK_TRUE(iqueue->tail == 0);
-   CHECK_TRUE(iqueue->current == 0);
-   CHECK_TRUE(iqueue->freepayload == qtfree);
-   CHECK_TRUE(iqueue->size == 0);
-   CHECK_TRUE(iqueue->maxsz == 100);
-
-   // enqueue the messages
-   free_count = 0;
-   for (i = 0; i < elemcount(msgs); i++)
-   {
-      char buf[32];
-      sprintf(buf, "message %d", i);
-      CHECK_NONZERO(msgs[i] = strdup(buf));
-      CHECK_ZERO(dnxQueuePut(queue, msgs[i]));
-   }
-
-   // we pushed one more than the size of the queue
-   // item 0 should have been freed by the destructor
-   CHECK_TRUE(free_count == 1);
-
-   // get item 1 from the queue - we'll own it after this call
-   CHECK_ZERO(dnxQueueGet(queue, (void **)&msg2));
-   CHECK_TRUE(strcmp(msg2, "message 1") == 0);
-   free(msg2);
-
-   // find and remove item 100 from the queue - we'll own it on success
-   msg2 = msg100_static;
-   CHECK_TRUE(dnxQueueRemove(queue, (void **)&msg2, qtcmp) == DNX_QRES_FOUND);
-   CHECK_NONZERO(msg2);
-   CHECK_TRUE(msg2 != msg100_static);
-   free(msg2);
-
-   // attempt to find an existing item
-   msg2 = msg25_static;
-   CHECK_TRUE(dnxQueueFind(queue, (void **)&msg2, qtcmp) == DNX_QRES_FOUND);
-   CHECK_TRUE(msg2 != msg25_static);
-   CHECK_TRUE(strcmp(msg2, msgs[25]) == 0);
-
-   // attempt to find a non-existent item
-   msg2 = msg250_static;
-   CHECK_TRUE(dnxQueueFind(queue, (void **)&msg2, qtcmp) == DNX_QRES_CONTINUE);
-
-   // remove remaining entries
-   for (i = 3; i < elemcount(msgs); i++)
-   {
-      CHECK_ZERO(dnxQueueGet(queue, (void **)&msg2));
-      free(msg2);
-   }
-
-   // attempt to remove one more entry
-   CHECK_NONZERO(dnxQueueGet(queue, (void **)&msg2));
-
-   // ensure queue is now empty
-   CHECK_TRUE(dnxQueueSize(queue) == 0);
-
-   dnxQueueDestroy(queue);
-
-   // we should have called the destructor only once
-   CHECK_TRUE(free_count == 1);
-
-#ifdef DEBUG_HEAP
-   CHECK_ZERO(dnxCheckHeap());
-#endif
-
-   return 0;
-}
-
-#endif   /* DNX_QUEUE_TEST */
-
-/*--------------------------------------------------------------------------*/
-
+//----------------------------------------------------------------------------
