@@ -563,9 +563,10 @@ static void * dnxWlm(void * data)
 
       DNX_PT_MUTEX_LOCK(&iwlm->mutex);
 
+      // get 'now' as timeval, convert to timespec, add poll interval seconds
       gettimeofday(&now, 0);
-      timeout.tv_sec = now.tv_sec + (iwlm->cfg.pollInterval / 1000);
-      timeout.tv_nsec = (now.tv_usec + (iwlm->cfg.pollInterval % 1000) * 1000L) * 1000L;
+      timeout.tv_sec = now.tv_sec + iwlm->cfg.pollInterval;
+      timeout.tv_nsec = now.tv_usec * 1000L;
 
       pthread_cond_timedwait(&iwlm->cond, &iwlm->mutex, &timeout);
 
