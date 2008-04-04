@@ -71,12 +71,12 @@
 # define SYSCONFDIR     "/etc"
 #endif
 
-#ifndef LOCALSTATEDIR
-# define LOCALSTATEDIR  "/var"
+#ifndef SYSLOGDIR
+# define SYSLOGDIR      "/var/log"
 #endif
 
 #ifndef SYSRUNPATH
-# define SYSRUNPATH     LOCALSTATEDIR "/run/dnx"
+# define SYSRUNPATH     "var/run/dnx"
 #endif
 
 #ifndef DNXUSER
@@ -93,8 +93,8 @@
 
 // default configuration
 #define DNX_DEFAULT_NODE_CONFIG_FILE      SYSCONFDIR "/dnxClient.cfg"
-#define DNX_DEFAULT_LOG                   LOCALSTATEDIR "/log/dnxcld.log"
-#define DNX_DEFAULT_DBGLOG                LOCALSTATEDIR "/log/dnxcld.debug.log"
+#define DNX_DEFAULT_LOG                   SYSLOGDIR "/dnxcld.log"
+#define DNX_DEFAULT_DBGLOG                SYSLOGDIR "/dnxcld.debug.log"
 #define DNX_DEFAULT_RUN_PATH              SYSRUNPATH
 #define DNX_DEFAULT_USER                  DNXUSER
 #define DNX_DEFAULT_GROUP                 DNXGROUP

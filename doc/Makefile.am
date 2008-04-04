@@ -10,7 +10,7 @@ install-docs: docs
 	$(INSTALL_DATA) $(srcdir)/DNX_Workflow.pdf $(DESTDIR)$(datadir)/doc
 
 $(distdir).tar.gz: html/index.html
-	tar chof - html | gzip -9 -c >$(distdir).tar.gz
+	tar chof - html | gzip -9 -c >$@
 
 # not perfect, but we can't depend on ALL source - config.h will have to do...
 

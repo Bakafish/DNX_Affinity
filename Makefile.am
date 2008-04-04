@@ -6,7 +6,7 @@ SUBDIRS = etc obs common server stats client doc
 docs install-docs:
 	cd doc && $(MAKE) $(AM_MAKEFLAGS) $@	
 
-install-cfg-nochown install-cfg install-clientcfg install-servercfg install-initscript:
+install-cfg install-clientcfg install-servercfg install-initscript:
 	cd etc && $(MAKE) $(AM_MAKEFLAGS) $@
 
 install-client:

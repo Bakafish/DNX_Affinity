@@ -17,24 +17,30 @@ all: dnxClient.cfg dnxServer.cfg dnxcld.generic-init dnxcld.init
 
 # Install init script and soft link to it from sbin directory
 install-initscript: dnxcld.generic-init dnxcld.init
-	$(mkdir_p) $(DESTDIR)@initrddir@
+	$(mkdir_p) $(DESTDIR)$(initrddir)
 	if [ -f /etc/SuSE-release ]; then \
-	   $(INSTALL_SCRIPT) dnxcld.init $(DESTDIR)@initrddir@/dnxcld; \
+	   $(INSTALL_SCRIPT) dnxcld.init $(DESTDIR)$(initrddir)/dnxcld; \
 	else \
-	   $(INSTALL_SCRIPT) dnxcld.generic-init $(DESTDIR)@initrddir@/dnxcld; \
+	   $(INSTALL_SCRIPT) dnxcld.generic-init $(DESTDIR)$(initrddir)/dnxcld; \
 	fi
-	$(LN_S) -f @initrddir@/dnxcld $(DESTDIR)@sbindir@/rcdnxcld
+	$(LN_S) -f $(initrddir)/dnxcld $(DESTDIR)$(sbindir)/rcdnxcld
 
 # Install *sample* config files
 install-cfg: install-clientcfg install-servercfg
 
 install-clientcfg: dnxClient.cfg
-	$(mkdir_p) $(DESTDIR)@sysconfdir@
-	$(INSTALL_DATA) dnxClient.cfg $(DESTDIR)@sysconfdir@/dnxClient.cfg
+	$(mkdir_p) $(DESTDIR)$(sysconfdir)
+	$(INSTALL_DATA) dnxClient.cfg $(DESTDIR)$(sysconfdir)/dnxClient.cfg
+	if [ `id -u` -eq 0 ]; then \
+	   chown $(dnx_user):$(dnx_group) $(DESTDIR)$(sysconfdir)/dnxClient.cfg; \
+	fi
 
 install-servercfg: dnxServer.cfg
-	$(mkdir_p) $(DESTDIR)@sysconfdir@
-	$(INSTALL_DATA) dnxServer.cfg $(DESTDIR)@sysconfdir@/dnxServer.cfg
+	$(mkdir_p) $(DESTDIR)$(sysconfdir)
+	$(INSTALL_DATA) dnxServer.cfg $(DESTDIR)$(sysconfdir)/dnxServer.cfg
+	if [ `id -u` -eq 0 ]; then \
+	   chown $(nagios_user):$(nagios_group) $(DESTDIR)$(sysconfdir)/dnxServer.cfg; \
+	fi
 
 # Build executable scripts
 dnxcld.generic-init dnxcld.init: Makefile

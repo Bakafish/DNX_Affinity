@@ -21,7 +21,7 @@ AC_CHECK_LIB([rt], [nanosleep])
 # Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stdlib.h string.h sys/file.h sys/socket.h sys/time.h syslog.h unistd.h getopt.h])
+AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stdlib.h string.h sys/file.h sys/socket.h sys/time.h unistd.h getopt.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -85,17 +85,23 @@ AC_SUBST(dnx_group)
 # Determine DNX lock/pid file directory
 AC_ARG_WITH([run-dir],
 	    [AS_HELP_STRING([--with-run-dir], 
-			    [specify the dnx client system run directory\
- @<:@default="${localstatedir}/run/${PACKAGE}"@:>@])],
+			    [specify the dnx client system run directory @<:@default="${localstatedir}/run/${PACKAGE}"@:>@])],
 	    [], [with_run_dir="${localstatedir}/run/${PACKAGE}"])
-sysrunpath="$with_run_dir"
-AC_SUBST(sysrunpath)
+sysrundir="$with_run_dir"
+AC_SUBST(sysrundir)
+
+# Determine DNX log/debug file directory
+AC_ARG_WITH([log-dir],
+	    [AS_HELP_STRING([--with-log-dir], 
+			    [specify the dnx system log directory @<:@default="${localstatedir}/log"@:>@])],
+	    [], [with_log_dir="${localstatedir}/log"])
+syslogdir="$with_log_dir"
+AC_SUBST(syslogdir)
 
 # Determine the system init.d directory
 AC_ARG_WITH([init-dir],
 	    [AS_HELP_STRING([--with-init-dir], 
-			    [specify the system init script directory\
- @<:@default="${sysconfdir}/init.d"@:>@])],
+			    [specify the system init script directory @<:@default="${sysconfdir}/init.d"@:>@])],
 	    [], [with_init_dir="${sysconfdir}/init.d"])
 initrddir="$with_init_dir"
 AC_SUBST(initrddir)
@@ -141,9 +147,9 @@ echo "  DNX client group is '${dnx_group}'."
 echo
 echo "  Path prefix is '${prefix}'."
 echo "  Data directory is '${datadir}'."
+echo "  Log directory is '${syslogdir}'."
 echo "  Config directory is '${sysconfdir}'."
-echo "  Client run path is '${sysrunpath}'."
-echo "  Local state directory is '${localstatedir}'."
+echo "  System run path is '${sysrundir}'."
 echo "  System init directory is '${initrddir}'."
 echo
 echo "  Now type 'make @<:@prefix=<user-prefix>@:>@ @<:@<target>@:>@'"

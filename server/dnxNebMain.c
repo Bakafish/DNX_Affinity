@@ -53,8 +53,8 @@
 # define SYSCONFDIR "/etc"
 #endif
 
-#ifndef LOCALSTATEDIR
-# define LOCALSTATEDIR "/var"
+#ifndef SYSLOGDIR
+# define SYSLOGDIR  "/var/log"
 #endif
 
 #ifndef NSCORE
@@ -79,8 +79,8 @@
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
 #define DNX_DEFAULT_SERVER_CONFIG_FILE SYSCONFDIR "/dnxServer.cfg"
-#define DNX_DEFAULT_LOG                LOCALSTATEDIR "/log/dnxsrv.log"
-#define DNX_DEFAULT_DBGLOG             LOCALSTATEDIR "/log/dnxsrv.dbg.log"
+#define DNX_DEFAULT_LOG                SYSLOGDIR "/dnxsrv.log"
+#define DNX_DEFAULT_DBGLOG             SYSLOGDIR "/dnxsrv.dbg.log"
 
 // specify event broker API version (required)
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);

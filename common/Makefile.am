@@ -31,7 +31,6 @@ libcmn_la_SOURCES =\
  dnxXml.c\
  pfopen.c
 
-
 # ---------------------------------------------------------------------------
 # common code unit tests
 #
