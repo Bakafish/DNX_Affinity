@@ -14,7 +14,8 @@ noinst_HEADERS =\
  dnxTransport.h\
  dnxUdp.h\
  dnxXml.h\
- pfopen.h
+ pfopen.h\
+ utesthelp.h
 
 libcmn_la_SOURCES =\
  dnxCfgParser.c\
