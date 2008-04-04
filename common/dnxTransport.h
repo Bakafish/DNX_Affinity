@@ -54,10 +54,10 @@
 #define _DNXTRANSPORT_H_
 
 /** The maximum length of a DNX transport URL. */
-#define DNX_MAX_URL 1023
+#define DNX_MAX_URL  1023
 
 /** The maximum length of a DNX message. */
-#define DNX_MAX_MSG        1024
+#define DNX_MAX_MSG  4096
 
 /** An abstraction for DnxChannel. */
 typedef struct { int unused; } DnxChannel;

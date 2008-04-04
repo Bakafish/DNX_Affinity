@@ -238,7 +238,7 @@ int dnxXmlAdd(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
 
    // convert data element to string
    *buf = 0;
-   if (xData && (ret = dnxXmlToString(xType, xData, buf, sizeof(buf))) != DNX_OK)
+   if (xData && (ret = dnxXmlToString(xType, xData, buf, sizeof buf)) != DNX_OK)
       return ret;
    
    // perform capacity check on XML buffer - 5 = number of brackets plus '/'

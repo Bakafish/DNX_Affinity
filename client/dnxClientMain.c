@@ -624,6 +624,8 @@ static char * buildMgmtStatsReply(char * req)
       { "maxexectm",    &ws.max_exec_time      },
       { "avgthexist",   &ws.avg_total_threads  },
       { "avgthactive",  &ws.avg_active_threads },
+      { "threadtm",     &ws.thread_time        },
+      { "jobtm",        &ws.job_time           },
    };
    char * rsp = 0;
 
@@ -687,6 +689,44 @@ static char * buildMgmtCfgReply(void)
 
 //----------------------------------------------------------------------------
 
+/** Build an allocated response buffer for the HELP request.
+ * 
+ * @return A pointer to an allocated response buffer, or 0 if out of memory.
+ */
+static char * buildHelpReply(void)
+{
+   static char * help = 
+         "DNX Client Management Commands:\n"
+         "  SHUTDOWN\n"
+         "  RECONFIGURE\n"
+         "  DEBUGTOGGLE\n"
+         "  RESETSTATS\n"
+         "  GETSTATS stat-list\n"
+         "    stat-list is a comma-delimited list of stat names:\n"
+         "      jobsok      - number of successful jobs\n"
+         "      jobsfailed  - number of unsuccessful jobs\n"
+         "      thcreated   - number of threads created\n"
+         "      thdestroyed - number of threads destroyed\n"
+         "      thexist     - number of threads currently in existence\n"
+         "      thactive    - number of threads currently active\n"
+         "      reqsent     - number of requests sent to DNX server\n"
+         "      jobsrcvd    - number of jobs received from DNX server\n"
+         "      minexectm   - minimum job execution time\n"
+         "      avgexectm   - average job execution time\n"
+         "      maxexectm   - maximum job execution time\n"
+         "      avgthexist  - average threads in existence\n"
+         "      avgthactive - average threads processing jobs\n"
+         "      threadtm    - total thread life time\n"
+         "      jobtm       - total job processing time\n"
+         "    Note: Stats are returned in the order they are requested.\n"
+         "  GETCONFIG\n"
+         "  GETVERSION\n"
+         "  HELP";
+   return xstrdup(help);
+}
+
+//----------------------------------------------------------------------------
+
 /** The main event loop for the dnxClient process.
  * 
  * @return Zero on success, or a non-zero error code.
@@ -732,6 +772,11 @@ static int processCommands(void)
          else if (!strcmp(Msg.action, "GETVERSION"))
          {
             if ((Rsp.reply = xstrdup("DNX Client " VERSION)) == 0)
+               Rsp.status = DNX_REQ_NAK;
+         }
+         else if (!strcmp(Msg.action, "HELP"))
+         {
+            if ((Rsp.reply = buildHelpReply()) == 0)
                Rsp.status = DNX_REQ_NAK;
          }
 

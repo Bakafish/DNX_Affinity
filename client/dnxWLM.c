@@ -81,9 +81,6 @@ typedef struct DnxWorkerStatus
    DnxChannel * dispatch;     //!< The thread job request channel.
    DnxChannel * collect;      //!< The thread job reply channel.
    time_t tstart;             //!< The thread start time.
-   time_t jobtime;            //!< The total amount of time spent in job processing.
-   unsigned jobsok;           //!< The total jobs completed.
-   unsigned jobsfail;         //!< The total jobs not completed.
    unsigned serial;           //!< The current job tracking serial number.
    struct iDnxWlm * iwlm;     //!< A reference to the owning WLM.
 } DnxWorkerStatus;
@@ -94,6 +91,8 @@ typedef struct iDnxWlm
    DnxWlmCfgData cfg;         //!< WLM configuration parameters.
    DnxWorkerStatus ** pool;   //!< The thread pool context list.
    pthread_mutex_t mutex;     //!< The thread pool sync mutex.
+   unsigned jobtm;            //!< Total amount of thread time processing jobs.
+   unsigned threadtm;         //!< Total amount of thread life time.
    unsigned jobsok;           //!< The number of successful jobs, so far.
    unsigned jobsfail;         //!< The number of failed jobs so far.
    unsigned active;           //!< The current number of active threads.
@@ -334,6 +333,7 @@ static int growThreadPool(iDnxWlm * iwlm)
 static void cleanThreadPool(iDnxWlm * iwlm)
 {
    unsigned i = 0;
+   time_t now = time(0);
 
    // look for zombie threads to join
    while (i < iwlm->threads)
@@ -346,15 +346,13 @@ static void cleanThreadPool(iDnxWlm * iwlm)
          dnxDebug(1, "WLM: Joining worker[%lx]...", ws->tid);
          pthread_join(ws->tid, 0);
 
-         // save stats to global counters
-         iwlm->jobsok += ws->jobsok;
-         iwlm->jobsfail += ws->jobsfail;
-         iwlm->tdestroyed++;
-
-         releaseWorkerComm(ws);
-
-         // reduce threads count, delete thread object, compact ptr array
+         // reduce thread count; update stats
          iwlm->threads--;
+         iwlm->tdestroyed++;
+         iwlm->threadtm += (unsigned)(now - ws->tstart);
+
+         // release thread resources; delete thread; compact ptr array
+         releaseWorkerComm(ws);
          xfree(iwlm->pool[i]);
          memmove(&iwlm->pool[i], &iwlm->pool[i + 1], 
                (iwlm->threads - i) * sizeof iwlm->pool[i]);
@@ -457,6 +455,7 @@ static void * dnxWorker(void * data)
          if (++retries > iwlm->cfg.maxRetries)
          {
             DNX_PT_MUTEX_LOCK(&iwlm->mutex);
+            iwlm->reqsent++;
             cleanThreadPool(iwlm);
             iwlm->lastclean = time(0);
             if (iwlm->threads > iwlm->cfg.poolMin)
@@ -480,6 +479,8 @@ static void * dnxWorker(void * data)
          //    and we haven't reached our configured limit, then increase
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);
          {
+            iwlm->reqsent++;
+            iwlm->jobsrcvd++;
             iwlm->active++;
             if (!iwlm->terminate 
                   && iwlm->active == iwlm->threads 
@@ -509,13 +510,6 @@ static void * dnxWorker(void * data)
          // store allocated copy of the result string
          if (*resData) result.resData = xstrdup(resData);
 
-         // update per-thread statistics
-         ws->jobtime += result.delta;
-         if (result.resCode == DNX_PLUGIN_RESULT_OK) 
-            ws->jobsok++;
-         else 
-            ws->jobsfail++;
-
          dnxDebug(2, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, result.delta, 
                result.resCode, result.resData);
@@ -535,6 +529,23 @@ static void * dnxWorker(void * data)
                cleanThreadPool(iwlm);
                iwlm->lastclean = now;
             }
+
+            // track status
+            if (result.resCode == DNX_PLUGIN_RESULT_OK) 
+               iwlm->jobsok++;
+            else 
+               iwlm->jobsfail++;
+
+            // track min/max/avg execution time
+            if (result.delta > iwlm->maxexectm)
+               iwlm->maxexectm = result.delta;
+            if (result.delta < iwlm->minexectm)
+               iwlm->minexectm = result.delta;
+            iwlm->avgexectm = (iwlm->avgexectm + result.delta) / 2;
+
+            // total job processing time
+            iwlm->jobtm += (unsigned)result.delta;
+
             iwlm->active--;   // reduce active count
          }
          DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
@@ -558,9 +569,11 @@ void dnxWlmResetStats(DnxWlm * wlm)
    assert(wlm);
 
    DNX_PT_MUTEX_LOCK(&iwlm->mutex);
+   iwlm->jobtm = iwlm->threadtm = 0;
    iwlm->jobsok = iwlm->jobsfail = iwlm->tcreated = iwlm->tdestroyed = 0;
-   iwlm->reqsent = iwlm->jobsrcvd = iwlm->minexectm = iwlm->avgexectm = 0;
+   iwlm->reqsent = iwlm->jobsrcvd = iwlm->avgexectm = 0;
    iwlm->maxexectm = iwlm->avgthreads = iwlm->avgactive = 0;
+   iwlm->minexectm = (unsigned)(-1);   // the largest possible value
    DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 }
 
@@ -586,6 +599,8 @@ void dnxWlmGetStats(DnxWlm * wlm, DnxWlmStats * wsp)
    wsp->max_exec_time = iwlm->maxexectm;
    wsp->avg_total_threads = iwlm->avgthreads;
    wsp->avg_active_threads = iwlm->avgactive;
+   wsp->thread_time = iwlm->threadtm;
+   wsp->job_time = iwlm->jobtm;
    DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 }
 
@@ -667,6 +682,7 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
    iwlm->cfg.collector = xstrdup(iwlm->cfg.collector);
    iwlm->poolsz = iwlm->cfg.poolMax;
    iwlm->pool = (DnxWorkerStatus **)xmalloc(iwlm->poolsz * sizeof *iwlm->pool);
+   iwlm->minexectm = (unsigned)(-1);   // the largest possible value
    memset(iwlm->pool, 0, iwlm->poolsz * sizeof *iwlm->pool);
 
    // cache our (primary?) ip address in binary and string format

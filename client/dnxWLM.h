@@ -61,6 +61,8 @@ typedef struct DnxWlmStats
    unsigned max_exec_time;       //!< The maximum job execution time.
    unsigned avg_total_threads;   //!< The average number of threads existing.
    unsigned avg_active_threads;  //!< The average number of threads active.
+   unsigned thread_time;         //!< The total amount of thread running time.
+   unsigned job_time;            //!< The total time spent processing jobs.
 } DnxWlmStats;
 
 /** An abstract data type - the external representation of a WLM object. */
