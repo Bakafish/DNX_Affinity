@@ -24,15 +24,22 @@ install-initscript: dnxcld.init
 # Install sample config files
 install-cfg: install-clientcfg install-servercfg
 
-install-clientcfg: dnxClient.cfg
-	$(mkdir_p) $(DESTDIR)@sysconfdir@
-	$(INSTALL_DATA) --owner=@dnx_user@ --group=@dnx_group@ \
-           dnxClient.cfg $(DESTDIR)@sysconfdir@
+install-clientcfg: install-clientcfg-nochown
+	chown @dnx_user@:@dnx_group@ $(DESTDIR)@sysconfdir@/dnxClient.cfg
 
-install-servercfg: dnxServer.cfg
+install-servercfg: install-servercfg-nochown
+	chown @nagios_user@:@nagios_group@ $(DESTDIR)@sysconfdir@/dnxServer.cfg
+
+# RPM support targets - rpmbuild doesn't like targets that chown things
+install-cfg-nochown: install-clientcfg-nochown install-servercfg-nochown
+
+install-clientcfg-nochown: dnxClient.cfg
 	$(mkdir_p) $(DESTDIR)@sysconfdir@
-	$(INSTALL_DATA) --owner=@nagios_user@ --group=@nagios_group@ \
-           dnxServer.cfg $(DESTDIR)@sysconfdir@
+	$(INSTALL_DATA) dnxClient.cfg $(DESTDIR)@sysconfdir@/dnxClient.cfg
+
+install-servercfg-nochown: dnxServer.cfg
+	$(mkdir_p) $(DESTDIR)@sysconfdir@
+	$(INSTALL_DATA) dnxServer.cfg $(DESTDIR)@sysconfdir@/dnxServer.cfg
 
 # Build executable scripts
 dnxcld.init: Makefile

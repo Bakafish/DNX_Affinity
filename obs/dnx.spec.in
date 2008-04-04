@@ -115,7 +115,7 @@ CFLAGS="%{optflags}" ./configure \
 %{__make} DESTDIR=%{buildroot} check
 
 %install
-%{__make} DESTDIR=%{buildroot} install install-cfg install-initscript
+%{__make} DESTDIR=%{buildroot} install install-cfg-nochown install-initscript
 
 %pre client
 # Create dnx client group if necessary

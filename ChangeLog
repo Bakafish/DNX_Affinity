@@ -6,11 +6,13 @@ major changes to the DNX code base. All entries should be separated by
 blank lines and include the date, developer's name, and change description.
 =============================================================================
 
-*** Revision 192: Released dnx-0.15: 19-FEB-08 jcalcote
+*** Revision 193: Released dnx-0.15: 19-FEB-08 jcalcote
 
-* Revision: 192-191: 19-FEB-08 jcalcote 
-Updated ChangeLog. Added installation targets to allow separate 
-installation of client and server pieces via make install. 
+* Revision: 193-191: 19-FEB-08 jcalcote 
+Updated ChangeLog. Modified Makefiles and rpm spec file to allow for non
+rpm targets that chown files and rpm targets that don't. Updated ChangeLog.
+Added installation targets to allow separate installation of client and 
+server pieces via make install. 
 
 * Revision: 190: 19-FEB-08 jcalcote
 Removed config change branch. 
