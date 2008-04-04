@@ -44,39 +44,25 @@
 #include "dnxJobList.h"
 #include "dnxLogging.h"
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#else
+# define VERSION "0.20"
+#endif
 
-/*
- *	Constants
- */
-
-#define DNX_VERSION	"0.13"
+#define DNX_VERSION	VERSION
 
 #define DNX_EMBEDDED_SVC_OBJECT	1
-
-
-/*
- *	Structures
- */
-
-
-/*
- *	Globals
- */
 
 // Specify event broker API version (required)
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);
 
-static void *myHandle = NULL;	// Private NEB module handle
+static void *myHandle = NULL;		// Private NEB module handle
 DnxGlobalData dnxGlobalData;		// Private module data
 
 // External global Nagios variables
-extern service *service_list;	// Nagios service list
+extern service *service_list;		// Nagios service list
 extern int service_check_timeout;	// Nagios global service check timeout
-
-
-/*
- *	Prototypes
- */
 
 static int dnxLoadConfig (char *ConfigFile, DnxGlobalData *gData);
 static int verifyFacility (char *szFacility, int *nFacility);
@@ -437,7 +423,7 @@ static int dnxPostNewJob (DnxGlobalData *gData, nebstruct_service_check_data *ds
 	{
 		// ERROR - This should never happen here: The service was not found.
 		dnxSyslog(LOG_ERR, "dnxPostNewJob: Could not find service %s for host %s",
-			ds->host_name, ds->service_description);
+			ds->service_description, ds->host_name);
 		return DNX_ERR_INVALID;
 	}
 
@@ -545,11 +531,15 @@ static int initThreads (void)
 	dnxGlobalData.isGo = 1;
 
 	// Signal all threads that it's show-time!
-	if ((ret = pthread_cond_broadcast(&dnxGlobalData.tcGo)) != 0)
+	pthread_mutex_lock(&dnxGlobalData.tmGo);
+	ret = pthread_cond_broadcast(&dnxGlobalData.tcGo);
+	pthread_mutex_unlock(&dnxGlobalData.tmGo);
+
+	if (ret != 0)
 	{
 		dnxGlobalData.isActive = 0;	// Init failure
 		dnxSyslog(LOG_ERR, "initThreads: Failed to broadcast GO signal: %d", ret);
-		releaseThreads();		// Cancel prior threads
+		releaseThreads();			// Cancel prior threads
 		return DNX_ERR_THREAD;
 	}
 

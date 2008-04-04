@@ -411,10 +411,16 @@ static int releaseClientThreads (DnxGlobalData *gData)
 	if (gData->debug)
 		syslog(LOG_DEBUG, "releaseClientThreads: Signalling termination condition to WLM thread %lx", gData->tWLM);
 
+	// Lock the thread data mutex
+	pthread_mutex_lock(&(gData->threadMutex));
+
 	// Set the latest time by which all worker threads must be terminated
 	gData->noLaterThan = time(NULL) + gData->wlmShutdownGracePeriod;
 	gData->terminate = 1;		// Set the worker thread term flag
 	pthread_cond_signal(&(gData->wlmCond));	// Signal the WLM
+
+	// Unlock the thread data mutex
+	pthread_mutex_unlock(&(gData->threadMutex));
 
 	// Wait for the WLM thread to exit
 	if (gData->debug)
@@ -422,8 +428,9 @@ static int releaseClientThreads (DnxGlobalData *gData)
 	if ((ret = pthread_join(gData->tWLM, NULL)) != 0)
 		syslog(LOG_ERR, "releaseClientThreads: pthread_join(Agent) failed with ret = %d", ret);
 
-	// Unlock the thread data mutex
-	pthread_mutex_unlock(&(gData->threadMutex));
+	// wait for all threads to be gone...
+	while (dnxGetThreadsActive() > 0)
+		sleep(100);
 
 	// Destroy the thread data mutex
 	if (pthread_mutex_destroy(&(gData->threadMutex)) != 0)

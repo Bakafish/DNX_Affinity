@@ -134,11 +134,11 @@ int dnxQueuePut (DnxQueue *queue, void *pPayload)
         free(qItem);	/* release the qItem wrapper */
 	}
 
-    /* unlock mutex */
-    rc = pthread_mutex_unlock(queue->p_mutex);
-
     /* signal the condition variable - there's a new request to handle */
     rc = pthread_cond_signal(queue->p_cond_var);
+
+    /* unlock mutex */
+    rc = pthread_mutex_unlock(queue->p_mutex);
 
     return DNX_OK;
 }
