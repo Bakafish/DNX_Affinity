@@ -400,7 +400,7 @@ int dnxCfgParserCreate(char * cfgfile, DnxCfgDictionary * dict, size_t dictsz,
    void * data, DnxCfgParser ** pcp)
 {
    iDnxCfgParser * icp;
-   int i, j, ret;
+   int i, j;
 
    assert(cfgfile && dict && dictsz && pcp);
 
@@ -430,7 +430,7 @@ int dnxCfgParserCreate(char * cfgfile, DnxCfgDictionary * dict, size_t dictsz,
 
    *pcp = (DnxCfgParser *)icp;
 
-   return ret;
+   return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -538,7 +538,7 @@ static void test_errhandler(int err, int line, char * buf, void * data)
    if (verbose)
       printf("test_errhandler: Error %d, Line %d, Buffer '%s'.\n", err, line, buf);
 }
-int dnxDebug(int l, char * f, ... )
+void dnxDebug(int l, char * f, ... )
 {
    if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
    return 0;
@@ -585,7 +585,7 @@ int main(int argc, char ** argv)
    fclose(fp);
 
    CHECK_ZERO(dnxCfgParserCreate(TEST_FILE_NAME, dict, elemcount(dict),
-      test_errhandler, 0, &cp));
+         test_errhandler, 0, &cp));
 
    icp = (iDnxCfgParser *)cp;
    CHECK_ZERO(strcmp(icp->cfgfile, TEST_FILE_NAME));

@@ -28,17 +28,31 @@
 #ifndef _DNXWLM_H_
 #define _DNXWLM_H_
 
-typedef struct { int unused; } DnxWLM;
+typedef struct DnxWlmCfgData
+{
+   char * dispatcher;      /*!< The name of the dispatcher channel. */
+   char * collector;       /*!< The name of the collector channel. */
+   unsigned reqTimeout;    /*!< The thread request timeout in seconds. */
+   unsigned ttlBackoff;    /*!< The time-to-live backoff in seconds. */
+   unsigned maxRetries;    /*!< The maximum allowable retries. */
+   unsigned poolMin;       /*!< The minimum number of pool threads. */
+   unsigned poolInitial;   /*!< The initial number of pool threads. */
+   unsigned poolMax;       /*!< The maximum number of pool threads. */
+   unsigned poolGrow;      /*!< The pool growth increment value. */
+   unsigned pollInterval;  /*!< The poll interval in seconds. */
+   unsigned shutdownGrace; /*!< The shutdown grace period in seconds. */
+   unsigned maxResults;    /*!< The maximum size of the results buffer. */
+} DnxWlmCfgData;
 
-int dnxWLMGetActiveThreads(DnxWLM * wlm);
-void dnxWLMSetActiveThreads(DnxWLM * wlm, int value);
-int dnxWLMGetActiveJobs(DnxWLM * wlm);
-void dnxWLMSetActiveJobs(DnxWLM * wlm, int value);
+typedef struct { int unused; } DnxWlm;
 
-int dnxWLMCreate(unsigned minsz, unsigned initsz, unsigned maxsz, 
-      unsigned incrsz, unsigned pollint, unsigned termgrace, 
-      unsigned * pdebug, DnxWLM ** pwlm);
-void dnxWLMDestroy(DnxWLM * wlm);
+int dnxWlmGetActiveThreads(DnxWlm * wlm);
+int dnxWlmGetActiveJobs(DnxWlm * wlm);
+
+int dnxWlmReconfigure(DnxWlm * wlm, DnxWlmCfgData * pcfg);
+
+int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm);
+void dnxWlmDestroy(DnxWlm * wlm);
 
 #endif   /* _DNXWLM_H_ */
 

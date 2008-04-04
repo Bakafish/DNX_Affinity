@@ -72,7 +72,7 @@ int dnxPluginInit(char * pluginPath)
 
    if (gInitialized)
    {
-      syslog(LOG_ERR, "dnxPluginInit: Already initialized");
+      dnxSyslog(LOG_ERR, "dnxPluginInit: Already initialized");
       return DNX_ERR_INVALID; // Already initialized
    }
 
@@ -86,14 +86,14 @@ int dnxPluginInit(char * pluginPath)
    {
       if ((len = strlen(pluginPath)) < 1 || len > MAX_PLUGIN_PREFIX)
       {
-         syslog(LOG_ERR, "dnxPluginInit: Invalid plugin path");
+         dnxSyslog(LOG_ERR, "dnxPluginInit: Invalid plugin path");
          return DNX_ERR_INVALID; // Invalid path
       }
 
       // Ensure that the plugin path prefix is absolute
       if (*pluginPath != '/')
       {
-         syslog(LOG_ERR, "dnxPluginInit: Plugin path is not absolute");
+         dnxSyslog(LOG_ERR, "dnxPluginInit: Plugin path is not absolute");
          return DNX_ERR_INVALID; // Invalid path
       }
 
@@ -457,7 +457,7 @@ int dnxPluginExternal(char * command, int * resCode, char * resData,
    // Validate parameters
    if (!command || !resCode || !resData || maxData < 2)
    {
-      syslog(LOG_ERR, "dnxPluginExternal: Invalid parameters");
+      dnxSyslog(LOG_ERR, "dnxPluginExternal: Invalid parameters");
       return DNX_ERR_INVALID;
    }
 

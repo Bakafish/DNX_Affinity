@@ -4,14 +4,12 @@ sbin_PROGRAMS = dnxClient
 
 noinst_HEADERS =\
  dnxPlugin.h\
- dnxWLM.h\
- dnxWorker.h
+ dnxWLM.h
 
 dnxClient_SOURCES =\
  dnxClientMain.c\
  dnxPlugin.c\
- dnxWLM.c\
- dnxWorker.c
+ dnxWLM.c
 
 INCLUDES =\
  -I$(top_srcdir)/common

@@ -30,8 +30,8 @@
 
 #include <syslog.h>
 
-int dnxSyslog(int priority, char * fmt, ...);
-int dnxDebug(int level, char * fmt, ...);
+void dnxSyslog(int priority, char * fmt, ... );
+void dnxDebug(int level, char * fmt, ... );
 
 void initLogging(int * pDebug, int * pLogFacility);
 

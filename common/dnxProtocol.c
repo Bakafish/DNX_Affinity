@@ -433,21 +433,19 @@ int dnxPutResult(DnxChannel * channel, DnxResult * pResult, char * address)
 {
    DnxXmlBuf xbuf;
 
-   // Validate parameters
-   if (!channel || !pResult)
-      return DNX_ERR_INVALID;
+   assert(channel && pResult);
 
    // Create the XML message
-   dnxXmlOpen (&xbuf, "Result");
-   dnxXmlAdd  (&xbuf, "GUID",       DNX_XML_XID,  &pResult->xid);
-   dnxXmlAdd  (&xbuf, "State",      DNX_XML_INT,  &pResult->state);
-   dnxXmlAdd  (&xbuf, "Delta",      DNX_XML_UINT, &pResult->delta);
-   dnxXmlAdd  (&xbuf, "ResultCode", DNX_XML_INT,  &pResult->resCode);
+   dnxXmlOpen  (&xbuf, "Result");
+   dnxXmlAdd   (&xbuf, "GUID",       DNX_XML_XID,  &pResult->xid);
+   dnxXmlAdd   (&xbuf, "State",      DNX_XML_INT,  &pResult->state);
+   dnxXmlAdd   (&xbuf, "Delta",      DNX_XML_UINT, &pResult->delta);
+   dnxXmlAdd   (&xbuf, "ResultCode", DNX_XML_INT,  &pResult->resCode);
    if (pResult->resData && pResult->resData[0])
-      dnxXmlAdd  (&xbuf, "ResultData", DNX_XML_STR, pResult->resData);
+      dnxXmlAdd(&xbuf, "ResultData", DNX_XML_STR,   pResult->resData);
    else
-      dnxXmlAdd  (&xbuf, "ResultData", DNX_XML_STR, "(DNX: No output!)");
-   dnxXmlClose(&xbuf);
+      dnxXmlAdd(&xbuf, "ResultData", DNX_XML_STR,   "(DNX: No output!)");
+   dnxXmlClose (&xbuf);
 
    // Send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);

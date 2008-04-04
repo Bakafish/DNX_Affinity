@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+#include <assert.h>
 
 #define MAX_LOG_LINE 1023
 
@@ -47,34 +48,27 @@ static int * pLogFacility = &defLogFacility;
  * 
  * @param[in] priority - a priority value for the log message.
  * @param[in] fmt - a format specifier string similar to that of printf.
- * 
- * @return Zero on success, or a non-zero error code.
  */
-int dnxSyslog(int priority, char * fmt, ...)
+void dnxSyslog(int priority, char * fmt, ...)
 {
-   va_list ap;
    char sbuf[MAX_LOG_LINE + 1];
 
-   // Validate input parameters
-   if (!fmt)
-      return DNX_ERR_INVALID;
+   assert(fmt);
 
-   // See if we need formatting
+   // see if we need formatting
    if (strchr(fmt, '%'))
    {
-      // Format the string
+      va_list ap;
       va_start(ap, fmt);
       vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
       va_end(ap);
    }
    else
       strncpy(sbuf, fmt, MAX_LOG_LINE);
+
    sbuf[MAX_LOG_LINE] = 0;
 
-   // Publish the results
    syslog(*pLogFacility | priority, "%s", sbuf);
-
-   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
@@ -89,22 +83,18 @@ int dnxSyslog(int priority, char * fmt, ...)
  * 
  * @return Zero on success, or a non-zero error code.
  */
-int dnxDebug(int level, char * fmt, ...)
+void dnxDebug(int level, char * fmt, ...)
 {
-   va_list ap;
    char sbuf[MAX_LOG_LINE + 1];
 
-   // Validate input parameters
-   if (!fmt)
-      return DNX_ERR_INVALID;
+   assert(fmt);
 
-   // See if this message meets or exceeds our debugging level
    if (level <= *pDebug)
    {
-      // See if we need formatting
+      // see if we need formatting
       if (strchr(fmt, '%'))
       {
-         // Format the string
+         va_list ap;
          va_start(ap, fmt);
          vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
          va_end(ap);
@@ -113,11 +103,8 @@ int dnxDebug(int level, char * fmt, ...)
          strncpy(sbuf, fmt, MAX_LOG_LINE);
       sbuf[MAX_LOG_LINE] = 0;
 
-      // Publish the results
       syslog(*pLogFacility | LOG_DEBUG, "%s", sbuf);
    }
-
-   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------

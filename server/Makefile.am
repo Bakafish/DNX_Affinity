@@ -36,13 +36,14 @@ TESTS = dnxJobListTest dnxQueueTest dnxTimerTest
 check_PROGRAMS = dnxJobListTest dnxQueueTest dnxTimerTest
 
 dnxJobListTest_SOURCES = dnxJobList.c @top_srcdir@/common/dnxError.c
-dnxJobListTest_CPPFLAGS = -DDEBUG -DDNX_JOBLIST_TEST -I$(top_srcdir)/common
+dnxJobListTest_CPPFLAGS = -DDNX_JOBLIST_TEST -I$(top_srcdir)/common
 
 dnxQueueTest_SOURCES = dnxQueue.c @top_srcdir@/common/dnxError.c
-dnxQueueTest_CPPFLAGS = -DDEBUG -DDNX_QUEUE_TEST -I$(top_srcdir)/common
+dnxQueueTest_CPPFLAGS = -DDNX_QUEUE_TEST -I$(top_srcdir)/common
 
-dnxTimerTest_SOURCES = dnxTimer.c @top_srcdir@/common/dnxError.c
-dnxTimerTest_CPPFLAGS = -DDEBUG -DDNX_TIMER_TEST\
+dnxTimerTest_SOURCES = dnxTimer.c @top_srcdir@/common/dnxSleep.c\
+ @top_srcdir@/common/dnxError.c
+dnxTimerTest_CPPFLAGS = -DDNX_TIMER_TEST\
  -I$(top_srcdir)/common -I$(top_srcdir)/nagios/nagios-2.7/include
 
 

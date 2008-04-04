@@ -471,12 +471,12 @@ static int verbose;
 /* functional stubs */
 int dnxTimerCreate(DnxJobList * jl, int s, DnxTimer ** pt) { *pt = 0; return 0; }
 void dnxTimerDestroy(DnxTimer * t) { }
-int dnxSyslog(int p, char * f, ... )
+void dnxSyslog(int p, char * f, ... )
 {
    if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
    return 0;
 }
-int dnxDebug(int l, char * f, ... )
+void dnxDebug(int l, char * f, ... )
 {
    if (verbose) { va_list a; va_start(a,f); vprintf(f,a); va_end(a); puts(""); }
    return 0;
