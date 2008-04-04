@@ -382,9 +382,15 @@ static void cleanThreadPool(iDnxWlm * iwlm)
  */
 static void dnxWorkerCleanup(void * data)
 {
+   iDnxWlm * iwlm;
+   DnxWorkerStatus * ws = (DnxWorkerStatus *)data;
    assert(data);
-   ((DnxWorkerStatus *)data)->state = DNX_THREAD_ZOMBIE;
+   iwlm = ws->iwlm;
    dnxDebug(2, "Worker[%lx]: Terminating.", pthread_self());
+   ws->state = DNX_THREAD_ZOMBIE;
+   DNX_PT_MUTEX_LOCK(&iwlm->mutex);
+   cleanThreadPool(iwlm);
+   DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 }
 
 //----------------------------------------------------------------------------
@@ -404,14 +410,14 @@ static void * dnxWorker(void * data)
    iDnxWlm * iwlm;
 
    assert(data);
+   
+   iwlm = ws->iwlm;
 
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
    pthread_cleanup_push(dnxWorkerCleanup, data);
 
    time(&ws->tstart);   // set thread start time (for stats)
-
-   iwlm = ws->iwlm;
 
    while (!iwlm->terminate)
    {
@@ -546,9 +552,6 @@ static void * dnxWorker(void * data)
       }
    }
    pthread_cleanup_pop(1);
-   DNX_PT_MUTEX_LOCK(&iwlm->mutex);
-   cleanThreadPool(iwlm);
-   DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
    return 0;
 }
 
