@@ -8,38 +8,85 @@ blank lines and include the date, developer's name, and change description.
 
 *** Revision xx: Released dnx-0.15: dd-mmm-yy jcalcote
 
+* Revision: 137-136: 04-JAN-08 jcalcote 
+Updated ChangeLog.  Removed work load manager thread; pushed all pool 
+management onto workers.  Changed debug levels for most dnxDebug messages 
+so they are a bit more spread out; level 1 is now reasonable to watch in 
+the log file.  
+
+* Revision: 135-131: 03-JAN-08 jcalcote 
+Switched back to second resolution on the WLM wakeup timer - it appears 
+that pthread_cond_timedwait doesn't much care for milliseconds.  Changed 
+WLM poll interval to use millisecond resolution instead of second 
+resolution.  Increased queue size to twice service queue size in order to 
+handle bursts.  (last checkin) reorganized entire transport subsystem such 
+that transports can be loaded and configured at runtime if desired now.  
+(this checkin) changed protocol slightly to allow for backward 
+compatibility between server and client.  Ensured that all serial-slot 
+messages were printed in the same format.  
+
+* Revision: 130: 01-JAN-08 jcalcote 
+Cleaned up protocol module.  Cleaned up xml module; added dnxXmlCmpStr to 
+avoid allocation management for strings we're just verifying and throwing 
+away.  
+
+* Revision: 129: 31-DEC-07 jcalcote 
+Combined dnxConnect.h into dnxTransport.h; internalized data structures 
+and static functions in transport module.  
+
+* Revision: 128-127: 30-DEC-07 jcalcote 
+Added utesthelp.h to common/Makefile.am noinst_HEADERS.  Added registrar 
+unit tests; cleaned up service check handler a little.  
+
+* Revision: 126-123: 29-DEC-07 jcalcote 
+Added dispatcher unit tests.  Added utesthelp.h to manage unit test CHECK 
+macros.  Added unit test to dnxCollector.c.  Updated other unit tests to 
+use utesthelp.h.  Set client worker thread receive timeout back to 1 times 
+the configured value.  Fixed a bug in the config parser that was not 
+allowing default values to carry through; objectized plugin module and xml 
+module; wrote unit tests for xml module; general cleanup.  
+
+* Revision: 122: 17-DEC-07 jcalcote 
+Finished up index.html web page; Added team photos to about.html page.  
+
+* Revision: 121-118: 15-DEC-07 jcalcote 
+Made minor updates to the about.html page.  Updated contributing.html and 
+added content to about.html.  Fixed one doxygen bug in logging interfaces.  
+Added contributing.html content to web site; Fixed up formatting for 
+doxygen source comments for some of the source files.  
+
 * Revision: 117-111: 12-DEC-07 jcalcote 
-Updated ChangeLog. Changed dnxExecuteJob to display local node address 
-rather than remote job source address in DNX results messages. Add node 
-address to (DNX: *) results output by the DNX client. Added a debug 
-message about job completion status to dnxExecuteJob. Fixed segfault in 
-dnxPlugin; was due to recent changes in dnxPlugin.c. Converted neb module 
-to new config parser. Cleaned up doxygen comments in neb module source 
-files. Cleaned up dnxPlugin; fixed doxygen errors throughout. 
+Updated ChangeLog.  Changed dnxExecuteJob to display local node address 
+rather than remote job source address in DNX results messages.  Add node 
+address to (DNX: *) results output by the DNX client.  Added a debug 
+message about job completion status to dnxExecuteJob.  Fixed segfault in 
+dnxPlugin; was due to recent changes in dnxPlugin.c.  Converted neb module 
+to new config parser.  Cleaned up doxygen comments in neb module source 
+files.  Cleaned up dnxPlugin; fixed doxygen errors throughout.  
 
 * Revision: 110: 11-DEC-07 jcalcote
 Finished client rework; reorganized work load manager and worker thread 
-pool. Added new config parser; added reconfig logic (via SIGHUP). 
+pool.  Added new config parser; added reconfig logic (via SIGHUP).  
 
 * Revision: 109-107: 10-DEC-07 jcalcote
-WLM changes complete. Intermediate commit; Change dnxChannel to 
-DnxChannel; cleaned up client main code; objectized the work load manager. 
+WLM changes complete.  Intermediate commit; Change dnxChannel to 
+DnxChannel; cleaned up client main code; objectized the work load manager.  
 Generisized logging functionality - commit in preparation for move to 
-common directory. 
+common directory.  
 
 * Revision: 106: 07-DEC-07 jcalcote
 Changed all references to "GUID/Guid/guid" to "XID/xid" (except for xml 
 wire buffer attribute names - that would break client/server compatibility 
 - we'll do it at the last minute before the release.) Cleaned up a few 
-doxygen issues. Fixed a logging/return value error in the registrar. 
+doxygen issues.  Fixed a logging/return value error in the registrar.  
 
 * Revision: 105-100: 06-DEC-07 jcalcote
-Fixed a few cancellation issues in the 4 server threads. Added 
-cancelability back into dispatcher and collector threads. Added 
-cancelability back to registrar thread. Added cancelability back into 
-timer thread. Changed timer resolution to milliseconds (mostly for 
-testing). Added nagios 2.10 to the nagios target list - configure 
---with-nagios-2_10. Added dnxQueue.c unit tests. 
+Fixed a few cancellation issues in the 4 server threads.  Added 
+cancelability back into dispatcher and collector threads.  Added 
+cancelability back to registrar thread.  Added cancelability back into 
+timer thread.  Changed timer resolution to milliseconds (mostly for 
+testing).  Added nagios 2.10 to the nagios target list - configure 
+--with-nagios-2_10.  Added dnxQueue.c unit tests.  
 
 * Revision: 99-95: 05-DEC-07 jcalcote
 Added unit tests for dnxTimer.c; incorporated them into build system check 
