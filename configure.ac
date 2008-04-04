@@ -66,6 +66,8 @@ AC_DEFINE_UNQUOTED(BUILDARCH, ["$BUILDARCH"],
 
 AC_CONFIG_FILES([Makefile
 		 rpm/dnx.spec
+                 deb/dnx.dsc.in
+                 deb/debian.changelog.in
 		 doc/Makefile
 		 doc/doxyfile
 		 etc/Makefile

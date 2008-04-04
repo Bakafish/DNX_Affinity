@@ -1,4 +1,4 @@
-dnx (0.15-1) stable; urgency=low
+dnx (@VERSION@-1) stable; urgency=low
 
   * Initial Release
 
