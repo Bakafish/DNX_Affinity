@@ -108,17 +108,6 @@ AC_ARG_WITH([init-dir],
 initrddir="$with_init_dir"
 AC_SUBST(initrddir)
 
-# Export RPM build architecture
-which rpm > /dev/null; \
-if [[ $? -eq 0 ]]; then \
-   BUILDARCH=`rpm --showrc | grep ^build\ arch | sed 's/\(.*: \)\(.*\)/\2/'`; \
-else \
-   BUILDARCH="$build_cpu"; \
-fi
-AC_SUBST(BUILDARCH)
-AC_DEFINE_UNQUOTED(BUILDARCH, ["$BUILDARCH"],
-	[The build architecture of this build.])
-
 AC_CONFIG_FILES([Makefile
 		 etc/Makefile
 		 obs/dnx.spec

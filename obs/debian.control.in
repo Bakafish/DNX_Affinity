@@ -1,22 +1,22 @@
-Source: @PACKAGE@
+Source: @PACKAGE_TARNAME@
 Section: unknown
 Priority: optional
 Maintainer: John Calcote <john.calcote@gmail.com>
 Build-Depends: debhelper (>= 4.1.16), gcc
 
-Package: @PACKAGE@-doc
+Package: @PACKAGE_TARNAME@-doc
 Architecture: any
 Depends: ${shlibs:Depends}
 Description: DNX documentation
  The Distributed Nagios eXecutor (DNX) documentation package contains documentation for the dnx client daemon and server NEB module.
 
-Package: @PACKAGE@-client
+Package: @PACKAGE_TARNAME@-client
 Architecture: any
 Depends: ${shlibs:Depends}
 Description: DNX client daemon
  The Distributed Nagios eXecutor (DNX) client package provides a client daemon which can be configured to request work from the DNX NEB module.
 
-Package: @PACKAGE@-server
+Package: @PACKAGE_TARNAME@-server
 Architecture: any
 Depends: ${shlibs:Depends}
 Description: DNX NEB module

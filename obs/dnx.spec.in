@@ -1,5 +1,5 @@
 #
-# spec file for package dnx (Version @VERSION@)
+# spec file for package @PACKAGE@ (Version @PACKAGE_VERSION@)
 #
 # Copyright (c) 2007 Intellectual Reserve, Inc.
 # This file and all modifications and additions to the pristine
@@ -10,9 +10,9 @@
 
 # norootforbuild
 
-Name:           dnx
+Name:           @PACKAGE_TARNAME@
 Summary:        Distributed Nagios eXecutor for Nagios versions 2.x and 3.x
-Version:        @VERSION@
+Version:        @PACKAGE_VERSION@
 Release:        1
 Group:          System/Monitoring
 License:        GNU General Public License (GPL)

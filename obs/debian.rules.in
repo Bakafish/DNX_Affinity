@@ -21,7 +21,7 @@ build-stamp:
 
 	# Add here commands to compile the package.
 	mkdir /usr/src/packages/BUILD/build_dir
-	(cd /usr/src/packages/BUILD/build_dir; ../configure --prefix=/opt/@PACKAGE@)
+	(cd /usr/src/packages/BUILD/build_dir; ../configure --prefix=/opt/@PACKAGE_TARNAME@)
 	(cd /usr/src/packages/BUILD/build_dir; make)
 	# --- end custom part for compiling
 
@@ -46,7 +46,7 @@ install: build
 
 	# Add here commands to install the package
 	# The DESTDIR Has To Be Exactly /usr/src/packages/BUILD/debian/debian/<nameOfPackage>
-	(cd /usr/src/packages/BUILD/build_dir; make DESTDIR=/usr/src/packages/BUILD/debian/@PACKAGE@ install)
+	(cd /usr/src/packages/BUILD/build_dir; make DESTDIR=/usr/src/packages/BUILD/debian/@PACKAGE_TARNAME@ install)
 	# --- end custom part for installing
 
 # Build architecture-independent files here.

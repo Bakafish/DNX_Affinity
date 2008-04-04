@@ -20,12 +20,12 @@ install-server:
 dist-hook:
 	rm -rf `find $(distdir) -name .svn`
 
-rpmarch = $(BUILDARCH)
 rpmmacros = --define='_rpmdir $(PWD)' --define='_srcrpmdir $(PWD)'\
  --define='_sourcedir $(PWD)' --define='_specdir $(PWD)'\
  --define='_builddir $(PWD)'
 
 rpmcheck:
+	-rm -rf _rpm
 	@which rpm &> /dev/null; \
         if [ $$? -ne 0 ]; then \
           echo "*** This make target requires an rpm-based linux distribution."; \
@@ -33,9 +33,9 @@ rpmcheck:
         fi
 
 srcrpm: rpmcheck dist
-	rpmbuild -bs $(rpmmacros) --nodeps obs/$(PACKAGE).spec
+	rpmbuild -bs $(rpmmacros) --nodeps obs/$(PACKAGE_TARNAME).spec
 
 rpms: rpmcheck dist
-	rpmbuild -ba $(rpmmacros) --nodeps --buildroot=$(PWD)/tmp obs/$(PACKAGE).spec
-	mv $(rpmarch)/* .; rm -rf $(rpmarch)
-
+	rpmbuild -ba $(rpmmacros) --nodeps --buildroot=$(PWD)/_rpm obs/$(PACKAGE_TARNAME).spec
+	rpmarch=`rpm --showrc | grep ^build\ arch | sed 's/\(.*: \)\(.*\)/\2/'`; \
+        test -z $${rpmarch} || ( mv $${rpmarch}/* .; rm -rf $${rpmarch} )
