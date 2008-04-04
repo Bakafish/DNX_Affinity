@@ -36,7 +36,6 @@
 
 #include "dnxError.h"
 #include "dnxDebug.h"
-#include "dnxClientMain.h"
 #include "dnxTransport.h"
 #include "dnxProtocol.h"
 #include "dnxXml.h"
@@ -146,7 +145,7 @@ static int initWorkerComm(DnxWorkerStatus * tData)
    }
 
    // Attempt to open the dispatch channel
-   if ((ret = dnxConnect(szChan, &(tData->pDispatch), DNX_CHAN_ACTIVE)) != DNX_OK)
+   if ((ret = dnxConnect(szChan, &tData->pDispatch, DNX_CHAN_ACTIVE)) != DNX_OK)
    {
       syslog(LOG_ERR, "initWorkerComm: dnxConnect(Dispatch) failed for thread %lx: %d", pthread_self(), ret);
       return ret;

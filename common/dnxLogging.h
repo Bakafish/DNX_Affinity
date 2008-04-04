@@ -33,5 +33,7 @@
 int dnxSyslog(int priority, char * fmt, ...);
 int dnxDebug(int level, char * fmt, ...);
 
+int initLogging(int * pDebug, int * pLogFacility);
+
 #endif   /* _DNXLOGGING_H_ */
 

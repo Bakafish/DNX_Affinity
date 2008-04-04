@@ -33,8 +33,8 @@
 #include "dnxTransport.h"
 #include "dnxXml.h"
 
-dnxChannel *pDispatch;  // Dispatch communications channel
-dnxChannel *pCollect;   // Collector communications channel
+DnxChannel * pDispatch;  // Dispatch communications channel
+DnxChannel * pCollect;   // Collector communications channel
 
 static int initComm (void);
 static int nukeComm (void);

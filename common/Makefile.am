@@ -1,6 +1,7 @@
 noinst_LTLIBRARIES = libcmn.la
 
 noinst_HEADERS =\
+ dnxCfgParser.h\
  dnxChannel.h\
  dnxConfig.h\
  dnxDebug.h\
@@ -16,8 +17,10 @@ noinst_HEADERS =\
  pfopen.h
 
 libcmn_la_SOURCES =\
+ dnxCfgParser.c\
  dnxError.c\
  dnxHeap.c\
+ dnxLogging.c\
  dnxMsgQ.c\
  dnxProtocol.c\
  dnxTcp.c\

@@ -32,12 +32,12 @@
 
 int dnxUdpInit(void);
 int dnxUdpDeInit(void);
-int dnxUdpNew(dnxChannel ** channel, char * url);
-int dnxUdpDelete(dnxChannel * channel);
-int dnxUdpOpen(dnxChannel * channel, dnxChanMode mode);
-int dnxUdpClose(dnxChannel * channel);
-int dnxUdpRead(dnxChannel * channel, char * buf, int * size, int timeout, char * src);
-int dnxUdpWrite(dnxChannel * channel, char * buf, int size, int timeout, char * dst);
+int dnxUdpNew(DnxChannel ** channel, char * url);
+int dnxUdpDelete(DnxChannel * channel);
+int dnxUdpOpen(DnxChannel * channel, DnxChanMode mode);
+int dnxUdpClose(DnxChannel * channel);
+int dnxUdpRead(DnxChannel * channel, char * buf, int * size, int timeout, char * src);
+int dnxUdpWrite(DnxChannel * channel, char * buf, int size, int timeout, char * dst);
 
 #endif   /* _DNXUDP_H_ */
 

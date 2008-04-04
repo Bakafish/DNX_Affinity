@@ -750,7 +750,8 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
       return ERROR;
    }
 
-   cfgServerLogging(&cfg.debug, &dnxLogFacility);
+   // temporary cast till we convert the neb module to the new config parser
+   initLogging((int *)&cfg.debug, &dnxLogFacility);
 
    // subscribe to PROCESS_DATA call-backs in order to defer initialization
    //    until after Nagios validates its configuration and environment.

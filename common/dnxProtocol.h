@@ -120,15 +120,15 @@ typedef struct DnxMgmtReply_
    char address[DNX_MAX_ADDRESS];   // Source address
 } DnxMgmtReply;
 
-int dnxRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address);
-int dnxDeRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address);
-int dnxWaitForNodeRequest(dnxChannel * channel, DnxNodeRequest * pReg, char * address, int timeout);
-int dnxWantJob(dnxChannel * channel, DnxNodeRequest * pReq, char * address);
-int dnxGetJob(dnxChannel * channel, DnxJob * pJob, char * address, int timeout);
-int dnxPutJob(dnxChannel * channel, DnxJob * pJob, char * address);
-int dnxGetResult(dnxChannel * channel, DnxResult * pResult, char * address, int timeout);
-int dnxPutResult(dnxChannel * channel, DnxResult * pResult, char * address);
-int dnxGetMgmtRequest(dnxChannel * channel, DnxMgmtRequest * pRequest, char * address, int timeout);
+int dnxRegister(DnxChannel * channel, DnxNodeRequest * pReg, char * address);
+int dnxDeRegister(DnxChannel * channel, DnxNodeRequest * pReg, char * address);
+int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * address, int timeout);
+int dnxWantJob(DnxChannel * channel, DnxNodeRequest * pReq, char * address);
+int dnxGetJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeout);
+int dnxPutJob(DnxChannel * channel, DnxJob * pJob, char * address);
+int dnxGetResult(DnxChannel * channel, DnxResult * pResult, char * address, int timeout);
+int dnxPutResult(DnxChannel * channel, DnxResult * pResult, char * address);
+int dnxGetMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, char * address, int timeout);
 
 #endif   /* _DNXPROTOCOL_H_ */
 

@@ -53,7 +53,7 @@ typedef struct iDnxCollector_
    char * chname;          /*!< The collector channel name. */
    char * url;             /*!< The collector channel URL. */
    DnxJobList * joblist;   /*!< The job list we're collecting for. */
-   dnxChannel * channel;   /*!< Collector communications channel. */
+   DnxChannel * channel;   /*!< Collector communications channel. */
    pthread_t tid;          /*!< The collector thread id. */
 } iDnxCollector;
 

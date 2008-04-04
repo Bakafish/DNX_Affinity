@@ -31,50 +31,46 @@
 #define DNX_MAX_URL        1023
 #define DNX_MAX_MSG        1024
 
-typedef enum _dnxChanType_ 
+typedef enum DnxChanType_ 
 {
    DNX_CHAN_UNKNOWN = 0, 
    DNX_CHAN_TCP, 
    DNX_CHAN_UDP, 
    DNX_CHAN_UNIX, 
    DNX_CHAN_MSGQ 
-} dnxChanType;
+} DnxChanType;
 
-typedef enum _dnxChanMode_ 
+typedef enum DnxChanMode_ 
 {
    DNX_CHAN_PASSIVE = 0, 
    DNX_CHAN_ACTIVE 
-} dnxChanMode;
+} DnxChanMode;
 
-typedef enum _dnxChanState_ 
+typedef enum DnxChanState_ 
 {
    DNX_CHAN_CLOSED = 0, 
    DNX_CHAN_OPEN 
-} dnxChanState;
+} DnxChanState;
 
-typedef struct _dnxChannel_ 
+typedef struct DnxChannel_ 
 {
    int chan;            // Can be: INET socket, UNIX socket or IPC Message Queue ID
                         // (Can implement as a union in the future, if needed, to support
                         // other communications mechanisms.)  Better yet, implement as an
                         // opaque (void) structure pointer to allow the transport protocols
                         // to manipulate this with complete encapsulation and privacy.
-   dnxChanType type;    // Channel type
+   DnxChanType type;    // Channel type
    char * name;         // Channel name, as specified to dnxConnect
    char * host;         // Host for TCP/UDP channels; NULL for Message Queues
    int port;            // Port for TCP and UDP channels; ID for Message Queues
-   dnxChanState state;  // Channel state
+   DnxChanState state;  // Channel state
    int debug;           // Channel comm debug flag
-   int (*dnxOpen)(struct _dnxChannel_ * channel, dnxChanMode mode);
-   int (*dnxClose)(struct _dnxChannel_ * channel);
-   int (*dnxRead)(struct _dnxChannel_ * channel, char * buf, int * size, int timeout, char * src);
-   int (*dnxWrite)(struct _dnxChannel_ * channel, char * buf, int size, int timeout, char * dst);
-   int (*txDelete)(struct _dnxChannel_ * channel); // Release a channel using this transport
-} dnxChannel;
-
-/** @todo Temporarily define DnxChannel till we've fully redefined it. */
-
-#define DnxChannel dnxChannel
+   int (*dnxOpen)(struct DnxChannel_ * channel, DnxChanMode mode);
+   int (*dnxClose)(struct DnxChannel_ * channel);
+   int (*dnxRead)(struct DnxChannel_ * channel, char * buf, int * size, int timeout, char * src);
+   int (*dnxWrite)(struct DnxChannel_ * channel, char * buf, int size, int timeout, char * dst);
+   int (*txDelete)(struct DnxChannel_ * channel); // Release a channel using this transport
+} DnxChannel;
 
 #endif   /* _DNXCHANNEL_H_ */
 

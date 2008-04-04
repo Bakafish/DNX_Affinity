@@ -28,7 +28,16 @@
 #ifndef _DNXWLM_H_
 #define _DNXWLM_H_
 
-void * dnxWLM(void * data);
+typedef struct { int unused; } DnxWLM;
+
+int dnxWLMGetActiveThreads(DnxWLM * wlm);
+void dnxWLMSetActiveThreads(DnxWLM * wlm, int value);
+int dnxWLMGetActiveJobs(DnxWLM * wlm);
+void dnxWLMSetActiveJobs(DnxWLM * wlm, int value);
+
+int dnxWLMCreate(unsigned minsz, unsigned initsz, unsigned maxsz, 
+      unsigned incrsz, unsigned term_grace, unsigned * pdebug, DnxWLM ** pwlm);
+void dnxWLMDestroy(DnxWLM * wlm);
 
 #endif   /* _DNXWLM_H_ */
 

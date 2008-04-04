@@ -28,194 +28,109 @@
 #include "dnxLogging.h"
 #include "dnxError.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
-#include <time.h>
-#include <errno.h>
-#include <assert.h>
-#include <unistd.h>
+#include <syslog.h>
 
-#if HAVE_CONFIG_H
-# include <config.h>
-#endif
+#define MAX_LOG_LINE 1023
 
-#ifndef LOCALSTATEDIR
-# define LOCALSTATEDIR     "/var"
-#endif
+static long defDebug = 0;
+static int defLogFacility = LOG_LOCAL7;
 
-#define LOGDIR             LOCALSTATEDIR "/log"
+static int * pDebug = &defDebug;
+static int * pLogFacility = &defLogFacility;
 
-#ifndef DEF_LOG_FILE
-# define DEF_LOG_FILE      LOGDIR "/dnx.log"
-#endif
+//----------------------------------------------------------------------------
 
-#ifndef DEF_DEBUG_FILE
-# define DEF_DEBUG_FILE    LOGDIR "/dnx.debug.log"
-#endif
-
-#ifndef DEF_DEBUG_LEVEL
-# define DEF_DEBUG_LEVEL   0
-#endif
-
-/** Maximum log line length. */
-#define MAX_LOG_LINE       1023
-
-static int defDebugLevel = DEF_DEBUG_LEVEL;  //!< The default debug level.
-
-static int * s_debugLevel = &defDebugLevel;  //!< Debug level pointer.
-static char s_LogFileName[FILENAME_MAX + 1] = DEF_LOG_FILE;
-static char s_DbgFileName[FILENAME_MAX + 1] = DEF_DEBUG_FILE;
-static char s_AudFileName[FILENAME_MAX + 1] = "";
-
-/*--------------------------------------------------------------------------
-                              IMPLEMENTATION
-  --------------------------------------------------------------------------*/
-
-/** A variable argument logger function that takes a stream.
+/** Log a parameterized message to the dnx system log file.
  * 
- * @param[in] fp - the stream to write to.
- * @param[in] fmt - the format string to write.
- * @param[in] ap - the argument list to use.
+ * @param[in] priority - a priority value for the log message.
+ * @param[in] fmt - a format specifier string similar to that of printf.
  * 
- * @return zero on success or a non-zero error value if the data could not
- * be written.
+ * @return Zero on success, or a non-zero error code.
  */
-static int vlogger(FILE * fp, char * fmt, va_list ap)
+int dnxSyslog(int priority, char * fmt, ...)
 {
-   if (fp)
-   {
-      if (!isatty(fileno(fp)))
-      {
-         time_t tm = time(0);
-         if (fprintf(fp, "[%.*s] ", 24, ctime(&tm)) < 0)
-            return errno;
-      }
-      if (vfprintf(fp, fmt, ap) < 0)
-         return errno;
-      if (fputc('\n', fp) == EOF)
-         return errno;
-      if (fflush(fp) == EOF)
-         return errno;
-   }
-   return 0;
-}
-
-/*--------------------------------------------------------------------------
-                                 INTERFACE
-  --------------------------------------------------------------------------*/
-
-void dnxLog(char * fmt, ... )
-{
-   FILE * fp_fopened = 0;
-   FILE * fp = stdout;
    va_list ap;
+   char sbuf[MAX_LOG_LINE + 1];
 
-   assert(fmt);
-   
-   // check first for standard file handle references
-   if (*s_LogFileName && strcmp(s_LogFileName, "STDOUT") != 0)
+   // Validate input parameters
+   if (!fmt)
+      return DNX_ERR_INVALID;
+
+   // See if we need formatting
+   if (strchr(fmt, '%'))
    {
-      if (strcmp(s_LogFileName, "STDERR") == 0)
-         fp = stderr;
-      else 
-         fp_fopened = fopen(s_LogFileName, "a+");
+      // Format the string
+      va_start(ap, fmt);
+      vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
+      va_end(ap);
    }
+   else
+      strncpy(sbuf, fmt, MAX_LOG_LINE);
+   sbuf[MAX_LOG_LINE] = 0;
 
-   va_start(ap, fmt);
-   (void)vlogger(fp_fopened? fp_fopened: fp, fmt, ap);
-   va_end(ap);
+   // Publish the results
+   syslog(*pLogFacility | priority, "%s", sbuf);
 
-   if (fp_fopened)
-      fclose(fp_fopened);
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-void dnxDebug(int level, char * fmt, ... )
+/** Log a parameterized message to the dnx DEBUG log.
+ * 
+ * This routine logs a debug message if the current global (configured) 
+ * debug level is greater than or equal the value of @p level.
+ * 
+ * @param[in] level - the debug level at which to log the message.
+ * @param[in] fmt - a format specifier string similar to that of printf.
+ * 
+ * @return Zero on success, or a non-zero error code.
+ */
+int dnxDebug(int level, char * fmt, ...)
 {
-   assert(fmt);
-   assert(s_debugLevel);
+   va_list ap;
+   char sbuf[MAX_LOG_LINE + 1];
 
-   if (level <= *s_debugLevel)
+   // Validate input parameters
+   if (!fmt)
+      return DNX_ERR_INVALID;
+
+   // See if this message meets or exceeds our debugging level
+   if (level <= *pDebug)
    {
-      FILE * fp_fopened = 0;
-      FILE * fp = stdout;
-      va_list ap;
-
-      // check first for standard file handle references
-      if (*s_DbgFileName && strcmp(s_DbgFileName, "STDOUT") != 0)
+      // See if we need formatting
+      if (strchr(fmt, '%'))
       {
-         if (strcmp(s_DbgFileName, "STDERR") == 0)
-            fp = stderr;
-         else
-            fp_fopened = fopen(s_DbgFileName, "a+");
+         // Format the string
+         va_start(ap, fmt);
+         vsnprintf(sbuf, MAX_LOG_LINE, fmt, ap);
+         va_end(ap);
       }
-   
-      va_start(ap, fmt);
-      (void)vlogger(fp_fopened? fp_fopened: fp, fmt, ap);
-      va_end(ap);
+      else
+         strncpy(sbuf, fmt, MAX_LOG_LINE);
+      sbuf[MAX_LOG_LINE] = 0;
 
-      if (fp_fopened)
-         fclose(fp_fopened);
+      // Publish the results
+      syslog(*pLogFacility | LOG_DEBUG, "%s", sbuf);
    }
+
+   return DNX_OK;
 }
 
 //----------------------------------------------------------------------------
 
-int dnxAudit(char * fmt, ... )
+/** Initialize logging functionality.
+ * 
+ * @param[in] debug - a pointer to the global debug level.
+ * @param[in] logFacility - a pointer to the global log facility.
+ */
+void initLogging(int * debug, int * logFacility)
 {
-   int ret = 0;
-
-   assert(fmt);
-
-   if (*s_AudFileName)
-   {
-      FILE * fp_fopened = 0;
-      FILE * fp = 0;
-      va_list ap;
-
-      // check first for standard file handle references
-      if (strcmp(s_AudFileName, "STDOUT") == 0)
-         fp = stdout;
-      else if (strcmp(s_AudFileName, "STDERR") == 0)
-         fp = stderr;
-      else if ((fp = fp_fopened = fopen(s_AudFileName, "a+")) == 0)
-         return errno;
-
-      va_start(ap, fmt);
-      ret = vlogger(fp, fmt, ap);
-      va_end(ap);
-
-      if (fp_fopened)
-         fclose(fp_fopened);
-   }
-   return ret;
-}
-
-//----------------------------------------------------------------------------
-
-void dnxLogInit(char * logFile, char * debugFile, char * auditFile, 
-      int * debugLevel)
-{
-   if (logFile)
-   {
-      strncpy(s_LogFileName, logFile, sizeof(s_LogFileName) - 1);
-      s_LogFileName[sizeof(s_LogFileName) - 1] = 0;
-   }
-   if (debugFile)
-   {
-      strncpy(s_DbgFileName, debugFile, sizeof(s_DbgFileName) - 1);
-      s_DbgFileName[sizeof(s_DbgFileName) - 1] = 0;
-   }
-   if (auditFile)
-   {
-      strncpy(s_AudFileName, auditFile, sizeof(s_AudFileName) - 1);
-      s_AudFileName[sizeof(s_AudFileName) - 1] = 0;
-   }
-   s_debugLevel = debugLevel;
+   pDebug = debug;
+   pLogFacility = logFacility;
 }
 
 /*--------------------------------------------------------------------------*/

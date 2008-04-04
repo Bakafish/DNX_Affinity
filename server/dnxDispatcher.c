@@ -52,7 +52,7 @@ typedef struct iDnxDispatcher_
    char * chname;          /*!< The dispatcher channel name. */
    char * url;             /*!< The dispatcher channel URL. */
    DnxJobList * joblist;   /*!< The job list we're dispatching from. */
-   dnxChannel * channel;   /*!< Dispatcher communications channel. */
+   DnxChannel * channel;   /*!< Dispatcher communications channel. */
    pthread_t tid;          /*!< The dispatcher thread id. */
 } iDnxDispatcher;
 

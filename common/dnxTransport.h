@@ -32,26 +32,26 @@
 
 #define DNX_MAX_CHAN_MAP   1000
 
-typedef struct _dnxChanMap_ 
+typedef struct DnxChanMap_ 
 {
    char * name;         // Channel name, as read from configuration file
    char * url;          // Channel connection specification
-   dnxChanType type;    // Channel type: which transport to use
-   int (*txAlloc)(dnxChannel ** channel, char * url);  // Transport's channel factory
-} dnxChanMap;
+   DnxChanType type;    // Channel type: which transport to use
+   int (*txAlloc)(DnxChannel ** channel, char * url);  // Transport's channel factory
+} DnxChanMap;
 
 int dnxChanMapInit(char * fileName);
 int dnxChanMapRelease(void);
 int dnxChanMapAdd(char * name, char * url);
-int dnxChanMapUrlParse(dnxChanMap * chanMap, char * url);
+int dnxChanMapUrlParse(DnxChanMap * chanMap, char * url);
 int dnxChanMapDelete(char * name);
-int dnxChanMapFindSlot(dnxChanMap ** chanMap);
-int dnxChanMapFindName(char * name, dnxChanMap ** chanMap);
-int dnxConnect(char * name, dnxChannel ** channel, dnxChanMode mode);
-int dnxDisconnect(dnxChannel * channel);
-int dnxGet(dnxChannel * channel, char * buf, int * size, int timeout, char * src);
-int dnxPut(dnxChannel * channel, char * buf, int size, int timeout, char * dst);
-int dnxChannelDebug(dnxChannel * channel, int doDebug);
+int dnxChanMapFindSlot(DnxChanMap ** chanMap);
+int dnxChanMapFindName(char * name, DnxChanMap ** chanMap);
+int dnxConnect(char * name, DnxChannel ** channel, DnxChanMode mode);
+int dnxDisconnect(DnxChannel * channel);
+int dnxGet(DnxChannel * channel, char * buf, int * size, int timeout, char * src);
+int dnxPut(DnxChannel * channel, char * buf, int size, int timeout, char * dst);
+int dnxChannelDebug(DnxChannel * channel, int doDebug);
 
 #endif   /* _DNXTRANSPORT_H_ */
 

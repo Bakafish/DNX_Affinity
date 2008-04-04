@@ -62,7 +62,7 @@
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
+int dnxRegister(DnxChannel * channel, DnxNodeRequest * pReg, char * address)
 {
    DnxXmlBuf xbuf;
 
@@ -94,7 +94,7 @@ int dnxRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxDeRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
+int dnxDeRegister(DnxChannel * channel, DnxNodeRequest * pReg, char * address)
 {
    DnxXmlBuf xbuf;
 
@@ -129,7 +129,7 @@ int dnxDeRegister(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxWaitForNodeRequest(dnxChannel * channel, DnxNodeRequest * pReg, 
+int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, 
       char * address, int timeout)
 {
    DnxXmlBuf xbuf;
@@ -210,7 +210,7 @@ int dnxWaitForNodeRequest(dnxChannel * channel, DnxNodeRequest * pReg,
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxWantJob(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
+int dnxWantJob(DnxChannel * channel, DnxNodeRequest * pReg, char * address)
 {
    DnxXmlBuf xbuf;
 
@@ -247,7 +247,7 @@ int dnxWantJob(dnxChannel * channel, DnxNodeRequest * pReg, char * address)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxGetJob(dnxChannel * channel, DnxJob * pJob, char * address, int timeout)
+int dnxGetJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeout)
 {
    DnxXmlBuf xbuf;
    char * msg;
@@ -309,7 +309,7 @@ int dnxGetJob(dnxChannel * channel, DnxJob * pJob, char * address, int timeout)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxPutJob(dnxChannel * channel, DnxJob * pJob, char * address)
+int dnxPutJob(DnxChannel * channel, DnxJob * pJob, char * address)
 {
    DnxXmlBuf xbuf;
 
@@ -345,7 +345,7 @@ int dnxPutJob(dnxChannel * channel, DnxJob * pJob, char * address)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxGetResult(dnxChannel * channel, DnxResult * pResult, 
+int dnxGetResult(DnxChannel * channel, DnxResult * pResult, 
       char * address, int timeout)
 {
    DnxXmlBuf xbuf;
@@ -429,7 +429,7 @@ int dnxGetResult(dnxChannel * channel, DnxResult * pResult,
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxPutResult(dnxChannel * channel, DnxResult * pResult, char * address)
+int dnxPutResult(DnxChannel * channel, DnxResult * pResult, char * address)
 {
    DnxXmlBuf xbuf;
 
@@ -468,7 +468,7 @@ int dnxPutResult(dnxChannel * channel, DnxResult * pResult, char * address)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxGetMgmtRequest(dnxChannel * channel, DnxMgmtRequest * pRequest, 
+int dnxGetMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, 
       char * address, int timeout)
 {
    DnxXmlBuf xbuf;

@@ -22,10 +22,10 @@
  * Exports:
  * 
  *    1. dnxConnect (char *channel_name, ...)
- *    2. dnxDisconnect (dnxChannel *channel)
- *    3. dnxGet (dnxChannel *channel, dnxRequest *req, dnxMsg **msg, int timeout)
- *    4. dnxPut (dnxChannel *channel, dnxRequest req, dnxMsg *msg, int timeout)
- *    5. dnxChannelDebug (dnxChannel *channel, int doDebug)
+ *    2. dnxDisconnect (DnxChannel *channel)
+ *    3. dnxGet (DnxChannel *channel, dnxRequest *req, dnxMsg **msg, int timeout)
+ *    4. dnxPut (DnxChannel *channel, dnxRequest req, dnxMsg *msg, int timeout)
+ *    5. dnxChannelDebug (DnxChannel *channel, int doDebug)
  * 
  * Connection targets for dnxConnect are specified as Message Queue Names.
  * 
@@ -184,22 +184,22 @@
 
 static int dnxInit = 0;
 static pthread_mutex_t chanMutex;
-static dnxChanMap gChannelMap[DNX_MAX_CHAN_MAP];
+static DnxChanMap gChannelMap[DNX_MAX_CHAN_MAP];
 
 // External TCP Transport Functions
 extern int dnxTcpInit(void);
 extern int dnxTcpDeInit(void);
-extern int dnxTcpNew(dnxChannel ** channel, char * url);
+extern int dnxTcpNew(DnxChannel ** channel, char * url);
 
 // External UDP Transport Functions
 extern int dnxUdpInit(void);
 extern int dnxUdpDeInit(void);
-extern int dnxUdpNew(dnxChannel ** channel, char * url);
+extern int dnxUdpNew(DnxChannel ** channel, char * url);
 
 // External Message Queue Transport Functions
 extern int dnxMsgQInit(void);
 extern int dnxMsgQDeInit(void);
-extern int dnxMsgQNew(dnxChannel ** channel, char * url);
+extern int dnxMsgQNew(DnxChannel ** channel, char * url);
 
 //----------------------------------------------------------------------------
 
@@ -298,7 +298,7 @@ int dnxChanMapRelease(void)
  */
 int dnxChanMapAdd(char * name, char * url)
 {
-   dnxChanMap * chanMap;
+   DnxChanMap * chanMap;
    int ret;
 
    // Validate arguments
@@ -360,9 +360,9 @@ abend:;
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxChanMapUrlParse(dnxChanMap * chanMap, char * url)
+int dnxChanMapUrlParse(DnxChanMap * chanMap, char * url)
 {
-   static struct urlTypeMap { char * name; dnxChanType type; } typeMap[] = 
+   static struct urlTypeMap { char * name; DnxChanType type; } typeMap[] = 
    {
       { "tcp", DNX_CHAN_TCP }, 
       { "udp", DNX_CHAN_UDP }, 
@@ -429,7 +429,7 @@ int dnxChanMapUrlParse(dnxChanMap * chanMap, char * url)
  */
 int dnxChanMapDelete(char * name)
 {
-   dnxChanMap * chanMap;
+   DnxChanMap * chanMap;
    int ret;
 
    // Validate arguments
@@ -445,7 +445,7 @@ int dnxChanMapDelete(char * name)
       // Release allocated variables
       xfree(chanMap->name);
       if (chanMap->url)  xfree(chanMap->url);
-      memset(chanMap, 0, sizeof(dnxChanMap));
+      memset(chanMap, 0, sizeof(DnxChanMap));
       chanMap->type = DNX_CHAN_UNKNOWN;
    }
 
@@ -463,7 +463,7 @@ int dnxChanMapDelete(char * name)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxChanMapFindSlot(dnxChanMap ** chanMap)
+int dnxChanMapFindSlot(DnxChanMap ** chanMap)
 {
    int i;
 
@@ -473,7 +473,7 @@ int dnxChanMapFindSlot(dnxChanMap ** chanMap)
    for (i=0; i < DNX_MAX_CHAN_MAP && gChannelMap[i].name; i++)
       ;
 
-   *chanMap = (dnxChanMap *)((i < DNX_MAX_CHAN_MAP) ? &gChannelMap[i] : NULL);
+   *chanMap = (DnxChanMap *)((i < DNX_MAX_CHAN_MAP) ? &gChannelMap[i] : NULL);
 
    return (*chanMap) ? DNX_OK : DNX_ERR_CAPACITY;
 }
@@ -488,7 +488,7 @@ int dnxChanMapFindSlot(dnxChanMap ** chanMap)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxChanMapFindName(char * name, dnxChanMap ** chanMap)
+int dnxChanMapFindName(char * name, DnxChanMap ** chanMap)
 {
    int i;
 
@@ -501,7 +501,7 @@ int dnxChanMapFindName(char * name, dnxChanMap ** chanMap)
       if (gChannelMap[i].name && !strcmp(name, gChannelMap[i].name))
          break;
 
-   *chanMap = (dnxChanMap *)((i < DNX_MAX_CHAN_MAP) ? &gChannelMap[i] : NULL);
+   *chanMap = (DnxChanMap *)((i < DNX_MAX_CHAN_MAP) ? &gChannelMap[i] : NULL);
 
    return (*chanMap) ? DNX_OK : DNX_ERR_NOTFOUND;
 }
@@ -524,9 +524,9 @@ int dnxChanMapFindName(char * name, dnxChanMap ** chanMap)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxConnect(char * name, dnxChannel ** channel, dnxChanMode mode)
+int dnxConnect(char * name, DnxChannel ** channel, DnxChanMode mode)
 {
-   dnxChanMap * chanMap;
+   DnxChanMap * chanMap;
    int ret;
 
    // Validate arguments
@@ -561,7 +561,7 @@ int dnxConnect(char * name, dnxChannel ** channel, dnxChanMode mode)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxDisconnect(dnxChannel * channel)
+int dnxDisconnect(DnxChannel * channel)
 {
    int ret;
 
@@ -592,7 +592,7 @@ int dnxDisconnect(dnxChannel * channel)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxGet(dnxChannel * channel, char * buf, int * size, 
+int dnxGet(DnxChannel * channel, char * buf, int * size, 
       int timeout, char * src)
 {
    assert(channel && buf && size && *size > 0);
@@ -615,7 +615,7 @@ int dnxGet(dnxChannel * channel, char * buf, int * size,
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxPut(dnxChannel * channel, char * buf, int size, int timeout, char * dst)
+int dnxPut(DnxChannel * channel, char * buf, int size, int timeout, char * dst)
 {
    assert(channel && buf && size > 0);
    return channel->dnxWrite(channel, buf, size, timeout, dst);
@@ -630,7 +630,7 @@ int dnxPut(dnxChannel * channel, char * buf, int size, int timeout, char * dst)
  * 
  * @return Always returns zero.
  */
-int dnxChannelDebug(dnxChannel * channel, int doDebug)
+int dnxChannelDebug(DnxChannel * channel, int doDebug)
 {
    assert(channel);
   

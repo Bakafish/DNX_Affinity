@@ -16,7 +16,6 @@ dnxServer_la_SOURCES =\
  dnxConfig.c\
  dnxDispatcher.c\
  dnxJobList.c\
- dnxLogging.c\
  dnxNebMain.c\
  dnxQueue.c\
  dnxRegistrar.c\

@@ -85,7 +85,7 @@ int dnxMsgQDeInit(void)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxMsgQNew(dnxChannel ** channel, char * url)
+int dnxMsgQNew(DnxChannel ** channel, char * url)
 {
    char tmpUrl[DNX_MAX_URL + 1];
    char * cp, * ep, * lastchar;
@@ -116,9 +116,9 @@ int dnxMsgQNew(dnxChannel ** channel, char * url)
       return DNX_ERR_BADURL;
 
    // Allocate a new channel structure
-   if ((*channel = (dnxChannel *)xmalloc(sizeof(dnxChannel))) == NULL)
+   if ((*channel = (DnxChannel *)xmalloc(sizeof(DnxChannel))) == NULL)
       return DNX_ERR_MEMORY;  // Memory allocation error
-   memset(*channel, 0, sizeof(dnxChannel));
+   memset(*channel, 0, sizeof(DnxChannel));
 
    // Save host name and port
    (*channel)->type = DNX_CHAN_MSGQ;
@@ -145,7 +145,7 @@ int dnxMsgQNew(dnxChannel ** channel, char * url)
  * 
  * @return Always returns zero.
  */
-int dnxMsgQDelete(dnxChannel * channel)
+int dnxMsgQDelete(DnxChannel * channel)
 {
    assert(channel && channel->type == DNX_CHAN_MSGQ);
 
@@ -154,7 +154,7 @@ int dnxMsgQDelete(dnxChannel * channel)
       dnxMsgQClose(channel);
 
    // Release channel memory
-   memset(channel, 0, sizeof(dnxChannel));
+   memset(channel, 0, sizeof(DnxChannel));
    xfree(channel);
 
    return DNX_OK;
@@ -171,7 +171,7 @@ int dnxMsgQDelete(dnxChannel * channel)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxMsgQOpen(dnxChannel * channel, dnxChanMode mode)
+int dnxMsgQOpen(DnxChannel * channel, DnxChanMode mode)
 {
    int qid;
 
@@ -200,7 +200,7 @@ int dnxMsgQOpen(dnxChannel * channel, dnxChanMode mode)
  * 
  * @return Always returns zero.
  */
-int dnxMsgQClose(dnxChannel * channel)
+int dnxMsgQClose(DnxChannel * channel)
 {
    assert(channel && channel->type == DNX_CHAN_MSGQ);
 
@@ -237,7 +237,7 @@ int dnxMsgQClose(dnxChannel * channel)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxMsgQRead(dnxChannel * channel, char * buf, int * size, 
+int dnxMsgQRead(DnxChannel * channel, char * buf, int * size, 
       int timeout, char * src)
 {
    dnxMsgBuf msg;
@@ -278,7 +278,7 @@ int dnxMsgQRead(dnxChannel * channel, char * buf, int * size,
  * @note If this is a stream oriented channel, or if NULL is passed for 
  * the @p dst parameter, The channel destination address is used.
  */
-int dnxMsgQWrite(dnxChannel * channel, char * buf, int size, 
+int dnxMsgQWrite(DnxChannel * channel, char * buf, int size, 
       int timeout, char * dst)
 {
    dnxMsgBuf msg;

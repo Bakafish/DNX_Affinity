@@ -87,7 +87,7 @@ int dnxTcpDeInit(void)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxTcpNew(dnxChannel ** channel, char * url)
+int dnxTcpNew(DnxChannel ** channel, char * url)
 {
    char tmpUrl[DNX_MAX_URL + 1];
    char * cp, * ep, * lastchar;
@@ -120,10 +120,10 @@ int dnxTcpNew(dnxChannel ** channel, char * url)
       return DNX_ERR_BADURL;
 
    // Allocate a new channel structure
-   if ((*channel = (dnxChannel *)xmalloc(sizeof(dnxChannel))) == NULL)
+   if ((*channel = (DnxChannel *)xmalloc(sizeof(DnxChannel))) == NULL)
       return DNX_ERR_MEMORY;  // Memory allocation error
 
-   memset(*channel, 0, sizeof(dnxChannel));
+   memset(*channel, 0, sizeof(DnxChannel));
 
    // Save host name and port
    (*channel)->type = DNX_CHAN_TCP;
@@ -156,7 +156,7 @@ int dnxTcpNew(dnxChannel ** channel, char * url)
  * 
  * @return Always returns zero.
  */
-int dnxTcpDelete(dnxChannel * channel)
+int dnxTcpDelete(DnxChannel * channel)
 {
    assert(channel && channel->type == DNX_CHAN_TCP);
 
@@ -168,7 +168,7 @@ int dnxTcpDelete(dnxChannel * channel)
    if (channel->host) xfree(channel->host);
 
    // Release channel memory
-   memset(channel, 0, sizeof(dnxChannel));
+   memset(channel, 0, sizeof(DnxChannel));
    xfree(channel);
 
    return DNX_OK;
@@ -185,7 +185,7 @@ int dnxTcpDelete(dnxChannel * channel)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxTcpOpen(dnxChannel * channel, dnxChanMode mode)   // 0=Passive, 1=Active
+int dnxTcpOpen(DnxChannel * channel, DnxChanMode mode)   // 0=Passive, 1=Active
 {
    struct hostent * he;
    struct sockaddr_in inaddr;
@@ -270,7 +270,7 @@ int dnxTcpOpen(dnxChannel * channel, dnxChanMode mode)   // 0=Passive, 1=Active
  * 
  * @return Always returns zero.
  */
-int dnxTcpClose(dnxChannel * channel)
+int dnxTcpClose(DnxChannel * channel)
 {
    assert(channel && channel->type == DNX_CHAN_TCP);
 
@@ -307,7 +307,7 @@ int dnxTcpClose(dnxChannel * channel)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxTcpRead(dnxChannel * channel, char * buf, int * size, 
+int dnxTcpRead(DnxChannel * channel, char * buf, int * size, 
       int timeout, char * src)
 {
    struct sockaddr_in src_addr;
@@ -396,7 +396,7 @@ int dnxTcpRead(dnxChannel * channel, char * buf, int * size,
  * @note If this is a stream oriented channel, or if NULL is passed for 
  * the @p dst parameter, The channel destination address is used.
  */
-int dnxTcpWrite(dnxChannel * channel, char * buf, int size, 
+int dnxTcpWrite(DnxChannel * channel, char * buf, int size, 
       int timeout, char * dst)
 {
    fd_set fd_wrs;

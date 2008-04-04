@@ -30,7 +30,6 @@
 #include "dnxError.h"
 #include "dnxDebug.h"
 #include "dnxChannel.h"
-#include "dnxClientMain.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +38,7 @@
 
 #define DNX_MAX_CFG_LINE   2048
 
-typedef enum _DnxVarType_ 
+typedef enum DnxVarType_ 
 { 
    DNX_VAR_ERR = 0, DNX_VAR_STR, DNX_VAR_INT, DNX_VAR_DBL 
 } DnxVarType;
@@ -51,27 +50,27 @@ typedef struct _DnxVarMap_
    void * varStorage;
 } DnxVarMap;
 
-extern DnxGlobalData dnxGlobalData;
+//extern DnxGlobalData dnxGlobalData;
 
 static DnxVarMap DnxVarDictionary[] = 
 {
-   { "channelAgent",          DNX_VAR_STR, NULL },
-   { "channelDispatcher",     DNX_VAR_STR, NULL },
-   { "channelCollector",      DNX_VAR_STR, NULL },
-   { "poolInitial",           DNX_VAR_INT, NULL },
-   { "poolMin",               DNX_VAR_INT, NULL },
-   { "poolMax",               DNX_VAR_INT, NULL },
-   { "poolGrow",              DNX_VAR_INT, NULL },
-   { "wlmPollInterval",       DNX_VAR_INT, NULL },
-   { "wlmShutdownGracePeriod",DNX_VAR_INT, NULL },
-   { "threadRequestTimeout",  DNX_VAR_INT, NULL },
-   { "threadMaxTimeouts",     DNX_VAR_INT, NULL },
-   { "threadTtlBackoff",      DNX_VAR_INT, NULL },
-   { "logFacility",           DNX_VAR_STR, NULL },
-   { "pluginPath",            DNX_VAR_STR, NULL },
-   { "maxResultBuffer",       DNX_VAR_INT, NULL },
-   { "debug",                 DNX_VAR_INT, NULL },
-   { NULL,                    DNX_VAR_ERR, NULL }
+   { "channelAgent",          DNX_VAR_STR, 0 },
+   { "channelDispatcher",     DNX_VAR_STR, 0 },
+   { "channelCollector",      DNX_VAR_STR, 0 },
+   { "poolInitial",           DNX_VAR_INT, 0 },
+   { "poolMin",               DNX_VAR_INT, 0 },
+   { "poolMax",               DNX_VAR_INT, 0 },
+   { "poolGrow",              DNX_VAR_INT, 0 },
+   { "wlmPollInterval",       DNX_VAR_INT, 0 },
+   { "wlmShutdownGracePeriod",DNX_VAR_INT, 0 },
+   { "threadRequestTimeout",  DNX_VAR_INT, 0 },
+   { "threadMaxTimeouts",     DNX_VAR_INT, 0 },
+   { "threadTtlBackoff",      DNX_VAR_INT, 0 },
+   { "logFacility",           DNX_VAR_STR, 0 },
+   { "pluginPath",            DNX_VAR_STR, 0 },
+   { "maxResultBuffer",       DNX_VAR_INT, 0 },
+   { "debug",                 DNX_VAR_INT, 0 },
+   { 0,                       DNX_VAR_ERR, 0 }
 };
 
 //----------------------------------------------------------------------------
@@ -176,7 +175,7 @@ static int parseLine(char * szFile, int lineNo, char * szLine)
    char * cp;
 
    // Strip comments
-   if ((cp = strchr(szLine, '#')) != NULL)
+   if ((cp = strchr(szLine, '#')) != 0)
       *cp = '\0';
 
    // Strip trailing whitespace
@@ -187,7 +186,7 @@ static int parseLine(char * szFile, int lineNo, char * szLine)
       return 0;
 
    // Look for equivalence delimiter
-   if ((cp = strchr(szLine, '=')) == NULL)
+   if ((cp = strchr(szLine, '=')) == 0)
    {
       fprintf(stderr, "parseLine: Missing '=' equivalence operator\n");
       return 1;   // Parse error: no delimiter
@@ -221,22 +220,22 @@ static int parseLine(char * szFile, int lineNo, char * szLine)
 void initGlobals(void)
 {
    // 'cause C doesn't allow non-constant initializers in static structures
-   DnxVarDictionary[ 0].varStorage = &(dnxGlobalData.channelAgent);
-   DnxVarDictionary[ 1].varStorage = &(dnxGlobalData.channelDispatcher);
-   DnxVarDictionary[ 2].varStorage = &(dnxGlobalData.channelCollector);
-   DnxVarDictionary[ 3].varStorage = &(dnxGlobalData.poolInitial);
-   DnxVarDictionary[ 4].varStorage = &(dnxGlobalData.poolMin);
-   DnxVarDictionary[ 5].varStorage = &(dnxGlobalData.poolMax);
-   DnxVarDictionary[ 6].varStorage = &(dnxGlobalData.poolGrow);
-   DnxVarDictionary[ 7].varStorage = &(dnxGlobalData.wlmPollInterval);
-   DnxVarDictionary[ 8].varStorage = &(dnxGlobalData.wlmShutdownGracePeriod);
-   DnxVarDictionary[ 9].varStorage = &(dnxGlobalData.threadRequestTimeout);
-   DnxVarDictionary[10].varStorage = &(dnxGlobalData.threadMaxTimeouts);
-   DnxVarDictionary[11].varStorage = &(dnxGlobalData.threadTtlBackoff);
-   DnxVarDictionary[12].varStorage = &(dnxGlobalData.logFacility);
-   DnxVarDictionary[13].varStorage = &(dnxGlobalData.pluginPath);
-   DnxVarDictionary[14].varStorage = &(dnxGlobalData.maxResultBuffer);
-   DnxVarDictionary[15].varStorage = &(dnxGlobalData.debug);
+   DnxVarDictionary[ 0].varStorage = &dnxGlobalData.channelAgent;
+   DnxVarDictionary[ 1].varStorage = &dnxGlobalData.channelDispatcher;
+   DnxVarDictionary[ 2].varStorage = &dnxGlobalData.channelCollector;
+   DnxVarDictionary[ 3].varStorage = &dnxGlobalData.poolInitial;
+   DnxVarDictionary[ 4].varStorage = &dnxGlobalData.poolMin;
+   DnxVarDictionary[ 5].varStorage = &dnxGlobalData.poolMax;
+   DnxVarDictionary[ 6].varStorage = &dnxGlobalData.poolGrow;
+   DnxVarDictionary[ 7].varStorage = &dnxGlobalData.wlmPollInterval;
+   DnxVarDictionary[ 8].varStorage = &dnxGlobalData.wlmShutdownGracePeriod;
+   DnxVarDictionary[ 9].varStorage = &dnxGlobalData.threadRequestTimeout;
+   DnxVarDictionary[10].varStorage = &dnxGlobalData.threadMaxTimeouts;
+   DnxVarDictionary[11].varStorage = &dnxGlobalData.threadTtlBackoff;
+   DnxVarDictionary[12].varStorage = &dnxGlobalData.logFacility;
+   DnxVarDictionary[13].varStorage = &dnxGlobalData.pluginPath;
+   DnxVarDictionary[14].varStorage = &dnxGlobalData.maxResultBuffer;
+   DnxVarDictionary[15].varStorage = &dnxGlobalData.debug;
 }
 
 //----------------------------------------------------------------------------
@@ -255,11 +254,11 @@ int parseFile(char * szFile)
    int ret = 0;
 
    // Open the config file
-   if ((fp = fopen(szFile, "r")) != NULL)
+   if ((fp = fopen(szFile, "r")) != 0)
    {
       lineNo = 0; // Clear line counter
 
-      while (fgets(szLine, sizeof(szLine), fp) != NULL)
+      while (fgets(szLine, sizeof(szLine), fp) != 0)
          if ((ret = parseLine(szFile, lineNo, szLine)) != 0)
             break;   // Encountered error condition
 

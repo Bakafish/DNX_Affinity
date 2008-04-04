@@ -34,12 +34,12 @@
 
 int dnxTcpInit(void);
 int dnxTcpDeInit(void);
-int dnxTcpNew(dnxChannel ** channel, char * url);
-int dnxTcpDelete(dnxChannel * channel);
-int dnxTcpOpen(dnxChannel * channel, dnxChanMode mode);
-int dnxTcpClose(dnxChannel * channel);
-int dnxTcpRead(dnxChannel * channel, char * buf, int * size, int timeout, char * src);
-int dnxTcpWrite(dnxChannel * channel, char * buf, int size, int timeout, char * dst);
+int dnxTcpNew(DnxChannel ** channel, char * url);
+int dnxTcpDelete(DnxChannel * channel);
+int dnxTcpOpen(DnxChannel * channel, DnxChanMode mode);
+int dnxTcpClose(DnxChannel * channel);
+int dnxTcpRead(DnxChannel * channel, char * buf, int * size, int timeout, char * src);
+int dnxTcpWrite(DnxChannel * channel, char * buf, int size, int timeout, char * dst);
 
 #endif   /* _DNXTCP_H_ */
 

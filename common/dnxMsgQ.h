@@ -32,12 +32,12 @@
 
 int dnxMsgQInit(void);
 int dnxMsgQDeInit(void);
-int dnxMsgQNew(dnxChannel ** channel, char * url);
-int dnxMsgQDelete(dnxChannel * channel);
-int dnxMsgQOpen(dnxChannel * channel, dnxChanMode mode);
-int dnxMsgQClose(dnxChannel * channel);
-int dnxMsgQRead(dnxChannel * channel, char * buf, int * size, int timeout, char * src);
-int dnxMsgQWrite(dnxChannel * channel, char * buf, int size, int timeout, char * dst);
+int dnxMsgQNew(DnxChannel ** channel, char * url);
+int dnxMsgQDelete(DnxChannel * channel);
+int dnxMsgQOpen(DnxChannel * channel, DnxChanMode mode);
+int dnxMsgQClose(DnxChannel * channel);
+int dnxMsgQRead(DnxChannel * channel, char * buf, int * size, int timeout, char * src);
+int dnxMsgQWrite(DnxChannel * channel, char * buf, int size, int timeout, char * dst);
 
 #endif   /* _DNXMSGQ_H_ */
 

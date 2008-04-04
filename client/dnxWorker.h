@@ -29,7 +29,6 @@
 #define _DNXWORKER_H_
 
 void * dnxWorker(void * data);
-int dnxThreadSleep(int seconds);
 
 #endif   /* _DNXWORKER_H_ */
 
