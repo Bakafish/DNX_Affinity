@@ -557,7 +557,7 @@ static int dnxServerInit(void)
       return ret;
 
    // create worker node registrar
-   if ((ret = dnxRegistrarCreate(joblistsz, 
+   if ((ret = dnxRegistrarCreate(joblistsz * 2, 
          dnxDispatcherGetChannel(dispatcher), &registrar)) != 0)
       return ret;
 
