@@ -10,15 +10,15 @@
 # 
 ### BEGIN INIT INFO
 # Provides:          dnxcld
-# Required-Start:    $local_fs
+# Required-Start:    $syslog $local_fs
 # Should-Start:      $time $network $remote_fs
-# Required-Stop:     $local_fs
+# Required-Stop:     $syslog $local_fs
 # Should-Stop:       $time $network $remote_fs
-# Default-Start:     3 5
+# Default-Start:     1 2 3 4 5
 # Default-Stop:      0 6
-# Short-Description: DNX dnxClient daemon providing Nagios check distribution
+# Short-Description: DNX dnxClient daemon providing nagios check distribution
 # Description:       Start dnxClient to allow this host to act as a node in 
-#                    a network of distributed Nagios check servers.
+#                    a network of distributed nagios check servers.
 ### END INIT INFO
 #
 # Note on runlevels:
@@ -33,17 +33,11 @@
 # Please use the names already registered or register one or use a
 # vendor prefix.
 
-# Setup service-specific environment
-SERVICE=dnxClient
-SERVICE_CFG="@sysconfdir@/$SERVICE.cfg"
-SERVICE_PID="@sysrundir@/$SERVICE.pid"
-SERVICE_LCK="@sysrundir@/$SERVICE.lck"
-SERVICE_BIN="@prefix@/sbin/$SERVICE"
-SERVICE_CMD="$SERVICE_BIN -c $SERVICE_CFG"
 
 # Check for missing binaries (stale symlinks should not happen)
 # Note: Special treatment of stop for LSB conformance
-test -x $SERVICE_BIN || { echo "$SERVICE not installed"; 
+DNXCLIENT_BIN=@prefix@/sbin/dnxClient
+test -x $DNXCLIENT_BIN || { echo "$DNXCLIENT_BIN not installed"; 
 	if [ "$1" = "stop" ]; then exit 0;
 	else exit 5; fi; }
 
@@ -55,21 +49,21 @@ rc_reset
 
 case "$1" in
     start)
-	echo -n "Starting $SERVICE "
+	echo -n "Starting dnxClient "
 	## Start daemon with startproc(8). If this fails
 	## the return value is set appropriately by startproc.
 
-	/sbin/startproc $SERVICE_CMD
+	/sbin/startproc $DNXCLIENT_BIN
 
 	# Remember status and be verbose
 	rc_status -v
 	;;
     stop)
-	echo -n "Shutting down $SERVICE "
+	echo -n "Shutting down dnxClient "
 	## Stop daemon with killproc(8) and if this fails
 	## killproc sets the return value according to LSB.
 
-	/sbin/killproc -TERM $SERVICE_BIN
+	/sbin/killproc -TERM $DNXCLIENT_BIN
 
 	# Remember status and be verbose
 	rc_status -v
@@ -105,10 +99,10 @@ case "$1" in
 	## If it does not support it, restart the service if it
 	## is running.
 
-	echo -n "Reload service $SERVICE "
+	echo -n "Reload service dnxClient "
 	## if it supports it:
-	/sbin/killproc -HUP $SERVICE_BIN
-	#touch $SERVICE_PID
+	/sbin/killproc -HUP $DNXCLIENT_BIN
+	#touch /var/run/dnxClient.pid
 	rc_status -v
 
 	## Otherwise:
@@ -120,9 +114,9 @@ case "$1" in
 	## signaling, do nothing (!)
 
 	# If it supports signaling:
-	echo -n "Reload service $SERVICE "
-	/sbin/killproc -HUP $SERVICE_BIN
-	#touch $SERVICE_PID
+	echo -n "Reload service dnxClient "
+	/sbin/killproc -HUP $DNXCLIENT_BIN
+	#touch /var/run/dnxClient.pid
 	rc_status -v
 	
 	## Otherwise if it does not support reload:
@@ -130,26 +124,26 @@ case "$1" in
 	#rc_status -v
 	;;
     status)
-	echo -n "Checking for service $SERVICE "
+	echo -n "Checking for service dnxClient "
 	## Check status with checkproc(8), if process is running
 	## checkproc will return with exit status 0.
 
 	# Return value is slightly different for the status command:
 	# 0 - service up and running
-	# 1 - service dead, but $SERVICE_PID file exists
-	# 2 - service dead, but $SERVICE_LCK file exists
+	# 1 - service dead, but /var/run/  pid  file exists
+	# 2 - service dead, but /var/lock/ lock file exists
 	# 3 - service not running (unused)
 	# 4 - service status unknown :-(
 	# 5--199 reserved (5--99 LSB, 100--149 distro, 150--199 appl.)
 	
 	# NOTE: checkproc returns LSB compliant status values.
-	/sbin/checkproc $SERVICE_BIN
+	/sbin/checkproc $DNXCLIENT_BIN
 	# NOTE: rc_status knows that we called this init script with
 	# "status" option and adapts its messages accordingly.
 	rc_status -v
 	;;
     probe)
-	test $SERVICE_CFG -nt $SERVICE_PID && echo reload
+	test /etc/dnxClient.cfg -nt /var/run/dnxClient.pid && echo reload
 	;;
     *)
 	echo "Usage: $0 {start|stop|status|try-restart|restart|force-reload|reload|probe}"

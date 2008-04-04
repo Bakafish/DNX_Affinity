@@ -50,6 +50,7 @@ AC_CONFIG_FILES([Makefile
 		 rpm/dnx.spec
 		 doc/doxyfile
 		 doc/Makefile
+                 etc/dnxcld.init
                  common/Makefile
                  server/Makefile
                  client/Makefile])
