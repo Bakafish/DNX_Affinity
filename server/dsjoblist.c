@@ -19,17 +19,19 @@
 
 /** Implements the DNX Job List mechanism.
  *
- * @file dnxJobList.c
+ * @file dsjoblist.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#include "dsjoblist.h"
 
-#include "dnxJobList.h"
+#include "dsaudit.h"
+
 #include "dnxLogging.h"
 #include "dnxError.h"
 #include "dnxDebug.h"
-#include "dsaudit.h"
+
 
 static int auditingEnabled;   /*!< Is job auditing enabled? */
 
@@ -431,4 +433,6 @@ void dnxJobListExit(DnxJobList ** ppJobList)
 
    *ppJobList = NULL;
 }
+
+/*-------------------------------------------------------------------------*/
 

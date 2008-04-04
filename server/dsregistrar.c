@@ -27,20 +27,22 @@
  * The Registrar thread manages this registration process on behalf
  * of the Scheduler.
  *
- * @file dnxRegistrar.c
+ * @file dsregistrar.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#include "dsregistrar.h"
 
-#include "dnxNebMain.h"
-#include "dnxError.h"
-#include "dnxQueue.h"
-#include "dnxProtocol.h"
-#include "dnxRegistrar.h"
+#include "dsnebmain.h"
+#include "dsqueue.h"
+
 #include "dnxLogging.h"
+#include "dnxError.h"
+#include "dnxProtocol.h"
 
 #include <assert.h>
+
 
 #define DNX_REGISTRAR_REQUEST_TIMEOUT  30
 
@@ -294,4 +296,6 @@ static DnxQueueResult dnxRemoveNode (void *pLeft, void *pRight)
    // Always return FOUND - This essentially allows us to walk the list
    return (DNX_QRES_FOUND);
 }
+
+/*-------------------------------------------------------------------------*/
 

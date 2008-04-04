@@ -26,16 +26,15 @@
  * The algorithm's weighting is based upon the number of jobs-per-second
  * throughput rating of each worker node.
  *
- * @file dnxDispatcher.h
+ * @file dsdispatcher.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#ifndef _DSDISPATCHER_H_
+#define _DSDISPATCHER_H_
 
-#ifndef _DNXDISPATCHER_H_
-#define _DNXDISPATCHER_H_
+void * dnxDispatcher(void * data);
 
-void *dnxDispatcher (void *data);
-
-#endif   /* _DNXDISPATCHER_H_ */
+#endif   /* _DSDISPATCHER_H_ */
 

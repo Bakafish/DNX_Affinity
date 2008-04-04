@@ -25,14 +25,13 @@
  * This requires access to the global Pending queue (which is also
  * manipulated by the Dispatcher and Collector threads.)
  *
- * @file dnxQueue.h
+ * @file dsqueue.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
-
-#ifndef _DNXQUEUE_H_
-#define _DNXQUEUE_H_
+#ifndef _DSQUEUE_H_
+#define _DSQUEUE_H_
 
 #include <stdio.h>       // standard I/O routines
 #include <pthread.h>     // pthread functions and data structures
@@ -61,29 +60,29 @@ typedef struct _DnxQueue_ {
  * create a requests queue. associate it with the given mutex
  * and condition variables.
  */
-extern int dnxQueueInit (DnxQueue **ppQueue, pthread_mutex_t *p_mutex, pthread_cond_t *p_cond_var, int max_size);
+int dnxQueueInit(DnxQueue ** ppQueue, pthread_mutex_t * p_mutex, pthread_cond_t * p_cond_var, int max_size);
 
 /* add a request to the requests list */
-extern int dnxQueuePut (DnxQueue *queue, void *pPayload);
+int dnxQueuePut(DnxQueue * queue, void * pPayload);
 
 /* get the first pending request from the requests list */
-extern int dnxQueueGet (DnxQueue *queue, void **ppPayload);
-extern int dnxQueueGetWait (DnxQueue *queue, void **ppPayload);
+int dnxQueueGet(DnxQueue * queue, void ** ppPayload);
+int dnxQueueGetWait(DnxQueue * queue, void ** ppPayload);
 
 /* Advance queue's circular buffer pointer */
-int dnxQueueNext (DnxQueue *queue, void **ppPayload);
+int dnxQueueNext(DnxQueue * queue, void ** ppPayload);
 
 /* Find a queue item without removing it */
-DnxQueueResult dnxQueueFind (DnxQueue *queue, void **ppPayload, DnxQueueResult (*Compare)(void *pLeft, void *pRight));
+DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, DnxQueueResult (*Compare)(void * pLeft, void * pRight));
 
 /* Atomically find and remove a queue item */
-DnxQueueResult dnxQueueRemove (DnxQueue *queue, void **ppPayload, DnxQueueResult (*Compare)(void *pLeft, void *pRight));
+DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload, DnxQueueResult (*Compare)(void * pLeft, void * pRight));
 
 /* get the number of requests in the list */
-extern int dnxQueueSize (DnxQueue *queue, int *pSize);
+int dnxQueueSize(DnxQueue * queue, int * pSize);
 
 /* free the resources taken by the given requests queue */
-extern int dnxQueueDelete (DnxQueue *queue);
+int dnxQueueDelete(DnxQueue * queue);
 
-#endif   /* _DNXQUEUE_H_ */
+#endif   /* _DSQUEUE_H_ */
 

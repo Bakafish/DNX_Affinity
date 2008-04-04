@@ -24,18 +24,19 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#include "dsnebmain.h"
 
-#include "dnxNebMain.h"
+#include "dsqueue.h"
+#include "dscollector.h"
+#include "dsdispatcher.h"
+#include "dstimer.h"
+#include "dsjoblist.h"
+
 #include "dnxConfig.h"
 #include "dnxProtocol.h"
 #include "dnxTransport.h"
 #include "dnxXml.h"
-#include "dnxQueue.h"
-#include "dnxCollector.h"
-#include "dnxDispatcher.h"
 #include "dnxRegistrar.h"
-#include "dnxTimer.h"
-#include "dnxJobList.h"
 #include "dnxLogging.h"
 
 #ifdef HAVE_CONFIG_H
@@ -712,4 +713,6 @@ int nebmodule_deinit (int flags, int reason)
 
    return 0;
 }
+
+/*-------------------------------------------------------------------------*/
 

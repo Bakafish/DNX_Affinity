@@ -26,22 +26,26 @@
  * The algorithm's weighting is based upon the number of jobs-per-second
  * throughput rating of each worker node.
  *
- * @file dnxDispatcher.c
+ * @file dsdispatcher.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
 
-#include <assert.h>
+#include "dsdispatcher.h"
+
+#include "dsnebmain.h"
+#include "dsjoblist.h"
+#include "dsaudit.h"
 
 #include "dnxError.h"
 #include "dnxProtocol.h"
 #include "dnxXml.h"
-#include "dnxNebMain.h"
 #include "dnxRegistrar.h"
-#include "dnxJobList.h"
 #include "dnxLogging.h"
-#include "dsaudit.h"
+
+#include <assert.h>
+
 
 static void dnxDispatcherCleanup (void *data);
 static int dnxDispatchJob (DnxGlobalData *gData, DnxNewJob *pSvcReq);
@@ -180,4 +184,6 @@ static int dnxSendJob (DnxGlobalData *gData, DnxNewJob *pSvcReq, DnxNodeRequest 
 
    return ret;
 }
+
+/*-------------------------------------------------------------------------*/
 

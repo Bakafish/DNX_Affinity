@@ -19,19 +19,19 @@
 
 /** Prototypes and definitions for the DNX Timer thread.
  *
- * @file dnxTimer.h
+ * @file dstimer.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
 
-#ifndef _DNXTIMER_H_
-#define _DNXTIMER_H_
+#ifndef _DSTIMER_H_
+#define _DSTIMER_H_
 
-#include "dnxJobList.h"
+#include "dsjoblist.h"
 
 int dnxTimerInit(DnxJobList * jobList);
 void dnxTimerExit(void);
 
-#endif   /* _DNXTIMER_H_ */
+#endif   /* _DSTIMER_H_ */
 

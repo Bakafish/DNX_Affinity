@@ -27,13 +27,13 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
-
 #include "dsaudit.h"
 
-#include "dnxJobList.h"
+#include "dsjoblist.h"
 
 #include <syslog.h>
 #include <netinet/in.h>
+
 
 static int auditingEnabled;   /*!< The current state of auditing.       */
 static int auditingFacility;  /*!< The auditing syslog facility code.   */
@@ -109,4 +109,6 @@ int dsAuditInit(int facility, int enabled)
 void dsAuditExit(void)
 {
 }
+
+/*-------------------------------------------------------------------------*/
 

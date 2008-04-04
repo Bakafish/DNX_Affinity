@@ -19,17 +19,19 @@
 
 /** Implements the DNX Server logging functions.
  *
- * @file dnxLogging.c
+ * @file dslogging.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#include "dnxLogging.h"
+
+#include "dsnebmain.h"
+
+#include "dnxError.h"
 
 #include <stdarg.h>
 
-#include "dnxNebMain.h"
-#include "dnxError.h"
-#include "dnxLogging.h"
 
 #define MAX_LOG_LINE 1023
 
@@ -128,4 +130,6 @@ int dnxDebug (int level, char *fmt, ...)
 
    return DNX_OK;
 }
+
+/*-------------------------------------------------------------------------*/
 

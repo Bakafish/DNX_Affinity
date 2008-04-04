@@ -19,18 +19,24 @@
 
 /** Header file for global structures associated with the DNX Server.
  *
- * @file dnxNebMain.h
+ * @file dsnebmain.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
-
-#ifndef _DNXNEBMAIN_H_
-#define _DNXNEBMAIN_H_
+#ifndef _DSNEBMAIN_H_
+#define _DSNEBMAIN_H_
 
 #ifndef NSCORE
 #define NSCORE
 #endif
+
+#include "dsjoblist.h"
+#include "dsqueue.h"
+
+#include "dnxError.h"
+#include "dnxTransport.h"
+#include "dnxProtocol.h"
 
 /* include (minimum required) event broker header files */
 #include "nebmodules.h"
@@ -49,17 +55,10 @@
 
 #include <regex.h>
 
-#include "dnxError.h"
-#include "dnxJobList.h"
-#include "dnxTransport.h"
-#include "dnxProtocol.h"
-#include "dnxQueue.h"         // for dnxQueue
-
-#define DNX_DISPATCH_PORT  12480
-#define DNX_COLLECT_PORT   12481
-#define DNX_TCP_LISTEN     5
-
 #define DNX_MAX_NODE_REQUESTS 1024
+#define DNX_DISPATCH_PORT     12480
+#define DNX_COLLECT_PORT      12481
+#define DNX_TCP_LISTEN        5
 
 typedef struct DnxGlobalData
 {
@@ -91,5 +90,5 @@ typedef struct DnxGlobalData
    int isActive;              // Boolean: Is this module active?
 } DnxGlobalData;
 
-#endif   /* _DNXNEBMAIN_H_ */
+#endif   /* _DSNEBMAIN_H_ */
 

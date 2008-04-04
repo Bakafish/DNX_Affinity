@@ -19,14 +19,14 @@
 
 /** Implements the DNX Job List mechanism.
  *
- * @file dnxJobList.h
+ * @file dsjoblist.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
 
-#ifndef _DNXJOBLIST_H_
-#define _DNXJOBLIST_H_
+#ifndef _DSJOBLIST_H_
+#define _DSJOBLIST_H_
 
 #include "dnxProtocol.h"   /* for DnxGuid, DnxJobState, DnxNodeRequest */
 
@@ -64,9 +64,11 @@ typedef struct _DnxJobList_
 } DnxJobList;
 
 int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob);
-int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs);
+int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, 
+   int * totalJobs);
 int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob);
-int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, DnxNewJob * pJob);
+int dnxJobListCollect(DnxJobList * pJobList, DnxGuid * pGuid, 
+   DnxNewJob * pJob);
 
 int dnxPostNewJob(DnxJobList * jobList, unsigned long serial, 
    nebstruct_service_check_data * ds, DnxNodeRequest * pNode);
@@ -75,5 +77,5 @@ void dnxJobCleanup(DnxNewJob * pJob);
 int dnxJobListInit(DnxJobList ** ppJobList, unsigned long size);
 void dnxJobListExit(DnxJobList ** ppJobList);
 
-#endif   /* _DNXJOBLIST_H_ */
+#endif   /* _DSJOBLIST_H_ */
 

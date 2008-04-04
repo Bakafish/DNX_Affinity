@@ -25,16 +25,15 @@
  * check from the Jobs queue and posts the result to the existing
  * Nagios service_result_buffer.
  *
- * @file dnxCollector.h
+ * @file dscollector.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#ifndef _DSCOLLECTOR_H_
+#define _DSCOLLECTOR_H_
 
-#ifndef _DNXCOLLECTOR_H_
-#define _DNXCOLLECTOR_H_
+void * dnxCollector(void * data);
 
-void *dnxCollector (void *data);
-
-#endif   /* _DNXCOLLECTOR_H_ */
+#endif   /* _DSCOLLECTOR_H_ */
 

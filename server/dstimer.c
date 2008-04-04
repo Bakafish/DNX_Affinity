@@ -25,19 +25,19 @@
  * This requires access to the global Pending queue (which is also
  * manipulated by the Dispatcher and Collector threads.)
  *
- * @file dnxTimer.h
+ * @file dstimer.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#include "dstimer.h"
 
-#include "dnxTimer.h"
+#include "dsjoblist.h"
+#include "dsaudit.h"
 
 #include "dnxError.h"
 #include "dnxProtocol.h"
-#include "dnxJobList.h"
 #include "dnxLogging.h"
-#include "dsaudit.h"
 
 #include <assert.h>
 
@@ -195,4 +195,6 @@ void dnxTimerExit(void)
       timer_thread_id = 0;
    }
 }
+
+/*-------------------------------------------------------------------------*/
 

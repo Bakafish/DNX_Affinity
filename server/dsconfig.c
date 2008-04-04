@@ -19,21 +19,22 @@
 
 /** Parses DNX Server config file.
  *
- * @file dnxConfig.c
+ * @file dsconfig.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#include "dnxConfig.h"
+
+#include "dnxError.h"
+#include "dnxChannel.h"
+#include "dnxLogging.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 
-#include "dnxError.h"
-#include "dnxChannel.h"
-#include "dnxConfig.h"
-#include "dnxLogging.h"
 
 #define DNX_MAX_CFG_LINE   2048
 
@@ -263,4 +264,6 @@ int strTrim (char *szLine)
 
    return strlen(szLine);
 }
+
+/*-------------------------------------------------------------------------*/
 

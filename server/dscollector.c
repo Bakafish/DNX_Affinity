@@ -25,22 +25,24 @@
  * check from the Jobs queue and posts the result to the existing
  * Nagios service_result_buffer.
  *
- * @file dnxCollector.c
+ * @file dscollector.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#include "dscollector.h"
 
-#include "dnxNebMain.h"
-#include "dnxError.h"
-#include "dnxQueue.h"
-#include "dnxProtocol.h"
-#include "dnxCollector.h"
-#include "dnxJobList.h"
-#include "dnxLogging.h"
+#include "dsnebmain.h"
+#include "dsqueue.h"
+#include "dsjoblist.h"
 #include "dsaudit.h"
 
+#include "dnxError.h"
+#include "dnxProtocol.h"
+#include "dnxLogging.h"
+
 #include <assert.h>
+
 
 #define DNX_COLLECTOR_TIMEOUT 30
 
@@ -204,4 +206,6 @@ static int dnxPostResult (DnxGlobalData *gData, DnxNewJob *pJob, DnxResult *pRes
 
    return DNX_OK;
 }
+
+/*-------------------------------------------------------------------------*/
 

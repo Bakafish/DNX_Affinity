@@ -19,19 +19,19 @@
 
 /** Provides structure and prototype definitions for thread-safe DNX queues.
  *
- * @file dnxQueue.c
+ * @file dsqueue.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#include "dsqueue.h"    // dnx server queue definitions and prototypes
+
+#include "dnxError.h"
+#include "dnxLogging.h"
 
 #include <stdlib.h>     // malloc() and free()
 #include <assert.h>     // assert()
 #include <syslog.h>
-
-#include "dnxError.h"
-#include "dnxQueue.h"   // dnxQueue definitions and prototypes
-#include "dnxLogging.h"
 
 
 //----------------------------------------------------------------------------
@@ -447,4 +447,6 @@ int dnxQueueDelete (DnxQueue *queue)
 
     return DNX_OK;
 }
+
+/*-------------------------------------------------------------------------*/
 

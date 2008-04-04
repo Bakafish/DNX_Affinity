@@ -27,21 +27,20 @@
  * The Registrar thread manages this registration process on behalf
  * of the Scheduler.
  *
- * @file dnxRegistrar.h
+ * @file dsregistrar.h
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX
  */
+#ifndef _DSREGISTRAR_H_
+#define _DSREGISTRAR_H_
 
-#ifndef _DNXREGISTRAR_H_
-#define _DNXREGISTRAR_H_
+void * dnxRegistrar(void * data);
+int dnxGetNodeRequest(DnxGlobalData * gData, DnxNodeRequest ** ppNode);
+int dnxProcessNodeRequest(DnxGlobalData * gData);
+int dnxRegisterNode(DnxGlobalData * gData, DnxNodeRequest * pMsg);
+int dnxDeregisterNode(DnxGlobalData * gData, DnxNodeRequest * pMsg);
+int dnxDeregisterAllNodes(DnxGlobalData * gData);
 
-void *dnxRegistrar (void *data);
-int dnxGetNodeRequest (DnxGlobalData *gData, DnxNodeRequest **ppNode);
-int dnxProcessNodeRequest (DnxGlobalData *gData);
-int dnxRegisterNode (DnxGlobalData *gData, DnxNodeRequest *pMsg);
-int dnxDeregisterNode (DnxGlobalData *gData, DnxNodeRequest *pMsg);
-int dnxDeregisterAllNodes (DnxGlobalData *gData);
-
-#endif   /* _DNXREGISTRAR_H_ */
+#endif   /* _DSREGISTRAR_H_ */
 
