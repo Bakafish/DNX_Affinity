@@ -707,6 +707,7 @@ void dnxCfgParserFreeCfgValues(DnxCfgParser * cp, void * ppvals[])
          if (icp->dict[i].type == ptrtypes[j])
          {
             xfree(*(void **)ppvals[i]);
+            *(void **)ppvals[i] = 0;
             break;
          }
 }

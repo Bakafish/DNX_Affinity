@@ -430,6 +430,12 @@ void dnxQueueDestroy(DnxQueue * queue)
       gcc -DDEBUG -DDNX_QUEUE_TEST -g -O0 -I../common dnxQueue.c \
          ../common/dnxError.c -lpthread -lgcc_s -lrt -o dnxQueueTest
 
+   Alternatively, a heap check may be done with the following command line:
+
+      gcc -DDEBUG -DDEBUG_HEAP -DDNX_QUEUE_TEST -g -O0 -I../common \
+         dnxQueue.c ../common/dnxError.c ../common/dnxHeap.c \
+         -lpthread -lgcc_s -lrt -o dnxCfgParserTest 
+
   --------------------------------------------------------------------------*/
 
 #ifdef DNX_QUEUE_TEST
@@ -440,6 +446,9 @@ void dnxQueueDestroy(DnxQueue * queue)
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
 static int free_count;
+static int verbose;
+
+IMPLEMENT_DNX_DEBUG(verbose);
 
 // functional stubs
 static DnxQueueResult qtcmp(void * left, void * right)
@@ -463,6 +472,8 @@ int main(int argc, char ** argv)
    char * msgs[101];
    char * msg2;
    int i;
+
+   verbose = argc > 1? 1: 0;
 
    // create a new queue and get a concrete reference to it for testing
    CHECK_ZERO(dnxQueueCreate(100, qtfree, &queue));
@@ -529,6 +540,10 @@ int main(int argc, char ** argv)
 
    // we should have called the destructor only once
    CHECK_TRUE(free_count == 1);
+
+#ifdef DEBUG_HEAP
+   CHECK_ZERO(dnxCheckHeap());
+#endif
 
    return 0;
 }

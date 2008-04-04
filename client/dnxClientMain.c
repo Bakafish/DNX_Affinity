@@ -44,6 +44,7 @@
 #include <sys/file.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
 #include <signal.h>
@@ -52,10 +53,14 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#define _GNU_SOURCE
+#include <getopt.h>
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #else
-# define VERSION "<unknown>"
+# define VERSION           "<unknown>"
+# define PACKAGE_BUGREPORT "<unknown>"
 #endif
 
 #ifndef SYSCONFDIR
@@ -83,6 +88,7 @@ static DnxWlm * s_wlm;           //!< The system worker thread pool.
 static DnxChannel * s_agent;     //!< The agent management channel.
 static char * s_progname;        //!< The base program name.
 static char * s_cfgfile;         //!< The system configuration file name.
+static char * s_cmdover = 0;     //!< The command line overrides string.
 static int s_dbgflag = 0;        //!< The system debug flag.
 static int s_shutdown = 0;       //!< The shutdown signal flag.
 static int s_reconfig = 0;       //!< The reconfigure signal flag.
@@ -123,11 +129,15 @@ static void * s_ppvals[] =
  */
 static void usage(void)
 {
-   fprintf(stderr, "\nUsage: %s [-c config-file] [-d] [-v]\n", s_progname);
-   fprintf(stderr, "\nWhere:\n");
-   fprintf(stderr, "\t-c Specify the location of the config file\n");
-   fprintf(stderr, "\t-d Enable debug mode (NOTE: Will not become a background daemon)\n");
-   fprintf(stderr, "\t-v Display version and exit\n\n");
+   fprintf(stderr, "\nUsage: %s [options]", s_progname);
+   fprintf(stderr, "\nWhere [options] are:\n");
+   fprintf(stderr, "   -c, --cfgfile <file>    specify the location of the config file.\n");
+   fprintf(stderr, "   -l, --logfile <file>    specify the location of the log file.\n");
+   fprintf(stderr, "   -D, --dbgfile <file>    specify the location of the debug log file.\n");
+   fprintf(stderr, "   -g, --dbglevel <value>  specify the level of debugging output.\n");
+   fprintf(stderr, "   -d, --debug             enable debug mode (will not become a daemon).\n");
+   fprintf(stderr, "   -v, --version           display DNX client version and exit.\n");
+   fprintf(stderr, "   -h, --help              display this help screen and exit.\n\n");
    exit(1);
 }
 
@@ -137,19 +147,48 @@ static void usage(void)
  */
 static void version(void)
 {
-   printf("%s %s\n", s_progname, VERSION);
+   printf("\n  %s version %s\n  Bug reports: %s.\n\n", 
+         s_progname, VERSION, PACKAGE_BUGREPORT);
    exit(0);
 }
 
 //----------------------------------------------------------------------------
 
-/** Parse command line options.
+/** Append text to a string by reallocating the string buffer.
  * 
- * Options:
- *    -c <config-file>     assign configuration file
- *    -d                   enable debug functionality
- *    -v                   display version information and exit
- *     *                   display usage information and exit
+ * This is a var-args function. Additional parameters following the @p fmt
+ * parameter are based on the content of the @p fmt string.
+ * 
+ * @param[in] spp - the address of a dynamically allocated buffer pointer.
+ * @param[in] fmt - a printf-like format specifier string.
+ */
+static void appendString(char ** spp, char * fmt, ... )
+{
+   char buf[1024];
+   char * newstr;
+   size_t strsz;
+   va_list ap;
+
+   // build new string
+   va_start(ap, fmt);
+   vsnprintf(buf, sizeof buf, fmt, ap);
+   va_end(ap);
+
+   // reallocate buffer; initialize if necessary
+   strsz = strlen(buf) + 1;
+   if ((newstr = xrealloc(*spp, (*spp? strlen(*spp): 0) + strsz)) == 0)
+      return;
+   if (*spp == 0) 
+      *newstr = 0;
+
+   // concatenate new string onto exiting string; return updated pointer
+   strcat(newstr, buf);
+   *spp = newstr;
+}
+
+//----------------------------------------------------------------------------
+
+/** Parse command line options.
  * 
  * @param[in] argc - the number of elements in the @p argv array.
  * @param[in] argv - a null-terminated array of command-line arguments.
@@ -160,29 +199,67 @@ static void getOptions(int argc, char ** argv)
    extern char * optarg;
    extern int opterr, optopt;
 
+   static char opts[] = "c:dg:l:D:vh";
+   static struct option longopts[] = 
+   {
+      { "cfgfile",  required_argument, 0, 'c' },
+      { "logfile",  required_argument, 0, 'l' },
+      { "dbgfile",  required_argument, 0, 'D' },
+      { "dbglevel", required_argument, 0, 'g' },
+      { "debug",    no_argument,       0, 'd' },
+      { "version",  no_argument,       0, 'v' },
+      { "help",     no_argument,       0, 'h' },
+      { 0, 0, 0, 0 },
+   };
+
    int ch;
+   char * logfile = 0;
+   char * dbgfile = 0;
+   char * dbglvl = 0;
 
    opterr = 0; /* Disable error messages */
 
-   while ((ch = getopt(argc, argv, "c:dv")) != -1)
+   while ((ch = getopt_long(argc, argv, opts, longopts, 0)) != -1)
    {
       switch (ch)
       {
-      case 'c':
-         s_cfgfile = optarg;
-         break;
-      case 'd':
-         s_dbgflag = 1;
-         break;
-      case 'v':
-         version();
-         break;
-      default:
-         usage();
+         case 'c':
+            s_cfgfile = optarg;
+            break;
+         case 'd':
+            s_dbgflag = 1;
+            break;
+         case 'g':
+            dbglvl = optarg;
+            break;
+         case 'l':
+            logfile = optarg;
+            break;
+         case 'D':
+            dbgfile = optarg;
+            break;
+         case 'v':
+            version();
+            break;
+         case 'h':
+         default:
+            usage();
       }
    }
    if (!s_cfgfile)
       s_cfgfile = DNX_DEFAULT_NODE_CONFIG_FILE;
+
+   if (s_dbgflag)
+      appendString(&s_cmdover, "logFile=STDOUT\ndebugFile=STDOUT\n");
+
+   if (logfile)
+      appendString(&s_cmdover, "logFile=%s\n", logfile);
+
+   if (dbgfile)
+      appendString(&s_cmdover, "debugFile=%s\n", dbgfile);
+
+   if (dbglvl)
+      appendString(&s_cmdover, "debugLevel=%s\n", dbglvl);
 }
 
 //----------------------------------------------------------------------------
@@ -229,6 +306,7 @@ static void releaseConfig(void)
 {
    dnxCfgParserFreeCfgValues(s_parser, s_ppvals);
    dnxCfgParserDestroy(s_parser);
+   xfree(s_cmdover);
 }
 
 //----------------------------------------------------------------------------
@@ -272,12 +350,14 @@ static int initConfig(void)
       "threadMaxRetries = 12\n"
       "threadTtlBackoff = 1\n"
       "maxResultBuffer = 1024\n"
-      "logFile = /var/log/dnxcld.log\n";
-   
+      "logFile = /var/log/dnxcld.log\n"
+      "debugFile = /var/log/dnxcld.debug.log";
+
    int ret;
 
    // create global configuration parser object
-   if ((ret = dnxCfgParserCreate(cfgdefs, s_cfgfile, 0, dict, &s_parser)) != 0)
+   if ((ret = dnxCfgParserCreate(cfgdefs, s_cfgfile, s_cmdover, dict, 
+         &s_parser)) != 0)
       return ret;
 
    // parse config file
