@@ -6,14 +6,14 @@ major changes to the DNX code base. All entries should be separated by
 blank lines and include the date, developer's name, and change description.
 =============================================================================
 
-*** Revision 200: Released dnx-0.16: 05-FEB-08 jcalcote
+*** Revision 217: Released dnx-0.16: 05-FEB-08 jcalcote
 
-* Revision: 216-211: 05-MAR-08 jcalcote 
-Updated ChangeLog. Updated NEWS file for 0.16 release. Fixed issue with no 
-debug log being created in server. Changed spec file for log directory 
-change. Changed a few undetected instances of sysrunpath to sysrundir, 
-etc. Updated make system to install to correct directories, and to set 
-owner and group if running as root. 
+* Revision: 217-211: 05-MAR-08 jcalcote 
+Updated ChangeLog again. Updated ChangeLog. Updated NEWS file for 0.16 
+release. Fixed issue with no debug log being created in server. Changed 
+spec file for log directory change. Changed a few undetected instances of 
+sysrunpath to sysrundir, etc. Updated make system to install to correct 
+directories, and to set owner and group if running as root. 
 
 * Revision: 210-208: 04-MAR-08 jcalcote 
 Made all install targets working correctly. Moved test directories to 
