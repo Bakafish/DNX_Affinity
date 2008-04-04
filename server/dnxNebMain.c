@@ -433,7 +433,7 @@ static int dnxPostNewJob (DnxGlobalData *gData, nebstruct_service_check_data *ds
 	Job.cmd        = strdup(ds->command_line);
 	Job.start_time = ds->start_time.tv_sec;
 	Job.timeout    = ds->timeout;
-	Job.expires    = Job.start_time + Job.timeout;
+	Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
 	Job.pNode      = pNode;
 
 	dnxDebug(1, "DnxNebMain: Posting Job %lu: %s", gData->serialNo, Job.cmd);

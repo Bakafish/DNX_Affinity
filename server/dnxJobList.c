@@ -461,7 +461,7 @@ int dnxJobListCollect (DnxJobList *pJobList, DnxGuid *pGuid, DnxNewJob *pJob)
 	//	pJobList->pList[current].guid.objSerial, pJobList->pList[current].guid.objSlot, pJobList->head, pJobList->dhead, pJobList->tail);
 
 	// Verify that the GUID of this result matches the GUID of the service check
-	if (memcmp(pGuid, &(pJobList->pList[current].guid), sizeof(DnxGuid)) != 0 || pJobList->pList[current].state == DNX_JOB_NULL)
+	if (pJobList->pList[current].state == DNX_JOB_NULL || memcmp(pGuid, &(pJobList->pList[current].guid), sizeof(DnxGuid)) != 0)
 	{
 		// Most likely, this job expired and was removed from the Job List by the Timer thread
 		ret = DNX_ERR_NOTFOUND;
