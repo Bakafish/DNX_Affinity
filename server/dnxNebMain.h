@@ -32,9 +32,9 @@
 #include "dnxError.h"
 #include "dnxTransport.h"
 #include "dnxProtocol.h"
-#include "dnxQueue.h"   // For dnxQueue definition
 #include "dnxRegistrar.h"
 #include "dnxDispatcher.h"
+#include "dnxCollector.h"
 
 #ifndef NSCORE
 # define NSCORE
@@ -63,35 +63,12 @@
 #define DNX_COLLECT_PORT   12481
 #define DNX_TCP_LISTEN     5
 
-#define DNX_MAX_NODE_REQUESTS 1024
-
-typedef struct _DnxGlobalData_ 
+typedef struct DnxServerCfg_
 {
-   unsigned long serialNo; // Number of service checks processed
-   time_t tStart;          // Module start time
-
-   pthread_cond_t tcGo;    // ShowStart condition variable
-   pthread_mutex_t tmGo;   // ShowStart mutex
-   int isGo;               // ShowStart flag: 0=No, 1=Yes
-
-   DnxJobList * JobList;   // Master Job List
-   DnxRegistrar * reg;     // The client node registrar.
-   DnxTimer * timer;       // The job list expiration timer.
-   DnxDispatcher * disp;   // The job list dispatcher.
-
-   pthread_t tCollector;   // Collector thread ID
-   dnxChannel * pCollect;  // Collector communications channel
-
-   regex_t regEx;          // Compiled Regular Expression structure
-
-   int  dnxLogFacility;    // DNX syslog facility
-   int  auditLogFacility;  // Worker Audit syslog facility
-
-   // Configuration File properties
    char * channelDispatcher;
    char * channelCollector;
    char * authWorkerNodes;
-   long  maxNodeRequests;  // Max number of node requests we will accept
+   long  maxNodeRequests;  // Maximum number of node requests we will accept
    long  minServiceSlots;
    long  expirePollInterval;
    char * localCheckPattern;
@@ -99,9 +76,7 @@ typedef struct _DnxGlobalData_
    char * logFacility;
    char * auditWorkerJobs;
    long debug;
-
-   int isActive;           // Boolean: Is this module active?
-} DnxGlobalData;
+} DnxServerCfg;
 
 int nebmodule_init(int flags, char * args, nebmodule * handle);
 int nebmodule_deinit(int flags, int reason);

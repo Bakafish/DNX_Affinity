@@ -34,7 +34,14 @@
 #ifndef _DNXCOLLECTOR_H_
 #define _DNXCOLLECTOR_H_
 
-void * dnxCollector(void * data);
+#include "dnxJobList.h"
+
+/** Abstract data type for the DNX job results collector. */
+typedef void DnxCollector;
+
+int dnxCollectorCreate(long * debug, char * chname, char * collurl,
+      DnxJobList * joblist, DnxCollector ** pcoll);
+void dnxCollectorDestroy(DnxCollector * coll);
 
 #endif   /* _DNXCOLLECTOR_H_ */
 

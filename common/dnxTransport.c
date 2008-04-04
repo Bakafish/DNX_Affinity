@@ -251,7 +251,11 @@ int dnxChanMapRelease(void)
 {
    int i;
 
-   assert(dnxInit);
+   /** @todo Objectize the channel map. */
+
+// assert(dnxInit);
+   if (!dnxInit)
+      return 0;
 
    // Clean-up global channel map
    for (i=0; i < DNX_MAX_CHAN_MAP; i++)

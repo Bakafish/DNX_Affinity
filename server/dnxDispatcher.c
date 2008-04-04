@@ -52,7 +52,7 @@ typedef struct iDnxDispatcher_
    char * chname;          /*!< The dispatcher channel name. */
    char * url;             /*!< The dispatcher channel URL. */
    DnxJobList * joblist;   /*!< The job list we're dispatching from. */
-   dnxChannel * dchannel;  /*!< Dispatcher communications channel. */
+   dnxChannel * channel;   /*!< Dispatcher communications channel. */
    pthread_t tid;          /*!< The dispatcher thread id. */
 } iDnxDispatcher;
 
@@ -87,7 +87,7 @@ static int dnxSendJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    job.cmd      = pSvcReq->cmd;
 
    // Transmit the job
-   if ((ret = dnxPutJob(idisp->dchannel, &job, pNode->address)) != DNX_OK)
+   if ((ret = dnxPutJob(idisp->channel, &job, pNode->address)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxDispatcher[%lx]: dnxSendJob: Unable to "
                          "send job %lu to worker node (%d): %s",
             pthread_self(), pSvcReq->guid.objSerial, ret, pSvcReq->cmd);
@@ -205,7 +205,7 @@ static void * dnxDispatcher(void * data)
  * @return A pointer to the dispatcher channel object.
  */
 DnxChannel * dnxDispatcherGetChannel(DnxDispatcher * disp)
-      { return ((iDnxDispatcher *)disp)->dchannel; }
+      { return ((iDnxDispatcher *)disp)->channel; }
 
 //----------------------------------------------------------------------------
 
@@ -233,7 +233,7 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
    idisp->url = strdup(dispurl);
    idisp->joblist = joblist;
    idisp->debug = debug;
-   idisp->dchannel = 0;
+   idisp->channel = 0;
    idisp->tid = 0;
 
    if (!idisp->url || idisp->chname)
@@ -242,22 +242,22 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
       return DNX_ERR_MEMORY;
    }
 
-   if ((ret = dnxChanMapAdd("Dispatch", dispurl)) != DNX_OK)
+   if ((ret = dnxChanMapAdd(chname, dispurl)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "dnxDispatcherCreate: "
-                         "dnxChanMapAdd(Dispatch) failed: %d", ret);
+                         "dnxChanMapAdd(%s) failed: %d", chname, ret);
       goto e1;
    }
 
-   if ((ret = dnxConnect("Dispatch", &idisp->dchannel, DNX_CHAN_PASSIVE)) != DNX_OK)
+   if ((ret = dnxConnect(chname, &idisp->channel, DNX_CHAN_PASSIVE)) != DNX_OK)
    {
       dnxSyslog(LOG_ERR, "dnxDispatcherCreate: "
-                         "dnxConnect(Dispatch) failed: %d", ret);
+                         "dnxConnect(%s) failed: %d", chname, ret);
       goto e2;
    }
 
    if (*debug)
-      dnxChannelDebug(idisp->dchannel, *debug);
+      dnxChannelDebug(idisp->channel, *debug);
 
    // create the dispatcher thread
    if ((ret = pthread_create(&idisp->tid, NULL, dnxDispatcher, idisp)) != 0)
@@ -273,7 +273,7 @@ int dnxDispatcherCreate(long * debug, char * chname, char * dispurl,
 
 // error paths
 
-e3:dnxDisconnect(idisp->dchannel);
+e3:dnxDisconnect(idisp->channel);
 e2:dnxChanMapDelete(idisp->chname);
 e1:free(idisp->url);
    free(idisp->chname);
@@ -295,8 +295,8 @@ void dnxDispatcherDestroy(DnxDispatcher * disp)
    pthread_cancel(idisp->tid);
    pthread_join(idisp->tid, NULL);
 
-   dnxDisconnect(idisp->dchannel);
-   dnxChanMapDelete("Dispatch");
+   dnxDisconnect(idisp->channel);
+   dnxChanMapDelete(idisp->chname);
 
    free(idisp->url);
    free(idisp->chname);

@@ -34,7 +34,11 @@
 
 #define MAX_LOG_LINE 1023
 
-extern DnxGlobalData dnxGlobalData;    // Private module data
+static long defDebug = 0;
+static int defLogFacility = LOG_LOCAL7;
+
+static long * pDebug = &defDebug;
+static int * pLogFacility = &defLogFacility;
 
 //----------------------------------------------------------------------------
 
@@ -67,7 +71,7 @@ int dnxSyslog(int priority, char * fmt, ...)
    sbuf[MAX_LOG_LINE] = '\0';
 
    // Publish the results
-   syslog((dnxGlobalData.dnxLogFacility | priority), "%s", sbuf);
+   syslog(*pLogFacility | priority, "%s", sbuf);
 
    return DNX_OK;
 }
@@ -94,7 +98,7 @@ int dnxDebug(int level, char * fmt, ...)
       return DNX_ERR_INVALID;
 
    // See if this message meets or exceeds our debugging level
-   if (level <= dnxGlobalData.debug)
+   if (level <= *pDebug)
    {
       // See if we need formatting
       if (strchr(fmt, '%'))
@@ -109,10 +113,23 @@ int dnxDebug(int level, char * fmt, ...)
       sbuf[MAX_LOG_LINE] = '\0';
 
       // Publish the results
-      syslog((dnxGlobalData.dnxLogFacility | LOG_DEBUG), "%s", sbuf);
+      syslog(*pLogFacility | LOG_DEBUG, "%s", sbuf);
    }
 
    return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** Initialize server logging functionality.
+ * 
+ * @param[in] debug - a pointer to the global debug level.
+ * @param[in] logFacility - a pointer to the global log facility.
+ */
+void cfgServerLogging(long * debug, int * logFacility)
+{
+   pDebug = debug;
+   pLogFacility = logFacility;
 }
 
 /*--------------------------------------------------------------------------*/

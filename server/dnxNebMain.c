@@ -53,16 +53,27 @@
 # define VERSION "<unknown>"
 #endif
 
-#define DNX_VERSION VERSION
+#define DNX_VERSION              VERSION
+#define DNX_EMBEDDED_SVC_OBJECT  1
+#define DNX_MAX_NODE_REQUESTS    1024
 
-#define DNX_EMBEDDED_SVC_OBJECT 1
-
-// Specify event broker API version (required)
+// specify event broker API version (required)
 NEB_API_VERSION(CURRENT_NEB_API_VERSION);
 
-static void * myHandle = NULL;      // Private NEB module handle
+// module static data
+static DnxJobList * jobs;        // The master job list
+static DnxRegistrar * reg;       // The client node registrar.
+static DnxTimer * timer;         // The job list expiration timer.
+static DnxDispatcher * disp;     // The job list dispatcher.
+static DnxCollector * coll;      // The job list results collector.
+static time_t start_time;        // The module start time
+static void * myHandle;          // Private NEB module handle
+static regex_t regEx;            // Compiled regular expression structure
+static int dnxLogFacility;       // DNX syslog facility
+static int auditLogFacility;     // Worker audit syslog facility
 
-DnxGlobalData dnxGlobalData;        // Private module data
+// module GLOBAL data
+DnxServerCfg cfg;                // The GLOBAL server config parameters
 
 //----------------------------------------------------------------------------
 
@@ -101,25 +112,22 @@ static int verifyFacility(char * szFacility, int * nFacility)
 /** Read and parse the dnxServer configuration file.
  * 
  * @param[in] ConfigFile - the configuration file to be read.
- * @param[in] gData - the global data structure to be populated with 
- *    configuration data from the dnxServer configuration file.
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxLoadConfig(char * ConfigFile, DnxGlobalData * gData)
+static int dnxLoadConfig(char * ConfigFile)
 {
    int ret, err_no;
 
-   // Initialize our module data
-   memset(gData, 0, sizeof(DnxGlobalData));
+   // clear GLOBAL server configuration data structure
+   memset(&cfg, 0, sizeof cfg);
 
    // Set default max concurrent number for node requests we will accept
-   gData->maxNodeRequests = DNX_MAX_NODE_REQUESTS;
-   gData->minServiceSlots = 1024;
-   gData->expirePollInterval = 5;
-   gData->dnxLogFacility = LOG_LOCAL7;
+   cfg.maxNodeRequests = DNX_MAX_NODE_REQUESTS;
+   cfg.minServiceSlots = 1024;
+   cfg.expirePollInterval = 5;
 
-   // Initialize global data
+   // Initialize configuration sub-system global data
    initGlobals();
 
    // Parse config file
@@ -131,36 +139,36 @@ static int dnxLoadConfig(char * ConfigFile, DnxGlobalData * gData)
 
    // Validate configuration items
    ret = DNX_ERR_INVALID;
-   if (!gData->channelDispatcher)
+   if (!cfg.channelDispatcher)
       dnxSyslog(LOG_ERR, "getConfig: Missing channelDispatcher parameter");
-   else if (!gData->channelCollector)
+   else if (!cfg.channelCollector)
       dnxSyslog(LOG_ERR, "getConfig: Missing channelCollector parameter");
-   else if (gData->maxNodeRequests < 1)
+   else if (cfg.maxNodeRequests < 1)
       dnxSyslog(LOG_ERR, "getConfig: Missing or invalid maxNodeRequests parameter");
-   else if (gData->minServiceSlots < 1)
+   else if (cfg.minServiceSlots < 1)
       dnxSyslog(LOG_ERR, "getConfig: Missing or invalid minServiceSlots parameter");
-   else if (gData->expirePollInterval < 1)
+   else if (cfg.expirePollInterval < 1)
       dnxSyslog(LOG_ERR, "getConfig: Missing or invalid expirePollInterval parameter");
-   else if (gData->localCheckPattern   /* If the localCheckPattern is defined, then */
-         && (err_no = regcomp(&(gData->regEx), gData->localCheckPattern, 
+   else if (cfg.localCheckPattern   /* If the localCheckPattern is defined, then */
+         && (err_no = regcomp(&regEx, cfg.localCheckPattern, 
             (REG_EXTENDED | REG_NOSUB))) != 0) /* Compile the regex */
    {
       char buffer[128];
-      regerror(err_no, &(gData->regEx), buffer, sizeof(buffer));
+      regerror(err_no, &regEx, buffer, sizeof(buffer));
       dnxSyslog(LOG_ERR, "getConfig: Failed to compile "
                          "localCheckPattern (\"%s\"): %s", 
-            gData->localCheckPattern, buffer);
-      regfree(&(gData->regEx));
+            cfg.localCheckPattern, buffer);
+      regfree(&regEx);
    }
-   else if (gData->logFacility &&   /* If logFacility is defined, then */
-         verifyFacility(gData->logFacility, &(gData->dnxLogFacility)) == -1)
+   else if (cfg.logFacility &&   /* If logFacility is defined, then */
+         verifyFacility(cfg.logFacility, &dnxLogFacility) == -1)
       dnxSyslog(LOG_ERR, "getConfig: Invalid syslog facility for logFacility: %s", 
-            gData->logFacility);
-   else if (gData->auditWorkerJobs &&  /* If auditWorkerJobs is defined, then */
-         verifyFacility(gData->auditWorkerJobs, &(gData->auditLogFacility)) == -1)
+            cfg.logFacility);
+   else if (cfg.auditWorkerJobs &&  /* If auditWorkerJobs is defined, then */
+         verifyFacility(cfg.auditWorkerJobs, &auditLogFacility) == -1)
       dnxSyslog(LOG_ERR, "getConfig: Invalid syslog facility for "
                          "auditWorkerJobs: %s", 
-            gData->auditWorkerJobs);
+            cfg.auditWorkerJobs);
    else
       ret = DNX_OK;
 
@@ -169,408 +177,67 @@ static int dnxLoadConfig(char * ConfigFile, DnxGlobalData * gData)
 
 //----------------------------------------------------------------------------
 
-/** Launches an external command and waits for it to return a status code.
+/** Return the number of services configured in Nagios.
+ *
+ * @return The number of services configured in Nagios.
  * 
- * @param[in] script - the command line to be launched.
- * 
- * @return Zero on success, or a non-zero error value.
+ * @todo This routine should become part of the nagios 2.7 and 2.7 patchs,
+ *    and this routine should become part of Nagios and exported to DNX.
  */
-static int launchScript(char * script)
+static int nagiosGetServiceCount(void)
 {
-   int ret;
+   extern service * service_list;      // the global nagios service list
 
-   /* Validate parameters */
-   if (!script)
-   {
-      dnxSyslog(LOG_ERR, "launchScript: Invalid parameters");
-      return DNX_ERR_INVALID;
-   }
-
-   // Exec the script
-   if ((ret = system(script)) == -1)
-   {
-      dnxSyslog(LOG_ERR, "launchScript: Failed to exec script: %s", strerror(errno));
-      ret = DNX_ERR_INVALID;
-   }
-   else
-      ret = DNX_OK;
-
-   // Display script return code
-   dnxDebug(1, "launchScript: Sync script returned %d", WEXITSTATUS(ret));
-
-   return ret; // This statement should not be reached...
-}
-
-//----------------------------------------------------------------------------
-
-/** Free resources associated with the dnxServer threading subsystem.
- * 
- * @return Always returns zero.
- */
-static int releaseThreads(void)
-{
-   int ret;
-
-   // Cancel all threads
-   if (dnxGlobalData.tCollector && (ret = pthread_cancel(dnxGlobalData.tCollector)) != 0)
-      dnxSyslog(LOG_ERR, "releaseThreads: pthread_cancel(tCollector) failed with ret = %d", ret);
-
-   // Wait for all threads to exit
-   if (dnxGlobalData.tCollector && (ret = pthread_join(dnxGlobalData.tCollector, NULL)) != 0)
-      dnxSyslog(LOG_ERR, "releaseThreads: pthread_join(tCollector) failed with ret = %d", ret);
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Free resources associated with the dnxServer communications subsystem.
- * 
- * @return Always returns zero.
- */
-static int releaseComm(void)
-{
-   int ret;
-
-   dnxDispatcherDestroy(&dnxGlobalData.disp);
-
-   // Close the Collector channel
-   if ((ret = dnxDisconnect(dnxGlobalData.pCollect)) != DNX_OK)
-      dnxSyslog(LOG_ERR, "releaseComm: Failed to disconnect "
-                         "Collector channel: %d", ret);
-   dnxGlobalData.pCollect = NULL;
-
-   // Delete the Collector channel
-   if ((ret = dnxChanMapDelete("Collect")) != DNX_OK)
-      dnxSyslog(LOG_ERR, "releaseComm: Failed to delete "
-                         "Collector channel: %d", ret);
-
-   // Release the DNX comm stack
-   if ((ret = dnxChanMapRelease()) != DNX_OK)
-      dnxSyslog(LOG_ERR, "releaseComm: Failed to release "
-                         "DNX comm stack: %d", ret);
-
-   dnxTimerDestroy(dnxGlobalData.timer);
-   dnxRegistrarDestroy(dnxGlobalData.reg);
-   dnxJobListWhack(&dnxGlobalData.JobList);
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-static int ehSvcCheck(int event_type, void * data);	// forward decls
-static int ehProcessData(int event_type, void * data);
-
-/** Deinitialize the dnx server.
- * 
- * @return Always returns zero.
- */
-static int dnxServerDeInit(void)
-{
-   /* deregister for all events we previously registered for... */
-   neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ehProcessData);
-   neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ehSvcCheck);
-
-   // Remove all of our objects: Threads, sockets and Queues
-   releaseThreads();
-   releaseComm();
-
-   // If the localCheckPattern is defined, then release regex structure
-   if (dnxGlobalData.localCheckPattern)
-      regfree(&dnxGlobalData.regEx);
-
-   return OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Initialize all dnxServer worker threads.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int initThreads(void)
-{
-   int ret;
-
-   // Create the starting condition synchronization variable
-   DNX_PT_MUTEX_UNLOCK(&dnxGlobalData.tmGo);
-   pthread_cond_init(&dnxGlobalData.tcGo, NULL);
-
-   // Clear the ShowStart flag
-   dnxGlobalData.isGo = 0;
-
-   dnxDebug(1, "DnxNebMain: Starting threads...");
-
-   // Create the Result Collector thread
-   if ((ret = pthread_create(&dnxGlobalData.tCollector, NULL, dnxCollector, (void *)&dnxGlobalData)) != 0)
-   {
-      dnxGlobalData.isActive = 0;   // Init failure
-      dnxSyslog(LOG_ERR, "initThreads: Failed to create Collector thread: %d", ret);
-      return DNX_ERR_THREAD;
-      
-   }
-
-   // Set the ShowStart flag
-   dnxGlobalData.isGo = 1;
-
-   // Signal all threads that it's show-time!
-   DNX_PT_MUTEX_LOCK(&dnxGlobalData.tmGo);
-   ret = pthread_cond_broadcast(&dnxGlobalData.tcGo);
-   DNX_PT_MUTEX_UNLOCK(&dnxGlobalData.tmGo);
-
-   if (ret != 0)
-   {
-      dnxGlobalData.isActive = 0;   // Init failure
-      dnxSyslog(LOG_ERR, "initThreads: Failed to broadcast GO signal: %d", ret);
-      releaseThreads();       // Cancel prior threads
-      return DNX_ERR_THREAD;
-   }
-
-   return DNX_OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Initialize the dnxServer communications sub-system.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-static int initComm(void)
-{
-   extern service * service_list;      // Nagios service list
-
-   service *temp_service;
+   service * temp_service;
    int total_services = 0;
-   int ret;
 
-   // Create the (merged) Job List: Contains both Pending and InProgress Jobs
-   // Find the total number of defined services
+   // walk the service list, count the nodes
    for (temp_service = service_list; temp_service; 
          temp_service = temp_service->next)
       total_services++;
 
-   if (total_services < 1)
-   {
-      total_services = 100;
-      dnxSyslog(LOG_WARNING, "initComm: No services defined!  Defaulting to 100 slots in the DNX Job Queue");
-   }
-
-   // Check for configuration maxNodeRequests override
-   if (total_services < dnxGlobalData.maxNodeRequests)
-   {
-      dnxSyslog(LOG_WARNING, "initComm: Overriding automatic service check slot count. Was %d, now is %d", total_services, dnxGlobalData.maxNodeRequests);
-      total_services = dnxGlobalData.maxNodeRequests;
-   }
-
-   dnxSyslog(LOG_INFO, "initComm: Allocating %d service request slots in the DNX Job Queue", total_services);
-
-   dnxDebug(2, "DnxNebMain: Initializing Job List and Client Node Registrar");
-
-   // Create the DNX Job List (Contains Pending and InProgress jobs)
-   if ((ret = dnxJobListInit(&(dnxGlobalData.JobList), total_services)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "initComm: Failed to initialize DNX Job List with %d slots", total_services);
-      return DNX_ERR_MEMORY;
-   }
-
-   dnxDebug(2, "DnxNebMain: Creating Dispatch and Collector channels");
-
-   dnxGlobalData.pCollect = NULL;
-
-   // Initialize the DNX comm stack
-   if ((ret = dnxChanMapInit(NULL)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "initComm: dnxChanMapInit failed: %d", ret);
-      return ret;
-   }
-
-   if ((ret = dnxDispatcherCreate(&dnxGlobalData.debug, "Dispatch", 
-         dnxGlobalData.channelDispatcher, dnxGlobalData.JobList, 
-         &dnxGlobalData.disp)) != 0)
-      return ret;
-
-   // create the registrar
-   if ((ret = dnxRegistrarCreate(&dnxGlobalData.debug, total_services,
-         dnxDispatcherGetChannel(dnxGlobalData.disp), &dnxGlobalData.reg)) != 0)
-      return ret;
-
-   // create job list expiration timer
-   if ((ret = dnxTimerCreate(dnxGlobalData.JobList, &dnxGlobalData.timer)) != 0)
-      return ret;
-
-   // Create Collector channel
-   if ((ret = dnxChanMapAdd("Collect", dnxGlobalData.channelCollector)) != 0)
-   {
-      dnxSyslog(LOG_ERR, "initComm: dnxChanMapInit(Collect) failed: %d", ret);
-      return ret;
-   }
-   
-   // Attempt to open the Collector channel
-   if ((ret = dnxConnect("Collect", &(dnxGlobalData.pCollect), DNX_CHAN_PASSIVE)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "initComm: dnxConnect(Collect) failed: %d", ret);
-      return ret;
-   }
-
-   if (dnxGlobalData.debug)
-      dnxChannelDebug(dnxGlobalData.pCollect, dnxGlobalData.debug);
-
-   return DNX_OK;
+   return total_services;
 }
 
 //----------------------------------------------------------------------------
 
-/** Initialize the dnxServer.
+/** Calculate the optimal size of the job list.
+ *
+ * Assumes the caller will actually use the returned value to allocate the 
+ * job list. Based on this assumption, this routine logs messages indicating
+ * when various configuration overrides have taken effect.
  * 
- * @return Zero on success, or a non-zero error value.
+ * @return The calculated size of the job list.
  */
-static int dnxServerInit(void)
+static int dnxCalculateJobListSize(void)
 {
-   int ret;
-
-   // Initialize the communications stack
-   if ((ret = initComm()) != DNX_OK)
+   int size = nagiosGetServiceCount();
+ 
+   // zero doesn't make sense...
+   if (size < 1)
    {
-      dnxSyslog(LOG_ERR, "dnxServerInit: Failed to "
-                         "initialize communications: %d", ret);
-      return ERROR;
+      size = 100;
+      dnxSyslog(LOG_WARNING, "init: No Nagios services defined! Defaulting "
+                             "to %d slots in the DNX job queue", size);
    }
 
-   // Start all of the threads: Dispatcher, Collector, Registrar and Timer
-   if ((ret = initThreads()) != DNX_OK)
+   // check for configuration maxNodeRequests override
+   if (size < cfg.maxNodeRequests)
    {
-      dnxSyslog(LOG_ERR, "dnxServerInit: Failed to "
-                         "initialize threads: %d", ret);
-      releaseComm();
-      return ERROR;
+      dnxSyslog(LOG_WARNING, "init: Overriding automatic service check slot "
+                             "count. Changing from %d to %d", 
+         size, cfg.maxNodeRequests);
+      size = cfg.maxNodeRequests;
    }
-
-   // Subscribe to the Service Check call-back type
-   neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA, myHandle, 0, ehSvcCheck);
-   dnxSyslog(LOG_INFO, "dnxNebMain: Registered Service Check callback");
-
-   dnxGlobalData.isActive = 1;   // Init success
-
-   dnxSyslog(LOG_INFO, "dnxServerInit: Server initialization completed.");
-
-   return OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** Process Data Event Handler.
- * 
- * @param[in] event_type - the event regarding which we were called by Nagios.
- * @param[in] data - an opaque pointer to an event-specific data structure.
- * 
- * @return Zero if all is okay, but we want nagios to handle this event;
- *    non-zero if there's a problem of some sort.
- */
-static int ehProcessData(int event_type, void * data)
-{
-   nebstruct_process_data *procdata = (nebstruct_process_data *)data;
-
-   // Validate our event type
-   if (event_type != NEBCALLBACK_PROCESS_DATA)
-      return OK;  // Ignore all non-process-data events
-
-   // Sanity-check our data structure
-   if (procdata == NULL)
-   {
-      dnxSyslog(LOG_ERR, "ehProcessData: Received NULL process data structure");
-      return ERROR;  // Should not happen - internal Nagios error
-   }
-
-   // Determine our sub-event type
-   switch (procdata->type)
-   {
-      case NEBTYPE_PROCESS_EVENTLOOPSTART:   // Perform DNX init
-         dnxDebug(2, "ehProcessData: Received Process Event Loop Start event");
-   
-         // Execute sync script, if defined
-         if (dnxGlobalData.syncScript)
-         {
-            dnxDebug(1, "ehProcessData: Executing plugin sync script: %s", dnxGlobalData.syncScript);
-   
-            // NB: This halts Nagios execution until the script exits...
-            launchScript(dnxGlobalData.syncScript);
-         }
-   
-         // Initialize DNX Server resources and threads
-         if (dnxServerInit() != OK)
-            dnxServerDeInit();   // Encountered init error - shutdown DNX
-         break;
-   
-      case NEBTYPE_PROCESS_EVENTLOOPEND:     // Perform DNX de-init
-         dnxDebug(2, "ehProcessData: Received Process Event Loop End event");
-   }
-
-   return OK;
-}
-
-//----------------------------------------------------------------------------
-
-/** The main NEB module initialization routine.
- * 
- * This function gets called when the module is loaded by the event broker.
- * 
- * @param[in] flags - module flags - not used
- * @param[in] args - module arguments. These come from the nagios 
- *    configuration file, and are passed through to the module as it loads.
- * @param[in] handle - our module handle - passed from the OS to nagios as
- *    nagios loaded us.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-int nebmodule_init(int flags, char * args, nebmodule * handle)
-{
-   int ret;
-
-   // Save a copy of our module handle
-   myHandle = handle;
-
-   // Announce our presence
-   dnxSyslog(LOG_INFO, "dnxNebMain: DNX Server Module Version %s", DNX_VERSION);
-   dnxSyslog(LOG_INFO, "dnxNebMain: Copyright (c) 2006-2007 Robert W. Ingraham");
-   
-   // The module args string should contain the fully-qualified path to the config file
-   if (!args || !*args)
-   {
-      dnxSyslog(LOG_ERR, "dnxNebMain: DNX Configuration File missing from module argument");
-      return ERROR;
-   }
-
-   // Load module configuration
-   if ((ret = dnxLoadConfig(args, &dnxGlobalData)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxNebMain: Failed to load configuration: %d", ret);
-      return ERROR;
-   }
-
-   // Subscribe to Process Data call-backs in order to defer initialization
-   //   until after Nagios validates its configuration and environment.
-   if ((ret = neb_register_callback(NEBCALLBACK_PROCESS_DATA, myHandle, 0, ehProcessData)) != OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxNebMain: Failed to register Process Data callback: %d", ret);
-      return ERROR;
-   }
-   dnxSyslog(LOG_INFO, "dnxNebMain: Registered Process Data callback");
-
-   // Write initialization completed message
-   dnxSyslog(LOG_INFO, "dnxNebMain: Module initialization completed.");
-
-   // Set our start time
-   dnxGlobalData.tStart = time((time_t)0);
-
-   return OK;
+   return size;
 }
 
 //----------------------------------------------------------------------------
 
 /** Post a new job from Nagios to the dnxServer job queue.
  * 
- * @param[in] gData - the dnxServer global data structure.
+ * @param[in] jobs - the job list to which the new job should be posted.
+ * @param[in] serial - the serial number of the new job.
  * @param[in] ds - a pointer to the nagios job that's being posted.
  * @param[in] pNode - a dnxClient node request structure that is being 
  *    posted with this job. The dispatcher thread will send the job to the
@@ -578,7 +245,7 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxPostNewJob(DnxGlobalData * gData, 
+static int dnxPostNewJob(DnxJobList * jobs, unsigned long serial, 
       nebstruct_service_check_data * ds, DnxNodeRequest * pNode)
 {
    service * svc;
@@ -599,7 +266,7 @@ static int dnxPostNewJob(DnxGlobalData * gData,
    }
 
    // Fill-in the job structure with the necessary information
-   dnxMakeGuid(&(Job.guid), DNX_OBJ_JOB, gData->serialNo, 0);
+   dnxMakeGuid(&Job.guid, DNX_OBJ_JOB, serial, 0);
    Job.svc        = svc;
    Job.cmd        = strdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
@@ -607,117 +274,16 @@ static int dnxPostNewJob(DnxGlobalData * gData,
    Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
    Job.pNode      = pNode;
 
-   dnxDebug(1, "DnxNebMain: Posting Job %lu: %s", gData->serialNo, Job.cmd);
+   dnxDebug(1, "DnxNebMain: Posting Job %lu: %s", serial, Job.cmd);
 
    // Post to the Job Queue
-   if ((ret = dnxJobListAdd(gData->JobList, &Job)) != DNX_OK)
+   if ((ret = dnxJobListAdd(jobs, &Job)) != DNX_OK)
       dnxSyslog(LOG_ERR, "dnxPostNewJob: Failed to post Job \"%s\": %d", Job.cmd, ret);
 
    // Worker Audit Logging
    dnxAuditJob(&Job, "ASSIGN");
 
    return ret;
-}
-
-//----------------------------------------------------------------------------
-
-/** Service Check Event Handler.
- * 
- * @param[in] event_type - the event type for which we're being called.
- * @param[in] data - an opaque pointer to nagios event-specific data.
- * 
- * @return Zero if we want Nagios to handle the event; 
- *    NEBERROR_CALLBACKOVERRIDE indicates that we want to handle the event
- *    ourselves; any other non-zero value represents an error.
- */
-static int ehSvcCheck(int event_type, void * data)
-{
-   nebstruct_service_check_data *svcdata = (nebstruct_service_check_data *)data;
-   DnxNodeRequest *pNode;
-   int ret;
-
-   // Validate our event type
-   if (event_type != NEBCALLBACK_SERVICE_CHECK_DATA)
-      return OK;  // Ignore all non-service-check events
-
-   // Sanity-check our data structure
-   if (svcdata == NULL)
-   {
-      dnxSyslog(LOG_ERR, "dnxServer: ehSvcCheck: Received NULL service data structure");
-      return ERROR;  // Should not happen - internal Nagios error
-   }
-
-   // Only need to look at pre-run service checks
-   if (svcdata->type != NEBTYPE_SERVICECHECK_INITIATE)
-      return OK;  // Ignore non-initialization events
-
-#if 0
-   dnxDebug(5, "ehSvcCheck: Received Service Check Init event");
-#endif
-
-   // See if this job should be executed locally.
-   //
-   // We do this by seeing if the check-command string (svcdata->command_line)
-   // matches the regular-expression specified in the localCheckPattern
-   // directive in the Server configuration file.
-   //
-   if (regexec(&(dnxGlobalData.regEx), svcdata->command_line, 0, NULL, 0) == 0)
-   {
-      dnxDebug(1, "dnxServer: ehSvcCheck: Job will execute locally: %s", svcdata->command_line);
-      return OK;  // Ignore check that should be executed locally
-   }
-
-   // Make sure we have at least one valid worker node request.
-   // If not, execute check locally.
-
-   dnxDebug(1, "dnxServer: ehSvcCheck: Received Job %lu at %lu (%lu)",
-         dnxGlobalData.serialNo, (unsigned long)time(NULL), (unsigned long)(svcdata->start_time.tv_sec));
-
-   // Locate the next available worker node from the Request Queue
-   if ((ret = dnxGetNodeRequest(dnxGlobalData.reg, &pNode)) != DNX_OK)
-   {
-      dnxDebug(1, "dnxServer: ehSvcCheck: No worker nodes requests available: %d", ret);
-      return OK;  // Unable to handle this request - Have Nagios handle it
-   }
-
-   // Post this service check to the Job Queue
-   if ((ret = dnxPostNewJob(&dnxGlobalData, svcdata, pNode)) != DNX_OK)
-   {
-      dnxSyslog(LOG_ERR, "dnxServer: ehSvcCheck: Failed to post new job: %d", ret);
-      return OK;  // Unable to handle this request - Have Nagios handle it
-   }
-
-   // Increment service check serial number
-   dnxGlobalData.serialNo++;
-
-   // Tell Nagios that we are overriding the handling of this event
-   return NEBERROR_CALLBACKOVERRIDE;
-}
-
-//----------------------------------------------------------------------------
-
-/** Deinitialize the dnx server NEB module.
- * 
- * This function gets called when the module is unloaded by the event broker.
- * 
- * @param[in] flags - nagios NEB module flags - not used.
- * @param[in] reason - nagios reason code - not used.
- *
- * @return Always returns zero.
- */
-int nebmodule_deinit(int flags, int reason)
-{
-   dnxSyslog(LOG_INFO, "dnxNebMain: DNX Server shutdown initiated.");
-
-   // Begin shutdown process
-   dnxServerDeInit();
-
-   // Write de-initialization completed message
-   dnxSyslog(LOG_INFO, "dnxNebMain: Module de-initialization completed.");
-
-   dnxGlobalData.isActive = 0;   // De-Init success
-
-   return 0;
 }
 
 //----------------------------------------------------------------------------
@@ -765,7 +331,7 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
    struct sockaddr_in src_addr;
    in_addr_t addr;
 
-   if (dnxGlobalData.auditWorkerJobs)
+   if (cfg.auditWorkerJobs)
    {
       // Convert opaque Worker Node address to IPv4 address
 
@@ -779,7 +345,7 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
       memcpy(&src_addr, pJob->pNode->address, sizeof(src_addr));
       addr = ntohl(src_addr.sin_addr.s_addr);
 
-      syslog((dnxGlobalData.auditLogFacility | LOG_INFO),
+      syslog(auditLogFacility | LOG_INFO,
          "%s: Job %lu: Worker %u.%u.%u.%u-%lx: %s",
          action,
          pJob->guid.objSerial,
@@ -793,6 +359,342 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
    }
 
    return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** Service Check Event Handler.
+ * 
+ * @param[in] event_type - the event type for which we're being called.
+ * @param[in] data - an opaque pointer to nagios event-specific data.
+ * 
+ * @return Zero if we want Nagios to handle the event; 
+ *    NEBERROR_CALLBACKOVERRIDE indicates that we want to handle the event
+ *    ourselves; any other non-zero value represents an error.
+ */
+static int ehSvcCheck(int event_type, void * data)
+{
+   static unsigned long serial = 0; // the number of service checks processed
+
+   nebstruct_service_check_data *svcdata = (nebstruct_service_check_data *)data;
+   DnxNodeRequest *pNode;
+   int ret;
+
+   // Validate our event type
+   if (event_type != NEBCALLBACK_SERVICE_CHECK_DATA)
+      return OK;  // Ignore all non-service-check events
+
+   // Sanity-check our data structure
+   if (svcdata == NULL)
+   {
+      dnxSyslog(LOG_ERR, "dnxServer: ehSvcCheck: Received NULL service data structure");
+      return ERROR;  // Should not happen - internal Nagios error
+   }
+
+   // Only need to look at pre-run service checks
+   if (svcdata->type != NEBTYPE_SERVICECHECK_INITIATE)
+      return OK;  // Ignore non-initialization events
+
+#if 0
+   dnxDebug(5, "ehSvcCheck: Received Service Check Init event");
+#endif
+
+   // See if this job should be executed locally.
+   //
+   // We do this by seeing if the check-command string (svcdata->command_line)
+   // matches the regular-expression specified in the localCheckPattern
+   // directive in the Server configuration file.
+   //
+   if (regexec(&regEx, svcdata->command_line, 0, NULL, 0) == 0)
+   {
+      dnxDebug(1, "dnxServer: ehSvcCheck: Job will execute locally: %s", svcdata->command_line);
+      return OK;  // Ignore check that should be executed locally
+   }
+
+   // Make sure we have at least one valid worker node request.
+   // If not, execute check locally.
+
+   dnxDebug(1, "dnxServer: ehSvcCheck: Received Job %lu at %lu (%lu)",
+         serial, (unsigned long)time(NULL), (unsigned long)(svcdata->start_time.tv_sec));
+
+   // Locate the next available worker node from the Request Queue
+   if ((ret = dnxGetNodeRequest(reg, &pNode)) != DNX_OK)
+   {
+      dnxDebug(1, "dnxServer: ehSvcCheck: No worker nodes requests available: %d", ret);
+      return OK;  // Unable to handle this request - Have Nagios handle it
+   }
+
+   // Post this service check to the Job Queue
+   if ((ret = dnxPostNewJob(jobs, serial, svcdata, pNode)) != 0)
+   {
+      dnxSyslog(LOG_ERR, "dnxServer: ehSvcCheck: Failed to post new job: %d", ret);
+      return OK;  // Unable to handle this request - Have Nagios handle it
+   }
+
+   // Increment service check serial number
+   serial++;
+
+   // Tell Nagios that we are overriding the handling of this event
+   return NEBERROR_CALLBACKOVERRIDE;
+}
+
+//----------------------------------------------------------------------------
+
+// forward declaration due to circular reference
+static int ehProcessData(int event_type, void * data);
+
+/** Deinitialize the dnx server.
+ * 
+ * @return Always returns zero.
+ */
+static int dnxServerDeInit(void)
+{
+   // deregister for all nagios events we previously registered for...
+   neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ehProcessData);
+   neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ehSvcCheck);
+
+   // ensure we don't destroy non-existent objects from here on out...
+   if (coll)
+      dnxCollectorDestroy(&coll);
+
+   if (disp)
+      dnxDispatcherDestroy(&disp);
+
+   if (timer)
+      dnxTimerDestroy(timer);
+
+   if (reg)
+      dnxRegistrarDestroy(reg);
+
+   if (jobs)
+      dnxJobListWhack(&jobs);
+
+   if (cfg.localCheckPattern)
+      regfree(&regEx);
+
+   dnxChanMapRelease();    // doesn't matter if we haven't initialized here
+
+   return OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** Initialize the dnxServer.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dnxServerInit(void)
+{
+   int ret, joblistsz = dnxCalculateJobListSize();
+
+   dnxSyslog(LOG_INFO, "dnxServerInit: Allocating %d service request "
+                       "slots in the DNX job list", joblistsz);
+
+   if ((ret = dnxChanMapInit(0)) != 0)
+   {
+      dnxSyslog(LOG_ERR, "dnxServerInit: dnxChanMapInit failed: %d", ret);
+      return ret;
+   }
+
+   if ((ret = dnxJobListInit(&jobs, joblistsz)) != 0)
+   {
+      dnxSyslog(LOG_ERR, "dnxServerInit: Failed to initialize DNX job "
+                         "list with %d slots", joblistsz);
+      return ret;
+   }
+
+   if ((ret = dnxCollectorCreate(&cfg.debug, "Collect", 
+         cfg.channelCollector, jobs, &coll)) != 0)
+      return ret;
+
+   if ((ret = dnxDispatcherCreate(&cfg.debug, "Dispatch", 
+         cfg.channelDispatcher, jobs, &disp)) != 0)
+      return ret;
+
+   if ((ret = dnxRegistrarCreate(&cfg.debug, joblistsz,
+         dnxDispatcherGetChannel(disp), &reg)) != 0)
+      return ret;
+
+   if ((ret = dnxTimerCreate(jobs, &timer)) != 0)
+      return ret;
+
+   // registration for this event starts everything rolling
+   neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA, myHandle, 0, ehSvcCheck);
+
+   dnxSyslog(LOG_INFO, "dnxServerInit: Registered for SERVICE_CHECK_DATA event");
+   dnxSyslog(LOG_INFO, "dnxServerInit: Server initialization completed");
+
+   return 0;
+}
+
+//----------------------------------------------------------------------------
+
+/** Launches an external command and waits for it to return a status code.
+ * 
+ * @param[in] script - the command line to be launched.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int launchScript(char * script)
+{
+   int ret;
+
+   assert(script);
+
+   // exec the script - system waits till child completes
+   if ((ret = system(script)) == -1)
+   {
+      dnxSyslog(LOG_ERR, "launchScript: Failed to exec script: %s", 
+            strerror(errno));
+      ret = DNX_ERR_INVALID;
+   }
+   else
+      ret = DNX_OK;
+
+   dnxSyslog(LOG_INFO, "launchScript: Sync script returned %d", 
+         WEXITSTATUS(ret));
+
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Process Data Event Handler.
+ * 
+ * @param[in] event_type - the event regarding which we were called by Nagios.
+ * @param[in] data - an opaque pointer to an event-specific data structure.
+ * 
+ * @return Zero if all is okay, but we want nagios to handle this event;
+ *    non-zero if there's a problem of some sort.
+ */
+static int ehProcessData(int event_type, void * data)
+{
+   nebstruct_process_data *procdata = (nebstruct_process_data *)data;
+
+   // validate our event type - ignore wrong event type
+   assert(event_type == NEBCALLBACK_PROCESS_DATA);
+   if (event_type != NEBCALLBACK_PROCESS_DATA)
+      return OK;
+
+   // sanity-check our data structure - should never happen
+   assert(procdata);
+   if (!procdata)
+   {
+      dnxSyslog(LOG_ERR, "ehProcessData: Received NULL process data structure");
+      return ERROR;
+   }
+
+   // look for process event loop start event
+   if (procdata->type == NEBTYPE_PROCESS_EVENTLOOPSTART)
+   {
+      dnxDebug(2, "ehProcessData: Received PROCESS_EVENTLOOPSTART event");
+
+      // execute sync script, if defined
+      if (cfg.syncScript)
+      {
+         dnxSyslog(LOG_INFO, "ehProcessData: Executing plugin sync script: %s", 
+               cfg.syncScript);
+
+         // NB: This halts Nagios execution until the script exits...
+         launchScript(cfg.syncScript);
+      }
+
+      // if server init fails, do server shutdown
+      if (dnxServerInit() != 0)
+         dnxServerDeInit();
+   }
+   return OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** The main NEB module deinitialization routine.
+ * 
+ * This function gets called when the module is unloaded by the event broker.
+ * 
+ * @param[in] flags - nagios NEB module flags - not used.
+ * @param[in] reason - nagios reason code - not used.
+ *
+ * @return Always returns zero.
+ */
+int nebmodule_deinit(int flags, int reason)
+{
+   dnxSyslog(LOG_INFO, "dnxServer: DNX Server shutdown initiated.");
+
+   dnxServerDeInit();
+
+   dnxSyslog(LOG_INFO, "dnxServer: DNX Server shutdown completed.");
+
+   return 0;
+}
+
+//----------------------------------------------------------------------------
+
+/** The main NEB module initialization routine.
+ * 
+ * This function gets called when the module is loaded by the event broker.
+ * 
+ * @param[in] flags - module flags - not used
+ * @param[in] args - module arguments. These come from the nagios 
+ *    configuration file, and are passed through to the module as it loads.
+ * @param[in] handle - our module handle - passed from the OS to nagios as
+ *    nagios loaded us.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+int nebmodule_init(int flags, char * args, nebmodule * handle)
+{
+   int ret;
+
+   myHandle = handle;
+
+   dnxSyslog(LOG_INFO, "dnxServer: DNX Server module version %s", DNX_VERSION);
+   dnxSyslog(LOG_INFO, "dnxServer: Copyright (c) 2006-2007 "
+                       "Intellectual Reserve. All rights reserved.");
+   
+   // module args string should contain a fully-qualified config file path
+   if (!args || !*args)
+   {
+      dnxSyslog(LOG_ERR, "dnxServer: DNX config file not specified");
+      return ERROR;
+   }
+
+   // clear globals for initialization (so we know what to undo as we back out)
+   jobs = 0;
+   reg = 0;
+   timer = 0;
+   disp = 0;
+   coll = 0;
+
+   dnxLogFacility = LOG_LOCAL7;
+   auditLogFacility = 0;
+
+   memset(&regEx, 0, sizeof regEx);
+
+   if ((ret = dnxLoadConfig(args)) != 0)
+   {
+      dnxSyslog(LOG_ERR, "dnxServer: Failed to load configuration: %d", ret);
+      return ERROR;
+   }
+
+   cfgServerLogging(&cfg.debug, &dnxLogFacility);
+
+   // subscribe to PROCESS_DATA call-backs in order to defer initialization
+   //    until after Nagios validates its configuration and environment.
+   if ((ret = neb_register_callback(NEBCALLBACK_PROCESS_DATA, 
+         myHandle, 0, ehProcessData)) != OK)
+   {
+      dnxSyslog(LOG_ERR, "dnxServer: PROCESS_DATA event "
+                         "registration failed: %d", ret);
+      return ERROR;
+   }
+
+   dnxSyslog(LOG_INFO, "dnxServer: Registered for PROCESS_DATA event");
+   dnxSyslog(LOG_INFO, "dnxServer: Module initialization completed");
+
+   start_time = time(0);
+
+   return OK;
 }
 
 /*--------------------------------------------------------------------------*/

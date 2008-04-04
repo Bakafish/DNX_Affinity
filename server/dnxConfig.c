@@ -54,8 +54,6 @@ typedef struct _DnxVarMap_
    void * varStorage;
 } DnxVarMap;
 
-extern DnxGlobalData dnxGlobalData;
-
 static DnxVarMap DnxVarDictionary[] = 
 {
    { "channelDispatcher",  DNX_VAR_STR, NULL },
@@ -212,18 +210,20 @@ int parseLine (char *szFile, int lineNo, char *szLine)
  */
 void initGlobals(void)
 {
-   // 'cause C doesn't allow non-constant initializers in static structures
-   DnxVarDictionary[ 0].varStorage = &(dnxGlobalData.channelDispatcher);
-   DnxVarDictionary[ 1].varStorage = &(dnxGlobalData.channelCollector);
-   DnxVarDictionary[ 2].varStorage = &(dnxGlobalData.authWorkerNodes);
-   DnxVarDictionary[ 3].varStorage = &(dnxGlobalData.maxNodeRequests);
-   DnxVarDictionary[ 4].varStorage = &(dnxGlobalData.minServiceSlots);
-   DnxVarDictionary[ 5].varStorage = &(dnxGlobalData.expirePollInterval);
-   DnxVarDictionary[ 6].varStorage = &(dnxGlobalData.localCheckPattern);
-   DnxVarDictionary[ 7].varStorage = &(dnxGlobalData.syncScript);
-   DnxVarDictionary[ 8].varStorage = &(dnxGlobalData.logFacility);
-   DnxVarDictionary[ 9].varStorage = &(dnxGlobalData.auditWorkerJobs);
-   DnxVarDictionary[10].varStorage = &(dnxGlobalData.debug);
+   /** @todo Fix the configuration sub-system so we can pass in the map. */
+   extern DnxServerCfg cfg;
+
+   DnxVarDictionary[ 0].varStorage = &cfg.channelDispatcher;
+   DnxVarDictionary[ 1].varStorage = &cfg.channelCollector;
+   DnxVarDictionary[ 2].varStorage = &cfg.authWorkerNodes;
+   DnxVarDictionary[ 3].varStorage = &cfg.maxNodeRequests;
+   DnxVarDictionary[ 4].varStorage = &cfg.minServiceSlots;
+   DnxVarDictionary[ 5].varStorage = &cfg.expirePollInterval;
+   DnxVarDictionary[ 6].varStorage = &cfg.localCheckPattern;
+   DnxVarDictionary[ 7].varStorage = &cfg.syncScript;
+   DnxVarDictionary[ 8].varStorage = &cfg.logFacility;
+   DnxVarDictionary[ 9].varStorage = &cfg.auditWorkerJobs;
+   DnxVarDictionary[10].varStorage = &cfg.debug;
 }
 
 //----------------------------------------------------------------------------
