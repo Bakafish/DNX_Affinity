@@ -1,7 +1,0 @@
-USING DEBIAN SPEC FILES
------------------------
-Currently, this directory contains debian spec files required to build dnx on 
-the OpenSuSE public build system at:
-
-   http://build.opensuse.org
-

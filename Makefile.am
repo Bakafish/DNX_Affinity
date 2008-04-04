@@ -4,7 +4,7 @@ if DO_DOXYGEN
   OPT_DOXYGEN = doc
 endif
 
-SUBDIRS = etc deb common server client stats $(OPT_DOXYGEN)
+SUBDIRS = etc obs common server client stats $(OPT_DOXYGEN)
 
 doxygen:
 	cd doc && $(MAKE) $(AM_MAKEFLAGS) $@
@@ -25,9 +25,9 @@ rpmcheck:
         fi
 
 srcrpm: rpmcheck dist
-	rpmbuild -bs $(rpmmacros) --nodeps rpm/$(PACKAGE).spec
+	rpmbuild -bs $(rpmmacros) --nodeps obs/$(PACKAGE).spec
 
 rpms: rpmcheck dist
-	rpmbuild -ba $(rpmmacros) --nodeps --buildroot=$(PWD)/tmp rpm/$(PACKAGE).spec
+	rpmbuild -ba $(rpmmacros) --nodeps --buildroot=$(PWD)/tmp obs/$(PACKAGE).spec
 	mv $(rpmarch)/* .; rm -rf $(rpmarch)
 

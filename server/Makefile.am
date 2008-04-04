@@ -1,5 +1,7 @@
 EXTRA_DIST = test sync_plugins.pl
 
+libexec_SCRIPTS = sync_plugins.pl
+
 pkglib_LTLIBRARIES = dnxServer.la
 
 noinst_HEADERS =\

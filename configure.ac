@@ -65,14 +65,14 @@ AC_DEFINE_UNQUOTED(BUILDARCH, ["$BUILDARCH"],
 	[The build architecture of this build.])
 
 AC_CONFIG_FILES([Makefile
-		 rpm/dnx.spec
-                 deb/dnx.dsc
-                 deb/debian.changelog
-		 deb/Makefile
-		 doc/Makefile
-		 doc/doxyfile
 		 etc/Makefile
 		 etc/dnxcld.init
+		 obs/dnx.spec
+		 obs/dnx.dsc
+		 obs/debian.changelog
+		 obs/Makefile
+		 doc/Makefile
+		 doc/doxyfile
 		 common/Makefile
 		 server/Makefile
 		 client/Makefile
