@@ -382,7 +382,7 @@ static int parseIntOrUnsignedArray(char * val, DnxCfgType type, int ** prval)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int parseBool(char * val, DnxCfgType type, unsigned ** prval)
+static int parseBool(char * val, DnxCfgType type, unsigned * prval)
 {
    assert(type == DNX_CFG_BOOL);
    if (strcasecmp(val, "YES") == 0 || strcasecmp(val, "TRUE") == 0 
