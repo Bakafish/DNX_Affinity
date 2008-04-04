@@ -1,3 +1,22 @@
+/*--------------------------------------------------------------------------
+ 
+   Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
+ 
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License version 2 as 
+   published by the Free Software Foundation.
+ 
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+ 
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ 
+  --------------------------------------------------------------------------*/
+
 //	dnxError.h
 //
 //	DNX Error Definitions
@@ -35,7 +54,7 @@
 #define DNX_OK				0	// A-OK, Okey-Dokey, Rock-On
 
 #define DNX_ERR_INVALID		1	// Invalid arguments or parameters
-#define	DNX_ERR_CAPACITY	2	// Out of channel slots or XML buffer space
+#define DNX_ERR_CAPACITY	2	// Out of channel slots or XML buffer space
 #define DNX_ERR_BADURL		3	// Invalid, malformed URL
 #define DNX_ERR_ALREADY		4	// Already init or deinit
 #define DNX_ERR_EXIST		5	// Channel already exists
@@ -69,4 +88,5 @@ dnxError dnxGetLastError (void);
 void dnxSetLastError (dnxError errno);
 char *dnxErrorString (dnxError errno);
 
-#endif
+#endif   /* _DNXERROR_H_ */
+
