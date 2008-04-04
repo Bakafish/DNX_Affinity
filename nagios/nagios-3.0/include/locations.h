@@ -2,7 +2,7 @@
  *
  * Nagios Locations Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 03-24-2003
+ * Last Modified: 04-30-2007
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,9 +19,12 @@
  ************************************************************************/
 
 #define DEFAULT_TEMP_FILE			"/usr/local/nagios/var/tempfile"
+#define DEFAULT_TEMP_PATH                       "/tmp"
+#define DEFAULT_CHECK_RESULT_PATH		"/usr/local/nagios/var/spool/checkresults"
 #define DEFAULT_STATUS_FILE			"/usr/local/nagios/var/status.dat"
 #define DEFAULT_LOG_FILE			"/usr/local/nagios/var/nagios.log"
 #define DEFAULT_LOG_ARCHIVE_PATH		"/usr/local/nagios/var/archives/"
+#define DEFAULT_DEBUG_FILE                      "/usr/local/nagios/var/nagios.debug"
 #define DEFAULT_COMMENT_FILE			"/usr/local/nagios/var/comments.dat"
 #define DEFAULT_DOWNTIME_FILE			"/usr/local/nagios/var/downtime.dat"
 #define DEFAULT_RETENTION_FILE			"/usr/local/nagios/var/retention.dat"
@@ -34,6 +37,7 @@
 #define DEFAULT_CGI_CONFIG_FILE			"/usr/local/nagios/etc/cgi.cfg"
 #define DEFAULT_LOCK_FILE			"/usr/local/nagios/var/nagios.lock"
 #define DEFAULT_OBJECT_CACHE_FILE		"/usr/local/nagios/var/objects.cache"
+#define DEFAULT_PRECACHED_OBJECT_FILE		"/usr/local/nagios/var/objects.precache"
 #define DEFAULT_EVENT_BROKER_FILE		"/usr/local/nagios/var/broker.socket"
 #define DEFAULT_P1_FILE				"/usr/local/nagios/bin/p1.pl"	/**** EMBEDDED PERL ****/
 #define DEFAULT_AUTH_FILE			""			/**** EMBEDDED PERL - IS THIS USED? ****/

@@ -3,7 +3,7 @@
  *
  * Nagios Config Header File
  * Written By: Ethan Galstad (nagios@nagios.org)
- * Last Modified: 05-16-2006
+ * Last Modified: 11-10-2007
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -24,6 +24,9 @@
 
 #define DEFAULT_NAGIOS_USER "nagios"
 #define DEFAULT_NAGIOS_GROUP "nagios"
+
+/* stop gcc from bitching about implicit asprintf declarations */
+#define _GNU_SOURCE 1
 
 /* Event broker integration */
 #define USE_EVENT_BROKER 1
@@ -73,6 +76,19 @@
 #define HAVE_STRTOUL 1
 #define HAVE_INITGROUPS 1
 /* #undef HAVE_GETLOADAVG */
+/* #undef HAVE_GLIB */
+
+
+
+/***** ASPRINTF() AND FRIENDS *****/
+
+/* #undef HAVE_VSNPRINTF */
+/* #undef HAVE_SNPRINTF */
+/* #undef HAVE_ASPRINTF */
+/* #undef HAVE_VASPRINTF */
+#define HAVE_C99_VSNPRINTF 1
+#define HAVE_VA_COPY 1
+/* #undef HAVE___VA_COPY */
 
 
 
@@ -94,6 +110,7 @@
 #ifndef RTLD_NOW
 #define RTLD_NOW 0
 #endif
+
 
 
 /***** HEADER FILES *****/
@@ -176,6 +193,21 @@
 #include <fcntl.h>
 #endif
 
+#ifdef NSCORE
+/* #undef HAVE_GLIB_H */
+#endif
+#ifdef NSCGI
+/* #undef HAVE_GLIB_H */
+#endif
+#ifdef HAVE_GLIB_H
+#include <glib.h>
+#endif
+
+#define HAVE_STDARG_H 1
+#ifdef HAVE_STDARG_H
+#include <stdarg.h>
+#endif
+
 #define HAVE_SYS_TYPES_H 1
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -253,6 +285,11 @@
 #define HAVE_NETDB_H 1
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
+#endif
+
+#define HAVE_LIBGEN_H 1
+#ifdef HAVE_LIBGEN_H
+#include <libgen.h>
 #endif
 
 #define HAVE_SYS_UN_H 1
