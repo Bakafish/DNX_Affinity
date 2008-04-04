@@ -93,11 +93,12 @@ typedef struct { int unused; } DnxCfgParser;
  * file. The @p cmdover string is parsed AFTER the configuration file, thus
  * @p cmdover entries override configuration file entries.
  * 
- * Command line overrides ALWAYS 
- * 
- * @param[in] cfgdefs - a string containing default config file entries.
- * @param[in] cfgfile - the path name of the config file to be parsed.
- * @param[in] cmdover - a string containing command line override entries.
+ * @param[in] cfgdefs - an optional string containing default config file 
+ *    entries. Pass NULL if not required.
+ * @param[in] cfgfile - an optional path name of the config file to be parsed.
+ *    Pass NULL if not required.
+ * @param[in] cmdover - an optional string containing command line override 
+ *    entries. Pass NULL if not required.
  * @param[in] dict - an array of DnxCfgDict objects, each of which defines a 
  *    valid configuration variable name and type for this parser. The @p dict
  *    array should be terminated with NULL field values (a NULL pointer in the 
@@ -111,16 +112,6 @@ int dnxCfgParserCreate(char * cfgdefs, char * cfgfile, char * cmdover,
       DnxCfgDict * dict, DnxCfgParser ** cpp);
 
 /** Parse a configuration file into a value array.
- * 
- * A configuration parser is used to read and parse a specified configuration 
- * file using a user-provided configuration variable dictionary to validate 
- * and convert the string values into usable data values.
- * 
- * A null-terminated array of pointers to configuration strings containing 
- * default values may optionally be passed in the @p cfgdefs parameter. The 
- * @p cfgdefs array strings contain configuration file entries that should be 
- * parsed before the actual file is parsed. Thus, configuration file entries 
- * override default array entries.
  * 
  * Depending on the type of the data value, the @p ppvals array will either
  * return the value, or the address of allocated storage containing the value.

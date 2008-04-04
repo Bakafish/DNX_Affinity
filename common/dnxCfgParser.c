@@ -123,6 +123,53 @@ static char ** strToStrArray(char * str, char delim)
 
 //----------------------------------------------------------------------------
  
+/** Make a dynamic copy of a dnx configuration dictionary.
+ *
+ * @param[in] dict - the dictionary describing the field value types.
+ * 
+ * @return A pointer to a copy of @p dict, or NULL if out of memory.
+ */
+static DnxCfgDict * copyDictionary(DnxCfgDict * dict)
+{
+   DnxCfgDict * cpy, * cp;
+   size_t bufsz = 0;
+   char * sptr;
+
+   assert(dict);
+
+   // calculate space required for copy; add one for null-terminator
+   cp = dict;
+   while (cp->varname)
+   {
+      bufsz += strlen(cp->varname) + 1;
+      cp++;
+   }
+   cp++;
+
+   // allocate space for array copy with buffer space for strings
+   if ((cpy = (DnxCfgDict *)xmalloc((cp - dict) * sizeof *cpy + bufsz)) == 0)
+      return 0;
+
+   // find buffer pointer
+   sptr = (char *)&cpy[cp - dict];
+
+   // copy dictionary
+   cp = cpy;
+   while (dict->varname)
+   {
+      size_t strsz = strlen(dict->varname) + 1;
+      memcpy(sptr, dict->varname, strsz);
+      cp->varname = sptr;
+      cp->type = dict->type;
+      sptr += strsz;
+      cp++, dict++;
+   }
+   cp->varname = 0;
+   return cpy;
+}
+
+//----------------------------------------------------------------------------
+ 
 /** Zero all value array pointer values.
  *
  * @param[in] dict - the dictionary describing the field value types.
@@ -576,24 +623,24 @@ int dnxCfgParserCreate(char * cfgdefs, char * cfgfile, char * cmdover,
       DnxCfgDict * dict, DnxCfgParser ** cpp)
 {
    iDnxCfgParser * icp;
-   int ret = DNX_ERR_MEMORY;
 
-   assert(cfgfile && *cfgfile && dict && cpp);
+   assert(dict && cpp);
 
    if ((icp = (iDnxCfgParser *)xmalloc(sizeof *icp)) == 0)
-      return ret;
+      return DNX_ERR_MEMORY;
    memset(icp, 0, sizeof *icp);
 
-   if ((icp->cfgfile = xstrdup(cfgfile)) == 0
+   if (cfgfile && (icp->cfgfile = xstrdup(cfgfile)) == 0
          || cfgdefs && (icp->cfgdefs = strToStrArray(cfgdefs, '\n')) == 0
-         || cmdover && (icp->cmdover = strToStrArray(cmdover, '\n')) == 0)
+         || cmdover && (icp->cmdover = strToStrArray(cmdover, '\n')) == 0
+         || (icp->dict = copyDictionary(dict)) == 0)
    {
+      xfree(icp->cmdover);
       xfree(icp->cfgdefs);
       xfree(icp->cfgfile);
       xfree(icp);
-      return ret;
+      return DNX_ERR_MEMORY;
    }
-   icp->dict = dict;
    *cpp = (DnxCfgParser *)icp;
    return DNX_OK;
 }
@@ -615,22 +662,25 @@ int dnxCfgParserParse(DnxCfgParser * cp, void * ppvals[])
       return ret;
 
    // parse configuration file
-   if ((fp = fopen(icp->cfgfile, "r")) == 0)
-      ret = errno == EACCES? DNX_ERR_ACCESS : DNX_ERR_NOTFOUND;
-   else
+   if (icp->cfgfile)
    {
-      while (fgets(buf, sizeof buf, fp) != 0)
+      if ((fp = fopen(icp->cfgfile, "r")) == 0)
+         ret = errno == EACCES? DNX_ERR_ACCESS : DNX_ERR_NOTFOUND;
+      else
       {
-         int err;
-         line++;
-         if ((err = dnxParseCfgLine(buf, icp->dict, ppvals)) != 0)
+         while (fgets(buf, sizeof buf, fp) != 0)
          {
-            dnxSyslog(LOG_ERR, "cfgParser [%s]: Syntax error on line %d: %s", 
-                  icp->cfgfile, line, dnxErrorString(err));
-            if (!ret) ret = err; // return only the first error
+            int err;
+            line++;
+            if ((err = dnxParseCfgLine(buf, icp->dict, ppvals)) != 0)
+            {
+               dnxSyslog(LOG_ERR, "cfgParser [%s]: Syntax error on line %d: %s", 
+                     icp->cfgfile, line, dnxErrorString(err));
+               if (!ret) ret = err; // return only the first error
+            }
          }
+         fclose(fp);
       }
-      fclose(fp);
    }
 
    // if no error so far, apply command line overrides
@@ -669,6 +719,7 @@ void dnxCfgParserDestroy(DnxCfgParser * cp)
 
    assert(cp);
 
+   xfree(icp->dict);
    xfree(icp->cmdover);
    xfree(icp->cfgdefs);
    xfree(icp->cfgfile);
