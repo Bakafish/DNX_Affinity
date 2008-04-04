@@ -196,32 +196,39 @@ static void logConfigChanges(DnxWlmCfgData * ocp, DnxWlmCfgData * ncp)
  */
 static int initWorkerComm(DnxWorkerStatus * ws)
 {
-   char szChan[64];
+   char szChanDisp[64];
+   char szChanColl[64];
    int ret;
 
    // create a channel for sending job requests (named after its memory address)
-   sprintf(szChan, "Dispatch:%lx", ws);
-   if ((ret = dnxChanMapAdd(szChan, ws->iwlm->cfg.dispatcher)) != DNX_OK)
+   sprintf(szChanDisp, "Dispatch:%lx", ws);
+   if ((ret = dnxChanMapAdd(szChanDisp, ws->iwlm->cfg.dispatcher)) != DNX_OK)
    {
       dnxLog("WLM: Failed to initialize dispatcher channel: %s.", dnxErrorString(ret));
       return ret;
    }
-   if ((ret = dnxConnect(szChan, 1, &ws->dispatch)) != DNX_OK)
+   if ((ret = dnxConnect(szChanDisp, 1, &ws->dispatch)) != DNX_OK)
    {
       dnxLog("WLM: Failed to open dispatcher channel: %s.", dnxErrorString(ret));
+      dnxChanMapDelete(szChanDisp);
       return ret;
    }
 
    // create a channel for sending job results (named after its memory address)
-   sprintf(szChan, "Collect:%lx", ws);
-   if ((ret = dnxChanMapAdd(szChan, ws->iwlm->cfg.collector)) != DNX_OK)
+   sprintf(szChanColl, "Collect:%lx", ws);
+   if ((ret = dnxChanMapAdd(szChanColl, ws->iwlm->cfg.collector)) != DNX_OK)
    {
       dnxLog("WLM: Failed to initialize collector channel: %s.", dnxErrorString(ret));
+      dnxDisconnect(ws->dispatch);
+      dnxChanMapDelete(szChanDisp);
       return ret;
    }
-   if ((ret = dnxConnect(szChan, 1, &ws->collect)) != DNX_OK)
+   if ((ret = dnxConnect(szChanColl, 1, &ws->collect)) != DNX_OK)
    {
       dnxLog("WLM: Failed to open collector channel: %s.", dnxErrorString(ret));
+      dnxChanMapDelete(szChanColl);
+      dnxDisconnect(ws->dispatch);
+      dnxChanMapDelete(szChanDisp);
       return ret;
    }
    return 0;
@@ -394,6 +401,7 @@ static void * dnxWorker(void * data)
    DnxWorkerStatus * ws = (DnxWorkerStatus *)data;
    pthread_t tid = pthread_self();
    int retries = 0;
+   iDnxWlm * iwlm;
 
    assert(data);
 
@@ -403,9 +411,10 @@ static void * dnxWorker(void * data)
 
    time(&ws->tstart);   // set thread start time (for stats)
 
-   while (!ws->iwlm->terminate)
+   iwlm = ws->iwlm;
+
+   while (!iwlm->terminate)
    {
-      iDnxWlm * iwlm = ws->iwlm;
       DnxNodeRequest msg;
       DnxJob job;
       int ret;
@@ -537,7 +546,9 @@ static void * dnxWorker(void * data)
       }
    }
    pthread_cleanup_pop(1);
-   cleanThreadPool(ws->iwlm);
+   DNX_PT_MUTEX_LOCK(&iwlm->mutex);
+   cleanThreadPool(iwlm);
+   DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
    return 0;
 }
 
