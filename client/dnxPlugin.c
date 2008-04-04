@@ -373,8 +373,11 @@ static void dnxPluginInternal(DnxPlugin * plugin, char * command, int * resCode,
    // break-up command string into vectors
    if ((ret = dnxPluginVector(command, &argc, argv, DNX_MAX_ARGV)) != DNX_OK)
    {
+      char * cp = resData;
       *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
-      sprintf(resData, "Unable to vectorize plugin command line %d", ret);
+      cp += sprintf(cp, "(DNX: Vectorize command-line failed!)");
+      if (myaddr)
+         sprintf(cp, " (dnx node %s)", myaddr);
       return;
    }
 
@@ -384,13 +387,23 @@ static void dnxPluginInternal(DnxPlugin * plugin, char * command, int * resCode,
 #ifdef USE_NRPE_MODULE
    *resCode = mod_nrpe(argc, argv, resData);
 #else
-   *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
-   sprintf(resData, "(DNX: Internal NRPE Modules Unavailable; Node %s)", myaddr);
+   {
+      char * cp = resData;
+      *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
+      cp += sprintf(cp, "(DNX: Internal NRPE modules unavailable!)");
+      if (myaddr)
+         sprintf(cp, " (dnx node %s)", myaddr);
+   }
 #endif
 
    // check for no output condition
    if (!resData[0])
-      sprintf(resData, "(DNX: No Output; Node %s)", myaddr);
+   {
+      char * cp = resData;
+      cp += sprintf(cp, "(No output!)");
+      if (myaddr)
+         sprintf(cp, " (dnx node %s)", myaddr);
+   }
 
    // test for exception conditions:
    temp_buffer[0] = 0;
@@ -453,8 +466,11 @@ static void dnxPluginExternal(char * command, int * resCode, char * resData,
 
    if (!*cp)
    {
+      char * cp = resData;
       *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
-      sprintf(resData, "dnxPluginExternal: empty plugin command string");
+      cp += sprintf(cp, "(DNX: Empty check command-line!)");
+      if (myaddr)
+         sprintf(cp, " (dnx node %s)", myaddr);
       return;
    }
 
@@ -468,16 +484,22 @@ static void dnxPluginExternal(char * command, int * resCode, char * resData,
 
       if (bp == ep)
       {
+         char * cp = resData;
          *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
-         sprintf(resData, "dnxPluginExternal: invalid plugin command string");
+         cp += sprintf(cp, "(DNX: Invalid check command-line!");
+         if (myaddr)
+            sprintf(cp, " (dnx node %s)", myaddr);
          return;
       }
 
       // verify that the restructured plugin path doesn't exceed our maximum
       if ((len = strlen(gPluginPath) + strlen(bp)) > MAX_PLUGIN_PATH)
       {
+         char * cp = resData;
          *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
-         sprintf(resData, "dnxPluginExternal: plugin command string exceeds max command string size");
+         cp += sprintf(cp, "(DNX: Check command-line exceeds max size!)");
+         if (myaddr)
+            sprintf(cp, " (dnx node %s)", myaddr);
          return;
       }
 
@@ -492,8 +514,11 @@ static void dnxPluginExternal(char * command, int * resCode, char * resData,
    // execute the plugin check command
    if ((pf = pfopen(plugin, "r")) == 0)
    {
+      char * cp = resData;
       *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
-      sprintf(resData, "dnxPluginExternal: pfopen failed with errno %d", errno);
+      cp += sprintf(cp, "(DNX: pfopen failed, %s!)", strerror(errno));
+      if (myaddr)
+         sprintf(cp, " (dnx node %s)", myaddr);
       return;
    }
 
@@ -521,8 +546,11 @@ static void dnxPluginExternal(char * command, int * resCode, char * resData,
    if ((count = select(fdmax, &fd_read, 0, 0, &tv)) < 0)
    {
       // select error
+      char * cp = resData;
       *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
-      sprintf(resData, "dnxPluginExternal: select on plugin pipe failed with errno %d", errno);
+      cp += sprintf(cp, "(DNX: select failed on pipe, %s!)", strerror(errno));
+      if (myaddr)
+         sprintf(cp, " (dnx node %s)", myaddr);
       pfkill(pf, SIGTERM);
       pfclose(pf);
       return;
@@ -530,8 +558,11 @@ static void dnxPluginExternal(char * command, int * resCode, char * resData,
    else if (count == 0)
    {
       // plugin timeout
+      char * cp = resData;
       *resCode = DNX_PLUGIN_RESULT_CRITICAL;
-      sprintf(resData, "(DNX: Plugin Timeout; Node %s)", myaddr);
+      cp += sprintf(cp, "(Service Check Timed Out)");
+      if (myaddr)
+         sprintf(cp, " (dnx node %s)", myaddr);
       pfkill(pf, SIGTERM);
       pfclose(pf);
       return;
@@ -559,7 +590,10 @@ static void dnxPluginExternal(char * command, int * resCode, char * resData,
    // check for no output condition
    if (!resData[0])
    {
-      sprintf(resData, "(DNX: No Output; Node %s)", myaddr);
+      char * cp = resData;
+      cp += sprintf(cp, "(No output!)");
+      if (myaddr)
+         sprintf(cp, " (dnx node %s)", myaddr);
       isErrOutput = 0;
    }
 
@@ -616,8 +650,11 @@ void dnxPluginExecute(char * command, int * resCode, char * resData,
             maxData, timeout, myaddr);
    else
    {
+      char * cp = resData;
       *resCode = DNX_PLUGIN_RESULT_UNKNOWN;
-      sprintf(resData, "Unable to isolate plugin base name, %d", ret);
+      cp += sprintf(cp, "(DNX: Unable to isolate check base name!)");
+      if (myaddr)
+         sprintf(cp, " (dnx node %s)", myaddr);
    }
 }
 

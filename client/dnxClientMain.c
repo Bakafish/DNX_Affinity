@@ -455,6 +455,7 @@ static int initConfig(char * cfgfile)
       { "threadMaxRetries",       DNX_CFG_UNSIGNED, &s_cfg.wlm.maxRetries    },
       { "threadTtlBackoff",       DNX_CFG_UNSIGNED, &s_cfg.wlm.ttlBackoff    },
       { "maxResultBuffer",        DNX_CFG_UNSIGNED, &s_cfg.wlm.maxResults    },
+      { "showNodeAddr",           DNX_CFG_BOOL,     &s_cfg.wlm.showNodeAddr  },
       { 0 },
    };
    char cfgdefs[] = 
@@ -469,6 +470,7 @@ static int initConfig(char * cfgfile)
       "threadMaxRetries = 12\n"
       "threadTtlBackoff = 1\n"
       "maxResultBuffer = 1024\n"
+      "showNodeAddr = Yes\n"
       "logFile = " DNX_DEFAULT_LOG "\n"
       "debugFile = " DNX_DEFAULT_DBGLOG "\n"
       "user = " DNX_DEFAULT_USER "\n"

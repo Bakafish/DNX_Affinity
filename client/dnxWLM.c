@@ -179,6 +179,11 @@ static void logConfigChanges(DnxWlmCfgData * ocp, DnxWlmCfgData * ncp)
    if (ocp->maxResults != ncp->maxResults)
       dnxLog("Config parameter 'maxResultBuffer' changed from %u to %u.", 
             ocp->maxResults, ncp->maxResults);
+
+   if (ocp->showNodeAddr != ncp->showNodeAddr)
+      dnxLog("Config parameter 'showNodeAddr' changed from %s to %s.", 
+            ocp->showNodeAddr? "TRUE" : "FALSE", 
+            ncp->showNodeAddr? "TRUE" : "FALSE");
 }
 
 //----------------------------------------------------------------------------
@@ -480,7 +485,8 @@ static void * dnxWorker(void * data)
          *resData = 0;
          jobstart = time(0);
          dnxPluginExecute(job.cmd, &result.resCode, resData, 
-               sizeof resData - 1, job.timeout, iwlm->myipaddrstr);
+               sizeof resData - 1, job.timeout, 
+               iwlm->cfg.showNodeAddr? iwlm->myipaddrstr: 0);
          result.delta = time(0) - jobstart;
 
          // store allocated copy of the result string
@@ -611,6 +617,7 @@ int dnxWlmReconfigure(DnxWlm * wlm, DnxWlmCfgData * cfg)
    iwlm->cfg.pollInterval = cfg->pollInterval;
    iwlm->cfg.shutdownGrace = cfg->shutdownGrace;
    iwlm->cfg.maxResults = cfg->maxResults;
+   iwlm->cfg.showNodeAddr = cfg->showNodeAddr;
 
    // we can't reduce the poolsz until the number of threads
    //    drops below the new maximum

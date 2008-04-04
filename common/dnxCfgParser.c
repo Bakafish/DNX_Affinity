@@ -370,6 +370,33 @@ static int parseIntOrUnsignedArray(char * val, DnxCfgType type, int ** prval)
 }
 
 //----------------------------------------------------------------------------
+
+/** Validate and return a boolean.
+ * 
+ * Values may be specified with ON, OFF, TRUE, FALSE, YES, NO, 0 or non-zero
+ * numeric values. Anything else is treated as a syntax error.
+ * 
+ * @param[in] val - the value to be validated.
+ * @param[in] type - the high-level type (BOOL) of @p val.
+ * @param[in,out] prval - the address of storage for the returned boolean.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int parseBool(char * val, DnxCfgType type, unsigned ** prval)
+{
+   assert(type == DNX_CFG_BOOL);
+   if (strcasecmp(val, "YES") == 0 || strcasecmp(val, "TRUE") == 0 
+         || strcasecmp(val, "ON") == 0 || strtoul(val, 0, 0) != 0)
+      *prval = 1;
+   else if (strcasecmp(val, "NO") == 0 || strcasecmp(val, "FALSE") == 0 
+         || strcasecmp(val, "OFF") == 0 || (val[0] == '0' && val[1] == 0))
+      *prval = 0;
+   else
+      return DNX_ERR_SYNTAX;
+   return DNX_OK;
+}
+
+//----------------------------------------------------------------------------
  
 /** Validate and convert a single variable/value pair against a dictionary. 
  * 
@@ -399,6 +426,7 @@ static int dnxParseCfgVar(char * var, char * val, DnxCfgDict * dict,
       (DnxVarParser_t *)parseIntOrUnsignedArray,
       (DnxVarParser_t *)parseString,
       (DnxVarParser_t *)parseString,
+      (DnxVarParser_t *)parseBool,
    };
    
    unsigned i;
@@ -515,7 +543,8 @@ static void freeArrayPtrs(DnxCfgDict * dict, void ** vptrs)
    assert(dict);
 
    for (i = 0; dict[i].varname; i++)
-      if (dict[i].type != DNX_CFG_INT && dict[i].type != DNX_CFG_UNSIGNED)
+      if (dict[i].type != DNX_CFG_INT && dict[i].type != DNX_CFG_UNSIGNED 
+            && dict[i].type != DNX_CFG_BOOL)
          xfree(vptrs? vptrs[i]: *(void **)dict[i].valptr);
 }
 
@@ -653,6 +682,32 @@ static char * formatIntOrUnsignedArray(char * var, DnxCfgType type, int * prval)
 
 //----------------------------------------------------------------------------
 
+/** Format a boolean configuration value.
+ * 
+ * @param[in] var - the variable name to be used during formatting.
+ * @param[in] type - the type of the variable to be formatted.
+ * @param[in] prval - the string value to be formatted.
+ * 
+ * @return A pointer to an allocated buffer containing the formatted
+ * configuration line, or NULL on memory allocation failure. The caller is 
+ * responsible for freeing the memory returned.
+ */
+static char * formatBool(char * var, DnxCfgType type, unsigned prval)
+{
+   char * cfg;
+
+   assert(var);
+   assert(type == DNX_CFG_BOOL);
+
+   // var + '=' + YES + '\n' + '\0'
+   if ((cfg = (char *)xmalloc(strlen(var) + 1 + 3 + 2)) != 0)
+      sprintf(cfg, "%s=%s\n", var, prval? "YES" : "NO");
+
+   return cfg;
+}
+
+//----------------------------------------------------------------------------
+
 /** Format an allocated buffer containing the current configuration.
  * 
  * @param[in] dict - the config dictionary to be formatted into a string.
@@ -674,6 +729,7 @@ static char * buildCurrentCfgCache(DnxCfgDict * dict, size_t * ccsizep)
       (DnxVarFormatter_t *)formatIntOrUnsignedArray,
       (DnxVarFormatter_t *)formatString,
       (DnxVarFormatter_t *)formatString,
+      (DnxVarFormatter_t *)formatBool,
    };
 
    char * cfg = 0;
@@ -895,7 +951,8 @@ void dnxCfgParserDestroy(DnxCfgParser * cp)
    "testCfgUnsigned = 332245235\r\n"                                          \
    "testCfgUnsignedArray = 2342, 234,234,4,  2342  ,2342  ,234234 \n"         \
    "testCfgUrl = http://www.example.com\n"                                    \
-   "testCfgFSPath = /some/path\n"
+   "testCfgFSPath = /some/path\n"                                             \
+   "testCfgBool = YES\n"
 
 #define TEST_CFG_CONTENTS                                                     \
    "testCfgString=some string\n"                                              \
@@ -908,7 +965,8 @@ void dnxCfgParserDestroy(DnxCfgParser * cp)
    "testCfgUnsigned=332245235\n"                                              \
    "testCfgUnsignedArray=2342,234,234,4,2342,2342,234234\n"                   \
    "testCfgUrl=http://www.example.com\n"                                      \
-   "testCfgFSPath=/some/path"
+   "testCfgFSPath=/some/path\n"                                               \
+   "testCfgBool=YES"
      
 static verbose;
 
@@ -928,6 +986,7 @@ int main(int argc, char ** argv)
    unsigned *         testCfgUnsignedArray;
    char *             testCfgUrl;
    char *             testCfgFSPath;
+   unsigned           testCfgBool;
 
    DnxCfgDict dict[] = 
    {
@@ -942,6 +1001,7 @@ int main(int argc, char ** argv)
       { "testCfgUnsignedArray",DNX_CFG_UNSIGNED_ARRAY, &testCfgUnsignedArray },
       { "testCfgUrl",          DNX_CFG_URL,            &testCfgUrl           },
       { "testCfgFSPath",       DNX_CFG_FSPATH,         &testCfgFSPath        },
+      { "testCfgBool",         DNX_CFG_BOOL,           &testCfgBool          },
       { 0 },
    };
    char * defs = "testCfgInt2 = 82\ntestCfgInt3 = -67\ntestCfgInt4 = 101";
@@ -1000,6 +1060,8 @@ int main(int argc, char ** argv)
 
    CHECK_ZERO(strcmp(testCfgUrl, "http://www.example.com"));
    CHECK_ZERO(strcmp(testCfgFSPath, "/some/path"));
+
+   CHECK_TRUE(testCfgBool != 0);
 
    // test getcfg
    bufsz = 0;

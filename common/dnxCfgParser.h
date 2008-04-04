@@ -61,6 +61,7 @@ typedef enum DnxCfgType
    DNX_CFG_UNSIGNED_ARRAY,    //!< Comma-delimited array (&unsigned*).
    DNX_CFG_URL,               //!< URL (&char*).
    DNX_CFG_FSPATH,            //!< File system path (&char*).
+   DNX_CFG_BOOL,              //!< Boolean (&unsigned).
 } DnxCfgType;
 
 /** An array of these structures defines a user's configuration variables. */

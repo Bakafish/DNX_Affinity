@@ -43,6 +43,7 @@ typedef struct DnxWlmCfgData
    unsigned pollInterval;        //!< The poll interval in seconds.
    unsigned shutdownGrace;       //!< The shutdown grace period in seconds.
    unsigned maxResults;          //!< The maximum size of the results buffer.
+   unsigned showNodeAddr;        //!< Boolean: show node in error results.
 } DnxWlmCfgData;
 
 /** A structure for returning WLM statistics to a caller. */
