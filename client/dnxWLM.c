@@ -430,8 +430,13 @@ static void * dnxWorker(void * data)
 
       // request a job, and then wait for a job to come in...
       if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
+      {
          dnxLog("Worker[%lx]: Error sending node request: %s.", 
                tid, dnxErrorString(ret));
+
+         // since we won't be sleeping while waiting for a response...
+         dnxCancelableSleep(iwlm->cfg.reqTimeout * 1000);
+      }
       else
       {
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);

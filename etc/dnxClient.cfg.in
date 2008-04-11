@@ -6,17 +6,6 @@
 # Communications Settings
 # ---------------------------------------------------------------------------
 
-# OPTIONAL: Local agent command channel.
-# The DNX client node will listen on this address for management commands
-# such as SHUTDOWN, STATUS, etc. This parameter is required, and will cause
-# the client node to fail to initialize if not specified. In order to bind the 
-# agent command channel to all local NICs on a multi-homed system, the host 
-# name or address portion of the URL should be set to either 0 or 0.0.0.0. If 
-# the agent should be bound to only one NIC, then the desired local interface 
-# address may be specified. The default channel agent URL is udp://0:12480.
-
-#channelAgent = udp://0:12480
-
 # REQUIRED: DNX server dispatcher address.
 # The client sends job requests to the dispatcher using the address, port and
 # protocol specified in this URL. This parameter is required, and will cause
@@ -34,6 +23,17 @@ channelDispatcher = udp://10.1.1.1:12480
 # URL of the collector.
 
 channelCollector = udp://10.1.1.1:12481
+
+# OPTIONAL: Local agent command channel.
+# The DNX client node will listen on this address for management commands
+# such as SHUTDOWN, STATUS, etc. This parameter is required, and will cause
+# the client node to fail to initialize if not specified. In order to bind the 
+# agent command channel to all local NICs on a multi-homed system, the host 
+# name or address portion of the URL should be set to either 0 or 0.0.0.0. If 
+# the agent should be bound to only one NIC, then the desired local interface 
+# address may be specified. The default channel agent URL is udp://0:12482.
+
+#channelAgent = udp://0:12482
 
 # ---------------------------------------------------------------------------
 # Workload Manager Settings

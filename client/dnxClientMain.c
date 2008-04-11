@@ -694,6 +694,17 @@ static int daemonize(char * base)
    dup2(fd, 1);
    dup2(fd, 2);
 
+   return 0;   // continue execution as a daemon
+}
+
+//----------------------------------------------------------------------------
+
+/** Drop privileges to configured user and group.
+ * 
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dropPrivileges(void)
+{
    // drop privileges if running as root
    if (getuid() == 0)
    {
@@ -750,13 +761,10 @@ static int daemonize(char * base)
       else
          dnxLog("Root user requested; oh well...");
    }
-
-   // create pid file (at the current privilege level)
-   if (createPidFile(base) != 0)
-      return -1;
-
-   return 0;   // continue execution as a daemon
+   return 0;
 }
+
+//----------------------------------------------------------------------------
 
 /** Log changes between old and new global configuration data sets.
  * 
@@ -1173,6 +1181,14 @@ int main(int argc, char ** argv)
 
    // daemonize if not running in debug mode
    if (!s_dbgflag && (ret = daemonize(s_progname)) != 0)
+      goto e2;
+
+   // drop privileges as per configuration
+   if ((ret = dropPrivileges()) != 0)
+      goto e2;
+
+   // create pid file if not running in debug mode
+   if (!s_dbgflag && (ret = createPidFile(s_progname)) != 0)
       goto e2;
 
    // initialize the communications stack

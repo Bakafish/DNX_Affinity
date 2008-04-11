@@ -6,9 +6,9 @@ mkdir testrun
 
 # Create a test configuration file using udp test ports 13480/1
 cat << END_CONFIG_FILE > $PWD/testrun/test.cfg
-channelAgent = udp://localhost:13480
-channelDispatcher = udp://localhost:13481
-channelCollector = udp://localhost:13482
+channelDispatcher = udp://localhost:13480
+channelCollector = udp://localhost:13481
+channelAgent = udp://localhost:13482
 logFile = $PWD/testrun/test.log
 debugFile = $PWD/testrun/test.dbg
 debugLevel = 3
@@ -30,7 +30,7 @@ if [ ! -e $PWD/testrun/dnxClient.pid ]; then
 fi
 
 # Hit it with a dnxstats GETVERSION request
-../../stats/dnxstats -p 13480 -c GETVERSION
+../../stats/dnxstats -p 13482 -c GETVERSION
 status=$?
 if [ $status -ne 0 ]; then
 	echo "dnxstats couldn't request client version!"

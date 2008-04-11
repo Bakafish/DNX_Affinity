@@ -56,7 +56,7 @@ static void usage(char * base)
          "Usage: %s [options]\n"
          "Where [options] are:\n"
          "  -s <host>    specify target host name (default: localhost).\n"
-         "  -p <port>    specify target port number (default: 12480).\n"
+         "  -p <port>    specify target port number (default: 12482).\n"
          "  -c <cmdstr>  send <cmdstr> to server. (Hint: Try sending \"HELP\".)\n"
          "  -v           print version and exit.\n"
          "  -h           print this help and exit.\n\n", base);
@@ -85,7 +85,7 @@ int main(int argc, char ** argv)
 
    // parse arguments
    hoststr = "localhost";
-   portstr = "12480";
+   portstr = "12482";
    opterr = 0;
    cmdstr = 0;
    while ((ch = getopt(argc, argv, "hvc:s:p:")) != -1)
