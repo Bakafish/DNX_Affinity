@@ -356,9 +356,6 @@ static int growThreadPool(iDnxWlm * iwlm)
    unsigned i, add, growsz;
    int ret;
 
-   // always clean first, in case the pool is full of zombies
-   cleanThreadPool(iwlm);
-
    // set additional thread count - keep us between the min and the max
    if (iwlm->threads < iwlm->cfg.poolInitial)
       growsz = iwlm->cfg.poolInitial - iwlm->threads;
@@ -414,7 +411,7 @@ static void * dnxWorker(void * data)
    iwlm = ws->iwlm;
 
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
-   pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
+   pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, 0);
    pthread_cleanup_push(dnxWorkerCleanup, data);
 
    time(&ws->tstart);   // set thread start time (for stats)
@@ -424,8 +421,6 @@ static void * dnxWorker(void * data)
       DnxNodeRequest msg;
       DnxJob job;
       int ret;
-
-      pthread_testcancel();
       
       // setup job request message - use thread id and node address in XID
       dnxMakeXID(&msg.xid, DNX_OBJ_WORKER, tid, iwlm->myipaddr);
@@ -439,9 +434,6 @@ static void * dnxWorker(void * data)
                tid, dnxErrorString(ret));
       else 
       {
-         DNX_PT_MUTEX_LOCK(&iwlm->mutex);
-         iwlm->reqsent++;
-         DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 
          if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
                iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
@@ -449,7 +441,9 @@ static void * dnxWorker(void * data)
                   tid, dnxErrorString(ret));
       }
 
-      // check for transmission error, or execute the job and reset retry count
+      pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
+      DNX_PT_MUTEX_LOCK(&iwlm->mutex);
+      cleanThreadPool(iwlm); // ensure counts are accurate before using them
       if (ret != DNX_OK)
       {
          // if exceeded max retries and above pool minimum...
@@ -457,28 +451,33 @@ static void * dnxWorker(void * data)
                && iwlm->threads > iwlm->cfg.poolMin)
          {
             dnxLog("Worker[%lx]: Exiting - max retries exceeded.", tid);
+            DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
             break;
          }
       }
       else
       {
-         char resData[MAX_RESULT_DATA + 1];
-         DnxResult result;
-         time_t jobstart;
-
          // check pool size before we get too busy -
          // if we're not shutting down, and this is the last thread out
          //    and we haven't reached our configured limit, then increase
-         DNX_PT_MUTEX_LOCK(&iwlm->mutex);
-         {
-            iwlm->jobsrcvd++;
-            iwlm->active++;
-            if (!iwlm->terminate 
-                  && iwlm->active == iwlm->threads 
-                  && iwlm->threads < iwlm->cfg.poolMax)
-               growThreadPool(iwlm);
-         }
-         DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
+         iwlm->reqsent++;
+         iwlm->jobsrcvd++;
+         iwlm->active++;
+         if (!iwlm->terminate 
+               && iwlm->active == iwlm->threads 
+               && iwlm->threads < iwlm->cfg.poolMax)
+            growThreadPool(iwlm);
+      }
+      DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
+      pthread_testcancel();
+      pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, 0);
+
+      // if we have a job, execute it and reset retry count
+      if (ret == DNX_OK)
+      {
+         char resData[MAX_RESULT_DATA + 1];
+         DnxResult result;
+         time_t jobstart;
 
          dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
@@ -516,12 +515,9 @@ static void * dnxWorker(void * data)
          pthread_testcancel();
  
          // if we haven't cleaned up zombies in a while, then do it now
+         pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);
          {
-            time_t now = time(0);
-            if (iwlm->lastclean + iwlm->cfg.pollInterval < now)
-               cleanThreadPool(iwlm);
-
             // track status
             if (result.resCode == DNX_PLUGIN_RESULT_OK) 
                iwlm->jobsok++;
@@ -537,10 +533,11 @@ static void * dnxWorker(void * data)
 
             // total job processing time
             iwlm->jobtm += (unsigned)result.delta;
-
             iwlm->active--;   // reduce active count
          }
          DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
+         pthread_testcancel();
+         pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, 0);
 
          ws->serial++;     // increment job serial number for next job
          retries = 0;
@@ -780,6 +777,11 @@ void dnxWlmDestroy(DnxWlm * wlm)
          dnxDebug(1, "WLMDestroy: Cancelling worker[%lx].", iwlm->pool[i]->tid);
          pthread_cancel(iwlm->pool[i]->tid);
       }
+
+   // give remaining thread some time to quit
+   DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
+   dnxCancelableSleep(1000);
+   DNX_PT_MUTEX_LOCK(&iwlm->mutex);
 
    // join all zombies (should be everything left)
    cleanThreadPool(iwlm);
