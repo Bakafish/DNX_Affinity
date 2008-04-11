@@ -411,7 +411,7 @@ static void * dnxWorker(void * data)
    iwlm = ws->iwlm;
 
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
-   pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, 0);
+   pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
    pthread_cleanup_push(dnxWorkerCleanup, data);
 
    time(&ws->tstart);   // set thread start time (for stats)
@@ -432,16 +432,13 @@ static void * dnxWorker(void * data)
       if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
          dnxLog("Worker[%lx]: Error sending node request: %s.", 
                tid, dnxErrorString(ret));
-      else 
-      {
+      else if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
+            iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
+         dnxLog("Worker[%lx]: Error receiving job: %s.", 
+               tid, dnxErrorString(ret));
 
-         if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
-               iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
-            dnxLog("Worker[%lx]: Error receiving job: %s.", 
-                  tid, dnxErrorString(ret));
-      }
+      pthread_testcancel();
 
-      pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
       DNX_PT_MUTEX_LOCK(&iwlm->mutex);
       cleanThreadPool(iwlm); // ensure counts are accurate before using them
       if (ret != DNX_OK)
@@ -469,8 +466,6 @@ static void * dnxWorker(void * data)
             growThreadPool(iwlm);
       }
       DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
-      pthread_testcancel();
-      pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, 0);
 
       // if we have a job, execute it and reset retry count
       if (ret == DNX_OK)
@@ -491,12 +486,19 @@ static void * dnxWorker(void * data)
 
          /** @todo Allocate result data buffer based on configured buffer size. */
 
+         // we want to be able to cancel threads while they're out on a task
+         // in order to obtain timely shutdown for long jobs - move into
+         // async cancel mode, but only for the duration of the check
+         pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, 0);
+
          *resData = 0;
          jobstart = time(0);
          dnxPluginExecute(job.cmd, &result.resCode, resData, 
                sizeof resData - 1, job.timeout, 
                iwlm->cfg.showNodeAddr? iwlm->myipaddrstr: 0);
          result.delta = time(0) - jobstart;
+
+         pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
 
          // store allocated copy of the result string
          if (*resData) result.resData = xstrdup(resData);
@@ -510,12 +512,8 @@ static void * dnxWorker(void * data)
                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
 
          xfree(result.resData);
-        
-         // die now if we shutdown during the job...
-         pthread_testcancel();
  
-         // if we haven't cleaned up zombies in a while, then do it now
-         pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
+         // update all statistics
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);
          {
             // track status
@@ -536,8 +534,6 @@ static void * dnxWorker(void * data)
             iwlm->active--;   // reduce active count
          }
          DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
-         pthread_testcancel();
-         pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, 0);
 
          ws->serial++;     // increment job serial number for next job
          retries = 0;
