@@ -6,6 +6,77 @@ major changes to the DNX code base. All entries should be separated by
 blank lines and include the date, developer's name, and change description.
 =============================================================================
 
+*** Revision 243: Released dnx-0.17: 04-APR-08 jcalcote
+
+* Revision: 243-242: 04-APR-08 jcalcote 
+Updated ChangeLog. Updated various project text file. 
+
+* Revision: 241-237: 03-APR-08 jcalcote 
+Forgot to uncomment the test cleanup code in the client test script. Fixed 
+deadlock in thread cleanup code (caused by last fix for race condition). 
+Fixed a text problem in configure output. Added debug lock configuration 
+option. Added help text to indicate which debugging options are enabled. 
+Added log messages to indicate options are enabled. Added configure 
+message to indicate which debug options are enabled. Moved code following 
+terminate functionality into worker cleanup routine. 
+
+* Revision: 236-234: 02-APR-08 jcalcote 
+Fixed nasty race condition in cleanThreadPool. Fixed error path resource 
+cleanup bug -- rarely hit. Fixed bug in default run dir path. Added 
+enable-debug-heap configure option; fixed bug in dnxXml.c where we were 
+calling strdup instead of xstrdup. 
+
+* Revision: 233: 31-MAR-08 jcalcote 
+Added a hint to try sending HELP to the server in the dnxstats help 
+display. 
+
+* Revision: 232: 28-MAR-08 jcalcote 
+Updated autoconf top-level Makefile.am to use internal source of rpm arch 
+info. Updated all uses of autoconf PACKAGE and VERSION macros. 
+
+* Revision: 231-229: 24-MAR-08 jcalcote 
+Checked in fixes for debian and ubuntu staged installation checks before 
+running chown. Cleanup unit tests for cfg parser; really fix cfg parser 
+boolean parse - was treating it like a pointer. Fixed config parser after 
+adding BOOL cfg type; were zeroing BOOL cfg types because we weren't 
+checking for it in copyDictionary routine. 
+
+* Revision: 228: 20-MAR-08 jcalcote 
+Change logging so it opens and closes log files for every log message. 
+This allows external log rotation. 
+
+* Revision: 227: 19-MAR-08 jcalcote 
+Updated autogen.sh to allow additional command line parameters to be 
+passed to autoreconf. Updated configure.ac as per autoconf 2.61. Updated 
+INSTALL indirectly. 
+
+* Revision: 226-225: 14-MAR-08 jcalcote 
+Modified autogen.sh to use autoreconf instead of calling individual 
+programs. Updated the README.nagios file for the lastest releases of 
+Nagios. 
+
+* Revision: 224: 13-MAR-08 jcalcote 
+Added patch for nagios 3.0; patch is backward compatible with nagios 3.0 
+rc2. 
+
+* Revision: 223: 12-MAR-08 jcalcote 
+Added William Leibzon's XML escaping code. 
+
+* Revision: 222-221: 11-MAR-08 jcalcote 
+Fixed error in signature of parseBool; would have failed on 64-bit 
+platforms. Fixed null pointer deref in getiface code submitted by William 
+Leibzon. 
+
+* Revision: 220-219: 07-MAR-08 jcalcote 
+Converted all files on a unix checkout - affected about 28 files. Added 
+boolean config type to config system. Added new boolean config variable, 
+showNodeAddrs. Added logic to use config variable to append dnx node 
+addresses to dnx-generated output data strings. Updated configure.ac to 
+version 0.17. 
+
+* Revision: 218: 05-MAR-08 jcalcote 
+Updated website to reflect version 0.16. 
+
 *** Revision 217: Released dnx-0.16: 05-FEB-08 jcalcote
 
 * Revision: 217-211: 05-MAR-08 jcalcote 
