@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(dnx, 0.18, dnx-devel@lists.sourceforge.net)
+AC_INIT(DNX, 0.19, dnx-devel@lists.sourceforge.net)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([client/dnxWLM.c])
 AC_CONFIG_HEADER([config.h])
