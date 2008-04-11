@@ -432,10 +432,17 @@ static void * dnxWorker(void * data)
       if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
          dnxLog("Worker[%lx]: Error sending node request: %s.", 
                tid, dnxErrorString(ret));
-      else if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
-            iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
-         dnxLog("Worker[%lx]: Error receiving job: %s.", 
-               tid, dnxErrorString(ret));
+      else
+      {
+         DNX_PT_MUTEX_LOCK(&iwlm->mutex);
+         iwlm->reqsent++;
+         DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
+
+         if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
+               iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
+            dnxLog("Worker[%lx]: Error receiving job: %s.", 
+                  tid, dnxErrorString(ret));
+      }
 
       pthread_testcancel();
 
@@ -443,9 +450,9 @@ static void * dnxWorker(void * data)
       cleanThreadPool(iwlm); // ensure counts are accurate before using them
       if (ret != DNX_OK)
       {
-         // if exceeded max retries and above pool minimum...
-         if (++retries > iwlm->cfg.maxRetries 
-               && iwlm->threads > iwlm->cfg.poolMin)
+         // if above pool minimum and exceeded max retries...
+         if (iwlm->threads > iwlm->cfg.poolMin 
+               && ++retries > iwlm->cfg.maxRetries)
          {
             dnxLog("Worker[%lx]: Exiting - max retries exceeded.", tid);
             DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
@@ -454,15 +461,15 @@ static void * dnxWorker(void * data)
       }
       else
       {
-         // check pool size before we get too busy -
-         // if we're not shutting down, and this is the last thread out
-         //    and we haven't reached our configured limit, then increase
-         iwlm->reqsent++;
          iwlm->jobsrcvd++;
          iwlm->active++;
+
+         // check pool size before we get too busy -
+         // if we're not shutting down and we haven't reached the configured
+         // maximum and this is the last thread out, then increase the pool
          if (!iwlm->terminate 
-               && iwlm->active == iwlm->threads 
-               && iwlm->threads < iwlm->cfg.poolMax)
+               && iwlm->threads < iwlm->cfg.poolMax
+               && iwlm->active == iwlm->threads)
             growThreadPool(iwlm);
       }
       DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);

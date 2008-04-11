@@ -129,6 +129,16 @@ static int dnxUdpOpen(iDnxChannel * icp, int active)
    }
    else
    {
+      struct linger lopt;
+      int reuse = 1;
+
+      lopt.l_onoff = 0;
+      lopt.l_linger = 0;
+
+      // reuse addr and clear linker to avoid tcp time_wait state issues
+      setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof reuse);
+      setsockopt(sd, SOL_SOCKET, SO_LINGER, &lopt, sizeof lopt);
+      
       // want to listen for incoming packets, so bind to the
       // specified local address and port
       if (bind(sd, (struct sockaddr *)&inaddr, sizeof inaddr) != 0)
