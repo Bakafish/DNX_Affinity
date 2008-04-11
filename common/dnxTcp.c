@@ -47,7 +47,11 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <syslog.h>
+#include <limits.h>
+
+#ifndef HOST_NAME_MAX
+# define HOST_NAME_MAX 256
+#endif
 
 /** Number of listen buffers per TCP listen point. */
 #define DNX_TCP_LISTEN  5
