@@ -6,6 +6,21 @@ major changes to the DNX code base. All entries should be separated by
 blank lines and include the date, developer's name, and change description.
 =============================================================================
 
+*** Revision 249: Released dnx-0.18: 07-APR-08 jcalcote
+
+* Revision: 249-248: 09-APR-08 jcalcote 
+Updated ChangeLog and NEWS. Added README text on dnxstats. Added full 
+versioning info to GETVERSION command. Added OK response text to commands
+whose responses were previously empty.
+
+* Revision: 247-245: 07-APR-08 jcalcote 
+Fixed TIME_WAIT problem on restart by adding linger(0) and REUSEADDR 
+options to listen binds. More minor tweaks to thread pool. Fix thread pool 
+die bug. 
+
+* Revision: 244: 04-APR-08 jcalcote 
+Updated website to reflect 0.17 release. 
+
 *** Revision 243: Released dnx-0.17: 04-APR-08 jcalcote
 
 * Revision: 243-242: 04-APR-08 jcalcote 

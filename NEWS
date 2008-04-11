@@ -1,3 +1,13 @@
+Version 0.18:
+=============
+- Fixed problem where dnxClient would stop processing jobs after a while,
+  thread pool bug - all threads would terminate - thanks to Alessandro Ren,
+  Jesse Caldwell and William Leibzon!
+- Added code to fix TIME_WAIT state issues on restart (doesn't always work).
+- Added code to display same version information from dnxstats as from CL.
+- Added code to have server return human-readable "OK" message on dnxstats
+  commands that didn't previously have reply text.
+
 Version 0.17:
 =============
 - Fixed race condition and deadlock in worker cleanup code in client.
@@ -17,8 +27,8 @@ Version 0.16:
 - Fixed rpm build issue - getaddrinfo failing under OBS.
 - Fixed doxygen generation issues related to incorrect exclude dir list.
 - Added new unit test for dnxClient - tests proper client daemonization.
-- Added generic init script for non-SUSE platforms (thanks to 
-  Alberto Villegas!).
+- Added generic init script for non-SUSE platforms - thanks to 
+  Alberto Villegas!
 
 Version 0.15.1:
 ===============
