@@ -21,8 +21,8 @@ incorporated into the mainline Nagios source code. Nagios 3.0 release,
 however still has a few minor quirks that need to be addressed. We're 
 hoping to get the Nagios folks to agree with us on the contents of the
 single change presented by the patch file nagios-3.0-dnx.patch, and apply
-this patch to the nagios 3.1 code base. Until this time, Nagios 3 may be 
-used with DNX after the application of this patch.
+this patch to the nagios 3.1 code base. Until this time, Nagios 3.0 and
+Nagios 3.0.1 may be used with DNX after the application of this patch.
 
 Additionally, until the nagios-devel package is completed and widely
 distributed nagios 3.x header files can be found in:

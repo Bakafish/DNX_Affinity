@@ -1,3 +1,93 @@
+DNX Build and Installation
+==========================
+
+Building DNX
+------------
+
+To build the DNX package, follow these steps:
+
+  $ tar -xzvf dnx-xx.yy.tar.gz
+  $ cd dnx-xx.yy
+  $ ./configure
+
+By default, the prefix will be /usr/local/nagios. If you wish to 
+install into a different location, then use the --prefix option
+on the configure command line:
+
+  $ ./configure --prefix=/opt/nagios (or whatever)
+
+The DNX configure script accepts some options that are specific
+to the DNX project. To find out what these are, use the configure
+--help option:
+
+  $ ./configure --help=short
+
+Once dnx has been configured, just use make to build it:
+
+  $ make
+
+The configure script specifies additional make targets that you 
+may wish to use when building DNX. Most of these are install
+targets, however one of them - the 'docs' target can be used to
+build a tar.gz archive of DNX doxygen documentation.
+
+Installing DNX Server
+---------------------
+
+DNX installation comes in three flavors:
+
+  a. default 'install' target - install everything
+  b. client installation
+  c. server installation
+
+The default is not often useful, as most people don't want the 
+DNX client installed on their server, and vice-versa. The speciall
+installation targets can be used to install either the server or the
+client individually. For the server, use:
+
+  $ sudo make install-server install-servercfg
+
+If you're upgrading an existing DNX installation, you may not
+wish to overwrite your existing configuration files, so don't use
+the 'install-servercfg' option. To find out the differences in the
+newer configuration file, just diff your existing configuration
+file with the new one:
+
+  $ diff /usr/local/nagios/etc/dnxServer.cfg etc/dnxServer.cfg
+
+Installing DNX Client
+---------------------
+
+To install the DNX client, build the DNX package on your client
+nodes, as specified above under "Building DNX", and then install
+as follows:
+
+  $ sudo make install-client install-clientcfg install-initscript
+
+Installing Documentation
+------------------------
+
+After building doxygen documentation as follows:
+
+  $ make docs
+
+You may then install this package into /usr/local/nagios/share/docs
+as follows:
+
+  $ sudo make install-docs
+
+The DNX doxygen documentation comes in HTML form. To view it, 
+just unpack the dnx-doxy-xx.yy.tar.gz file into your /srv/www
+directory, and then use a web browser to access the web server
+on your system.
+
+Alternatively, if you have an X desktop, you may simply view
+the document from any unpack location by accessing the file
+in the root level 'html' directory called 'index.html'.
+
+The remaining documentation in this INSTALL file is generation 
+usage instructions for autoconf-generated configure scripts.
+
 Installation Instructions
 *************************
 

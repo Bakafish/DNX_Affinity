@@ -16,7 +16,15 @@ process address space as Nagios upon start up.
 dnxClient resides on a separate host and sends requests to the thread started 
 by the DNX NEB module on the Nagios server ("head node") for checks to 
 perform and then returns the status data back to the module for Nagios' 
-interpretation and subsequent actions (alerts, notifcations, etc).
+interpretation and subsequent actions (alerts, notifications, etc).
+
+
+Nagios Support
+--------------
+
+Currently, DNX has been tested with Nagios 2.7, 2.8, 2.9, 2.10, 2.11, 3.0
+and 3.0.1. As we continue to release new versions of DNX, we'll continue
+to enhance support for the latest Nagios versions. 
 
 
 Advanced Features
@@ -74,4 +82,4 @@ For detailed information on source changes between versions, please refer to
 the ChangeLog file.
 
 Please see the COPYING file for details on the GNU General Public License, 
-under which this software is released.
+

@@ -1,3 +1,13 @@
+Version 0.17:
+=============
+- Fixed race condition and deadlock in worker cleanup code in client.
+- Added --enable-debug-heap option to configure script.
+- Added --enable-debug-locks option to configure script.
+- Added additional text to configure output to explain build process.
+- Added official support for Nagios 3.x through 3.0.1.
+- Added detailed DNX build and installation information to the 
+  INSTALL document.
+
 Version 0.16:
 =============
 - Fixed install bugs - mostly related to improper file system rights.
@@ -35,7 +45,6 @@ Version 0.15:
   separately.
 - Support added to configure script for RPM packages managed through 
   the OpenSUSE build service.
- 
 
 Version 0.13:
 =============
@@ -51,7 +60,6 @@ Version 0.13:
   module as well. Although, this was not likely to occur very often.
 - Added some additional error and debug logging.
 - Added some graceful handling of NULL strings in the XML protocol messaging.
-
 
 Version 0.12:
 =============
@@ -73,7 +81,6 @@ Version 0.12:
   acquire the semaphore right after the expiration thread released it, and
   therefore still see the expired job as active. The job would then be
   "collected", even though it was already "expired".
-  
 
 Version 0.11:
 =============
@@ -82,14 +89,12 @@ Version 0.11:
   will be used to see if a check command job should execute locally (instead
   of being sent to a DNX client.)
 
-
 Version 0.10:
 =============
 - Fixed improper XML parsing of command or response values, where the
   command/response contains embedded XML tags (or even just embedded
   angle-brackets).  This fix affects both the server and the client,
   since they share the common XML parsing routines contained in dnxXml.c
-
 
 Version 0.09:
 =============
@@ -99,14 +104,12 @@ Version 0.09:
 - Added missing include statements to dnxClientMain.h to help
   compilation on FreeBSD
 
-
 Version 0.08:
 =============
 - Removed the use of the internal NRPE module from the DNX Client.
   The NRPE module is still experimental and will be added back into
   the DNX distribution once I have fully implemented in-core checks
   to the DNX Client.
-
 
 Version 0.07:
 =============
@@ -121,7 +124,6 @@ Version 0.07:
   file (instead of host names requiring DNS lookup,) just in case your DNS
   server fails; which might cause thread creation to suspend for 30 seconds
   or more.
-
 
 Version 0.06:
 =============
@@ -165,7 +167,6 @@ Version 0.06:
   pthreads to auto-detect potential mutex deadlock situations, if they ever occur.
 
 - Tweaked some of the default parameters in the dnxClient.cfg file.
-
 
 Version 0.05:
 =============
