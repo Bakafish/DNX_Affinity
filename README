@@ -18,6 +18,66 @@ by the DNX NEB module on the Nagios server ("head node") for checks to
 perform and then returns the status data back to the module for Nagios' 
 interpretation and subsequent actions (alerts, notifications, etc).
 
+Management Interface
+--------------------
+
+DNX provides a simple management interface, which allows the administrator
+to perform management tasks against installed DNX clients. The tool is
+called 'dnxstats' and is installed (by default) into the $(prefix)/bin
+directory on the DNX server (installed using install or install-server). 
+
+The dnxstats utility has a simple interface, which you can discover using 
+the --help command-line option:
+
+  $ /usr/local/nagios/bin/dnxstats --help
+  Usage: dnxstats [options]
+  Where [options] are:
+    -s <host>    specify target host name (default: localhost).
+    -p <port>    specify target port number (default: 12480).
+    -c <cmdstr>  send <cmdstr> to server. (Hint: Try sending "HELP".)
+    -v           print version and exit.
+    -h           print this help and exit.
+
+The functionality provided by dnxstats is really provided by the stats
+server (the DNX client, in this case). To find out the level of
+functionality supported by a given server, send the "HELP" command:
+
+  $ /usr/local/nagios/bin/dnxstats -s 10.1.1.1 -c "HELP"
+  DNX Client Management Commands:
+    SHUTDOWN
+    RECONFIGURE
+    DEBUGTOGGLE
+    RESETSTATS
+    GETSTATS stat-list
+      stat-list is a comma-delimited list of stat names:
+        jobsok      - number of successful jobs
+        jobsfailed  - number of unsuccessful jobs
+        thcreated   - number of threads created
+        thdestroyed - number of threads destroyed
+        thexist     - number of threads currently in existence
+        thactive    - number of threads currently active
+        reqsent     - number of requests sent to DNX server
+        jobsrcvd    - number of jobs received from DNX server
+        minexectm   - minimum job execution time
+        avgexectm   - average job execution time
+        maxexectm   - maximum job execution time
+        avgthexist  - average threads in existence
+        avgthactive - average threads processing jobs
+        threadtm    - total thread life time
+        jobtm       - total job processing time
+      Note: Stats are returned in the order they are requested.
+    GETCONFIG
+    GETVERSION
+    HELP
+
+Thus, the dnxstats utility is really a dumb client, sending text 
+specified by the user, and dumping raw response text to the console.
+
+Except for single-word commands, all command strings should be
+enclosed in double or single quotes, so that the shell interprets
+the entire command string (text following the -c option) as a single
+argument.
+
 
 Nagios Support
 --------------

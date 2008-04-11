@@ -131,16 +131,20 @@ static int s_lockfd = -1;        //!< The system PID file descriptor.
 
 //----------------------------------------------------------------------------
 
-/** Display program version information to a specified stream. 
+/** Format version text to an allocated string buffer.
+ *
+ * Caller is responsible to free memory buffer returned.
  * 
- * @param[in] fp - the stream to which version info should be printed.
  * @param[in] base - the base file name of this program.
+ *
+ * @return An allocated string buffer containing version text.
  */
-static void version(FILE * fp, char * base)
+static char * versionText(char * base)
 {
-   fprintf(fp, 
+   char buf[1024];
+   snprintf(buf, sizeof(buf) - 1, 
       "\n"
-      "  %s, version " VERSION ".\n" 
+      "  %s Version " VERSION ", Built " __DATE__ " at " __TIME__ ".\n" 
       "  Distributed Nagios eXecutor (DNX) Client Daemon.\n"
       "  Please report bugs to <" PACKAGE_BUGREPORT ">.\n"
       "\n"
@@ -158,9 +162,26 @@ static void version(FILE * fp, char * base)
 #if DEBUG_LOCKS
       "    Debug locks are ENABLED.\n"
 #endif
-      "\n",
-      base
+      , base
    );
+   return xstrdup(buf);
+}
+
+//----------------------------------------------------------------------------
+
+/** Display program version information to a specified stream. 
+ * 
+ * @param[in] fp - the stream to which version info should be printed.
+ * @param[in] base - the base file name of this program.
+ */
+static void version(FILE * fp, char * base)
+{
+   char * vertxt = versionText(base);
+   if (vertxt)
+   {
+      fprintf(fp, "%s\n", vertxt);
+      xfree(vertxt);
+   }
 }
 
 //----------------------------------------------------------------------------
@@ -1009,14 +1030,26 @@ static int processCommands(void)
 
          // perform the requested action
          if (!strcmp(Msg.action, "SHUTDOWN"))
+         {
             s_shutdown = 1;
+            Rsp.reply = xstrdup("OK");
+         }
          else if (!strcmp(Msg.action, "RECONFIGURE"))
+         {
             s_reconfig = 1;
+            Rsp.reply = xstrdup("OK");
+         }
          else if (!strcmp(Msg.action, "DEBUGTOGGLE"))
+         {
             s_debugsig = 1;
+            Rsp.reply = xstrdup("OK");
+         }
          else if (!strcmp(Msg.action, "RESETSTATS"))
+         {
             dnxWlmResetStats(s_wlm);
-         else if (!memcmp(Msg.action, "GETSTATS ", 9))
+            Rsp.reply = xstrdup("OK");
+         }
+         if (!memcmp(Msg.action, "GETSTATS ", 9))
          {
             if ((Rsp.reply = buildMgmtStatsReply(Msg.action + 9)) == 0)
                Rsp.status = DNX_REQ_NAK;
@@ -1028,7 +1061,7 @@ static int processCommands(void)
          }
          else if (!strcmp(Msg.action, "GETVERSION"))
          {
-            if ((Rsp.reply = xstrdup("DNX Client " VERSION)) == 0)
+            if ((Rsp.reply = versionText(s_progname)) == 0)
                Rsp.status = DNX_REQ_NAK;
          }
          else if (!strcmp(Msg.action, "HELP"))
