@@ -593,7 +593,7 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
    
-   hostObj = find_host(svcdata->hostname);
+   hostObj = find_host(svcdata->host_name);
    
    dnxDebug(2, "ehSvcCheck: Job is part of [%s] host group.",
          hostObj->name);
