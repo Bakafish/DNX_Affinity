@@ -572,6 +572,7 @@ static int ehSvcCheck(int event_type, void * data)
    DnxNodeRequest * pNode;
    DnxJobData * jdp;
    int ret;
+   host_struct * hostObj;
 
    if (event_type != NEBCALLBACK_SERVICE_CHECK_DATA)
       return OK;
@@ -591,6 +592,11 @@ static int ehSvcCheck(int event_type, void * data)
       dnxDebug(1, "Service will execute locally: %s.", svcdata->command_line);
       return OK;     // tell nagios execute locally
    }
+   
+   hostObj = find_host(svcdata->hostname);
+   
+   dnxDebug(2, "ehSvcCheck: Job is part of [%s] host group.",
+         hostObj->name);
 
    dnxDebug(2, "ehSvcCheck: Received Job [%lu] at %lu (%lu).",
          serial, (unsigned long)time(0), 
