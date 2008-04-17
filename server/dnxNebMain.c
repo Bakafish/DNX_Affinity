@@ -105,6 +105,7 @@ typedef struct DnxServerCfg
    unsigned minServiceSlots;        //!< The minimum acceptable node requests.
    unsigned expirePollInterval;     //!< The job expiration timer check interval.
    char * localCheckPattern;        //!< The regular expression for local jobs.
+   char * bypassHostgroup;          //!< The hostgroup name for local jobs.
    char * syncScript;               //!< The sync script path and file name.
    char * logFilePath;              //!< The system log file path.
    char * debugFilePath;            //!< The debug log file path.
@@ -166,11 +167,12 @@ static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
    cfg.minServiceSlots    = (unsigned)(intptr_t)vptrs[ 4];
    cfg.expirePollInterval = (unsigned)(intptr_t)vptrs[ 5];
    cfg.localCheckPattern  = (char *)vptrs[ 6];
-   cfg.syncScript         = (char *)vptrs[ 7];
-   cfg.logFilePath        = (char *)vptrs[ 8];
-   cfg.debugFilePath      = (char *)vptrs[ 9];
-   cfg.auditFilePath      = (char *)vptrs[10];
-   cfg.debugLevel         = (unsigned)(intptr_t)vptrs[11];
+   cfg.bypassHostgroup    = (char *)vptrs[ 7];
+   cfg.syncScript         = (char *)vptrs[ 8];
+   cfg.logFilePath        = (char *)vptrs[ 9];
+   cfg.debugFilePath      = (char *)vptrs[ 10];
+   cfg.auditFilePath      = (char *)vptrs[11];
+   cfg.debugLevel         = (unsigned)(intptr_t)vptrs[12];
 
    // validate configuration items in context
    if (!cfg.dispatcherUrl)
@@ -217,6 +219,7 @@ static int initConfig(char * cfgfile)
       { "minServiceSlots",    DNX_CFG_UNSIGNED, &cfg.minServiceSlots    },
       { "expirePollInterval", DNX_CFG_UNSIGNED, &cfg.expirePollInterval },
       { "localCheckPattern",  DNX_CFG_STRING,   &cfg.localCheckPattern  },
+      { "bypassHostgroup",    DNX_CFG_STRING,   &cfg.bypassHostgroup    },
       { "syncScript",         DNX_CFG_FSPATH,   &cfg.syncScript         },
       { "logFile",            DNX_CFG_FSPATH,   &cfg.logFilePath        },
       { "debugFile",          DNX_CFG_FSPATH,   &cfg.debugFilePath      },
@@ -572,7 +575,12 @@ static int ehSvcCheck(int event_type, void * data)
    DnxNodeRequest * pNode;
    DnxJobData * jdp;
    int ret;
-   host_struct * hostObj;
+   host * hostObj = find_host(svcdata->host_name);
+
+   //Get the list of host groups
+   extern hostgroup *hostgroup_list;
+   hostgroup * temp_member;
+   char hostGroupNames[10][64]; // = hostgroup->host_name;
 
    if (event_type != NEBCALLBACK_SERVICE_CHECK_DATA)
       return OK;
@@ -589,16 +597,33 @@ static int ehSvcCheck(int event_type, void * data)
    // check for local execution pattern on command line
    if (cfg.localCheckPattern && regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
    {
-      dnxDebug(1, "Service will execute locally: %s.", svcdata->command_line);
+      dnxDebug(1, "(localCheckPattern match) Service for %s will execute locally: %s.", 
+         hostObj->name, svcdata->command_line);
       return OK;     // tell nagios execute locally
    }
-   
-   hostObj = find_host(svcdata->host_name);
-   
-   dnxDebug(2, "ehSvcCheck: Job is part of [%s] host group.",
-         hostObj->name);
 
-   dnxDebug(2, "ehSvcCheck: Received Job [%lu] at %lu (%lu).",
+   // Aggregate the hostgroups that this host belongs to for affinity
+   int i=0;
+   for (temp_member=hostgroup_list; temp_member!=NULL; temp_member=temp_member->next ) {
+      dnxDebug(4, "ehSvcCheck: Entering hostgroup ID loop: %s", temp_member->group_name);
+      if ( is_host_member_of_hostgroup(temp_member, hostObj) ) {
+         // See if this is the bypass hostgroup
+         if(strcmp(cfg.bypassHostgroup, temp_member->group_name)==0) {
+            dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
+               hostObj->name, svcdata->command_line);
+            return OK;     // tell nagios execute locally
+         } else {
+            //we have a match, add this dnxClient queue
+            strcpy(&hostGroupNames[i++],temp_member->group_name);
+            dnxDebug(4, "ehSvcCheck: Match [%s].", &hostGroupNames[i-1]);
+         }
+      }
+   }
+
+   dnxDebug(4, "ehSvcCheck: [%s] job is part of [%s] host group.",
+         hostObj->name, &hostGroupNames[0]);
+
+   dnxDebug(4, "ehSvcCheck: Received Job [%lu] at %lu (%lu).",
          serial, (unsigned long)time(0), 
          (unsigned long)svcdata->start_time.tv_sec);
 
@@ -938,6 +963,30 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
    dnxLog("-------- DNX Server Module Startup Complete --------");
 
    return OK;
+}
+
+//----------------------------------------------------------------------------
+
+/** Check to see if the check should be local.
+ * 
+ * This function gets called prior to dispatching the check.
+ * 
+ * @param[in] hostgroups - list of hostgroups the host being checked belongs to.
+ *
+ * @return True if the check should be run from local Nagios.
+ */
+int check_for_bypass(char hostGroupNames[][64], int cols)
+{
+dnxDebug(2, "CFB Enter. Bypass Group is [%s]", &hostGroupNames[0]);
+
+   int i = 0;
+   for(; i < cols; i++) {   
+    dnxDebug(2, "CFB Loop. [%s]", &hostGroupNames[i]);
+      if(strcmp(cfg.bypassHostgroup, &hostGroupNames[i])==0) {
+          return 1;
+      }
+   }
+   return 0;
 }
 
 /*--------------------------------------------------------------------------*/
