@@ -1018,24 +1018,24 @@ int setAffinity(DnxNodeRequest * pNode)
       (unsigned)((addr >>  8) & 0xff),
       (unsigned)( addr        & 0xff));
    
-   dnxDebug(2, "findAffinity: IP address [%s]", ip_address);
+   dnxDebug(2, "setAffinity: IP address [%s]", ip_address);
    
    // Find it's host object
-   extern host *host_list;
-   host * temp_host;
-   char hostNames[10][64]; // = host->name;
-   // Addresses are non-unique, it is possible for several hosts to share the same address
-   // therefore there is no built in get_host_by_addr function. 
-   int i=0;
-   for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) {
-      dnxDebug(4, "setAffinity: Entering host ID loop: %s", temp_host->name);
-      if ( strcmp(temp_host->address, ip_address)==0 ) {
-        //we have a match, add this dnxClient queue
-//       strcpy(&hostNames[i++],temp_host->group_name);
-        dnxDebug(4, "setAffinity: Match [%s].", temp_host->name);
-      }
-   }
-   
+//    extern host *host_list;
+//    host * temp_host;
+//    char hostNames[10][64]; // = host->name;
+//    // Addresses are non-unique, it is possible for several hosts to share the same address
+//    // therefore there is no built in get_host_by_addr function. 
+//    int i=0;
+//    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) {
+//       dnxDebug(4, "setAffinity: Entering host ID loop: %s", temp_host->name);
+//       if ( strcmp(temp_host->address, ip_address)==0 ) {
+//         //we have a match, add this dnxClient queue
+// //       strcpy(&hostNames[i++],temp_host->group_name);
+//         dnxDebug(4, "setAffinity: Match [%s].", temp_host->name);
+//       }
+//    }
+//    
    
    // Find out what hostgroups it is in
    

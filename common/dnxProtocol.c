@@ -90,6 +90,9 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg,
    if ((ret = dnxXmlGet(&xbuf, "JobCap", DNX_XML_INT, &pReg->jobCap)) != DNX_OK
          && (ret = dnxXmlGet(&xbuf, "Capacity", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
       return ret;
+      
+   // check the return value!!
+   dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hostname);
 
    // decode job expiration (Time-To-Live in seconds)
    return dnxXmlGet(&xbuf, "TTL", DNX_XML_INT, &pReg->ttl);
@@ -122,6 +125,7 @@ int dnxSendNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * addre
    dnxXmlAdd  (&xbuf, "JobCap",  DNX_XML_UINT, &pReg->jobCap);
    dnxXmlAdd  (&xbuf, "Capacity",DNX_XML_UINT, &pReg->jobCap); // old format - for bc
    dnxXmlAdd  (&xbuf, "TTL",     DNX_XML_UINT, &pReg->ttl);
+   dnxXmlAdd  (&xbuf, "Hostname",DNX_XML_STR,  &pReg->hostname);   
    dnxXmlClose(&xbuf);
 
    dnxDebug(3, "dnxSendNodeRequest: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);
