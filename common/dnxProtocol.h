@@ -45,6 +45,7 @@
        <ReqType>IntegerRequestType</ReqType>
        <JobCap>IntegerCapabilityCount</JobCap>
        <TTL>IntegerSeconds<TTL>
+       <Hostname>StringHostname</Hostname>
      </dnxMessage>
 
    ----------------------------------------------
@@ -144,6 +145,14 @@
 
 #include "dnxTransport.h"
 
+typedef struct DnxAffinityList
+{
+   char * groupname;                //!< Name of Nagios Host group/Service group
+   double flag;                     //!< Flag for affinity check
+//   struct 
+   struct DnxAffinityList * next;   //!< Next structure in linked list
+} DnxAffinityList;
+
 /** Defines the type of a DNX object in a network message. */
 typedef enum DnxObjType
 {
@@ -179,6 +188,9 @@ typedef enum DnxJobState
 /** The maximum number of bytes in a DNX message address buffer. */
 #define DNX_MAX_ADDRESS 64
 
+/** The maximum number of bytes in a DNX message hostname buffer. */
+#define DNX_MAX_HOSTNAME 253 // DNS max via ISC
+
 /** DNX wire transaction ID structure. */
 typedef struct DnxXID
 {
@@ -193,9 +205,11 @@ typedef struct DnxNodeRequest
    DnxXID xid;                      //!< Worker node transaction ID.
    DnxReqType reqType;              //!< Request type.
    unsigned int jobCap;             //!< Job capacity.
+   double affinity;                 //!< Affinity groups bitmask.
    unsigned int ttl;                //!< Request Time-To-Live (in seconds).
    time_t expires;                  //!< Job expiration time (not transmitted).
    char address[DNX_MAX_ADDRESS];   //!< Source address.
+   char hostname[DNX_MAX_HOSTNAME]; //!< Hostname from client config.
 } DnxNodeRequest;
 
 /** Send job wire structure. */

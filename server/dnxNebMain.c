@@ -120,6 +120,7 @@ static DnxJobList * joblist;        //!< The master job list.
 static DnxRegistrar * registrar;    //!< The client node registrar.
 static DnxDispatcher * dispatcher;  //!< The job list dispatcher.
 static DnxCollector * collector;    //!< The job list results collector.
+static DnxAffinityList * affinity;  //!< The list of client affinity groups.
 static time_t start_time;           //!< The module start time.
 static void * myHandle;             //!< Private NEB module handle.
 static regex_t regEx;               //!< Compiled regular expression structure.
@@ -666,6 +667,18 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
+
+   // Get the IP address of the dnxClient
+   struct sockaddr_in src_addr;
+   in_addr_t addr;
+   memcpy(&src_addr, pNode->address, sizeof(src_addr));
+   addr = ntohl(src_addr.sin_addr.s_addr);
+   dnxDebug(2, "ehSvcCheck: IP address [%u.%u.%u.%u]",
+      (unsigned)((addr >> 24) & 0xff),
+      (unsigned)((addr >> 16) & 0xff),
+      (unsigned)((addr >>  8) & 0xff),
+      (unsigned)( addr        & 0xff));
+      
    serial++;                           // bump serial number
 
    return NEBERROR_CALLBACKOVERRIDE;   // tell nagios we want it
@@ -982,12 +995,63 @@ dnxDebug(2, "CFB Enter. Bypass Group is [%s]", &hostGroupNames[0]);
    int i = 0;
    for(; i < cols; i++) {   
     dnxDebug(2, "CFB Loop. [%s]", &hostGroupNames[i]);
-      if(strcmp(cfg.bypassHostgroup, &hostGroupNames[i])==0) {
+      if(strcmp(cfg.bypassHostgroup, (char *)&hostGroupNames[i])==0) {
           return 1;
       }
    }
    return 0;
 }
+
+
+int setAffinity(DnxNodeRequest * pNode)
+{
+   // Get the IP address of the dnxClient
+   struct sockaddr_in src_addr;
+   in_addr_t addr;
+   memcpy(&src_addr, pNode->address, sizeof(src_addr));
+   addr = ntohl(src_addr.sin_addr.s_addr);
+   char ip_address [18];
+   
+   sprintf(ip_address, "%u.%u.%u.%u",
+      (unsigned)((addr >> 24) & 0xff),
+      (unsigned)((addr >> 16) & 0xff),
+      (unsigned)((addr >>  8) & 0xff),
+      (unsigned)( addr        & 0xff));
+   
+   dnxDebug(2, "findAffinity: IP address [%s]", ip_address);
+   
+   // Find it's host object
+   extern host *host_list;
+   host * temp_host;
+   char hostNames[10][64]; // = host->name;
+   // Addresses are non-unique, it is possible for several hosts to share the same address
+   // therefore there is no built in get_host_by_addr function. 
+   int i=0;
+   for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) {
+      dnxDebug(4, "setAffinity: Entering host ID loop: %s", temp_host->name);
+      if ( strcmp(temp_host->address, ip_address)==0 ) {
+        //we have a match, add this dnxClient queue
+//       strcpy(&hostNames[i++],temp_host->group_name);
+        dnxDebug(4, "setAffinity: Match [%s].", temp_host->name);
+      }
+   }
+   
+   
+   // Find out what hostgroups it is in
+   
+   
+   
+   // Create a bitmask for it's hostgroups
+   char test[] = "192.168.223.210";
+   if(strcmp(ip_address, test)==0) {
+     pNode->affinity = 0x01;
+   } else {
+     pNode->affinity = 0x02;
+   }
+   return 0;
+}
+
+
 
 /*--------------------------------------------------------------------------*/
 
