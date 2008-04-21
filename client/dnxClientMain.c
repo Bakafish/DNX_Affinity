@@ -113,6 +113,7 @@ typedef struct DnxCfgData
    char * runPath;               //!< The system lock/pid file path (no file).
    unsigned debugLevel;          //!< The system global debug level.
    DnxWlmCfgData wlm;            //!< WLM specific configuration data.
+   char * hostname;              //!< Hostname of the dnxClient machine.
 } DnxCfgData;
 
 // module statics
@@ -415,6 +416,7 @@ static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
    cfg.wlm.maxRetries    = (unsigned)(intptr_t)vptrs[17];
    cfg.wlm.ttlBackoff    = (unsigned)(intptr_t)vptrs[18];
    cfg.wlm.maxResults    = (unsigned)(intptr_t)vptrs[19];
+   cfg.hostname          = (char *)            vptrs[20];
 
    if (!cfg.wlm.dispatcher)
       dnxLog("config: Missing channelDispatcher parameter.");
@@ -483,6 +485,7 @@ static int initConfig(char * cfgfile)
       { "threadTtlBackoff",       DNX_CFG_UNSIGNED, &s_cfg.wlm.ttlBackoff    },
       { "maxResultBuffer",        DNX_CFG_UNSIGNED, &s_cfg.wlm.maxResults    },
       { "showNodeAddr",           DNX_CFG_BOOL,     &s_cfg.wlm.showNodeAddr  },
+      { "hostname",               DNX_CFG_STRING,   &s_cfg.hostname          },
       { 0 },
    };
    char cfgdefs[] = 
@@ -503,6 +506,7 @@ static int initConfig(char * cfgfile)
       "user = " DNX_DEFAULT_USER "\n"
       "group = " DNX_DEFAULT_GROUP "\n"
       "runPath = " DNX_DEFAULT_RUN_PATH "\n";
+      "hostname = localhost\n";
 
    int ret;
 
@@ -968,6 +972,7 @@ static void freeCfgData(DnxCfgData * cpy)
    xfree(cpy->runPath);
    xfree(cpy->wlm.dispatcher);
    xfree(cpy->wlm.collector);
+   xfree(cpy->hostname);
    xfree(cpy);
 }
 
@@ -1000,6 +1005,7 @@ static DnxCfgData * copyCfgData(DnxCfgData * org)
    cpy->runPath = xstrdup(org->runPath);
    cpy->wlm.dispatcher = xstrdup(org->wlm.dispatcher);
    cpy->wlm.collector = xstrdup(org->wlm.collector);
+   cpy->hostname = xstrdup(org->hostname);
 
    // if any buffer copies failed, free everything, return NULL
    if (cpy->channelAgent == 0 || cpy->logFilePath == 0

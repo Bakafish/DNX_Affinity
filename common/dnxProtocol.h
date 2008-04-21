@@ -189,7 +189,7 @@ typedef enum DnxJobState
 #define DNX_MAX_ADDRESS 64
 
 /** The maximum number of bytes in a DNX message hostname buffer. */
-#define DNX_MAX_HOSTNAME 253 // DNS max via ISC
+#define MAX_HOSTNAME 253            // DNS max via ISC
 
 /** DNX wire transaction ID structure. */
 typedef struct DnxXID
@@ -209,7 +209,7 @@ typedef struct DnxNodeRequest
    unsigned int ttl;                //!< Request Time-To-Live (in seconds).
    time_t expires;                  //!< Job expiration time (not transmitted).
    char address[DNX_MAX_ADDRESS];   //!< Source address.
-   char hostname[DNX_MAX_HOSTNAME]; //!< Hostname from client config.
+   char hostname[MAX_HOSTNAME];     //!< Hostname from client config.
 } DnxNodeRequest;
 
 /** Send job wire structure. */

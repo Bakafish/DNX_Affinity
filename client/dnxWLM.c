@@ -62,6 +62,7 @@
 #define MAX_RESULT_DATA 1024
 
 #define MAX_IP_ADDRSZ   64
+#define MAX_HOSTNAME    253
 
 struct iDnxWlm;               // forward declaration: circular reference
 
@@ -111,6 +112,7 @@ typedef struct iDnxWlm
    int terminate;             //!< The pool termination flag.
    unsigned long myipaddr;    //!< Binary local address for identification.
    char myipaddrstr[MAX_IP_ADDRSZ];//!< String local address for presentation.
+   char myhostname[MAX_HOSTNAME];//!< String local Hostname for presentation.
 } iDnxWlm;
 
 // forward declaration required by source code organization
@@ -184,6 +186,10 @@ static void logConfigChanges(DnxWlmCfgData * ocp, DnxWlmCfgData * ncp)
       dnxLog("Config parameter 'showNodeAddr' changed from %s to %s.", 
             ocp->showNodeAddr? "TRUE" : "FALSE", 
             ncp->showNodeAddr? "TRUE" : "FALSE");
+            
+   if (ocp->hostname != ncp->hostname)
+      dnxLog("Config parameter 'hostname' changed from %s to %s.",
+            ocp->hostname, ncp->hostname);
 }
 
 //----------------------------------------------------------------------------
@@ -427,6 +433,10 @@ static void * dnxWorker(void * data)
       msg.reqType = DNX_REQ_REGISTER;
       msg.jobCap = 1;
       msg.ttl = iwlm->cfg.reqTimeout - iwlm->cfg.ttlBackoff;
+      strcpy(msg.hostname, iwlm->cfg.hostname);
+//      msg.hostname = iwlm->cfg.hostname;
+//       char tmp_hostname [253] = "dnx-02.forschooner.net";
+//       strcpy(msg.hostname, tmp_hostname);
 
       // request a job, and then wait for a job to come in...
       if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
@@ -632,6 +642,7 @@ int dnxWlmReconfigure(DnxWlm * wlm, DnxWlmCfgData * cfg)
    iwlm->cfg.shutdownGrace = cfg->shutdownGrace;
    iwlm->cfg.maxResults = cfg->maxResults;
    iwlm->cfg.showNodeAddr = cfg->showNodeAddr;
+   strcpy(iwlm->cfg.hostname, cfg->hostname);
 
    // we can't reduce the poolsz until the number of threads
    //    drops below the new maximum
@@ -676,6 +687,7 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
 
    memset(iwlm, 0, sizeof *iwlm);
    iwlm->cfg = *cfg;
+//   iwlm->myhostname = xstrdup(iwlm->cfg.hostname);
    iwlm->cfg.dispatcher = xstrdup(iwlm->cfg.dispatcher);
    iwlm->cfg.collector = xstrdup(iwlm->cfg.collector);
    iwlm->poolsz = iwlm->cfg.poolMax;
@@ -707,6 +719,32 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
                iwlm->myipaddrstr, sizeof iwlm->myipaddrstr);
       }
       freeifaddrs(ifa);
+   }
+   
+   char empty[] = "";
+   if( strcmp(iwlm->myhostname, empty)==0)
+   {
+      if(strcmp(iwlm->cfg.hostname, empty)==0)
+      {
+         dnxDebug(3, "Hostname undefined.");
+         // Get our hostname
+         char machineName [MAX_HOSTNAME];
+         if(gethostname(machineName, MAX_HOSTNAME)==0)
+         {
+            dnxDebug(3, "Hostname is [%s].", machineName);
+            strcpy(iwlm->cfg.hostname, machineName);
+            // cache hostname
+            strcpy(iwlm->myhostname, machineName);
+         } else {
+            dnxLog("Unable to obtain Hostname [%s?], set in config.",
+            machineName);
+         }
+      } else {
+//   iwlm->cfg.dispatcher = xstrdup(iwlm->cfg.dispatcher);
+//         strcpy(iwlm->cfg.hostname, machineName);
+//         iwlm->cfg.hostname = xstrdup(iwlm->cfg.hostname);
+      }
+
    }
 
    // if any of the above failed, we really can't continue

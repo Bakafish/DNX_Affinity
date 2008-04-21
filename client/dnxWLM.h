@@ -28,6 +28,8 @@
 #ifndef _DNXWLM_H_
 #define _DNXWLM_H_
 
+#include "dnxProtocol.h"
+
 /** A WLM configuration data structure - passed to dnxWlmCreate. */
 typedef struct DnxWlmCfgData
 {
@@ -44,6 +46,7 @@ typedef struct DnxWlmCfgData
    unsigned shutdownGrace;       //!< The shutdown grace period in seconds.
    unsigned maxResults;          //!< The maximum size of the results buffer.
    unsigned showNodeAddr;        //!< Boolean: show node in error results.
+   char hostname[MAX_HOSTNAME];  //!< String holding the hostname of the client.
 } DnxWlmCfgData;
 
 /** A structure for returning WLM statistics to a caller. */
