@@ -46,7 +46,7 @@ typedef struct DnxWlmCfgData
    unsigned shutdownGrace;       //!< The shutdown grace period in seconds.
    unsigned maxResults;          //!< The maximum size of the results buffer.
    unsigned showNodeAddr;        //!< Boolean: show node in error results.
-   char hostname[MAX_HOSTNAME];  //!< String holding the hostname of the client.
+   char * hostname;              //!< String holding the hostname of the client.
 } DnxWlmCfgData;
 
 /** A structure for returning WLM statistics to a caller. */

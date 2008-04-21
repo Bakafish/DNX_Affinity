@@ -113,7 +113,6 @@ typedef struct DnxCfgData
    char * runPath;               //!< The system lock/pid file path (no file).
    unsigned debugLevel;          //!< The system global debug level.
    DnxWlmCfgData wlm;            //!< WLM specific configuration data.
-   char * hostname;              //!< Hostname of the dnxClient machine.
 } DnxCfgData;
 
 // module statics
@@ -205,6 +204,7 @@ static void usage(char * base)
 # define OL_GROUP    ", --group   "
 # define OL_VERSION  ", --version "
 # define OL_HELP     ", --help    "
+# define OL_HOSTNAME ", --hostname"
 #else
 # define OL_CFGFILE
 # define OL_LOGFILE
@@ -216,22 +216,24 @@ static void usage(char * base)
 # define OL_GROUP
 # define OL_VERSION
 # define OL_HELP
+# define OL_HOSTNAME
 #endif
 
    version(stderr, base);
    fprintf(stderr, 
       "  Usage: %s [options]\n"
       "    Where [options] are:\n"
-      "      -c" OL_CFGFILE  " <file>   specify the file and path of the config file.\n"
-      "      -l" OL_LOGFILE  " <file>   specify the file and path of the log file.\n"
-      "      -D" OL_DBGFILE  " <file>   specify the file and path of the debug log file.\n"
-      "      -g" OL_DBGLEVEL " <value>  specify the level of debugging output.\n"
-      "      -d" OL_DEBUG    "          enable debug mode (will not become a daemon).\n"
-      "      -r" OL_RUNPATH  " <path>   specify the path of the lock/pid file.\n"
-      "      -U" OL_USER     " <user>   specify the DNX client user name or id.\n"
-      "      -G" OL_GROUP    " <group>  specify the DNX client group name or id.\n"
-      "      -v" OL_VERSION  "          display DNX client version and exit.\n"
-      "      -h" OL_HELP     "          display this help screen and exit.\n"
+      "      -c" OL_CFGFILE  " <file>     specify the file and path of the config file.\n"
+      "      -l" OL_LOGFILE  " <file>     specify the file and path of the log file.\n"
+      "      -D" OL_DBGFILE  " <file>     specify the file and path of the debug log file.\n"
+      "      -g" OL_DBGLEVEL " <value>    specify the level of debugging output.\n"
+      "      -d" OL_DEBUG    "            enable debug mode (will not become a daemon).\n"
+      "      -r" OL_RUNPATH  " <path>     specify the path of the lock/pid file.\n"
+      "      -U" OL_USER     " <user>     specify the DNX client user name or id.\n"
+      "      -G" OL_GROUP    " <group>    specify the DNX client group name or id.\n"
+      "      -v" OL_VERSION  "            display DNX client version and exit.\n"
+      "      -h" OL_HELP     "            display this help screen and exit.\n"
+      "      -s" OL_HOSTNAME " <hostname> specify the hostname sent to the server.\n"
       "\n", 
       base
    );
@@ -290,7 +292,7 @@ static int getOptions(int argc, char ** argv)
    extern char * optarg;
    extern int opterr, optopt;
 
-   static char opts[] = "c:dr:g:l:D:U:G:vh";
+   static char opts[] = "c:dr:g:l:D:U:G:vh:s";
 
 #if HAVE_GETOPT_LONG
    static struct option longopts[] = 
@@ -305,6 +307,7 @@ static int getOptions(int argc, char ** argv)
       { "user",     required_argument, 0, 'U' },
       { "group",    required_argument, 0, 'G' },
       { "help",     no_argument,       0, 'h' },
+      { "hostname", required_argument, 0, 's' },
       { 0, 0, 0, 0 },
    };
 #endif
@@ -317,6 +320,7 @@ static int getOptions(int argc, char ** argv)
    char * user = 0;
    char * group = 0;
    char * runpath = 0;
+   char * hostname = 0;
    size_t rplen;
 
    // set program base name
@@ -340,6 +344,7 @@ static int getOptions(int argc, char ** argv)
          case 'g': dbglvl    = optarg; break;
          case 'l': logfile   = optarg; break;
          case 'D': dbgfile   = optarg; break;
+         case 's': hostname  = optarg; break;
          case 'v': version(stdout, s_progname); exit(0);
          case 'h':
          default : usage(s_progname);
@@ -372,6 +377,9 @@ static int getOptions(int argc, char ** argv)
 
    if (runpath)
       appendString(&s_cmdover, "runPath=%s\n", runpath);
+      
+   if (hostname)
+      appendString(&s_cmdover, "hostname=%s\n", hostname);
 
    return 0;
 }
@@ -416,7 +424,7 @@ static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
    cfg.wlm.maxRetries    = (unsigned)(intptr_t)vptrs[17];
    cfg.wlm.ttlBackoff    = (unsigned)(intptr_t)vptrs[18];
    cfg.wlm.maxResults    = (unsigned)(intptr_t)vptrs[19];
-   cfg.hostname          = (char *)            vptrs[20];
+   cfg.wlm.hostname      = (char *)            vptrs[20];
 
    if (!cfg.wlm.dispatcher)
       dnxLog("config: Missing channelDispatcher parameter.");
@@ -484,8 +492,8 @@ static int initConfig(char * cfgfile)
       { "threadMaxRetries",       DNX_CFG_UNSIGNED, &s_cfg.wlm.maxRetries    },
       { "threadTtlBackoff",       DNX_CFG_UNSIGNED, &s_cfg.wlm.ttlBackoff    },
       { "maxResultBuffer",        DNX_CFG_UNSIGNED, &s_cfg.wlm.maxResults    },
+      { "hostname",               DNX_CFG_STRING,   &s_cfg.wlm.hostname      },
       { "showNodeAddr",           DNX_CFG_BOOL,     &s_cfg.wlm.showNodeAddr  },
-      { "hostname",               DNX_CFG_STRING,   &s_cfg.hostname          },
       { 0 },
    };
    char cfgdefs[] = 
@@ -505,9 +513,9 @@ static int initConfig(char * cfgfile)
       "debugFile = " DNX_DEFAULT_DBGLOG "\n"
       "user = " DNX_DEFAULT_USER "\n"
       "group = " DNX_DEFAULT_GROUP "\n"
-      "runPath = " DNX_DEFAULT_RUN_PATH "\n";
-      "hostname = localhost\n";
-
+      "runPath = " DNX_DEFAULT_RUN_PATH "\n"
+      "hostname = NULL\n"
+;
    int ret;
 
    // create global configuration parser object
@@ -972,7 +980,6 @@ static void freeCfgData(DnxCfgData * cpy)
    xfree(cpy->runPath);
    xfree(cpy->wlm.dispatcher);
    xfree(cpy->wlm.collector);
-   xfree(cpy->hostname);
    xfree(cpy);
 }
 
@@ -1005,7 +1012,6 @@ static DnxCfgData * copyCfgData(DnxCfgData * org)
    cpy->runPath = xstrdup(org->runPath);
    cpy->wlm.dispatcher = xstrdup(org->wlm.dispatcher);
    cpy->wlm.collector = xstrdup(org->wlm.collector);
-   cpy->hostname = xstrdup(org->hostname);
 
    // if any buffer copies failed, free everything, return NULL
    if (cpy->channelAgent == 0 || cpy->logFilePath == 0

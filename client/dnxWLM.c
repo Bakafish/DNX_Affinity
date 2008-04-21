@@ -433,7 +433,7 @@ static void * dnxWorker(void * data)
       msg.reqType = DNX_REQ_REGISTER;
       msg.jobCap = 1;
       msg.ttl = iwlm->cfg.reqTimeout - iwlm->cfg.ttlBackoff;
-      strcpy(msg.hostname, iwlm->cfg.hostname);
+      strcpy(msg.hostname, iwlm->myhostname);
 //      msg.hostname = iwlm->cfg.hostname;
 //       char tmp_hostname [253] = "dnx-02.forschooner.net";
 //       strcpy(msg.hostname, tmp_hostname);
@@ -688,6 +688,7 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
    memset(iwlm, 0, sizeof *iwlm);
    iwlm->cfg = *cfg;
 //   iwlm->myhostname = xstrdup(iwlm->cfg.hostname);
+//   strcpy(iwlm->myhostname, iwlm->cfg.hostname);
    iwlm->cfg.dispatcher = xstrdup(iwlm->cfg.dispatcher);
    iwlm->cfg.collector = xstrdup(iwlm->cfg.collector);
    iwlm->poolsz = iwlm->cfg.poolMax;
@@ -721,30 +722,35 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
       freeifaddrs(ifa);
    }
    
-   char empty[] = "";
-   if( strcmp(iwlm->myhostname, empty)==0)
+   char unset[] = "NULL";
+   if(!strnlen(iwlm->myhostname, 1)) //See if the global hostname has been set
    {
-      if(strcmp(iwlm->cfg.hostname, empty)==0)
+      dnxDebug(1, "dnxWlmCreate: Hostname not set in parent thread.");
+      char machineName [MAX_HOSTNAME];
+      if(strcmp(cfg->hostname, unset)==0)
       {
-         dnxDebug(3, "Hostname undefined.");
+         dnxDebug(1, "dnxWlmCreate: Hostname undefined in config.");
          // Get our hostname
-         char machineName [MAX_HOSTNAME];
          if(gethostname(machineName, MAX_HOSTNAME)==0)
          {
-            dnxDebug(3, "Hostname is [%s].", machineName);
+            dnxDebug(1, "dnxWlmCreate: Hostname is [%s].", machineName);
             strcpy(iwlm->cfg.hostname, machineName);
             // cache hostname
             strcpy(iwlm->myhostname, machineName);
          } else {
-            dnxLog("Unable to obtain Hostname [%s?], set in config.",
+            dnxLog("dnxWlmCreate: Unable to obtain Hostname [%s?], please set hostname in config.",
             machineName);
+            sprintf( machineName, "localhost");
+            strcpy(iwlm->myhostname, machineName);
          }
       } else {
-//   iwlm->cfg.dispatcher = xstrdup(iwlm->cfg.dispatcher);
-//         strcpy(iwlm->cfg.hostname, machineName);
-//         iwlm->cfg.hostname = xstrdup(iwlm->cfg.hostname);
+         dnxDebug(1, "dnxWlmCreate: Using hostname in config [%s].", cfg->hostname);
+         strcpy(iwlm->myhostname, cfg->hostname);
       }
-
+      xfree(machineName);
+   } else {
+      dnxDebug(1, "dnxWlmCreate: Using cached hostname [%s].", iwlm->myhostname);
+      strcpy(iwlm->cfg.hostname, iwlm->myhostname);
    }
 
    // if any of the above failed, we really can't continue
