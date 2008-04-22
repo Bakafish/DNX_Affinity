@@ -147,7 +147,7 @@
 
 typedef struct DnxAffinityList
 {
-   char * groupname;                //!< Name of Nagios Host group/Service group
+   char * name;                     //!< Name of Nagios Host group/dnxClient
    unsigned int flag;               //!< Flag for affinity check
    struct DnxAffinityList * next;   //!< Next structure in linked list
 } DnxAffinityList;

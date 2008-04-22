@@ -327,46 +327,29 @@ void dnxRegistrarDestroy(DnxRegistrar * reg)
    xfree(ireg);
 }
 
-
-
-DnxAffinityList* DnxAffinityList_add(DnxAffinityList *p, char * groupname, unsigned int flag) {
-    DnxAffinityList *new_item = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
-    if (new_item == NULL)
-        return NULL;
-    if (p->groupname == NULL)
+DnxAffinityList* DnxAffinityList_add(DnxAffinityList *p, char * name, unsigned int flag) 
+{
+    if (p->name == NULL) 
     {
-        dnxDebug(1, "DnxAffinityList_add: First Element!!!!");    
+       p->name = name;
+       p->flag = flag;
+       dnxDebug(4, "DnxAffinityList_add: Added [%s]", p->name);    
+    } else {
+       DnxAffinityList *new_item = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
+       new_item->name = name;
+       new_item->flag = flag;
+       new_item->next = p->next;
+       p->next = new_item;
+       dnxDebug(4, "DnxAffinityList_add: Added [%s] to [%s]", new_item->name, p->name);    
     }
-    new_item->groupname = groupname;
-    new_item->flag = flag;
-    p->next = new_item;
-    dnxDebug(1, "DnxAffinityList_add: Added [%s] to [%s]", new_item->groupname, p->groupname);    
-    return new_item;
+    return p;
 }
 
-long int DnxAffinityList_getFlag(DnxAffinityList *affinity, char * groupname){
-    dnxDebug(1, "DnxAffinityList_getFlag: enter");
-    DnxAffinityList *temp_affinity = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
-    if (temp_affinity == NULL)
-    {
-        dnxDebug(1, "DnxAffinityList_getFlag: couldn't create new affinity struct");
-        return 0;
-    }
-    //memcpy(&temp_affinity, &affinity, sizeof(temp_affinity));
-    temp_affinity = affinity;
-    while (temp_affinity != NULL) {
-       dnxDebug(1, "DnxAffinityList_getFlag: While loop - groupname [%s]", temp_affinity->groupname);
-       if (strcmp(temp_affinity->groupname, groupname) == 0) {
-          dnxDebug(1, "DnxAffinityList_getFlag: matches [%s]", groupname);
-          return(temp_affinity->flag);
-       } else {
-          dnxDebug(1, "DnxAffinityList_getFlag: no match with [%s]", groupname);
-       }
-       temp_affinity = temp_affinity->next;
-       dnxDebug(1, "DnxAffinityList_getFlag: While next grp[%s]", temp_affinity->groupname);
-    }
-    return 0;
-}
+// int DnxAffinityList_get(DnxAffinityList *p, char * name) 
+// {
+//     // see if the item exists
+// }
+
 
 
 /*--------------------------------------------------------------------------
