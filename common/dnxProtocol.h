@@ -148,10 +148,10 @@
 typedef struct DnxAffinityList
 {
    char * groupname;                //!< Name of Nagios Host group/Service group
-   double flag;                     //!< Flag for affinity check
-//   struct 
+   unsigned int flag;               //!< Flag for affinity check
    struct DnxAffinityList * next;   //!< Next structure in linked list
 } DnxAffinityList;
+
 
 /** Defines the type of a DNX object in a network message. */
 typedef enum DnxObjType
@@ -209,7 +209,7 @@ typedef struct DnxNodeRequest
    unsigned int ttl;                //!< Request Time-To-Live (in seconds).
    time_t expires;                  //!< Job expiration time (not transmitted).
    char address[DNX_MAX_ADDRESS];   //!< Source address.
-   char hostname[MAX_HOSTNAME];     //!< Hostname from client config.
+   char * hostname;                 //!< Hostname from client config.
 } DnxNodeRequest;
 
 /** Send job wire structure. */

@@ -77,6 +77,10 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg,
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "NodeRequest")) != DNX_OK)
       return ret;
 
+   // decode the hostname
+   if ((ret = dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hostname)) != DNX_OK)
+      return ret;
+
    // decode the worker node's XID (support older GUID format as well)
    if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pReg->xid)) != DNX_OK
          && (ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pReg->xid)) != DNX_OK)
@@ -91,9 +95,6 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg,
          && (ret = dnxXmlGet(&xbuf, "Capacity", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
       return ret;
       
-   // decode the hostname
-   if ((ret = dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hostname)) != DNX_OK)
-      return ret;
    // decode job expiration (Time-To-Live in seconds)
    return dnxXmlGet(&xbuf, "TTL", DNX_XML_INT, &pReg->ttl);
 }
@@ -520,6 +521,20 @@ int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb)
    return pxa->objType == pxb->objType 
          && pxa->objSerial == pxb->objSerial 
          && pxa->objSlot == pxb->objSlot;
+}
+
+
+
+DnxAffinityList *DnxAffinityList_add(DnxAffinityList **p, char * groupname, unsigned int i) {
+    DnxAffinityList *n = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
+    if (n == NULL)
+        return NULL;
+    n->next = *p;                                                                            
+    *p = n;
+    n->groupname = groupname;
+//    sprintf(n->groupname, "foo");
+    n->flag = i;
+    return *p;
 }
 
 /*--------------------------------------------------------------------------*/

@@ -120,7 +120,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
       pReq->expires = (*ppMsg)->expires;
-      setAffinity(pReq);
+//      setAffinity(pReq);
       dnxDebug(2, 
             "dnxRegistrar[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
             tid, pReq->xid.objSerial, pReq->xid.objSlot, 
@@ -129,12 +129,12 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       // This is the first time we've seen this machine, discover affinity
-      setAffinity(pReq);
+//      setAffinity(pReq);
       
       *ppMsg = 0;    // we're keeping this message; return NULL
       dnxDebug(2, 
-            "dnxRegistrar[%lx]: Added req [%lu,%lu] at %u; expires at %u.", 
-            tid, pReq->xid.objSerial, pReq->xid.objSlot, 
+            "dnxRegistrar[%lx]: Added req for [%s] [%lu,%lu] at %u; expires at %u.", 
+            tid, pReq->hostname, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
    else
