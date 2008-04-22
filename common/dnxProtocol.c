@@ -523,19 +523,5 @@ int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb)
          && pxa->objSlot == pxb->objSlot;
 }
 
-
-
-DnxAffinityList *DnxAffinityList_add(DnxAffinityList **p, char * groupname, unsigned int i) {
-    DnxAffinityList *n = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
-    if (n == NULL)
-        return NULL;
-    n->next = *p;                                                                            
-    *p = n;
-    n->groupname = groupname;
-//    sprintf(n->groupname, "foo");
-    n->flag = i;
-    return *p;
-}
-
 /*--------------------------------------------------------------------------*/
 

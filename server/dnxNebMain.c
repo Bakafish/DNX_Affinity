@@ -604,6 +604,15 @@ static int ehSvcCheck(int event_type, void * data)
    }
    
    // use the affinity bitmask to dispatch the check
+   char * foo; 
+   foo = DnxAffinityList_getGroup(svcdata->host_name);
+   long int bar;
+   dnxDebug(1, "ehSvcCheck: Affinity groupname [%s]", affinity->groupname);
+
+   
+   bar = DnxAffinityList_getFlag(affinity, foo);
+   
+   dnxDebug(1, "Host [%s] is in group [%s](%li)", svcdata->host_name, foo, bar);
 
    // Aggregate the hostgroups that this host belongs to for affinity
 //    int i=0;
@@ -780,26 +789,38 @@ static int dnxServerInit(void)
    } 
    
    // create the list of affinity groups (Nagios Hostgroups)
-   //Get the list of host groups
+   // Get the list of host groups
    extern hostgroup *hostgroup_list;
    hostgroup * temp_member;
-   char hostGroupNames[10][64]; // = hostgroup->host_name;
-   
-   // Aggregate the hostgroups that this host belongs to for affinity
+   DnxAffinityList *temp_affinity = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
+   temp_affinity->groupname = NULL;
+   affinity = temp_affinity;
+   // Create affinity linked list
    unsigned int i = 0x01;
-   DnxAffinityList * temp_affinity = affinity;
    for (temp_member=hostgroup_list; temp_member!=NULL; temp_member=temp_member->next ) {
-     dnxDebug(4, "dnxServerInit: Entering hostgroup init loop: %s", temp_member->group_name);
+     dnxDebug(1, "dnxServerInit: Entering hostgroup init loop: %s", temp_member->group_name);
      if(strcmp(cfg.bypassHostgroup, temp_member->group_name)==0) {
         // This is the bypass group and should be assigned the NULL flag
-        temp_affinity = (DnxAffinityList *)DnxAffinityList_add(temp_affinity, temp_member->group_name, 0);
-        dnxDebug(4, "(bypassHostgroup match) Service for %s hostgroup will execute locally.", 
+        if(temp_affinity->groupname == NULL)
+        {
+           temp_affinity->groupname = temp_member->group_name;
+           temp_affinity->flag = 0;
+        } else {
+           temp_affinity = (DnxAffinityList *)DnxAffinityList_add(temp_affinity, temp_member->group_name, 0);
+           dnxDebug(1, "(bypassHostgroup match) Service for %s hostgroup will execute locally.", 
            temp_affinity->groupname);
+        }
      } else {
         //we have a match, add this dnxClient queue
-        temp_affinity = (DnxAffinityList *)DnxAffinityList_add(temp_affinity, temp_member->group_name, i);
+        if(temp_affinity->groupname == NULL)
+        {
+           temp_affinity->groupname = temp_member->group_name;
+           temp_affinity->flag = i;
+        } else {
+           temp_affinity = (DnxAffinityList *)DnxAffinityList_add(temp_affinity, temp_member->group_name, i);
+        }
         i <<= 1;
-        dnxDebug(4, "Hostgroup [%s] uses (%li) flag.", temp_affinity->groupname, temp_affinity->flag);
+        dnxDebug(1, "Hostgroup [%s] uses (%li) flag.", temp_affinity->groupname, temp_affinity->flag);
      }
    }
 
@@ -1016,30 +1037,6 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
 
 //----------------------------------------------------------------------------
 
-/** Check to see if the check should be local.
- * 
- * This function gets called prior to dispatching the check.
- * 
- * @param[in] hostgroups - list of hostgroups the host being checked belongs to.
- *
- * @return True if the check should be run from local Nagios.
- */
-int check_for_bypass(char hostGroupNames[][64], int cols)
-{
-dnxDebug(2, "CFB Enter. Bypass Group is [%s]", &hostGroupNames[0]);
-
-   int i = 0;
-   for(; i < cols; i++) {   
-    dnxDebug(2, "CFB Loop. [%s]", &hostGroupNames[i]);
-      if(strcmp(cfg.bypassHostgroup, (char *)&hostGroupNames[i])==0) {
-          return 1;
-      }
-   }
-   return 0;
-}
-
-
-
 int setAffinity(DnxNodeRequest * pNode)
 {
 
@@ -1150,6 +1147,28 @@ int setAffinity(DnxNodeRequest * pNode)
     return 0;
 }
 
+char * DnxAffinityList_getGroup(char * hostname){
+   host * hostObj = find_host(hostname);
+   dnxDebug(2, "DnxAffinityList_getGroup: dnxClient hostname [%s].", hostObj->name);
+
+
+   // Go through the Nagios hostgroup list
+   extern hostgroup *hostgroup_list;
+   hostgroup * temp_member;
+   char hostGroupNames[32][64]; // = hostgroup->host_name;
+   
+   
+   int i=0;
+   for (temp_member=hostgroup_list; temp_member!=NULL; temp_member=temp_member->next ) {
+      dnxDebug(2, "DnxAffinityList_getGroup: Entering hostgroup ID loop: %s", temp_member->group_name);
+      if ( is_host_member_of_hostgroup(temp_member, hostObj) ) {
+         dnxDebug(2, "DnxAffinityList_getGroup: dnxClient[%s] is a member of %s", hostObj->name, temp_member->group_name);
+         return(temp_member->group_name);
+      } else {
+         dnxDebug(2, "DnxAffinityList_getGroup: dnxClient[%s] is not a member of %s", hostObj->name, temp_member->group_name);
+      }
+   }
+}
 
 
 /*--------------------------------------------------------------------------*/

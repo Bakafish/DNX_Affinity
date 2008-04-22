@@ -74,5 +74,19 @@ int dnxRegistrarCreate(unsigned queuesz, DnxChannel * dispchan,
  */
 void dnxRegistrarDestroy(DnxRegistrar * reg);
 
+/** Create an Affinity linked list item.
+*
+* Adds an affinity struct and returns the new item.
+*
+* @param[in] p - the affinity list to add item to.
+* @param[in] groupname - the name of the affinity group.
+* @param[in] flag - the binary bitmask representation for the affinity group.
+*
+* @return Affinity object on success, NULL on failure.
+*/
+DnxAffinityList * DnxAffinityList_add(DnxAffinityList *p, char * groupname, unsigned int flag);
+long int DnxAffinityList_getFlag(DnxAffinityList *affinity, char * groupname);
+char * DnxAffinityList_getGroup(char * hostname);
+
 #endif   /* _DNXREGISTRAR_H_ */
 
