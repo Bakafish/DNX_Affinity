@@ -793,40 +793,41 @@ static int dnxServerInit(void)
    extern hostgroup *hostgroup_list;
    hostgroup * temp_hostgroup;
    // Create affinity linked list
-   unsigned int flag = 0x01;
+   unsigned int flag = 0x02;
    for (temp_hostgroup=hostgroup_list; temp_hostgroup!=NULL; temp_hostgroup=temp_hostgroup->next) 
    {
      dnxDebug(1, "dnxServerInit: Entering hostgroup init loop: %s", temp_hostgroup->group_name);
      if(strcmp(cfg.bypassHostgroup, temp_hostgroup->group_name)==0) {
         // This is the bypass group and should be assigned the NULL flag
-        addDnxAffinity(affinity, temp_hostgroup->group_name, 0);
-        dnxDebug(1, "(bypassHostgroup match) Service for %s hostgroup will execute locally.", 
+        addDnxAffinity(affinity, temp_hostgroup->group_name, 0x01);
+        dnxDebug(1, "dnxServerInit: (bypassHostgroup match) Service for %s hostgroup will execute locally.", 
         temp_hostgroup->group_name);
      } else {
         addDnxAffinity(affinity, temp_hostgroup->group_name, flag);
-        dnxDebug(1, "Hostgroup [%s] uses (%li) flag.", temp_hostgroup->group_name, flag);
+        dnxDebug(1, "dnxServerInit: Hostgroup [%s] uses (%li) flag.", temp_hostgroup->group_name, flag);
         flag <<= 1;
      }
    }
    // Create initial host list
    extern host *host_list;
    host * temp_host;
-   temp_aff = affinity;
    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
    {
+      dnxDebug(1, "Adding host [%s] to hostAffinity cache.", temp_host->name);
       flag = 0;
+      temp_aff = affinity;
       while (temp_aff != NULL) {
          // Recurse through the affinity list
-         dnxDebug(1, "getDnxAffinity: Recursing affinity list - [%s] = (%li)", 
+         dnxDebug(1, "dnxServerInit: Recursing affinity list - [%s] = (%li)", 
          temp_aff->name, temp_aff->flag);
          // Is host in this group?
          hostgroupObj = find_hostgroup(temp_aff->name);
          if(is_host_member_of_hostgroup(hostgroupObj, temp_host))
          {
             flag = flag + temp_aff->flag;
-            dnxDebug(2, "getDnxAffinity: matches [%s]", temp_aff->name);
+            dnxDebug(2, "dnxServerInit: matches [%s]", temp_aff->name);
          } else {
-            dnxDebug(1, "getDnxAffinity: no match with [%s]", temp_aff->name);
+            dnxDebug(1, "dnxServerInit: no match with [%s]", temp_aff->name);
          }
          temp_aff = temp_aff->next;
       }
@@ -1044,177 +1045,6 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
 
 //----------------------------------------------------------------------------
 
-// int setAffinity(DnxNodeRequest * pNode)
-// {
-// 
-//    
-//    // Get the hostname of the dnxClient
-// //   char * clientHostname;
-//    
-// //   strcpy(clientHostname, pNode->hostname);
-// 
-//    dnxDebug(2, "setAffinity: dnxClient hostname [%s].", pNode->hostname);
-//    // Find out what hostgroups it is in
-// //   char foo [] = "dnx-01.forschooner.net";
-//    char * tempName;
-//    strcpy(tempName, pNode->hostname);
-//    host * hostObj = find_host(tempName);
-//    dnxDebug(2, "setAffinity: dnxClient hostname [%s].", hostObj->name);
-// 
-// 
-//    // Go through the Nagios hostgroup list
-//    extern hostgroup *hostgroup_list;
-//    hostgroup * temp_member;
-//    DnxAffinityList * temp_affinity;   
-//    
-//    int i=0;
-//    for (temp_member=hostgroup_list; temp_member!=NULL; temp_member=temp_member->next ) {
-//       // If we are a hostgroup member, look up flag in affinity list and
-//       // set that bit for this dnxClient
-//       dnxDebug(2, "setAffinity: Entering hostgroup ID loop: %s", temp_member->group_name);
-//       if ( is_host_member_of_hostgroup(temp_member, hostObj) ) {
-//          dnxDebug(2, "setAffinity: dnxClient[%s] is a member of %s", hostObj->name, temp_member->group_name);
-//          for(temp_affinity = affinity; temp_affinity != NULL ;temp_affinity = temp_affinity->next)
-//          {
-//             if(strcmp(temp_affinity->name, temp_member->group_name) == 0)
-//             {
-//                pNode->affinity = pNode->affinity || temp_affinity->flag;
-//                dnxDebug(2, "setAffinity: dnxClient [%s] now has (%lu) affinity.",
-//                   pNode->hostname, pNode->affinity);
-//             }
-//          }   
-//       } else {
-//          dnxDebug(2, "setAffinity: dnxClient[%s] is not a member of %s", hostObj->name, temp_member->group_name);
-//       }
-//    }
-// 
-// //    dnxDebug(4, "ehSvcCheck: [%s] job is part of [%s] host group.",
-// //          hostObj->name, &hostGroupNames[0]);
-//    
-//    
-//    
-// // Create a bitmask for it's hostgroups
-// //    char test[] = "dnx-01.forschooner.net";
-// //    if(strcmp(clientHostname, test)==0) {
-// //      pNode->affinity = 0x01;
-// //    } else {
-// //      pNode->affinity = 0x02;
-// //    }
-// //    return 0;
-// 
-// 
-// 
-// 
-//    // Get the IP address of the dnxClient
-// //    struct sockaddr_in src_addr;
-// //    in_addr_t addr;
-// //    memcpy(&src_addr, pNode->address, sizeof(src_addr));
-// //    addr = ntohl(src_addr.sin_addr.s_addr);
-// //    char ip_address [18];
-// //    
-// //    sprintf(ip_address, "%u.%u.%u.%u",
-// //       (unsigned)((addr >> 24) & 0xff),
-// //       (unsigned)((addr >> 16) & 0xff),
-// //       (unsigned)((addr >>  8) & 0xff),
-// //       (unsigned)( addr        & 0xff));
-//    
-// //   dnxDebug(2, "setAffinity: IP address [%s]", ip_address);
-//    
-//    // Find it's host object
-// //    extern host *host_list;
-// //    host * temp_host;
-// //    char hostNames[10][64]; // = host->name;
-// //    // Addresses are non-unique, it is possible for several hosts to share the same address
-// //    // therefore there is no built in get_host_by_addr function. 
-// //    int i=0;
-// //    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) {
-// //       dnxDebug(4, "setAffinity: Entering host ID loop: %s", temp_host->name);
-// //       if ( strcmp(temp_host->address, ip_address)==0 ) {
-// //         //we have a match, add this dnxClient queue
-// // //       strcpy(&hostNames[i++],temp_host->group_name);
-// //         dnxDebug(4, "setAffinity: Match [%s].", temp_host->name);
-// //       }
-// //    }
-// //    
-//    
-//    // Find out what hostgroups it is in
-//    
-//    
-//    
-//    // Create a bitmask for it's hostgroups
-// //    char test[] = "192.168.223.210";
-// //    if(strcmp(ip_address, test)==0) {
-// //      pNode->affinity = 0x01;
-// //    } else {
-// //      pNode->affinity = 0x02;
-// //    }
-//     return 0;
-// }
-
-// char * DnxAffinityList_getGroup(char * hostname){
-//    host * hostObj = find_host(hostname);
-//    dnxDebug(2, "DnxAffinityList_getGroup: dnxClient hostname [%s].", hostObj->name);
-// 
-// 
-//    // Go through the Nagios hostgroup list
-//    extern hostgroup *hostgroup_list;
-//    hostgroup * temp_member;   
-//    
-//    int i=0;
-//    for (temp_member=hostgroup_list; temp_member!=NULL; temp_member=temp_member->next ) {
-//       dnxDebug(4, "DnxAffinityList_getGroup: Entering hostgroup ID loop: %s", temp_member->group_name);
-//       if ( is_host_member_of_hostgroup(temp_member, hostObj) ) {
-//          dnxDebug(2, "DnxAffinityList_getGroup: dnxClient[%s] is a member of %s", hostObj->name, temp_member->group_name);
-//          return(temp_member->group_name);
-//       } else {
-//          dnxDebug(4, "DnxAffinityList_getGroup: dnxClient[%s] is not a member of %s", hostObj->name, temp_member->group_name);
-//       }
-//    }
-// }
-
-// long int DnxAffinityList_getFlag(DnxAffinityList *aff, char * name)
-// {
-//    dnxDebug(1, "DnxAffinityList_getFlag: enter");
-//    host * hostObj = find_host(name); // If there is no host object than this is the affinity list
-//                                      // otherwise it must be a host or dnxClient
-//    extern hostgroup *hostgroup_list;
-//    hostgroup * temp_member;   
-//    long int flag = 0;
-//    short int match = 0;
-//    DnxAffinityList * temp_aff;
-//    temp_aff = aff;
-//    while (temp_aff != NULL) {
-//       dnxDebug(1, "DnxAffinityList_getFlag: While loop - name [%s]",
-//       temp_aff->name);
-//       if (temp_aff->name == NULL)
-//       {
-//          dnxDebug(1, "DnxAffinityList_getFlag: End of the line");
-//          temp_aff = NULL;
-//       } else {
-//          if (strcmp(temp_aff->name, name) == 0) {
-//             dnxDebug(2, "DnxAffinityList_getFlag: matches [%s]", name);
-//             flag = flag + temp_aff->flag;
-//             match++;
-//          } else {
-//             dnxDebug(1, "DnxAffinityList_getFlag: no match with [%s]", name);
-//          }
-//          temp_aff = temp_aff->next;
-//       }
-//    }
-//    if(!match)
-//    {
-//       // First time we've seen this host/dnxClient
-//       dnxDebug(1, "DnxAffinityList_getFlag: No Match");
-//       char * host_group;
-//       host_group = DnxAffinityList_getGroup(name);
-//       dnxDebug(1, "DnxAffinityList_getFlag: Hostgroup (%s) is [%s]", affinity->name, host_group);
-//       flag = DnxAffinityList_getFlag(affinity, host_group);
-//       addDnxAffinity(aff, name, flag);
-//    }
-//    return(flag);
-// }
-
-
 unsigned int getDnxAffinity(char * name)
 {
    dnxDebug(1, "getDnxAffinity: enter");
@@ -1233,11 +1063,11 @@ unsigned int getDnxAffinity(char * name)
       temp_aff = hostAffinity;
    }
    while (temp_aff != NULL) {
-      dnxDebug(1, "getDnxAffinity: Checking cache for [%s]", name);
+      dnxDebug(3, "getDnxAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0)
       {
          // We have a cached copy so return
-         dnxDebug(1, "getDnxAffinity: Found [%s] in cache.", name);
+         dnxDebug(1, "getDnxAffinity: Found [%s] in cache with (%u) flags.", name, temp_aff->flag);
          return(temp_aff->flag);
       }
       temp_aff = temp_aff->next;
