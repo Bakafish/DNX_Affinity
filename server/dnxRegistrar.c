@@ -327,20 +327,21 @@ void dnxRegistrarDestroy(DnxRegistrar * reg)
    xfree(ireg);
 }
 
-DnxAffinityList* DnxAffinityList_add(DnxAffinityList *p, char * name, unsigned int flag) 
+DnxAffinityList* addDnxAffinity(DnxAffinityList *p, char * name, unsigned int flag) 
 {
-    if (p->name == NULL) 
+    if (p->next == p) 
     {
        p->name = name;
        p->flag = flag;
-       dnxDebug(4, "DnxAffinityList_add: Added [%s]", p->name);    
+       p->next = NULL;
+       dnxDebug(4, "addDnxAffinity: Added [%s]", p->name);    
     } else {
        DnxAffinityList *new_item = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
        new_item->name = name;
        new_item->flag = flag;
        new_item->next = p->next;
        p->next = new_item;
-       dnxDebug(4, "DnxAffinityList_add: Added [%s] to [%s]", new_item->name, p->name);    
+       dnxDebug(4, "addDnxAffinity: Added [%s] to [%s]", new_item->name, p->name);    
     }
     return p;
 }
