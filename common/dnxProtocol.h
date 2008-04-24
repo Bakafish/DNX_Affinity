@@ -205,7 +205,7 @@ typedef struct DnxNodeRequest
    DnxXID xid;                      //!< Worker node transaction ID.
    DnxReqType reqType;              //!< Request type.
    unsigned int jobCap;             //!< Job capacity.
-   double affinity;                 //!< Affinity groups bitmask.
+   unsigned long long affinity;     //!< Affinity groups bitmask.
    unsigned int ttl;                //!< Request Time-To-Live (in seconds).
    time_t expires;                  //!< Job expiration time (not transmitted).
    char address[DNX_MAX_ADDRESS];   //!< Source address.
