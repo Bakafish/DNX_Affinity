@@ -1023,27 +1023,28 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
 
 unsigned long long getDnxAffinity(char * name)
 {
-   dnxDebug(1, "getDnxAffinity: enter");
+   dnxDebug(4, "getDnxAffinity: entering with [%s]", name);
    extern hostgroup *hostgroup_list;
    hostgroup * hostgroupObj;
    unsigned long long flag = 0;
    short int match = 0;
    DnxAffinityList * temp_aff;
-   host * hostObj = find_host(name); // If there is no host object than this is the affinity list
-   if(!hostObj)                      // otherwise it must be a host or dnxClient
+   temp_aff = hostAffinity;          // We are probably looking for a host or dnxClient
+   host * hostObj = find_host(name); 
+   if(!hostObj)                      // If there is no host object
    {
-      // We must be looking for a specific affinity group flag
-      temp_aff = affinity;
-   } else {
-      // We are looking for a host/dnxClient so see if we have a cached copy first
-      temp_aff = hostAffinity;
+      // We might be looking for a specific affinity group flag otherwise it is
+      // a dynamically registered dnxClient that isn't in the Nagios hostlist
+      hostgroupObj = find_hostgroup(name);
+      if(hostgroupObj) 
+         temp_aff = affinity;
    }
    while (temp_aff != NULL) {
-      dnxDebug(3, "getDnxAffinity: Checking cache for [%s]", name);
+      dnxDebug(4, "getDnxAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0)
       {
          // We have a cached copy so return
-         dnxDebug(1, "getDnxAffinity: Found [%s] in cache with (%u) flags.", name, temp_aff->flag);
+         dnxDebug(4, "getDnxAffinity: Found [%s] in cache with (%qu) flags.", name, temp_aff->flag);
          return(temp_aff->flag);
       }
       temp_aff = temp_aff->next;
@@ -1052,42 +1053,39 @@ unsigned long long getDnxAffinity(char * name)
    temp_aff = affinity;
    while (temp_aff != NULL) {
       // Recurse through the affinity list
-      dnxDebug(1, "getDnxAffinity: Recursing affinity list - [%s] = (%li)", 
+      dnxDebug(4, "getDnxAffinity: Recursing affinity list - [%s] = (%qu)", 
          temp_aff->name, temp_aff->flag);
-      if (temp_aff->name == NULL)
-      {
-         dnxDebug(1, "getDnxAffinity: This should not happen, fix linked list!");
-         temp_aff = NULL;
-      } else {
          // Is host in this group?
          hostgroupObj = find_hostgroup(temp_aff->name);
          if(is_host_member_of_hostgroup(hostgroupObj, hostObj))
          {
-// See if it is in the local check group
-//             if (temp_aff->flag == 0)
-//             {
-//                dnxDebug(1, "getDnxAffinity: Local check group [%s]", temp_aff->name);
-//                return 0;
-//             }
             flag = flag + temp_aff->flag;
             match++;
-            dnxDebug(2, "getDnxAffinity: matches [%s]", temp_aff->name);
+            dnxDebug(4, "getDnxAffinity: matches [%s]", temp_aff->name);
          } else {
-            dnxDebug(1, "getDnxAffinity: no match with [%s]", temp_aff->name);
+            dnxDebug(4, "getDnxAffinity: no match with [%s]", temp_aff->name);
          }
          temp_aff = temp_aff->next;
-      }
+//       }
    }
    if(match)
    {
       // Push this into the host cache
       addDnxAffinity(hostAffinity, name, flag);
-      dnxDebug(1, "getDnxAffinity: Adding [%s] to host cache with (%li) flags.",
+      dnxDebug(1, "getDnxAffinity: Adding [%s] dnxClient to host cache with (%qu) flags.",
+         name, flag);
+      return(flag);
+   } else {
+      // This is a dnxClient that is unaffiliated with a hostgroup
+      // the default behavior should be that it can handle all requests
+      // for backwards compatibility. This is dangerous though as a rogue or
+      // misconfigured client could steal requests that it can't service.
+      flag = (unsigned long long *)(flag-2);
+      addDnxAffinity(hostAffinity, name, flag);
+      dnxDebug(1, "getDnxAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
       return(flag);
    }
-   dnxDebug(1, "getDnxAffinity: Something bad happened.");
-   return 0;
 }
 
 /*--------------------------------------------------------------------------*/

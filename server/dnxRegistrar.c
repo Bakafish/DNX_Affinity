@@ -115,12 +115,12 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    // compute expiration time of this request
    pReq = *ppMsg;
    pReq->expires = now + pReq->ttl;
-
+   // Store threads affinity flags in struct
+   pReq->affinity = getDnxAffinity(pReq->hostname);
    // locate existing node: update expiration time, or add to the queue
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
       pReq->expires = (*ppMsg)->expires;
-//      setAffinity(pReq);
       dnxDebug(2, 
             "dnxRegistrar[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
             tid, pReq->xid.objSerial, pReq->xid.objSlot, 
@@ -128,8 +128,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
-      // This is the first time we've seen this machine, discover affinity
-//      setAffinity(pReq);
       
       *ppMsg = 0;    // we're keeping this message; return NULL
       dnxDebug(2, 
@@ -327,7 +325,7 @@ void dnxRegistrarDestroy(DnxRegistrar * reg)
    xfree(ireg);
 }
 
-DnxAffinityList* addDnxAffinity(DnxAffinityList *p, char * name, unsigned int flag) 
+DnxAffinityList* addDnxAffinity(DnxAffinityList *p, char * name, unsigned long long flag) 
 {
     if (p->next == p) 
     {
