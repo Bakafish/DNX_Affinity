@@ -79,12 +79,12 @@ void dnxRegistrarDestroy(DnxRegistrar * reg);
 * Adds an affinity struct and returns the new item.
 *
 * @param[in] p - the affinity list to add item to.
-* @param[in] groupname - the name of the affinity group.
+* @param[in] name - the name of the affinity group or host.
 * @param[in] flag - the binary bitmask representation for the affinity group.
 *
 * @return Affinity object on success, NULL on failure.
 */
-DnxAffinityList * addDnxAffinity(DnxAffinityList *p, char * groupname, unsigned int flag);
+DnxAffinityList * addDnxAffinity(DnxAffinityList *p, char * name, unsigned int flag);
 
 #endif   /* _DNXREGISTRAR_H_ */
 

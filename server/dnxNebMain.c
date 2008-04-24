@@ -600,39 +600,15 @@ static int ehSvcCheck(int event_type, void * data)
    }
    
    // use the affinity bitmask to dispatch the check
-   unsigned int host_flags = getDnxAffinity(hostObj->name);
+   unsigned long long host_flags = getDnxAffinity(hostObj->name);
    dnxDebug(1, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, host_flags);
 
-
-//    char * foo; 
-//    foo = DnxAffinityList_getGroup(svcdata->host_name);
-//    long int bar;
-
-   
-//    bar = DnxAffinityList_getFlag(affinity, foo);
-//    
-//    dnxDebug(1, "Host [%s] is in group [%s](%li)", svcdata->host_name, foo, bar);
-
-   // Aggregate the hostgroups that this host belongs to for affinity
-//    int i=0;
-//    for (temp_member=hostgroup_list; temp_member!=NULL; temp_member=temp_member->next ) {
-//       dnxDebug(4, "ehSvcCheck: Entering hostgroup ID loop: %s", temp_member->group_name);
-//       if ( is_host_member_of_hostgroup(temp_member, hostObj) ) {
-//          // See if this is the bypass hostgroup
-//          if(strcmp(cfg.bypassHostgroup, temp_member->group_name)==0) {
-//             dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
-//                hostObj->name, svcdata->command_line);
-//             return OK;     // tell nagios execute locally
-//          } else {
-//             //we have a match, add this dnxClient queue
-//             strcpy(&hostGroupNames[i++],temp_member->group_name);
-//             dnxDebug(4, "ehSvcCheck: Match [%s].", &hostGroupNames[i-1]);
-//          }
-//       }
-//    }
-// 
-//    dnxDebug(4, "ehSvcCheck: [%s] job is part of [%s] host group.",
-//          hostObj->name, &hostGroupNames[0]);
+   if (cfg.bypassHostgroup && (host_flags & 1)) // Affinity bypass group is always the LSB
+   {
+      dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
+         hostObj->name, svcdata->command_line);
+      return OK;     // tell nagios execute locally
+   }
 
    dnxDebug(4, "ehSvcCheck: Received Job [%lu] at %lu (%lu).",
          serial, (unsigned long)time(0), 
@@ -1045,12 +1021,12 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
 
 //----------------------------------------------------------------------------
 
-unsigned int getDnxAffinity(char * name)
+unsigned long long getDnxAffinity(char * name)
 {
    dnxDebug(1, "getDnxAffinity: enter");
    extern hostgroup *hostgroup_list;
    hostgroup * hostgroupObj;
-   unsigned int flag = 0;
+   unsigned long long flag = 0;
    short int match = 0;
    DnxAffinityList * temp_aff;
    host * hostObj = find_host(name); // If there is no host object than this is the affinity list
