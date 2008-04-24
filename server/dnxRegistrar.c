@@ -344,13 +344,6 @@ DnxAffinityList* addDnxAffinity(DnxAffinityList *p, char * name, unsigned long l
     return p;
 }
 
-// int DnxAffinityList_get(DnxAffinityList *p, char * name) 
-// {
-//     // see if the item exists
-// }
-
-
-
 /*--------------------------------------------------------------------------
                                  TEST MAIN
 

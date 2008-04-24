@@ -652,18 +652,6 @@ static int ehSvcCheck(int event_type, void * data)
       xfree(jdp);
       return OK;     // tell nagios execute locally
    }
-
-
-   // Get the IP address of the dnxClient
-   struct sockaddr_in src_addr;
-   in_addr_t addr;
-   memcpy(&src_addr, pNode->address, sizeof(src_addr));
-   addr = ntohl(src_addr.sin_addr.s_addr);
-   dnxDebug(2, "ehSvcCheck: IP address [%u.%u.%u.%u]",
-      (unsigned)((addr >> 24) & 0xff),
-      (unsigned)((addr >> 16) & 0xff),
-      (unsigned)((addr >>  8) & 0xff),
-      (unsigned)( addr        & 0xff));
       
    serial++;                           // bump serial number
 
@@ -1054,25 +1042,24 @@ unsigned long long getDnxAffinity(char * name)
    while (temp_aff != NULL) {
       // Recurse through the affinity list
       dnxDebug(4, "getDnxAffinity: Recursing affinity list - [%s] = (%qu)", 
-         temp_aff->name, temp_aff->flag);
-         // Is host in this group?
-         hostgroupObj = find_hostgroup(temp_aff->name);
-         if(is_host_member_of_hostgroup(hostgroupObj, hostObj))
-         {
-            flag = flag + temp_aff->flag;
-            match++;
-            dnxDebug(4, "getDnxAffinity: matches [%s]", temp_aff->name);
-         } else {
-            dnxDebug(4, "getDnxAffinity: no match with [%s]", temp_aff->name);
-         }
-         temp_aff = temp_aff->next;
-//       }
+      temp_aff->name, temp_aff->flag);
+      // Is host in this group?
+      hostgroupObj = find_hostgroup(temp_aff->name);
+      if(is_host_member_of_hostgroup(hostgroupObj, hostObj))
+      {
+         flag = flag + temp_aff->flag;
+         match++;
+         dnxDebug(4, "getDnxAffinity: matches [%s]", temp_aff->name);
+      } else {
+         dnxDebug(4, "getDnxAffinity: no match with [%s]", temp_aff->name);
+      }
+      temp_aff = temp_aff->next;
    }
    if(match)
    {
       // Push this into the host cache
       addDnxAffinity(hostAffinity, name, flag);
-      dnxDebug(1, "getDnxAffinity: Adding [%s] dnxClient to host cache with (%qu) flags.",
+      dnxDebug(4, "getDnxAffinity: Adding [%s] dnxClient to host cache with (%qu) flags.",
          name, flag);
       return(flag);
    } else {
@@ -1080,9 +1067,9 @@ unsigned long long getDnxAffinity(char * name)
       // the default behavior should be that it can handle all requests
       // for backwards compatibility. This is dangerous though as a rogue or
       // misconfigured client could steal requests that it can't service.
-      flag = (unsigned long long *)(flag-2);
+      flag = (unsigned long long *)(flag-2); // Match all affinity but local(LSB)
       addDnxAffinity(hostAffinity, name, flag);
-      dnxDebug(1, "getDnxAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
+      dnxDebug(4, "getDnxAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
       return(flag);
    }
