@@ -73,6 +73,17 @@
 
 #localCheckPattern = .*local.*
 
+# OPTIONAL: Local service check hostgroup.
+# This allows you to specify a Nagios hostgroup which will be used to 
+# disqualify matching service checks as candidates for remote execution by 
+# DNX. Use this to make sure your local host checks stay local. There is no
+# default value. If this parameter is not specified, then *ALL* Nagios checks 
+# will be handled by DNX. A host in this group will always be tested locally
+# even if it is in other hostgroups, so if you want a mixture of remote and 
+# local checks for a specific host you should create two different hostnames.
+
+#bypassHostgroup = Local Checks
+
 # OPTIONAL: Plugin synchronization script.
 # If specified, DNX will execute the external script specified in this
 # directive *before* Nagios begins scheduling service checks. This is 

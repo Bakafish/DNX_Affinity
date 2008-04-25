@@ -191,3 +191,12 @@ channelCollector = udp://10.1.1.1:12481
 
 #runPath = @sysrundir@
 
+# OPTIONAL: The DNX daemon hostname.
+# Set this parameter to override the hostname of the dnxClient. If this is not
+# set the hostname is derived from standard system calls and should be accurate.
+# The hostname is only used for establishing affinity to hostgroups in the
+# Nagios configuration. The dnxServer will only send checks from hosts that are 
+# in the same hostgroup with this dnxClient. The default value of this option 
+# is @hostname@
+
+#hostname = @hostname@
