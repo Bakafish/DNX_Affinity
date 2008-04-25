@@ -440,24 +440,20 @@ static void * dnxWorker(void * data)
 
       // request a job, and then wait for a job to come in...
       if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
-      {
          dnxLog("Worker[%lx]: Error sending node request: %s.", 
                tid, dnxErrorString(ret));
-
-         // since we won't be sleeping while waiting for a response...
-         dnxCancelableSleep(iwlm->cfg.reqTimeout * 1000);
-      }
       else
       {
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);
          iwlm->reqsent++;
          DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
-
-         if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
-               iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
-            dnxLog("Worker[%lx]: Error receiving job: %s.", 
-                  tid, dnxErrorString(ret));
       }
+
+      // wait for job, even if request was never sent
+      if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
+            iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
+         dnxLog("Worker[%lx]: Error receiving job: %s.", 
+               tid, dnxErrorString(ret));
 
       pthread_testcancel();
 
