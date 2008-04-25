@@ -48,10 +48,12 @@ typedef struct { int unused; } DnxRegistrar;
  * @param[in] reg - the registrar from which a node request should be returned.
  * @param[out] ppNode - the address of storage in which to return the located
  *    request node.
+ * @param[in] flag - the bitmask used to get an appropriate thread to service
+ *    an affined check
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode);
+int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned long long flag);
 
 /** Create a new registrar object.
  * 

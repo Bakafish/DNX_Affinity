@@ -78,9 +78,10 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    int ret;
 
    dnxDebug(2, 
-         "dnxDispatcher[%lx]: Dispatching job [%lu,%lu] (%s) to node %u.%u.%u.%u.",
+         "dnxDispatcher[%lx]: Dispatching job [%lu,%lu] (%s) to host [%s] at node %u.%u.%u.%u. flags(%qu)",
          tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
-         sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5]);
+         pNode->hostname, sin->sa_data[2], sin->sa_data[3], sin->sa_data[4],
+         sin->sa_data[5], pNode->affinity);
 
    memset(&job, 0, sizeof job);
    job.xid      = pSvcReq->xid;

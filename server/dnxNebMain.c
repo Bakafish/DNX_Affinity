@@ -614,7 +614,7 @@ static int ehSvcCheck(int event_type, void * data)
          serial, (unsigned long)time(0), 
          (unsigned long)svcdata->start_time.tv_sec);
 
-   if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
+   if ((ret = dnxGetNodeRequest(registrar, &pNode, host_flags)) != DNX_OK)
    {
       dnxDebug(1, "ehSvcCheck: No worker nodes requests available: %s.", 
             dnxErrorString(ret));

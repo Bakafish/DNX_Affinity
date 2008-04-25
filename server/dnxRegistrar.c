@@ -235,7 +235,7 @@ static void * dnxRegistrar(void * data)
                                  INTERFACE
   --------------------------------------------------------------------------*/
 
-int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
+int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned long long flag)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)reg;
    int ret, discard_count = 0;
@@ -247,19 +247,31 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    {
       time_t now = time(0);
 
-      // verify that this request's Time-To-Live (TTL) has not expired
+      // verify that this request's Time-To-Live (TTL) has not expired and
+      // that this thread has affinity
       if (node->expires > now)
-         break;
-
-      dnxDebug(3, 
+      {
+         // make sure that this thread has affinity
+         if (node->affinity & flag)
+         {
+            dnxDebug(4, "dnxRegisterNode: [%s] has affinity.",
+               node->hostname);
+            break;
+         } else {
+            dnxDebug(4, "dnxRegisterNode: [%s] can not service request.",
+               node->hostname);
+         }
+      } else {  
+         dnxDebug(3, 
             "dnxRegisterNode: Expired req [%lu,%lu] at %u; expired at %u.", 
             node->xid.objSerial, node->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(node->expires % 1000));
 
-      discard_count++;
+         discard_count++;
 
-      xfree(node); 
-      node = 0;
+         xfree(node); 
+         node = 0;
+      }
    }
 
    if (discard_count > 0)
