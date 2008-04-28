@@ -114,9 +114,13 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
 
    // compute expiration time of this request
    pReq = *ppMsg;
+//    char hostname[253];
+//    strcpy(&hostname, pReq->hostname);
+//    strcpy(hostname, *pReq->hostname);
    pReq->expires = now + pReq->ttl;
+// dnxDebug(1, "dnxRegistrar: Hostname [%s][%s]", pReq->hostname, hostname);
    // Store threads affinity flags in struct
-   pReq->affinity = getDnxAffinity(pReq->hostname);
+   pReq->affinity = getDnxAffinity(*(char **)pReq->hostname);
    // locate existing node: update expiration time, or add to the queue
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
@@ -132,7 +136,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
       *ppMsg = 0;    // we're keeping this message; return NULL
       dnxDebug(2, 
             "dnxRegistrar[%lx]: Added req for [%s] [%lu,%lu] at %u; expires at %u.", 
-            tid, pReq->hostname, pReq->xid.objSerial, pReq->xid.objSlot, 
+            tid, *(char **)pReq->hostname, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
    else

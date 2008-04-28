@@ -373,7 +373,7 @@ static int growThreadPool(iDnxWlm * iwlm)
    // fill as many empty slots as we can or need to
    for (i = iwlm->threads, add = growsz; i < iwlm->poolsz && add > 0; i++, add--)
    {
-     if ((ret = workerCreate(iwlm, &iwlm->pool[i])) != 0)
+      if ((ret = workerCreate(iwlm, &iwlm->pool[i])) != 0)
          break;
       iwlm->threads++;
       iwlm->tcreated++;
@@ -447,10 +447,10 @@ static void * dnxWorker(void * data)
       }
 
       // wait for job, even if request was never sent
-         if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
-               iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
-            dnxLog("Worker[%lx]: Error receiving job: %s.", 
-                  tid, dnxErrorString(ret));
+      if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
+         iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
+      dnxLog("Worker[%lx]: Error receiving job: %s.", 
+         tid, dnxErrorString(ret));
 
       pthread_testcancel();
 
@@ -728,8 +728,8 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
             // cache hostname
             strcpy(iwlm->myhostname, machineName);
          } else {
-            dnxLog("dnxWlmCreate: Unable to obtain Hostname [%s?], please set hostname in config.",
-            machineName);
+            dnxLog("dnxWlmCreate: Unable to obtain Hostname [%s?],"
+               "please set hostname in config.", machineName);
             sprintf( machineName, "localhost");
             strcpy(iwlm->myhostname, machineName);
          }
@@ -758,7 +758,7 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
       int ret;
       if ((ret = growThreadPool(iwlm)) != DNX_OK)
       {
-        if (iwlm->threads)
+         if (iwlm->threads)
             dnxLog("WLM: Error creating SOME worker threads: %s; "
                   "continuing with smaller initial pool.", dnxErrorString(ret));
          else

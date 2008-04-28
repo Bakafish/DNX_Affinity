@@ -120,13 +120,13 @@ int dnxSendNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * addre
    
    // create the XML message
    dnxXmlOpen (&xbuf, "NodeRequest");
-   dnxXmlAdd  (&xbuf, "XID",     DNX_XML_XID,  &pReg->xid);
-   dnxXmlAdd  (&xbuf, "GUID",    DNX_XML_XID,  &pReg->xid);    // old format - for bc
-   dnxXmlAdd  (&xbuf, "ReqType", DNX_XML_INT,  &pReg->reqType);
-   dnxXmlAdd  (&xbuf, "JobCap",  DNX_XML_UINT, &pReg->jobCap);
-   dnxXmlAdd  (&xbuf, "Capacity",DNX_XML_UINT, &pReg->jobCap); // old format - for bc
-   dnxXmlAdd  (&xbuf, "TTL",     DNX_XML_UINT, &pReg->ttl);
-   dnxXmlAdd  (&xbuf, "Hostname",DNX_XML_STR,  pReg->hostname);   
+   dnxXmlAdd  (&xbuf, "XID",      DNX_XML_XID,  &pReg->xid);
+   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pReg->xid);    // old format - for bc
+   dnxXmlAdd  (&xbuf, "ReqType",  DNX_XML_INT,  &pReg->reqType);
+   dnxXmlAdd  (&xbuf, "JobCap",   DNX_XML_UINT, &pReg->jobCap);
+   dnxXmlAdd  (&xbuf, "Capacity", DNX_XML_UINT, &pReg->jobCap); // old format - for bc
+   dnxXmlAdd  (&xbuf, "TTL",      DNX_XML_UINT, &pReg->ttl);
+   dnxXmlAdd  (&xbuf, "Hostname", DNX_XML_STR,  pReg->hostname);   
    dnxXmlClose(&xbuf);
 
    dnxDebug(3, "dnxSendNodeRequest: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);

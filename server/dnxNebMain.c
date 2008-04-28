@@ -1067,7 +1067,7 @@ unsigned long long getDnxAffinity(char * name)
       // the default behavior should be that it can handle all requests
       // for backwards compatibility. This is dangerous though as a rogue or
       // misconfigured client could steal requests that it can't service.
-      flag = (unsigned long long *)(flag-2); // Match all affinity but local(LSB)
+      flag = (unsigned long long *)(-2); // Match all affinity but local(LSB)
       addDnxAffinity(hostAffinity, name, flag);
       dnxDebug(4, "getDnxAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);

@@ -210,6 +210,7 @@ typedef struct DnxNodeRequest
    time_t expires;                  //!< Job expiration time (not transmitted).
    char address[DNX_MAX_ADDRESS];   //!< Source address.
    char hostname[MAX_HOSTNAME];     //!< Hostname from client config.
+   char * hn;
 } DnxNodeRequest;
 
 /** Send job wire structure. */
