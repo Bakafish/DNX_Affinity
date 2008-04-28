@@ -209,7 +209,7 @@ typedef struct DnxNodeRequest
    unsigned int ttl;                //!< Request Time-To-Live (in seconds).
    time_t expires;                  //!< Job expiration time (not transmitted).
    char address[DNX_MAX_ADDRESS];   //!< Source address.
-   char * hostname;                 //!< Hostname from client config.
+   char hostname[MAX_HOSTNAME];     //!< Hostname from client config.
 } DnxNodeRequest;
 
 /** Send job wire structure. */

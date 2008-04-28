@@ -373,7 +373,7 @@ static int growThreadPool(iDnxWlm * iwlm)
    // fill as many empty slots as we can or need to
    for (i = iwlm->threads, add = growsz; i < iwlm->poolsz && add > 0; i++, add--)
    {
-      if ((ret = workerCreate(iwlm, &iwlm->pool[i])) != 0)
+     if ((ret = workerCreate(iwlm, &iwlm->pool[i])) != 0)
          break;
       iwlm->threads++;
       iwlm->tcreated++;
@@ -433,11 +433,8 @@ static void * dnxWorker(void * data)
       msg.reqType = DNX_REQ_REGISTER;
       msg.jobCap = 1;
       msg.ttl = iwlm->cfg.reqTimeout - iwlm->cfg.ttlBackoff;
+      dnxDebug(4, "dnxWorker: Hostname [%s] (%s)", iwlm->myhostname, msg.hostname);
       strcpy(msg.hostname, iwlm->myhostname);
-//      msg.hostname = iwlm->cfg.hostname;
-//       char tmp_hostname [253] = "dnx-02.forschooner.net";
-//       strcpy(msg.hostname, tmp_hostname);
-
       // request a job, and then wait for a job to come in...
       if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
          dnxLog("Worker[%lx]: Error sending node request: %s.", 
@@ -450,10 +447,10 @@ static void * dnxWorker(void * data)
       }
 
       // wait for job, even if request was never sent
-      if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
-            iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
-         dnxLog("Worker[%lx]: Error receiving job: %s.", 
-               tid, dnxErrorString(ret));
+         if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
+               iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
+            dnxLog("Worker[%lx]: Error receiving job: %s.", 
+                  tid, dnxErrorString(ret));
 
       pthread_testcancel();
 
@@ -683,8 +680,6 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
 
    memset(iwlm, 0, sizeof *iwlm);
    iwlm->cfg = *cfg;
-//   iwlm->myhostname = xstrdup(iwlm->cfg.hostname);
-//   strcpy(iwlm->myhostname, iwlm->cfg.hostname);
    iwlm->cfg.dispatcher = xstrdup(iwlm->cfg.dispatcher);
    iwlm->cfg.collector = xstrdup(iwlm->cfg.collector);
    iwlm->poolsz = iwlm->cfg.poolMax;
@@ -721,16 +716,15 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
    char unset[] = "NULL";
    if(!strnlen(iwlm->myhostname, 1)) //See if the global hostname has been set
    {
-      dnxDebug(1, "dnxWlmCreate: Hostname not set in parent thread.");
+      dnxDebug(3, "dnxWlmCreate: Hostname not set in parent thread.");
       char machineName [MAX_HOSTNAME];
       if(strcmp(cfg->hostname, unset)==0)
       {
-         dnxDebug(1, "dnxWlmCreate: Hostname undefined in config.");
+         dnxDebug(3, "dnxWlmCreate: Hostname undefined in config.");
          // Get our hostname
          if(gethostname(machineName, MAX_HOSTNAME)==0)
          {
-            dnxDebug(1, "dnxWlmCreate: Hostname is [%s].", machineName);
-            strcpy(iwlm->cfg.hostname, machineName);
+            dnxDebug(3, "dnxWlmCreate: Hostname is [%s].", machineName);
             // cache hostname
             strcpy(iwlm->myhostname, machineName);
          } else {
@@ -740,12 +734,11 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
             strcpy(iwlm->myhostname, machineName);
          }
       } else {
-         dnxDebug(1, "dnxWlmCreate: Using hostname in config [%s].", cfg->hostname);
+         dnxDebug(3, "dnxWlmCreate: Using hostname in config [%s].", cfg->hostname);
          strcpy(iwlm->myhostname, cfg->hostname);
       }
-      xfree(machineName);
    } else {
-      dnxDebug(1, "dnxWlmCreate: Using cached hostname [%s].", iwlm->myhostname);
+      dnxDebug(3, "dnxWlmCreate: Using cached hostname [%s].", iwlm->myhostname);
       strcpy(iwlm->cfg.hostname, iwlm->myhostname);
    }
 
@@ -765,7 +758,7 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
       int ret;
       if ((ret = growThreadPool(iwlm)) != DNX_OK)
       {
-         if (iwlm->threads)
+        if (iwlm->threads)
             dnxLog("WLM: Error creating SOME worker threads: %s; "
                   "continuing with smaller initial pool.", dnxErrorString(ret));
          else
