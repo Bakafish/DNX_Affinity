@@ -119,6 +119,19 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
 //    strcpy(hostname, *pReq->hostname);
    pReq->expires = now + pReq->ttl;
 // dnxDebug(1, "dnxRegistrar: Hostname [%s][%s]", pReq->hostname, hostname);
+
+   // Get the IP address of the dnxClient
+   struct sockaddr_in src_addr;
+   in_addr_t addr;
+   memcpy(&src_addr, pReq->address, sizeof(src_addr));
+   addr = ntohl(src_addr.sin_addr.s_addr);
+   dnxDebug(2, "dnxRegisterNode: IP address [%u.%u.%u.%u]",
+      (unsigned)((addr >> 24) & 0xff),
+      (unsigned)((addr >> 16) & 0xff),
+      (unsigned)((addr >>  8) & 0xff),
+      (unsigned)( addr        & 0xff));
+
+
    // Store threads affinity flags in struct
    pReq->affinity = getDnxAffinity(*(char **)pReq->hostname);
    // locate existing node: update expiration time, or add to the queue
