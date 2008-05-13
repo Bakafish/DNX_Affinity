@@ -46,6 +46,7 @@
 
 #include <assert.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 
 /** Registrar dispatch channel timeout in seconds. */
 #define DNX_REGISTRAR_REQUEST_TIMEOUT  5
@@ -114,18 +115,15 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
 
    // compute expiration time of this request
    pReq = *ppMsg;
-//    char hostname[253];
-//    strcpy(&hostname, pReq->hostname);
-//    strcpy(hostname, *pReq->hostname);
    pReq->expires = now + pReq->ttl;
-// dnxDebug(1, "dnxRegistrar: Hostname [%s][%s]", pReq->hostname, hostname);
 
    // Get the IP address of the dnxClient
    struct sockaddr_in src_addr;
    in_addr_t addr;
    memcpy(&src_addr, pReq->address, sizeof(src_addr));
    addr = ntohl(src_addr.sin_addr.s_addr);
-   dnxDebug(2, "dnxRegisterNode: IP address [%u.%u.%u.%u]",
+   dnxDebug(2, "dnxRegisterNode: [%s] IP address [%u.%u.%u.%u]",
+      *(char **)pReq->hostname,
       (unsigned)((addr >> 24) & 0xff),
       (unsigned)((addr >> 16) & 0xff),
       (unsigned)((addr >>  8) & 0xff),
@@ -271,12 +269,12 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned lon
          // make sure that this thread has affinity
          if (node->affinity & flag)
          {
-            dnxDebug(4, "dnxRegisterNode: [%s] has affinity.",
-               node->hostname);
+            dnxDebug(4, "dnxRegisterNode: dnxClient [%s] has affinity C(%qu) H(%qu).",
+                *(char **)node->hostname, node->affinity, flag);
             break;
          } else {
-            dnxDebug(4, "dnxRegisterNode: [%s] can not service request.",
-               node->hostname);
+            dnxDebug(4, "dnxRegisterNode: dnxClient [%s] can not service request C(%qu) H(%qu).",
+               *(char **)node->hostname, node->affinity, flag);
          }
       } else {  
          dnxDebug(3, 

@@ -616,8 +616,8 @@ static int ehSvcCheck(int event_type, void * data)
 
    if ((ret = dnxGetNodeRequest(registrar, &pNode, host_flags)) != DNX_OK)
    {
-      dnxDebug(1, "ehSvcCheck: No worker nodes requests available: %s.", 
-            dnxErrorString(ret));
+      dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", 
+            job, dnxErrorString(ret));
       return OK;     // tell nagios execute locally
    }
 
@@ -1028,7 +1028,7 @@ unsigned long long getDnxAffinity(char * name)
          temp_aff = affinity;
    }
    while (temp_aff != NULL) {
-      dnxDebug(4, "getDnxAffinity: Checking cache for [%s]", name);
+      dnxDebug(8, "getDnxAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0)
       {
          // We have a cached copy so return
@@ -1051,7 +1051,7 @@ unsigned long long getDnxAffinity(char * name)
          match++;
          dnxDebug(4, "getDnxAffinity: matches [%s]", temp_aff->name);
       } else {
-         dnxDebug(4, "getDnxAffinity: no match with [%s]", temp_aff->name);
+         dnxDebug(8, "getDnxAffinity: no match with [%s]", temp_aff->name);
       }
       temp_aff = temp_aff->next;
    }
