@@ -67,6 +67,8 @@ typedef struct DnxWlmStats
    unsigned avg_active_threads;  //!< The average number of threads active.
    unsigned thread_time;         //!< The total amount of thread running time.
    unsigned job_time;            //!< The total time spent processing jobs.
+   unsigned packets_in;          //!< The total number of packets read in
+   unsigned packets_out;         //!< The total number of packets written out
 } DnxWlmStats;
 
 /** An abstract data type - the external representation of a WLM object. */

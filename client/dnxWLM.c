@@ -108,6 +108,8 @@ typedef struct iDnxWlm
    unsigned avgthreads;       //!< The avg number of threads in existence.
    unsigned avgactive;        //!< The avg number of active threads.
    unsigned poolsz;           //!< The allocated size of the @em pool array.
+   unsigned packets_in;       //!< The total number of packets recieved
+   unsigned packets_out;      //!< The total number of packets send
    time_t lastclean;          //!< The last time the pool was cleaned.
    int terminate;             //!< The pool termination flag.
    unsigned long myipaddr;    //!< Binary local address for identification.
@@ -117,6 +119,7 @@ typedef struct iDnxWlm
 
 // forward declaration required by source code organization
 static void * dnxWorker(void * data);
+
 
 /*--------------------------------------------------------------------------
                      WORK LOAD MANAGER IMPLEMENTATION
@@ -273,7 +276,7 @@ static void releaseWorkerComm(DnxWorkerStatus * ws)
  */
 static int workerCreate(iDnxWlm * iwlm, DnxWorkerStatus ** pws)
 {
-   DnxWorkerStatus * ws;
+   DnxWorkerStatus * ws = NULL;
    int ret;
    
    // allocate and clear a new worker status structure
@@ -285,8 +288,7 @@ static int workerCreate(iDnxWlm * iwlm, DnxWorkerStatus ** pws)
    // initialize our communications channels
    if ((ret = initWorkerComm(ws)) != 0)
    {
-      dnxLog("WLM: Failed to initialize worker comm channels: %s.", 
-            dnxErrorString(ret));
+      dnxLog("WLM: Failed to initialize worker comm channels: %s.",dnxErrorString(ret));
       xfree(ws);
       return ret;
    }
@@ -447,8 +449,7 @@ static void * dnxWorker(void * data)
       }
 
       // wait for job, even if request was never sent
-      if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address, 
-         iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
+      if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address,iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
       dnxLog("Worker[%lx]: Error receiving job: %s.", 
          tid, dnxErrorString(ret));
 
@@ -471,7 +472,7 @@ static void * dnxWorker(void * data)
       {
          iwlm->jobsrcvd++;
          iwlm->active++;
-
+         dnxSendJobAck(ws->dispatch, &job, &job.address);
          // check pool size before we get too busy -
          // if we're not shutting down and we haven't reached the configured
          // maximum and this is the last thread out, then increase the pool
@@ -508,9 +509,7 @@ static void * dnxWorker(void * data)
 
          *resData = 0;
          jobstart = time(0);
-         dnxPluginExecute(job.cmd, &result.resCode, resData, 
-               sizeof resData - 1, job.timeout, 
-               iwlm->cfg.showNodeAddr? iwlm->myipaddrstr: 0);
+         dnxPluginExecute(job.cmd, &result.resCode, resData, sizeof resData - 1, job.timeout,iwlm->cfg.showNodeAddr? iwlm->myipaddrstr: 0);
          result.delta = time(0) - jobstart;
 
          pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, 0);
@@ -518,12 +517,12 @@ static void * dnxWorker(void * data)
          // store allocated copy of the result string
          if (*resData) result.resData = xstrdup(resData);
 
-         dnxDebug(2, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s.", 
+         dnxDebug(3, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s.",
                tid, job.xid.objSerial, job.xid.objSlot, result.delta, 
                result.resCode, result.resData);
 
          if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK)
-            dnxLog("Worker[%lx]: Post job [%lu,%lu] results failed: %s.", 
+            dnxDebug(3, "Worker[%lx]: Post job [%lu,%lu] results failed: %s.",
                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
 
          xfree(result.resData);
@@ -574,6 +573,8 @@ void dnxWlmResetStats(DnxWlm * wlm)
    iwlm->reqsent = iwlm->jobsrcvd = iwlm->avgexectm = 0;
    iwlm->maxexectm = iwlm->avgthreads = iwlm->avgactive = 0;
    iwlm->minexectm = (unsigned)(-1);   // the largest possible value
+   iwlm->packets_out = 0;
+   iwlm->packets_in = 0;
    DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 }
 
@@ -601,6 +602,8 @@ void dnxWlmGetStats(DnxWlm * wlm, DnxWlmStats * wsp)
    wsp->avg_active_threads = iwlm->avgactive;
    wsp->thread_time = iwlm->threadtm;
    wsp->job_time = iwlm->jobtm;
+   wsp->packets_out = iwlm->packets_out;
+   wsp->packets_in = iwlm->packets_in;
    DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
 }
 
@@ -666,7 +669,7 @@ int dnxWlmReconfigure(DnxWlm * wlm, DnxWlmCfgData * cfg)
 int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
 {
    iDnxWlm * iwlm;
-   struct ifaddrs * ifa;
+   struct ifaddrs * ifa = NULL;
 
    assert(cfg && pwlm);
    assert(cfg->poolMin > 0);
@@ -706,9 +709,7 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
          // cache binary and presentation (string) versions of the ip address
          iwlm->myipaddr = (unsigned long)
                ((struct sockaddr_in *)ifcur->ifa_addr)->sin_addr.s_addr;
-         inet_ntop(ifcur->ifa_addr->sa_family, 
-               &((struct sockaddr_in *)ifcur->ifa_addr)->sin_addr, 
-               iwlm->myipaddrstr, sizeof iwlm->myipaddrstr);
+         inet_ntop(ifcur->ifa_addr->sa_family,&((struct sockaddr_in *)ifcur->ifa_addr)->sin_addr,iwlm->myipaddrstr, sizeof iwlm->myipaddrstr);
       }
       freeifaddrs(ifa);
    }

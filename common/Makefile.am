@@ -19,7 +19,10 @@ noinst_HEADERS =\
  dnxUdp.h\
  dnxXml.h\
  pfopen.h\
- utesthelp.h
+ utesthelp.h\
+ dnxComStats.h\
+ dnxCommon.h\
+ dnxTypes.h
 
 libcmn_la_SOURCES =\
  dnxCfgParser.c\
@@ -33,6 +36,8 @@ libcmn_la_SOURCES =\
  dnxUdp.c\
  dnxXml.c\
  pfopen.c\
+ dnxComStats.c\
+ dnxCommon.c\
  $(dbgheap_srcs)
 
 # ---------------------------------------------------------------------------

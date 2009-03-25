@@ -323,7 +323,9 @@ void dnxFree(void * p)
          return;
       free(ohp->file);
       free(ohp);
+      ohp = NULL;
       dnxDebug(10, "dnxHeap: free(%p).", p);
+      p = NULL;
    }
 }
 

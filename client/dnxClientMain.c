@@ -1,31 +1,31 @@
 /*--------------------------------------------------------------------------
- 
+
    Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
- 
+
    This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as 
+   it under the terms of the GNU General Public License version 2 as
    published by the Free Software Foundation.
- 
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
- 
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
+
   --------------------------------------------------------------------------*/
 
 /** Main source file for DNX Client.
- * 
+ *
  * @file dnxClientMain.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX_CLIENT_IMPL
  */
 
-/*!@defgroup DNX_CLIENT_IMPL DNX Client Implementation 
+/*!@defgroup DNX_CLIENT_IMPL DNX Client Implementation
  * @defgroup DNX_CLIENT_IFC  DNX Client Interface
  */
 
@@ -37,6 +37,8 @@
 #include "dnxWLM.h"
 #include "dnxPlugin.h"
 #include "dnxLogging.h"
+#include "dnxTypes.h"
+#include "dnxComStats.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -129,12 +131,14 @@ static int s_reconfig = 0;       //!< The reconfigure signal flag.
 static int s_debugsig = 0;       //!< The debug toggle signal flag.
 static int s_lockfd = -1;        //!< The system PID file descriptor.
 
+extern DCS * gTopDCS;
+
 //----------------------------------------------------------------------------
 
 /** Format version text to an allocated string buffer.
  *
  * Caller is responsible to free memory buffer returned.
- * 
+ *
  * @param[in] base - the base file name of this program.
  *
  * @return An allocated string buffer containing version text.
@@ -142,9 +146,9 @@ static int s_lockfd = -1;        //!< The system PID file descriptor.
 static char * versionText(char * base)
 {
    char buf[1024];
-   snprintf(buf, sizeof(buf) - 1, 
+   snprintf(buf, sizeof(buf) - 1,
       "\n"
-      "  %s Version " VERSION ", Built " __DATE__ " at " __TIME__ ".\n" 
+      "  %s Version " VERSION ", Built " __DATE__ " at " __TIME__ ".\n"
       "  Distributed Nagios eXecutor (DNX) Client Daemon.\n"
       "  Please report bugs to <" PACKAGE_BUGREPORT ">.\n"
       "\n"
@@ -169,8 +173,8 @@ static char * versionText(char * base)
 
 //----------------------------------------------------------------------------
 
-/** Display program version information to a specified stream. 
- * 
+/** Display program version information to a specified stream.
+ *
  * @param[in] fp - the stream to which version info should be printed.
  * @param[in] base - the base file name of this program.
  */
@@ -181,13 +185,14 @@ static void version(FILE * fp, char * base)
    {
       fprintf(fp, "%s\n", vertxt);
       xfree(vertxt);
+      vertxt = NULL;
    }
 }
 
 //----------------------------------------------------------------------------
 
-/** Display program usage text to STDERR and exit with an error. 
- * 
+/** Display program usage text to STDERR and exit with an error.
+ *
  * @param[in] base - the base file name of this program.
  */
 static void usage(char * base)
@@ -220,7 +225,7 @@ static void usage(char * base)
 #endif
 
    version(stderr, base);
-   fprintf(stderr, 
+   fprintf(stderr,
       "  Usage: %s [options]\n"
       "    Where [options] are:\n"
       "      -c" OL_CFGFILE  " <file>     specify the file and path of the config file.\n"
@@ -243,13 +248,13 @@ static void usage(char * base)
 //----------------------------------------------------------------------------
 
 /** Append text to a string by reallocating the string buffer.
- * 
+ *
  * This is a var-args function. Additional parameters following the @p fmt
  * parameter are based on the content of the @p fmt string.
- * 
+ *
  * @param[in] spp - the address of a dynamically allocated buffer pointer.
  * @param[in] fmt - a printf-like format specifier string.
- * 
+ *
  * @return Zero on success, or DNX_ERR_MEMORY on out-of-memory condition.
  */
 static int appendString(char ** spp, char * fmt, ... )
@@ -280,10 +285,10 @@ static int appendString(char ** spp, char * fmt, ... )
 //----------------------------------------------------------------------------
 
 /** Parse command line options.
- * 
+ *
  * @param[in] argc - the number of elements in the @p argv array.
  * @param[in] argv - a null-terminated array of command-line arguments.
- * 
+ *
  * @return Zero on success, or a non-zero error value.
  */
 static int getOptions(int argc, char ** argv)
@@ -295,7 +300,7 @@ static int getOptions(int argc, char ** argv)
    static char opts[] = "c:dr:g:l:D:U:G:vh:s";
 
 #if HAVE_GETOPT_LONG
-   static struct option longopts[] = 
+   static struct option longopts[] =
    {
       { "cfgfile",  required_argument, 0, 'c' },
       { "logfile",  required_argument, 0, 'l' },
@@ -387,13 +392,13 @@ static int getOptions(int argc, char ** argv)
 //----------------------------------------------------------------------------
 
 /** Validate a configuration data structure in context.
- * 
+ *
  * @param[in] dict - the dictionary used by the DnxCfgParser.
  * @param[in] vptrs - an array of opaque objects (either pointers or values)
  *    to be checked.
- * @param[in] passthru - an opaque pointer passed through from 
+ * @param[in] passthru - an opaque pointer passed through from
  *    dnxCfgParserCreate.
- * 
+ *
  * @return Zero on success, or a non-zero error value. This error value is
  * passed back through dnxCfgParserParse.
  */
@@ -455,22 +460,23 @@ static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
 //----------------------------------------------------------------------------
 
 /** Cleanup the config file parser. */
-static void releaseConfig(void) 
+static void releaseConfig(void)
 {
    dnxCfgParserDestroy(s_parser);
    xfree(s_cmdover);
+   s_cmdover = NULL;
 }
 
 //----------------------------------------------------------------------------
 
 /** Read and parse the dnxClient configuration file.
- * 
+ *
  * @param[in] cfgfile - the configuration file to use.
  * @return Zero on success, or a non-zero error value.
  */
 static int initConfig(char * cfgfile)
 {
-   DnxCfgDict dict[] = 
+   DnxCfgDict dict[] =
    {  // Do NOT change the order, unless you know what you're doing!
       { "channelAgent",           DNX_CFG_URL,      &s_cfg.channelAgent      },
       { "logFile",                DNX_CFG_FSPATH,   &s_cfg.logFilePath       },
@@ -519,7 +525,7 @@ static int initConfig(char * cfgfile)
    int ret;
 
    // create global configuration parser object
-   if ((ret = dnxCfgParserCreate(cfgdefs, s_cfgfile, s_cmdover, dict, 
+   if ((ret = dnxCfgParserCreate(cfgdefs, s_cfgfile, s_cmdover, dict,
          validateCfg, &s_parser)) != 0)
       return ret;
 
@@ -533,7 +539,7 @@ static int initConfig(char * cfgfile)
 //----------------------------------------------------------------------------
 
 /** Initializes a client communication channels and sub-systems.
- * 
+ *
  * @return Zero on success, or a non-zero error code.
  */
 static int initClientComm(void)
@@ -549,7 +555,7 @@ static int initClientComm(void)
       return ret;
    }
 
-   // create a channel for receiving DNX Client Requests 
+   // create a channel for receiving DNX Client Requests
    //    (e.g., Shutdown, Status, etc.)
    if ((ret = dnxChanMapAdd("Agent", s_cfg.channelAgent)) != DNX_OK)
    {
@@ -582,7 +588,7 @@ static void releaseClientComm(void)
 //----------------------------------------------------------------------------
 
 /** The global signal handler for the dnxClient process.
- * 
+ *
  * @param[in] sig - the signal number received from the system.
  */
 static void sighandler(int sig)
@@ -591,16 +597,17 @@ static void sighandler(int sig)
    {
       case SIGHUP:   s_reconfig = 1;   break;
       case SIGUSR1:  s_debugsig = 1;   break;
-      default:       s_shutdown = 1;   break;
+      default:       s_shutdown = 1;
+      break;
    }
 }
 
 //----------------------------------------------------------------------------
 
 /** Create the process id (pid) lock file.
- * 
+ *
  * @param[in] base - the base file name to use for the pid file name.
- * 
+ *
  * @return Zero on success, or a non-zero error code.
  */
 static int createPidFile(char * base)
@@ -633,7 +640,7 @@ static int createPidFile(char * base)
    if (write(s_lockfd, szPid, strlen(szPid)) != strlen(szPid))
    {
       close(s_lockfd);
-      dnxLog("Failed to write pid to lock file, %s: %s.", 
+      dnxLog("Failed to write pid to lock file, %s: %s.",
             lockFile, strerror(errno));
       return (-1);
    }
@@ -663,10 +670,10 @@ static void removePidFile(char * base)
 
 //----------------------------------------------------------------------------
 
-/** Turn this process into a daemon. 
- * 
+/** Turn this process into a daemon.
+ *
  * @param[in] base - the base file name of this program.
- * 
+ *
  * @return Zero on success, or a non-zero error value.
  */
 static int daemonize(char * base)
@@ -694,9 +701,12 @@ static int daemonize(char * base)
    else if (pid != 0)
       exit(0);
 
-   // change working directory to root so as to not keep any file systems open 
+   // change working directory to root so as to not keep any file systems open
    chdir("/");
 
+   // change working directory back to specified directory from config file.
+   chdir(s_cfg.runPath);
+   dnxLog("Changed working directory to %s", s_cfg.runPath);
    // allow us complete control over any newly created files
    umask(0);
 
@@ -704,7 +714,7 @@ static int daemonize(char * base)
    fd = open("/dev/null", O_RDWR);
    dup2(fd, 0);
    dup2(fd, 1);
-   dup2(fd, 2);
+   dup2(fd, 2); //Comment this line to make stderr not point to dev null.
 
    return 0;   // continue execution as a daemon
 }
@@ -712,7 +722,7 @@ static int daemonize(char * base)
 //----------------------------------------------------------------------------
 
 /** Drop privileges to configured user and group.
- * 
+ *
  * @return Zero on success, or a non-zero error value.
  */
 static int dropPrivileges(void)
@@ -779,10 +789,10 @@ static int dropPrivileges(void)
 //----------------------------------------------------------------------------
 
 /** Log changes between old and new global configuration data sets.
- * 
+ *
  * Dynamic reconfiguration of dispatcher and collector URL's is not allowed
  * so we don't need to check differences in those string values.
- * 
+ *
  * @param[in] ocp - a reference to the old configuration data set.
  * @param[in] ncp - a reference to the new configuration data set.
  */
@@ -790,17 +800,17 @@ static void logGblConfigChanges(DnxCfgData * ocp, DnxCfgData * ncp)
 {
    if (strcmp(ocp->channelAgent, ncp->channelAgent) != 0)
       dnxLog("Config parameter 'channelAgent' changed from %s to %s. "
-            "NOTE: Changing the agent URL requires a restart.", 
+            "NOTE: Changing the agent URL requires a restart.",
             ocp? ocp->channelAgent: "<unknown>", ncp->channelAgent);
 
    if (strcmp(ocp->logFilePath, ncp->logFilePath) != 0)
       dnxLog("Config parameter 'logFile' changed from %s to %s. "
-            "NOTE: Changing the log file path requires a restart.", 
+            "NOTE: Changing the log file path requires a restart.",
             ocp? ocp->logFilePath: "<unknown>", ncp->logFilePath);
 
    if (strcmp(ocp->debugFilePath, ncp->debugFilePath) != 0)
       dnxLog("Config parameter 'debugFile' changed from %s to %s. "
-            "NOTE: Changing the debug log file path requires a restart.", 
+            "NOTE: Changing the debug log file path requires a restart.",
             ocp? ocp->debugFilePath: "<unknown>", ncp->debugFilePath);
 
    if (strcmp(ocp->pluginPath, ncp->pluginPath) != 0)
@@ -809,58 +819,84 @@ static void logGblConfigChanges(DnxCfgData * ocp, DnxCfgData * ncp)
 
    if (strcmp(ocp->user, ncp->user) != 0)
       dnxLog("Config parameter 'user' changed from %s to %s. "
-            "NOTE: Changing the dnx user requires a restart.", 
+            "NOTE: Changing the dnx user requires a restart.",
             ocp? ocp->user: "<unknown>", ncp->user);
 
    if (strcmp(ocp->group, ncp->group) != 0)
       dnxLog("Config parameter 'group' changed from %s to %s. "
-            "NOTE: Changing the dnx group requires a restart.", 
+            "NOTE: Changing the dnx group requires a restart.",
             ocp? ocp->group: "<unknown>", ncp->group);
 
    if (strcmp(ocp->runPath, ncp->runPath) != 0)
       dnxLog("Config parameter 'runPath' changed from %s to %s. "
-            "NOTE: Changing the dnx pid/lock file directory requires a restart.", 
+            "NOTE: Changing the dnx pid/lock file directory requires a restart.",
             ocp? ocp->runPath: "<unknown>", ncp->runPath);
 
    if (ocp->debugLevel != ncp->debugLevel)
-      dnxLog("Config parameter 'debugLevel' changed from %u to %u.", 
+      dnxLog("Config parameter 'debugLevel' changed from %u to %u.",
             ocp? ocp->debugLevel: 0, ncp->debugLevel);
 }
 
 //----------------------------------------------------------------------------
 
 /** Build an allocated response buffer for requested stats values.
- * 
+ *
  * @param[in] req - The requested stats in comma-separated string format.
- * 
+ *
  * @return A pointer to an allocated response buffer, or 0 if out of memory.
  */
 static char * buildMgmtStatsReply(char * req)
 {
-   DnxWlmStats ws;
-   struct { char * str; unsigned * stat; } rs[] = 
-   {
-      { "jobsok",       &ws.jobs_succeeded     },
-      { "jobsfailed",   &ws.jobs_failed        },
-      { "thcreated",    &ws.threads_created    },
-      { "thdestroyed",  &ws.threads_destroyed  },
-      { "thexist",      &ws.total_threads      },
-      { "thactive",     &ws.active_threads     },
-      { "reqsent",      &ws.requests_sent      },
-      { "jobsrcvd",     &ws.jobs_received      },
-      { "minexectm",    &ws.min_exec_time      },
-      { "avgexectm",    &ws.avg_exec_time      },
-      { "maxexectm",    &ws.max_exec_time      },
-      { "avgthexist",   &ws.avg_total_threads  },
-      { "avgthactive",  &ws.avg_active_threads },
-      { "threadtm",     &ws.thread_time        },
-      { "jobtm",        &ws.job_time           },
-   };
-   char * rsp = 0;
-
    assert(req);
 
-   dnxWlmGetStats(s_wlm, &ws);
+   char * rsp = NULL;
+   unsigned jobs_handled = 0;
+   unsigned packets_out = 0;
+   unsigned packets_in = 0;
+   unsigned packets_failed = 0;
+   DnxWlmStats ws;
+
+   if(s_wlm)
+   {
+        dnxWlmGetStats(s_wlm, &ws);
+   }else{
+        return ('0');//Gotta return something, but we got nuthin
+   }
+
+
+    jobs_handled = ws.jobs_succeeded + ws.jobs_failed;//jobshandled = jobsok + jobsfailed
+
+
+    if(gTopDCS)
+    {
+        packets_out = gTopDCS->packets_out;
+        packets_in = gTopDCS->packets_in;
+        packets_failed = gTopDCS->packets_failed;
+    }
+
+
+   struct { char * str; unsigned * stat; } rs[] =
+   {
+      { "jobs_handled",  &jobs_handled           },
+      { "jobs_ok",       &ws.jobs_succeeded      },
+      { "jobs_failed",   &ws.jobs_failed         },
+      { "th_created",    &ws.threads_created     },
+      { "th_destroyed",  &ws.threads_destroyed   },
+      { "th_exist",      &ws.total_threads       },
+      { "th_active",     &ws.active_threads      },
+      { "req_sent",      &ws.requests_sent       },
+      { "jobs_rcvd",     &ws.jobs_received       },
+      { "min_exec_tm",    &ws.min_exec_time      },
+      { "avg_exec_tm",    &ws.avg_exec_time      },
+      { "max_exec_tm",    &ws.max_exec_time      },
+      { "avg_th_exist",   &ws.avg_total_threads  },
+      { "avg_th_active",  &ws.avg_active_threads },
+      { "thread_tm",     &ws.thread_time         },
+      { "job_tm",        &ws.job_time            },
+      { "packets_out",   &packets_out            },
+      { "packets_in",    &packets_in             },
+      { "packets_failed", &packets_failed        },
+   };
 
    // trim leading ws
    while (isspace(*req)) req++;
@@ -885,6 +921,7 @@ static char * buildMgmtStatsReply(char * req)
             if (appendString(&rsp, "%u,", *rs[i].stat) != 0)
             {
                xfree(rsp);
+               rsp = NULL;
                return 0;
             }
             break;
@@ -907,7 +944,7 @@ static char * buildMgmtStatsReply(char * req)
 //----------------------------------------------------------------------------
 
 /** Build an allocated response buffer for the current configuration.
- * 
+ *
  * @return A pointer to an allocated response buffer, or 0 if out of memory.
  */
 static char * buildMgmtCfgReply(void)
@@ -920,7 +957,7 @@ static char * buildMgmtCfgReply(void)
 
    if ((buf = (char *)xmalloc(bufsz)) != 0)
       if (dnxCfgParserGetCfg(s_parser, buf, &bufsz) != 0)
-         xfree(buf), (buf = 0);
+         xfree(buf), (buf = NULL);
 
    return buf;
 }
@@ -928,12 +965,12 @@ static char * buildMgmtCfgReply(void)
 //----------------------------------------------------------------------------
 
 /** Build an allocated response buffer for the HELP request.
- * 
+ *
  * @return A pointer to an allocated response buffer, or 0 if out of memory.
  */
 static char * buildHelpReply(void)
 {
-   static char * help = 
+   static char * help =
          "DNX Client Management Commands:\n"
          "  SHUTDOWN\n"
          "  RECONFIGURE\n"
@@ -941,21 +978,25 @@ static char * buildHelpReply(void)
          "  RESETSTATS\n"
          "  GETSTATS stat-list\n"
          "    stat-list is a comma-delimited list of stat names:\n"
-         "      jobsok      - number of successful jobs\n"
-         "      jobsfailed  - number of unsuccessful jobs\n"
-         "      thcreated   - number of threads created\n"
-         "      thdestroyed - number of threads destroyed\n"
-         "      thexist     - number of threads currently in existence\n"
-         "      thactive    - number of threads currently active\n"
-         "      reqsent     - number of requests sent to DNX server\n"
-         "      jobsrcvd    - number of jobs received from DNX server\n"
-         "      minexectm   - minimum job execution time\n"
-         "      avgexectm   - average job execution time\n"
-         "      maxexectm   - maximum job execution time\n"
-         "      avgthexist  - average threads in existence\n"
-         "      avgthactive - average threads processing jobs\n"
-         "      threadtm    - total thread life time\n"
-         "      jobtm       - total job processing time\n"
+         "      jobs_handled - number of jobs completed successful or otherwise\n"
+         "      jobs_ok      - number of successful jobs\n"
+         "      jobs_failed  - number of unsuccessful jobs\n"
+         "      th_created   - number of threads created\n"
+         "      th_destroyed - number of threads destroyed\n"
+         "      th_exist     - number of threads currently in existence\n"
+         "      th_active    - number of threads currently active\n"
+         "      req_sent     - number of requests sent to DNX server\n"
+         "      job_srcvd    - number of jobs received from DNX server\n"
+         "      min_exec_tm   - minimum job execution time\n"
+         "      avg_exec_tm   - average job execution time\n"
+         "      max_exec_tm   - maximum job execution time\n"
+         "      avg_th_exist  - average threads in existence\n"
+         "      avg_th_active - average threads processing jobs\n"
+         "      thread_tm    - total thread life time\n"
+         "      job_tm       - total job processing time\n"
+         "      packets_in   - total number of packets recieved\n"
+         "      packets_out  - total number of packets sent\n"
+         "      packets_failed  - total number of packets that failed to send\n"
          "    Note: Stats are returned in the order they are requested.\n"
          "  GETCONFIG\n"
          "  GETVERSION\n"
@@ -966,7 +1007,7 @@ static char * buildHelpReply(void)
 //----------------------------------------------------------------------------
 
 /** Release a previously copied configuration data structure.
- * 
+ *
  * @param[in] cpy - the structure to be freed.
  */
 static void freeCfgData(DnxCfgData * cpy)
@@ -981,14 +1022,15 @@ static void freeCfgData(DnxCfgData * cpy)
    xfree(cpy->wlm.dispatcher);
    xfree(cpy->wlm.collector);
    xfree(cpy);
+   cpy = NULL;
 }
 
 //----------------------------------------------------------------------------
 
 /** Make a dynamic copy of all configuration data.
- * 
+ *
  * @param[in] org - the structure to be copied.
- * 
+ *
  * @return Pointer to allocated copy, or NULL on memory allocation failure.
  */
 static DnxCfgData * copyCfgData(DnxCfgData * org)
@@ -1026,33 +1068,37 @@ static DnxCfgData * copyCfgData(DnxCfgData * org)
 //----------------------------------------------------------------------------
 
 /** The main event loop for the dnxClient process.
- * 
+ *
  * @return Zero on success, or a non-zero error code.
  */
 static int processCommands(void)
 {
-   DnxMgmtRequest Msg;
    int ret;
-
+   DnxMgmtRequest Msg;
+   Msg.action = NULL;
    dnxLog("DNX Client Agent awaiting commands...");
 
    while (1)
    {
-      // wait 1 second for a request; process the request, if valid
-      if ((ret = dnxWaitForMgmtRequest(s_agent, &Msg, Msg.address, 1)) == DNX_OK)
-      {
-         DnxMgmtReply Rsp;
 
+      memset(Msg.address,'\0',DNX_MAX_ADDRESS);
+
+      // wait 1 second for a request; process the request, if valid
+      if ((ret = dnxWaitForMgmtRequest(s_agent, &Msg, Msg.address, 0)) == DNX_OK)
+      {
+         //char * addr = ntop(Msg.address);
+         DnxMgmtReply Rsp;
+         //dnxDebug(3,"processCommand:  Received MgmtRequest from %s", addr);
          // setup some default response values
          Rsp.xid = Msg.xid;
          Rsp.status = DNX_REQ_ACK;
-         Rsp.reply = 0;
+         Rsp.reply = NULL;
 
          // perform the requested action
          if (!strcmp(Msg.action, "SHUTDOWN"))
          {
-            s_shutdown = 1;
             Rsp.reply = xstrdup("OK");
+            s_shutdown = 1;
          }
          else if (!strcmp(Msg.action, "RECONFIGURE"))
          {
@@ -1067,6 +1113,7 @@ static int processCommands(void)
          else if (!strcmp(Msg.action, "RESETSTATS"))
          {
             dnxWlmResetStats(s_wlm);
+            dnxComStatReset();
             Rsp.reply = xstrdup("OK");
          }
          if (!memcmp(Msg.action, "GETSTATS ", 9))
@@ -1095,9 +1142,13 @@ static int processCommands(void)
             dnxLog("Agent response failure: %s.", dnxErrorString(ret));
 
          // free request and reply message buffers
+        // memset(addr,'\0',DNX_MAX_ADDRESS);
          xfree(Rsp.reply);
          xfree(Msg.action);
+         //xfree(addr);
+
       }
+
       else if (ret != DNX_ERR_TIMEOUT)
          dnxLog("Agent channel failure: %s.", dnxErrorString(ret));
 
@@ -1118,7 +1169,7 @@ static int processCommands(void)
       if (s_debugsig)
       {
          s_dbgflag ^= 1;
-         dnxLog("Agent: Received DEBUGTOGGLE request. Debugging is %s.", 
+         dnxLog("Agent: Received DEBUGTOGGLE request. Debugging is %s.",
                s_dbgflag? "ENABLED" : "DISABLED");
          s_debugsig = 0;
       }
@@ -1136,16 +1187,18 @@ static int processCommands(void)
 //----------------------------------------------------------------------------
 
 /** The main program entry point for the dnxClient service.
- * 
+ *
  * @param[in] argc - the number of elements in the @p argv array.
  * @param[in] argv - a null-terminated array of command-line arguments.
- * 
+ *
  * @return Zero on success, or a non-zero error code that is returned to the
  * shell. Any non-zero codes should be values between 1 and 127.
  */
 int main(int argc, char ** argv)
 {
    int ret;
+
+   gTopDCS = dnxComStatCreateDCS("127.0.0.1");
 
    // parse command line options; read configuration file
    if ((ret = getOptions(argc, argv)) != DNX_OK
@@ -1163,7 +1216,7 @@ int main(int argc, char ** argv)
    dnxLog("Collector: %s.", s_cfg.wlm.collector);
    if (s_cfg.debugFilePath && s_cfg.debugLevel != 0)
    {
-      dnxLog("Debug logging enabled at level %d to %s.", 
+      dnxLog("Debug logging enabled at level %d to %s.",
             s_cfg.debugLevel, s_cfg.debugFilePath);
 #if DEBUG_HEAP
       dnxLog("Debug heap is enabled.");
@@ -1181,6 +1234,7 @@ int main(int argc, char ** argv)
    }
 
    // install signal handlers
+
    signal(SIGHUP,  sighandler);
    signal(SIGINT,  sighandler);
    signal(SIGQUIT, sighandler);
@@ -1216,6 +1270,7 @@ int main(int argc, char ** argv)
       goto e4;
    }
 
+
    //----------------------------------------------------------------------
    ret = processCommands();
    //----------------------------------------------------------------------
@@ -1229,7 +1284,10 @@ e2:dnxPluginRelease();
 e1:releaseConfig();
 e0:dnxLog("-------- DNX Client Daemon Shutdown Complete --------");
 
+   dnxComStatDestroy();
+
    xheapchk();    // works when debug heap is compiled in
+   closelog();
 
    return ret;
 }

@@ -4,12 +4,14 @@ sbin_PROGRAMS = dnxClient
 
 noinst_HEADERS =\
  dnxPlugin.h\
- dnxWLM.h
+ dnxWLM.h\
+ dnxProtocol.h
 
 dnxClient_SOURCES =\
  dnxClientMain.c\
  dnxPlugin.c\
- dnxWLM.c
+ dnxWLM.c\
+ dnxProtocol.c
 
 dnxClient_CPPFLAGS =\
  -DSYSCONFDIR=\"$(sysconfdir)\"\

@@ -27,6 +27,8 @@
 
 #include "dnxLogging.h"
 #include "dnxError.h"
+#include "dnxTransport.h"
+#include "dnxDebug.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -37,6 +39,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <unistd.h>
+#include <syslog.h>
 
 #if HAVE_CONFIG_H
 # include <config.h>
@@ -99,6 +102,8 @@ static int vlogger(FILE * fp, char * fmt, va_list ap)
          return errno;
       if (fflush(fp) == EOF)
          return errno;
+   }else{
+        syslog(LOG_ERR,"DNX Logging Error: Could not obtain file handle while writing log, check permissions, size, or max handles.\nMessage to be logged was %s", fmt);
    }
    return 0;
 }
@@ -106,7 +111,7 @@ static int vlogger(FILE * fp, char * fmt, va_list ap)
 /*--------------------------------------------------------------------------
                                  INTERFACE
   --------------------------------------------------------------------------*/
-
+/*
 void dnxLog(char * fmt, ... )
 {
    FILE * fp_fopened = 0;
@@ -114,31 +119,72 @@ void dnxLog(char * fmt, ... )
    va_list ap;
 
    assert(fmt);
-   
+   int errcode = 0;
    // check first for standard file handle references
    if (*s_LogFileName && strcmp(s_LogFileName, "STDOUT") != 0)
    {
       if (strcmp(s_LogFileName, "STDERR") == 0)
+      {
          fp = stderr;
+      }
       else 
          fp_fopened = fopen(s_LogFileName, "a+");
    }
 
-   va_start(ap, fmt);
-   (void)vlogger(fp_fopened? fp_fopened: fp, fmt, ap);
-   va_end(ap);
 
-   if (fp_fopened)
+   va_start(ap, fmt);
+   errcode = vlogger(fp_fopened? fp_fopened: fp, fmt, ap);
+   va_end(ap);
       fclose(fp_fopened);
+   if(errcode)
+   {
+        va_start(ap, fmt);
+        syslog(LOG_ERR,"DNX Logging Error: an error occured while writing log file. Error code was %s\nMessage to be written was %s",((errcode == EOF)?"End of file or file to large.":strerror(errcode)),fmt);
+        va_end(ap);
+   }
+}
+*/
+
+void dnxLog(char * fmt, ...)
+{
+    assert(fmt);
+    //char * buffer = xcalloc(DNX_MAX_MSG, sizeof(char));
+    va_list ap;
+    va_start(ap,fmt);
+    //vsprintf(buffer, fmt, ap);
+    vsyslog(LOG_DEBUG,fmt,ap);
+    va_end(ap);
+
+    //syslog(LOG_ERR,buffer);
+
+    //xfree(buffer);
+}
+
+void dnxDebug(int level, char * fmt, ...)
+{
+   assert(fmt);
+   assert(s_debugLevel);
+    if(level <= *s_debugLevel)
+    {
+        //char * buffer = xcalloc(DNX_MAX_MSG, sizeof(char));
+        va_list ap;
+        va_start(ap,fmt);
+        //vsprintf(buffer,fmt,ap);
+        vsyslog(LOG_DEBUG,fmt,ap);
+        va_end(ap);
+
+        //syslog(LOG_DEBUG,buffer);
+        //xfree(buffer);
+    }
 }
 
 //----------------------------------------------------------------------------
-
+/*
 void dnxDebug(int level, char * fmt, ... )
 {
    assert(fmt);
    assert(s_debugLevel);
-
+   int errcode = 0;
    if (level <= *s_debugLevel)
    {
       FILE * fp_fopened = 0;
@@ -155,16 +201,25 @@ void dnxDebug(int level, char * fmt, ... )
       }
    
       va_start(ap, fmt);
-      (void)vlogger(fp_fopened? fp_fopened: fp, fmt, ap);
+      errcode = vlogger(fp_fopened? fp_fopened: fp, fmt, ap);
       va_end(ap);
 
       if (fp_fopened)
          fclose(fp_fopened);
+
+      if(errcode)
+      {
+        va_start(ap, fmt);
+        syslog(LOG_ERR,"DNX Debug Error: an error occured while writing debug log file. Error code was %s\nMessage to be written was %s",((errcode == EOF)?"End of file or file to large.":strerror(errcode)),fmt);
+        va_end(ap);
+      }
    }
 }
+*/
 
 //----------------------------------------------------------------------------
 
+/*
 int dnxAudit(char * fmt, ... )
 {
    int ret = 0;
@@ -194,6 +249,16 @@ int dnxAudit(char * fmt, ... )
    }
    return ret;
 }
+*/
+
+int dnxAudit(char * fmt, ...)
+{
+    va_list ap;
+    va_start(ap,fmt);
+    vsyslog(LOG_DEBUG,fmt,ap);
+    va_end(ap);
+    return DNX_OK;
+}
 
 //----------------------------------------------------------------------------
 
@@ -216,6 +281,9 @@ void dnxLogInit(char * logFile, char * debugFile, char * auditFile,
       s_AudFileName[sizeof(s_AudFileName) - 1] = 0;
    }
    s_debugLevel = debugLevel;
+
+   openlog(NULL,
+        LOG_PID | LOG_CONS | LOG_NDELAY | LOG_NOWAIT, LOG_LOCAL7 );
 }
 
 /*--------------------------------------------------------------------------*/

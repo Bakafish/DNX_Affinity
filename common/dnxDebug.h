@@ -101,6 +101,7 @@ extern int pthread_mutexattr_settype(pthread_mutexattr_t * attr, int kind);
 #else
 # include <stdlib.h>
 # include <string.h>
+# include "dnxCommon.h"
 # define xmalloc        malloc
 # define xcalloc        calloc
 # define xrealloc       realloc

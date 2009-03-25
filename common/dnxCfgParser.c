@@ -224,8 +224,7 @@ static int parseString(char * val, DnxCfgType type, char ** prval)
 {
    int ret;
    char * str;
-   assert(type == DNX_CFG_URL || type == DNX_CFG_FSPATH 
-         || type == DNX_CFG_STRING);
+   assert(type == DNX_CFG_URL || type == DNX_CFG_FSPATH || type == DNX_CFG_STRING);
    if (type == DNX_CFG_URL && (ret = validateURL(val)) != 0)
       return ret;
    if (type == DNX_CFG_FSPATH && (ret = validateFSPath(val)) != 0)
@@ -355,8 +354,10 @@ static int parseIntOrUnsignedArray(char * val, DnxCfgType type, int ** prval)
 
    // allocate space for count + ints
    if ((array = (int *)xmalloc((i + 1) * sizeof *array)) == 0)
-      return xfree(sa), DNX_ERR_MEMORY;
-
+   {
+      xfree(sa);
+      return DNX_ERR_MEMORY;
+   }
    // setup for call to parseIntOrUnsigned
    type = (type == DNX_CFG_INT_ARRAY)? DNX_CFG_INT : DNX_CFG_UNSIGNED;
 
@@ -366,7 +367,11 @@ static int parseIntOrUnsignedArray(char * val, DnxCfgType type, int ** prval)
    {
       int ret;
       if ((ret = parseIntOrUnsigned(sa[i], type, &array[i + 1])) != 0)
-         return xfree(array), xfree(sa), ret;
+      {
+         xfree(array);
+         xfree(sa);
+         return ret;
+      }
    }
    xfree(sa);
    xfree(*prval);
@@ -418,8 +423,7 @@ static int parseBool(char * val, DnxCfgType type, unsigned * prval)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxParseCfgVar(char * var, char * val, DnxCfgDict * dict, 
-      void ** vptrs)
+static int dnxParseCfgVar(char * var, char * val, DnxCfgDict * dict, void ** vptrs)
 {
    static DnxVarParser_t * parsetbl[] =
    {
