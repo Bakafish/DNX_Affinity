@@ -1,34 +1,34 @@
 /*--------------------------------------------------------------------------
- 
+
    Copyright (c) 2006-2007, Intellectual Reserve, Inc. All rights reserved.
- 
+
    This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as 
+   it under the terms of the GNU General Public License version 2 as
    published by the Free Software Foundation.
- 
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
- 
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
+
   --------------------------------------------------------------------------*/
 
 /** Implements the main entry point for the Distributed Nagios eXecutor (DNX).
  *
- * Intercepts all service checks and dispatches them to distributed 
+ * Intercepts all service checks and dispatches them to distributed
  * worker nodes.
- * 
+ *
  * @file dnxNebMain.c
  * @author Robert W. Ingraham (dnx-devel@lists.sourceforge.net)
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX_SERVER_IMPL
  */
 
-/*!@defgroup DNX_SERVER_IMPL DNX NEB Module Implementation 
+/*!@defgroup DNX_SERVER_IMPL DNX NEB Module Implementation
  * @defgroup DNX_SERVER_IFC  DNX NEB Module Interface
  */
 
@@ -140,7 +140,7 @@ extern DCS * gTopDCS;
   --------------------------------------------------------------------------*/
 
 /** Cleanup the config file parser. */
-static void releaseConfig(void) 
+static void releaseConfig(void)
 {
    if (cfg.localCheckPattern)
       regfree(&regEx);
@@ -151,14 +151,14 @@ static void releaseConfig(void)
 //----------------------------------------------------------------------------
 
 /** Validate a configuration data structure in context.
- * 
+ *
  * @param[in] dict - the dictionary used by the DnxCfgParser.
  * @param[in] vptrs - an array of opaque objects (either pointers or values)
  *    to be checked.
- * @param[in] passthru - an opaque pointer passed through from 
+ * @param[in] passthru - an opaque pointer passed through from
  *    dnxCfgParserCreate. In this routine, it's the regex_t object into which
  *    we should parse the regular expression if one is given.
- * 
+ *
  * @return Zero on success, or a non-zero error value. This error value is
  * passed back through dnxCfgParserParse.
  */
@@ -196,12 +196,12 @@ static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
       dnxLog("config: Invalid minServiceSlots parameter.");
    else if (cfg.expirePollInterval < 1)
       dnxLog("config: Invalid expirePollInterval parameter.");
-   else if (cfg.localCheckPattern && (err = regcomp(rep, 
+   else if (cfg.localCheckPattern && (err = regcomp(rep,
          cfg.localCheckPattern, REG_EXTENDED | REG_NOSUB)) != 0)
    {
       char buffer[128];
       regerror(err, rep, buffer, sizeof buffer);
-      dnxLog("config: Failed to compile localCheckPattern (\"%s\"): %s.", 
+      dnxLog("config: Failed to compile localCheckPattern (\"%s\"): %s.",
              cfg.localCheckPattern, buffer);
       regfree(rep);
    }
@@ -214,14 +214,14 @@ static int validateCfg(DnxCfgDict * dict, void ** vptrs, void * passthru)
 //----------------------------------------------------------------------------
 
 /** Read and parse the dnxServer configuration file.
- * 
+ *
  * @param[in] cfgfile - the configuration file to be read.
- * 
+ *
  * @return Zero on success, or a non-zero error value.
  */
 static int initConfig(char * cfgfile)
 {
-   DnxCfgDict dict[] = 
+   DnxCfgDict dict[] =
    {  // Do NOT change the order, unless you know what you're doing!
       { "channelDispatcher",  DNX_CFG_URL,      &cfg.dispatcherUrl      },
       { "channelCollector",   DNX_CFG_URL,      &cfg.collectorUrl       },
@@ -254,7 +254,7 @@ static int initConfig(char * cfgfile)
    memset(&re, 0, sizeof re);
 
    // create global configuration parser object
-   if ((ret = dnxCfgParserCreate(cfgdefs, cfgfile, 0, dict, 
+   if ((ret = dnxCfgParserCreate(cfgdefs, cfgfile, 0, dict,
          validateCfg, &parser)) != 0)
       return ret;
 
@@ -272,7 +272,7 @@ static int initConfig(char * cfgfile)
 /** Return the number of services configured in Nagios.
  *
  * @return The number of services configured in Nagios.
- * 
+ *
  * @todo This routine should be in nagios code.
  */
 
@@ -285,7 +285,7 @@ static int nagiosGetServiceCount(void)
    int total_services = 0;
 
    // walk the service list, count the nodes
-   for (temp_service = service_list; temp_service; 
+   for (temp_service = service_list; temp_service;
          temp_service = temp_service->next)
       total_services++;
 
@@ -297,18 +297,18 @@ static int nagiosGetServiceCount(void)
 //----------------------------------------------------------------------------
 
 /** Post job result information to Nagios 2.x.
- * 
+ *
  * @param[in] svc - the nagios service to which the results belong.
  * @param[in] start_time - the check start time in seconds.
  * @param[in] early_timeout - boolean; true (!0) means the service timed out.
  * @param[in] res_code - the check result code.
  * @param[in] res_data - the check result data.
- * 
+ *
  * @return Zero on success, or a non-zero error value.
- * 
+ *
  * @todo This routine should be in nagios code.
  */
-static int nagios2xPostResult(service * svc, time_t start_time, 
+static int nagios2xPostResult(service * svc, time_t start_time,
       int early_timeout, int res_code, char * res_data)
 {
    extern circular_buffer service_result_buffer;
@@ -323,7 +323,7 @@ static int nagios2xPostResult(service * svc, time_t start_time,
    gettimeofday(&new_message->finish_time, 0);
    strncpy(new_message->host_name, svc->host_name,sizeof(new_message->host_name) - 1);
    new_message->host_name[sizeof(new_message->host_name) - 1] = 0;
-   strncpy(new_message->description, svc->description, 
+   strncpy(new_message->description, svc->description,
          sizeof(new_message->description) - 1);
    new_message->description[sizeof(new_message->description) - 1] = 0;
    new_message->return_code = res_code;
@@ -342,7 +342,7 @@ static int nagios2xPostResult(service * svc, time_t start_time,
    if (service_result_buffer.items == check_result_buffer_slots)
    {
       service_result_buffer.overflow++;
-      service_result_buffer.tail = (service_result_buffer.tail + 1) 
+      service_result_buffer.tail = (service_result_buffer.tail + 1)
             % check_result_buffer_slots;
    }
 
@@ -351,7 +351,7 @@ static int nagios2xPostResult(service * svc, time_t start_time,
          [service_result_buffer.head] = new_message;
 
    // increment the head counter and items
-   service_result_buffer.head = (service_result_buffer.head + 1) 
+   service_result_buffer.head = (service_result_buffer.head + 1)
          % check_result_buffer_slots;
    if (service_result_buffer.items < check_result_buffer_slots)
       service_result_buffer.items++;
@@ -370,7 +370,7 @@ static int nagios2xPostResult(service * svc, time_t start_time,
 //----------------------------------------------------------------------------
 
 /** Post job result information to Nagios 3.x.
- * 
+ *
  * @param[in] svc - the nagios service to which the results belong.
  * @param[in] check_type - nagios 3.x check type value.
  * @param[in] check_options - nagios 3.x bit-wise check options.
@@ -383,14 +383,14 @@ static int nagios2xPostResult(service * svc, time_t start_time,
  * @param[in] exited_ok - boolean; true (!0) if the external check exited ok.
  * @param[in] res_code - the check result code.
  * @param[in] res_data - the check result data.
- * 
+ *
  * @return Zero on success, or a non-zero error value.
- * 
+ *
  * @todo This routine should be in nagios code.
  */
-static int nagios3xPostResult(service * svc, int check_type, 
-      int check_options, int schedule, int reschedule, double latency, 
-      time_t start_time, time_t finish_time, int early_timeout, 
+static int nagios3xPostResult(service * svc, int check_type,
+      int check_options, int schedule, int reschedule, double latency,
+      time_t start_time, time_t finish_time, int early_timeout,
       int exited_ok, int res_code, char * res_data)
 {
    /** @todo Invent a different temp path strategy. */
@@ -456,7 +456,7 @@ static int nagios3xPostResult(service * svc, int check_type,
 
 //----------------------------------------------------------------------------
 
-int dnxPostResult(void * data, time_t start_time, unsigned delta, 
+int dnxPostResult(void * data, time_t start_time, unsigned delta,
       int early_timeout, int res_code, char * res_data)
 {
    DnxJobData * jdp = (DnxJobData *)data;
@@ -469,14 +469,14 @@ int dnxPostResult(void * data, time_t start_time, unsigned delta,
 
 #if CURRENT_NEB_API_VERSION == 2
 
-   return nagios2xPostResult(jdp->svc, start_time, early_timeout, 
+   return nagios2xPostResult(jdp->svc, start_time, early_timeout,
          res_code, res_data);
 
 #elif CURRENT_NEB_API_VERSION == 3
 
-   return nagios3xPostResult(jdp->svc, SERVICE_CHECK_ACTIVE, 
-         jdp->chkopts, jdp->schedule, jdp->reschedule, jdp->latency, 
-         start_time, start_time + delta, early_timeout, 
+   return nagios3xPostResult(jdp->svc, SERVICE_CHECK_ACTIVE,
+         jdp->chkopts, jdp->schedule, jdp->reschedule, jdp->latency,
+         start_time, start_time + delta, early_timeout,
          1, res_code, res_data);
 
 #else
@@ -488,16 +488,16 @@ int dnxPostResult(void * data, time_t start_time, unsigned delta,
 
 /** Calculate the optimal size of the job list.
  *
- * Assumes the caller will actually use the returned value to allocate the 
+ * Assumes the caller will actually use the returned value to allocate the
  * job list. Based on this assumption, this routine logs messages indicating
  * when various configuration overrides have taken effect.
- * 
+ *
  * @return The calculated size of the job list.
  */
 static int dnxCalculateJobListSize(void)
 {
    int size = nagiosGetServiceCount();
- 
+
    // zero doesn't make sense...
    if (size < 1)
    {
@@ -510,7 +510,7 @@ static int dnxCalculateJobListSize(void)
    if (size < cfg.minServiceSlots)
    {
       dnxLog("Overriding calculated service check slot count. "
-             "Increasing from %d to configured minimum: %d.", 
+             "Increasing from %d to configured minimum: %d.",
              size, cfg.minServiceSlots);
       size = cfg.minServiceSlots;
    }
@@ -519,7 +519,7 @@ static int dnxCalculateJobListSize(void)
    if (size > cfg.maxNodeRequests)
    {
       dnxLog("Overriding calculated service check slot count. "
-             "Decreasing from %d to configured maximum: %d.", size, 
+             "Decreasing from %d to configured maximum: %d.", size,
              cfg.maxNodeRequests);
       size = cfg.maxNodeRequests;
    }
@@ -529,15 +529,15 @@ static int dnxCalculateJobListSize(void)
 //----------------------------------------------------------------------------
 
 /** Post a new job from Nagios to the dnxServer job queue.
- * 
+ *
  * @param[in] joblist - the job list to which the new job should be posted.
  * @param[in] serial - the serial number of the new job.
  * @param[in] jdp - a pointer to a job data structure.
  * @param[in] ds - a pointer to the nagios job that's being posted.
- * @param[in] pNode - a dnxClient node request structure that is being 
+ * @param[in] pNode - a dnxClient node request structure that is being
  *    posted with this job. The dispatcher thread will send the job to the
  *    associated node.
- * 
+ *
  * @return Zero on success, or a non-zero error value.
  */
 static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial, DnxJobData * jdp, nebstruct_service_check_data * ds, DnxNodeRequest * pNode)
@@ -572,11 +572,11 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial, DnxJobData 
 //----------------------------------------------------------------------------
 
 /** Service Check Event Handler.
- * 
+ *
  * @param[in] event_type - the event type for which we're being called.
  * @param[in] data - an opaque pointer to nagios event-specific data.
- * 
- * @return Zero if we want Nagios to handle the event; 
+ *
+ * @return Zero if we want Nagios to handle the event;
  *    NEBERROR_CALLBACKOVERRIDE indicates that we want to handle the event
  *    ourselves; any other non-zero value represents an error.
  */
@@ -627,8 +627,7 @@ static int ehSvcCheck(int event_type, void * data)
 
    if ((ret = dnxGetNodeRequest(registrar, &pNode, host_flags)) != DNX_OK)
    {
-      dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", 
-            job, dnxErrorString(ret));
+      dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
 
       //SM 09/08 DnxNodeList
       gTopNode->jobs_rejected_no_nodes++;
@@ -673,7 +672,7 @@ static int ehSvcCheck(int event_type, void * data)
       xfree(jdp);
       return OK;     // tell nagios execute locally
    }
-      
+
    serial++;                           // bump serial number
 
    return NEBERROR_CALLBACKOVERRIDE;   // tell nagios we want it
@@ -685,7 +684,7 @@ static int ehSvcCheck(int event_type, void * data)
 static int ehProcessData(int event_type, void * data);
 
 /** Deinitialize the dnx server.
- * 
+ *
  * @return Always returns zero.
  */
 static int dnxServerDeInit(void)
@@ -726,7 +725,7 @@ static int dnxServerDeInit(void)
 //----------------------------------------------------------------------------
 
 /** Initialize the dnxServer.
- * 
+ *
  * @return Zero on success, or a non-zero error value.
  */
 static int dnxServerInit(void)
@@ -763,20 +762,20 @@ static int dnxServerInit(void)
    }
 
    // create and configure collector
-   if ((ret = dnxCollectorCreate("Collect", cfg.collectorUrl, 
+   if ((ret = dnxCollectorCreate("Collect", cfg.collectorUrl,
          joblist, &collector)) != 0)
       return ret;
 
    // create and configure dispatcher
-   if ((ret = dnxDispatcherCreate("Dispatch", cfg.dispatcherUrl, 
+   if ((ret = dnxDispatcherCreate("Dispatch", cfg.dispatcherUrl,
          joblist, &dispatcher)) != 0)
       return ret;
 
    // create worker node registrar
-   if ((ret = dnxRegistrarCreate(joblistsz * 2, 
+   if ((ret = dnxRegistrarCreate(joblistsz * 2,
          dnxDispatcherGetChannel(dispatcher), &registrar)) != 0)
       return ret;
-      
+
     //SM 09/08 DnxNodeList
     gTopNode = dnxNodeListCreateNode("127.0.0.1");
     pthread_t tid;
@@ -844,9 +843,9 @@ static int dnxServerInit(void)
 //----------------------------------------------------------------------------
 
 /** Launches an external command and waits for it to return a status code.
- * 
+ *
  * @param[in] script - the command line to be launched.
- * 
+ *
  * @return Zero on success, or a non-zero error value.
  */
 static int launchScript(char * script)
@@ -872,10 +871,10 @@ static int launchScript(char * script)
 //----------------------------------------------------------------------------
 
 /** Process Data Event Handler.
- * 
+ *
  * @param[in] event_type - the event regarding which we were called by Nagios.
  * @param[in] data - an opaque pointer to an event-specific data structure.
- * 
+ *
  * @return Zero if all is okay, but we want nagios to handle this event;
  *    non-zero if there's a problem of some sort.
  */
@@ -947,7 +946,7 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
       /** @todo This conversion should take place in the dnxUdpRead function
        * and the resultant address string stored in the DnxNewJob
        * structure. This would have two benefits:
-       * 
+       *
        *    1. Encapsulates conversion at the protocol level.
        *    2. Saves some time during logging.
        */
@@ -974,9 +973,9 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
 //----------------------------------------------------------------------------
 
 /** The main NEB module deinitialization routine.
- * 
+ *
  * This function gets called when the module is unloaded by the event broker.
- * 
+ *
  * @param[in] flags - nagios NEB module flags - not used.
  * @param[in] reason - nagios reason code - not used.
  *
@@ -996,15 +995,15 @@ int nebmodule_deinit(int flags, int reason)
 //----------------------------------------------------------------------------
 
 /** The main NEB module initialization routine.
- * 
+ *
  * This function gets called when the module is loaded by the event broker.
- * 
+ *
  * @param[in] flags - module flags - not used
- * @param[in] args - module arguments. These come from the nagios 
+ * @param[in] args - module arguments. These come from the nagios
  *    configuration file, and are passed through to the module as it loads.
  * @param[in] handle - our module handle - passed from the OS to nagios as
  *    nagios loaded us.
- * 
+ *
  * @return Zero on success, or a non-zero error value.
  */
 int nebmodule_init(int flags, char * args, nebmodule * handle)
@@ -1022,7 +1021,7 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
       return ERROR;
 
    // set configured debug level and syslog log facility code
-   dnxLogInit(cfg.logFilePath, cfg.debugFilePath, cfg.auditFilePath, 
+   dnxLogInit(cfg.logFilePath, cfg.debugFilePath, cfg.auditFilePath,
          &cfg.debugLevel);
 
    dnxLog("-------- DNX Server Module Version %s Startup --------", VERSION);
@@ -1031,12 +1030,12 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
    if (cfg.auditFilePath)
       dnxLog("Auditing enabled to %s.", cfg.auditFilePath);
    if (cfg.debugLevel)
-      dnxLog("Debug logging enabled at level %d to %s.", 
+      dnxLog("Debug logging enabled at level %d to %s.",
             cfg.debugLevel, cfg.debugFilePath);
 
    // subscribe to PROCESS_DATA call-backs in order to defer initialization
    //    until after Nagios validates its configuration and environment.
-   if ((ret = neb_register_callback(NEBCALLBACK_PROCESS_DATA, 
+   if ((ret = neb_register_callback(NEBCALLBACK_PROCESS_DATA,
          myHandle, 0, ehProcessData)) != OK)
    {
       dnxLog("PROCESS_DATA event registration failed: %s.", dnxErrorString(ret));
