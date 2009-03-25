@@ -42,6 +42,10 @@
 #include "dnxDispatcher.h"
 #include "dnxRegistrar.h"
 #include "dnxJobList.h"
+#include "dnxNode.h"
+#include "stdarg.h"
+#include "dnxXml.h"
+#include "dnxComStats.h"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -125,6 +129,11 @@ static DnxAffinityList * hostAffinity; //!< The affinity list of hosts.
 static time_t start_time;           //!< The module start time.
 static void * myHandle;             //!< Private NEB module handle.
 static regex_t regEx;               //!< Compiled regular expression structure.
+
+//SM 09/08 DnxNodeList
+DnxNode * gTopNode = NULL;;
+extern DCS * gTopDCS;
+//SM 09/08 DnxNodeList End
 
 /*--------------------------------------------------------------------------
                               IMPLEMENTATION
@@ -266,6 +275,8 @@ static int initConfig(char * cfgfile)
  * 
  * @todo This routine should be in nagios code.
  */
+
+// This is supposedly broken
 static int nagiosGetServiceCount(void)
 {
    extern service * service_list;      // the global nagios service list
@@ -301,7 +312,7 @@ static int nagios2xPostResult(service * svc, time_t start_time,
       int early_timeout, int res_code, char * res_data)
 {
    extern circular_buffer service_result_buffer;
-   extern int check_result_buffer_slots;
+   int check_result_buffer_slots = 4096;
 
    service_message * new_message;
 
@@ -310,8 +321,7 @@ static int nagios2xPostResult(service * svc, time_t start_time,
       return DNX_ERR_MEMORY;
 
    gettimeofday(&new_message->finish_time, 0);
-   strncpy(new_message->host_name, svc->host_name, 
-         sizeof(new_message->host_name) - 1);
+   strncpy(new_message->host_name, svc->host_name,sizeof(new_message->host_name) - 1);
    new_message->host_name[sizeof(new_message->host_name) - 1] = 0;
    strncpy(new_message->description, svc->description, 
          sizeof(new_message->description) - 1);
@@ -530,12 +540,13 @@ static int dnxCalculateJobListSize(void)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial, 
-      DnxJobData * jdp, nebstruct_service_check_data * ds, 
-      DnxNodeRequest * pNode)
+static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial, DnxJobData * jdp, nebstruct_service_check_data * ds, DnxNodeRequest * pNode)
 {
    DnxNewJob Job;
    int ret;
+
+   assert(ds);
+   assert(ds->command_line);
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
@@ -545,13 +556,13 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial,
    Job.timeout    = ds->timeout;
    Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
    Job.pNode      = pNode;
+   Job.ack        = false;
 
    dnxDebug(2, "DnxNebMain: Posting Job [%lu]: %s.", serial, Job.cmd);
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
-      dnxLog("Failed to post Job [%lu]; \"%s\": %d.", 
-             Job.xid.objSerial, Job.cmd, ret);
+      dnxLog("Failed to post Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
 
    dnxAuditJob(&Job, "ASSIGN");
 
@@ -618,6 +629,11 @@ static int ehSvcCheck(int event_type, void * data)
    {
       dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", 
             job, dnxErrorString(ret));
+
+      //SM 09/08 DnxNodeList
+      gTopNode->jobs_rejected_no_nodes++;
+      //SM 09/08 DnxNodeList
+
       return OK;     // tell nagios execute locally
    }
 
@@ -625,6 +641,11 @@ static int ehSvcCheck(int event_type, void * data)
    if ((jdp = (DnxJobData *)xmalloc(sizeof *jdp)) == 0)
    {
       dnxDebug(1, "ehSvcCheck: Out of memory!");
+
+      //SM 09/08 DnxNodeList
+      gTopNode->jobs_rejected_oom++;
+      //SM 09/08 DnxNodeList
+
       return OK;
    }
    memset(jdp, 0, sizeof *jdp);
@@ -695,6 +716,10 @@ static int dnxServerDeInit(void)
 
    releaseConfig();
 
+    //SM 09/08 DnxNodeList
+   dnxNodeListDestroy();
+   //SM 09/08 END DnxNodeList
+
    return OK;
 }
 
@@ -752,6 +777,16 @@ static int dnxServerInit(void)
          dnxDispatcherGetChannel(dispatcher), &registrar)) != 0)
       return ret;
       
+    //SM 09/08 DnxNodeList
+    gTopNode = dnxNodeListCreateNode("127.0.0.1");
+    pthread_t tid;
+   if ((ret = pthread_create(&tid, NULL, dnxStatsRequestListener,NULL)) != 0)
+   {
+      dnxLog("dnx dnxServerInit: thread creation failed for stats listener: %s.",dnxErrorString(ret));
+      ret = DNX_ERR_THREAD;
+   }
+   //SM 09/08 DnxNodeList End
+
    // Create the list of affinity groups (Nagios Hostgroups)
    // Get the list of host groups
    extern hostgroup *hostgroup_list;
@@ -892,6 +927,7 @@ void dnxJobCleanup(DnxNewJob * pJob)
    {
       xfree(pJob->cmd);
       xfree(pJob->payload);
+      xfree(pJob->pNode->addr);
       xfree(pJob->pNode);
    }
 }
@@ -900,6 +936,7 @@ void dnxJobCleanup(DnxNewJob * pJob)
 
 int dnxAuditJob(DnxNewJob * pJob, char * action)
 {
+   /*
    if (cfg.auditFilePath)
    {
       struct sockaddr_in src_addr;
@@ -914,9 +951,10 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
        *    1. Encapsulates conversion at the protocol level.
        *    2. Saves some time during logging.
        */
-      memcpy(&src_addr, pJob->pNode->address, sizeof(src_addr));
-      addr = ntohl(src_addr.sin_addr.s_addr);
+      //memcpy(&src_addr, pJob->pNode->address, sizeof(src_addr));
+      //addr = ntohl(src_addr.sin_addr.s_addr);
 
+    /*
       return dnxAudit(
             "%s: Job %lu: Worker %u.%u.%u.%u-%lx: %s",
                   action, pJob->xid.objSerial,
@@ -925,7 +963,11 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
                   (unsigned)((addr >>  8) & 0xff),
                   (unsigned)( addr        & 0xff),
                   pJob->pNode->xid.objSlot, pJob->cmd);
-   }
+
+    */
+   //}
+
+   dnxLog("%s: Job %lu: Worker %s-%lx: %s",action, pJob->xid.objSerial,pJob->pNode->addr,pJob->pNode->xid.objSlot,pJob->cmd);
    return DNX_OK;
 }
 
@@ -969,6 +1011,7 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
 {
    int ret;
 
+   gTopDCS = dnxComStatCreateDCS("127.0.0.1");
    myHandle = handle;
 
    // module args string should contain a fully-qualified config file path
@@ -1006,6 +1049,368 @@ int nebmodule_init(int flags, char * args, nebmodule * handle)
 
    return OK;
 }
+
+/*--------------------------------------------------------------------------*/
+//Added 09/08 SM dnxNode
+
+/** Append text to a string by reallocating the string buffer.
+ *
+ * This is a var-args function. Additional parameters following the @p fmt
+ * parameter are based on the content of the @p fmt string.
+ *
+ * @param[in] spp - the address of a dynamically allocated buffer pointer.
+ * @param[in] fmt - a printf-like format specifier string.
+ *
+ * @return Zero on success, or DNX_ERR_MEMORY on out-of-memory condition.
+ */
+static int appendString(char ** spp, char * fmt, ... )
+{
+   char buf[1024];
+   char * newstr;
+   size_t strsz;
+   va_list ap;
+
+   // build new string
+   va_start(ap, fmt);
+   vsnprintf(buf, sizeof buf, fmt, ap);
+   va_end(ap);
+
+   // reallocate buffer; initialize if necessary
+   strsz = strlen(buf) + 1;
+   if ((newstr = xrealloc(*spp, (*spp? strlen(*spp): 0) + strsz)) == 0)
+      return DNX_ERR_MEMORY;
+   if (*spp == 0)
+      *newstr = 0;
+
+   // concatenate new string onto exiting string; return updated pointer
+   strcat(newstr, buf);
+   *spp = newstr;
+   return 0;
+}
+/*--------------------------------------------------------------------------*/
+
+void trim(char * str, char c)
+{
+       size_t len = strlen(str);
+       if (len && str[len - 1] == c) str[len - 1] = 0;
+}
+
+void buildStatsReplyForNode(DnxNode* pDnxNode, char* requested_stat, DnxMgmtReply* pReply)
+{
+
+    assert(requested_stat);
+    static int pass = 1;
+
+    int i,count = 0;
+
+    char * token = requested_stat;
+    //char * token = strtok(requested_action,",");
+    assert(token);
+
+    unsigned node_count= dnxNodeListCountNodes();
+
+    bool allstats = (strncmp("ALLSTATS",token,strlen(token)) ==0);
+    bool match = false;
+
+    if(!pDnxNode)
+    {
+            pDnxNode = gTopNode;
+            pass = 0;
+    }
+
+    DCS * pDCS = dnxComStatFindDCS(pDnxNode->address);
+    unsigned packets_in = 0;
+    unsigned packets_out = 0;
+    unsigned packets_failed = 0;
+
+    if(pDCS)
+    {
+            packets_in = pDCS->packets_in;
+            packets_out = pDCS->packets_out;
+            packets_failed = pDCS->packets_failed;
+    }
+
+
+
+    //Create a struct to hold all possible responses
+    struct { char * str; unsigned * stat; } response_struct[] =
+    {
+        { "job_requests_recieved",  &pDnxNode->jobs_req_recv           },
+        { "jobs_dispatched",        &pDnxNode->jobs_dispatched         },
+        { "jobs_handled",           &pDnxNode->jobs_handled            },
+        { "job_requests_expired",   &pDnxNode->jobs_req_exp            },
+        { "jobs_rejected_no_nodes", &pDnxNode->jobs_rejected_no_nodes  },
+        { "jobs_rejected_no_memory",&pDnxNode->jobs_rejected_oom       },
+        { "packets_out",            &packets_out                       },
+        { "packets_in",             &packets_in                        },
+        { "packets_failed",         &packets_failed                    },
+        { "nodes_registered",       &node_count                        },
+    };
+
+
+
+    //Lets build our Stats Reply
+    //do
+    //{
+
+        //They want to clear stats on a node
+        if(strncmp("CLEAR",token,strlen(token))==0)
+        {
+            if(strncmp(pDnxNode->address,"127.0.0.1",strlen(pDnxNode->address)) != 0)
+            {
+                appendString(&pReply->reply, "Reset Node %s\n",pDnxNode->address);
+                dnxComStatClear(pDnxNode->address);
+                dnxNodeListRemoveNode(pDnxNode);
+            }else{
+                appendString(&pReply->reply,"Error: Cannot Clear Top Node, did you mean reset instead?\n");
+            }
+            return;
+        }
+
+        //They want to reset a node
+        if(strncmp("RESETSTATS",token,strlen(token))==0)
+        {
+            appendString(&pReply->reply, "Reseting All Nodes\n");
+            dnxComStatReset();
+            dnxNodeListReset();
+            return;
+        }
+
+        //They want help
+        if(strncmp("HELP",token,strlen(token))==0)
+        {
+            appendString(&pReply->reply,"HELP: Format is [node ip address* (optional)], HELP, CLEAR, RESETSTATS, ALLSTATS, ");
+        }
+
+       //build the response by looping through the response_struct looking for matching values
+       for (i = 0; i < elemcount(response_struct); i++)
+        {
+            dnxDebug(2,"buildStatsReply: request = %s\n",token);
+            dnxDebug(2,"buildStatsReply: element = %s\n",response_struct[i].str);
+            //If it's help or we need the headers do this
+            if(strncmp("help",token,strlen(token))==0 || (allstats && pass ==0))
+            {
+                appendString(&pReply->reply,"%s,",response_struct[i].str);
+                count++;
+            }else{
+                //Otherwise lets get those values out of that struct
+                match = (strncmp(response_struct[i].str,token,strlen(token)) == 0);
+
+                if (match || allstats)
+                {
+                    count++;
+                    dnxDebug(2,"buildStatsReply: Found a match for request %s value is %u\n",token,*response_struct[i].stat);
+                    if (appendString(&pReply->reply, "%u,", *response_struct[i].stat) != 0)
+                    {
+                        dnxDebug(2,"buildStatsReply: Error! appendString Failed!\n");
+                    }
+
+                    //We found what we were looking for, lets get out of here, unless of course allstats is true
+                    if(!allstats)
+                       break;
+                }
+            }
+        }
+
+        //Place the word NULL in for values not found
+        if(!count)
+        {
+            appendString(&pReply->reply, "NULL,");
+        }
+
+        count = 0;
+        pass++;
+
+    //}while(token = strtok(NULL,","));
+}
+
+
+/** Build an allocated response buffer for requested stats values.
+ *
+ * @param[in] request - The requested stats in comma-separated string format.
+ * @param[in] pReply - A pointer to an allocated reply buffer
+ * @return false if out of memory true otherwise
+ */
+bool buildStatsReply(char * request,DnxMgmtReply * pReply)
+{
+
+    assert(request);
+
+    DnxNode * pDnxNode = gTopNode;
+
+    char * response = NULL;
+    char * token = NULL;
+    char * action = (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
+
+    int count = 0;
+    DnxXmlBuf xreq_buf;
+    unsigned i;
+
+    pthread_mutex_t mutex;
+    DNX_PT_MUTEX_INIT(&mutex);
+
+    dnxDebug(2,"buildStatsReply:  Request is %s",request);
+
+    //De XMLify request
+    strcpy(xreq_buf.buf,request);
+    xreq_buf.size = strlen(request);
+    dnxXmlGet(&xreq_buf, "XID", DNX_XML_STR, &pReply->xid);
+    dnxXmlGet(&xreq_buf, "Action", DNX_XML_STR,&action);
+    pReply->status = DNX_REQ_ACK;
+
+    // search table for sub-string, append requested stat to response
+    DNX_PT_MUTEX_LOCK(&mutex);
+
+        if(strcmp("ALLSTATS",action) == 0)
+        {
+            //The requested action is the keyword ALLSTATS, short circuit all normal functionality and just dump all the stats
+
+            //Build the header
+
+                appendString(&pReply->reply,"IP ADDRESS: ");
+                buildStatsReplyForNode(NULL,action,pReply);
+                trim(pReply->reply,',');
+                appendString(&pReply->reply,"\n");
+            //Build the response by looping through all the nodes in order
+            do
+            {
+                appendString(&pReply->reply,"%s,",pDnxNode->address);
+                buildStatsReplyForNode(pDnxNode,action,pReply);
+                trim(pReply->reply,',');
+                appendString(&pReply->reply,"\n");
+            }while(pDnxNode = pDnxNode->next);
+
+        }else{
+
+           //Get first token
+            token = strtok(action,",");
+
+            do
+            {
+                 //Check request to see if it's an IP address
+                if(strchr(token,'.'))
+                {
+                    dnxLog("buildStatsReply: Request appears to contain an IP address, address is %s",token);
+
+                    //it does contain an IP address so we want to find the DnxNode with that address and set pDnxNode
+                    pDnxNode = dnxNodeListFindNode(token);
+
+                    if(!pDnxNode)
+                    {
+                        //We couldn't find a node for that IP address
+                        appendString(&pReply->reply, "%s","Invalid Worker Node Requested");
+                        return false;
+                    }else{
+                        //We did find a node for it
+                        //Prefix the result with an IP address
+                        appendString(&pReply->reply, "%s,",token);
+                    }
+                }else{
+                    buildStatsReplyForNode(pDnxNode,token,pReply);
+                }
+            }while(token = strtok(NULL,","));
+        }
+
+        //Get rid of that very annoying trailing comma
+
+        if (pReply->reply)
+        {
+            trim(pReply->reply,',');
+            appendString(&pReply->reply,"\n");
+            dnxDebug(2,"buildStatsReply: Response completed, response is:\n%s\n",pReply->reply);
+        }
+
+    DNX_PT_MUTEX_UNLOCK(&mutex);
+
+    return true;
+}
+
+/*--------------------------------------------------------------------------*/
+
+/** dnxStatsRequestListener
+*   Start the stats request listener and run it.
+*   @return void : returns nothing
+*/
+void dnxStatsRequestListener(void * vpargs)
+{
+    dnxLog("dnxStatsRequestListener: Starting up!\n");
+    int maxsize = DNX_MAX_MSG; //This is an ugly hack we have to do this because dnxGet requires a point to an INT and DNX_MAX_MSG is a macro
+    bool ret = false;
+    int timeout = 0;
+    bool quit = false;
+    char *pHost = "127.0.0.1";
+    char *pPort = "12482";
+    bool result;
+    DnxMgmtReply reply;
+
+    if(!gTopNode)
+        gTopNode = dnxNodeListCreateNode(pHost);
+
+
+    dnxDebug(2,"dnxStatsRequestListener: init comm sub-system\n");
+
+    char url[1024];
+    snprintf(url, sizeof url, "udp://%s:%s", pHost, pPort);
+    dnxLog("dnxStatsRequestListener: Adding Channel Map\n");
+    if ((ret = dnxChanMapAdd("StatsServer", url)) != 0)
+    {
+        dnxLog("dnxStatsRequestListener Error: adding channel (%s): %s.\n", url, dnxErrorString(ret));
+    }else{
+        dnxDebug(2,"dnxStatsRequestListener: Connecting Channel!\n");
+        DnxChannel * channel;
+        if ((ret = dnxConnect("StatsServer", 0, &channel)) != 0)
+        {
+            dnxLog("dnxStatsRequestListener Error: opening stats listener (%s): %s.\n", url, dnxErrorString(ret));
+        }else{
+            while(!quit)
+            {
+                struct sockaddr_in * addr = (struct sockaddr_in*) xcalloc(1,sizeof(struct sockaddr_in));
+
+                char *buf =     (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
+                reply.reply =   (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
+
+                dnxDebug(2,"dnxStatsRequestListener: Listening For Data!\n");
+                if ((ret = dnxGet(channel, buf, &maxsize, timeout, addr)) != DNX_OK)
+                {
+                    quit = true;
+                    dnxLog("dnxStatsRequestListener Error: Error reading from socket, data retrieved if any was %s\n",buf);
+                }else{
+                    pHost = ntop(addr);
+                    dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n",pHost,buf);
+                    result = buildStatsReply(buf,&reply);
+                    if(result)
+                    {
+                        dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s",pHost);
+                        if(dnxSendMgmtReply(channel, &reply, addr)!=0)
+                        {
+                            dnxLog("dnxStatsRequestListener Error: Error writing to socket for reply to %s\n",pHost);
+                        }else{
+                            dnxDebug(2,"dnxStatsRequestListener: Sent requested data to source %s, reply was %s\n",pHost,reply.reply);
+                        }
+                    }else{
+                        dnxLog("dnxStatsRequestListener Error: building stats result failed, stats result was NULL\n");
+                    }
+                }
+                maxsize = DNX_MAX_MSG; //We have to do this because dnxUdpRead is changing the size of the maxsize variable to whatever was read from last time.
+                xfree(buf);
+                xfree(addr);
+                xfree(pHost);
+                if(reply.reply)
+                {
+                    xfree(reply.reply);
+                }else{
+                    dnxLog("dnxStatsRequestListener Error: reply had a length less thqan or equal to 0 or reply was NULL\n");
+                    quit = true;
+                }
+            }
+            dnxDisconnect(channel);
+        }
+        dnxChanMapDelete("StatsServer\n");
+    }
+    xheapchk();
+    dnxLog("dnxStatsRequestListener: Exiting Listener!\n");
+}
+//End dnxNode changes 09/08
 
 //----------------------------------------------------------------------------
 

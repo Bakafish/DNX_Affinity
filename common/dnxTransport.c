@@ -31,6 +31,7 @@
 #include "dnxDebug.h"
 #include "dnxError.h"
 #include "dnxLogging.h"
+#include "dnxProtocol.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,6 +41,8 @@
 #include <syslog.h>
 #include <errno.h>
 #include <assert.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 #define elemcount(x) (sizeof(x)/sizeof(*(x)))
 
@@ -89,6 +92,32 @@ static DnxChanMap gChannelMap[DNX_MAX_CHAN_MAP]; //!< The global channel map.
 /*--------------------------------------------------------------------------
                               IMPLEMENTATION
   --------------------------------------------------------------------------*/
+char *ntop(const struct sockaddr *sa)
+{
+    size_t maxlen;
+    char * buf = (char *)xcalloc(DNX_MAX_ADDRESS,sizeof(char));
+    assert(sa);
+    if(!sa)
+        return xstrdup("DNX Error:  Address Unkown or Corrupt! ");
+
+    switch(sa->sa_family) {
+        case AF_INET:
+            maxlen = INET_ADDRSTRLEN;
+            inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr),buf, maxlen);
+            break;
+
+        case AF_INET6:
+            maxlen = INET6_ADDRSTRLEN;
+            inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)sa)->sin6_addr),buf, maxlen);
+            break;
+
+        default:
+            strncpy(buf, "Unknown AF", maxlen);
+            return NULL;
+    }
+
+    return buf;
+}
 
 /** Set a channel map's transport object allocator in a based on URL scheme.
  * 
@@ -345,8 +374,7 @@ void dnxDisconnect(DnxChannel * channel)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxGet(DnxChannel * channel, char * buf, int * size, 
-      int timeout, char * src)
+int dnxGet(DnxChannel * channel, char * buf, int * size,int timeout, char * src)
 {
    iDnxChannel * icp = (iDnxChannel *)channel;
    assert(channel && buf && size && *size > 0);

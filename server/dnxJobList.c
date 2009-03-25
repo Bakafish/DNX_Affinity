@@ -37,6 +37,8 @@
 #define DNX_JOBLIST_TIMEOUT   5     /*!< Wake up to see if we're shutting down. */
 #define DNX_TIMER_SLEEP       5000  /*!< Timer sleep interval, in milliseconds */
 
+DnxJobList * joblist; // Fwd declaration
+
 /** The JobList implementation data structure. */
 typedef struct iDnxJobList_ 
 {
@@ -49,6 +51,7 @@ typedef struct iDnxJobList_
    pthread_cond_t cond;    /*!< The job list condition variable. */
    DnxTimer * timer;       /*!< The job list expiration timer. */
 } iDnxJobList;
+
 
 /*--------------------------------------------------------------------------
                                  INTERFACE
@@ -101,6 +104,22 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    return ret;
 }
 
+int dnxJobListMarkAck(DnxXID * pXid)
+{
+    int current = 0;
+    iDnxJobList * ilist = (iDnxJobList *)joblist;
+    DNX_PT_MUTEX_LOCK(&ilist->mut);
+    while(current++ <= ilist->size)
+    {
+        if (dnxEqualXIDs(pXid, &ilist->list[current].xid))
+        {
+            ilist->list[current].ack = true;
+            break;
+        }
+    }
+    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
+    return DNX_OK;
+}
 //----------------------------------------------------------------------------
 
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, 

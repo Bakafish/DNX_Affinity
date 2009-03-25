@@ -11,7 +11,9 @@ noinst_HEADERS =\
  dnxNebMain.h\
  dnxQueue.h\
  dnxRegistrar.h\
- dnxTimer.h
+ dnxTimer.h\
+ dnxNode.h\
+ dnxProtocol.h
 
 dnxServer_la_SOURCES =\
  dnxCollector.c\
@@ -20,9 +22,12 @@ dnxServer_la_SOURCES =\
  dnxNebMain.c\
  dnxQueue.c\
  dnxRegistrar.c\
- dnxTimer.c
+ dnxTimer.c\
+ dnxNode.c\
+ dnxProtocol.c
 
 dnxServer_la_CPPFLAGS =\
+ -fPIC\
  -DSYSCONFDIR=\"$(sysconfdir)\"\
  -DSYSLOGDIR=\"$(syslogdir)\"\
  -I$(top_srcdir)/common\

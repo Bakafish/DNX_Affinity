@@ -209,6 +209,7 @@ typedef struct DnxNodeRequest
    unsigned int ttl;                //!< Request Time-To-Live (in seconds).
    time_t expires;                  //!< Job expiration time (not transmitted).
    char address[DNX_MAX_ADDRESS];   //!< Source address.
+   char * addr;                     //!< Source address as char * for easier logging later
    char hostname[MAX_HOSTNAME];     //!< Hostname from client config.
    char * hn;
 } DnxNodeRequest;
@@ -252,29 +253,14 @@ typedef struct DnxMgmtReply
    char address[DNX_MAX_ADDRESS];   //!< Source address.
 } DnxMgmtReply;
 
-int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, 
-      char * address, int timeout);
-int dnxSendNodeRequest(DnxChannel * channel, DnxNodeRequest * pReq, char * address);
 
-int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeout);
-int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address);
 
-int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, 
-      int timeout);
-int dnxSendResult(DnxChannel * channel, DnxResult * pResult, char * address);
-
-int dnxWaitForMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, 
-      char * address, int timeout);
 int dnxSendMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, char * address);
-
-int dnxWaitForMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, 
-      char * address, int timeout);
 int dnxSendMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address);
+int dnxWaitForMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address, int timeout);
 
-int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, 
-      unsigned long xSlot);
+int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, unsigned long xSlot);
 int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb);
-
 
 #endif   /* _DNXPROTOCOL_H_ */
 

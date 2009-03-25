@@ -113,33 +113,37 @@ static void * dnxTimer(void * data)
 
       // search for expired jobs in the pending queue
       totalExpired = MAX_EXPIRED;
-      if ((ret = dnxJobListExpire(itimer->joblist, ExpiredList, 
-            &totalExpired)) == DNX_OK && totalExpired > 0)
+      if ((ret = dnxJobListExpire(itimer->joblist, ExpiredList, &totalExpired)) == DNX_OK && totalExpired > 0)
       {
          for (i = 0; i < totalExpired; i++)
          {
             char msg[128];
             DnxNewJob * job = &ExpiredList[i];
 
-            dnxDebug(1, "dnxTimer[%lx]: Expiring Job [%lu,%lu]: %s.", 
-                  pthread_self(), job->xid.objSerial, job->xid.objSlot, job->cmd);
+            dnxDebug(1, "dnxTimer[%lx]: Expiring Job [%lu,%lu]: %s.",pthread_self(), job->xid.objSerial, job->xid.objSlot, job->cmd);
 
             dnxAuditJob(job, "EXPIRE");
+            char * addr = ntop(job->pNode->address);
 
-            sprintf(msg, "(DNX Service Check Timed Out - Node: %s)", 
-                  job->pNode->address);
+            if(job->ack)
+            {
+                sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to return job response in time allowed)",job->xid.objSerial, job->xid.objSlot, addr);
 
+            }else{
+                sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to acknowledge job reciept)",job->xid.objSerial, job->xid.objSlot, addr);
+            }
+
+            dnxDebug(2,msg);
+
+            xfree(addr);
             // report the expired job to Nagios
-            ret = dnxPostResult(job->payload, job->start_time, 
-                  time(0) - job->start_time, 1, 0, msg);
-
+            ret = dnxPostResult(job->payload, job->start_time, time(0) - job->start_time, 1, 0, msg);
             dnxJobCleanup(job);
          }
       }
 
       if (totalExpired > 0 || ret != DNX_OK)
-         dnxDebug(2, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d: %s.", 
-               pthread_self(), totalExpired, ret, dnxErrorString(ret));
+         dnxDebug(2, "dnxTimer[%lx]: Expired job count: %d  Retcode=%d: %s.",pthread_self(), totalExpired, ret, dnxErrorString(ret));
    }
 
    dnxLog("dnxTimer[%lx]: Terminating: %s.", pthread_self(), dnxErrorString(ret));

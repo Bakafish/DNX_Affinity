@@ -451,7 +451,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
    unsigned long unum;
    long num;
    int ret = DNX_OK;
-   char * temp;
+   char * temp = NULL;
 
    // extract the value of the specified tag from the XML buffer
    if ((ret = dnxXmlGetTagValue(xbuf, xTag, xType, buf, sizeof buf)) != DNX_OK)
@@ -521,9 +521,9 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
 
       case DNX_XML_STR:
          if ((temp = xstrdup(buf)) == 0)
-            ret = DNX_ERR_MEMORY;
-         else
          {
+            ret = DNX_ERR_MEMORY;
+         }else{
             ret = dnxXmlUnescapeStr(temp, buf, sizeof buf);
             *(char **)xData = temp;
          }

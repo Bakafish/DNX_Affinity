@@ -42,6 +42,7 @@
 #include "dnxRegistrar.h"
 #include "dnxJobList.h"
 #include "dnxLogging.h"
+#include "dnxNode.h"
 
 #include <netinet/in.h>
 #include <assert.h>
@@ -69,8 +70,7 @@ typedef struct iDnxDispatcher_
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, 
-      DnxNodeRequest * pNode)
+static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeRequest * pNode)
 {
    struct sockaddr * sin = (struct sockaddr *)pNode->address;
    pthread_t tid = pthread_self();
@@ -92,11 +92,16 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq,
    job.cmd      = pSvcReq->cmd;
 
    if ((ret = dnxSendJob(idisp->channel, &job, pNode->address)) != DNX_OK)
+   {
       dnxLog("Unable to send job [%lu,%lu] (%s) to worker node %u.%u.%u.%u: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
             sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5], 
             dnxErrorString(ret));
-
+   }else{
+        char * addr = ntop(sin);
+        dnxNodeListIncrementNodeMember(addr,JOBS_DISPATCHED);
+        xfree(addr);
+   }
    return ret;
 }
 

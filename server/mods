@@ -1,0 +1,215 @@
+//Checks can be bypassed if they are in a special Host group, Service group or match a regex.
+
+//If a test is in a certain host group or service group they should be sent to a matching dnxClient. 
+
+//The client should have it's affiliation to a host group via Nagios?
+
+
+/* HOSTGROUP structure */
+typedef struct hostgroup_struct{
+        char    *group_name;
+        char    *alias;
+        hostgroupmember *members;
+        struct  hostgroup_struct *next;
+        struct  hostgroup_struct *nexthash;
+        }hostgroup;
+
+/* HOSTGROUPMEMBER structure */
+typedef struct hostgroupmember_struct{
+        char    *host_name;
+        struct  hostgroupmember_struct *next;
+        }hostgroupmember;
+
+hostgroup * find_hostgroup(char *); /* finds a hostgroup object */
+
+
+/* SERVICEGROUPMEMBER structure */
+typedef struct servicegroupmember_struct{
+        char    *host_name;
+        char    *service_description;
+        struct  servicegroupmember_struct *next;
+        }servicegroupmember;
+
+servicegroup * find_servicegroup(char *);  /* finds a servicegroup object */
+/* SERVICEGROUP structure */
+typedef struct servicegroup_struct{
+        char    *group_name;
+        char    *alias;
+        servicegroupmember *members;
+        struct  servicegroup_struct *next;
+        struct  servicegroup_struct *nexthash;
+        }servicegroup;
+
+/* finds a host object */
+host * find_host(char *);
+
+/* tests whether or not a host is a member of a specific hostgroup */
+int is_host_member_of_hostgroup(hostgroup *,host *);
+
+/* tests whether or not a service is a member of a specific servicegroup */
+int is_host_member_of_servicegroup(servicegroup *,host *); 
+
+/* HOSTSMEMBER structure */
+typedef struct hostsmember_struct{
+        char *host_name;
+        struct hostsmember_struct *next;
+        }hostsmember;
+
+
+hostgroup
+
+
+/* HOST structure */
+typedef struct host_struct{
+        char    *name;
+        char    *alias;
+        char    *address;
+        hostsmember *parent_hosts;
+        char    *host_check_command;
+        int     check_interval;
+        int     max_attempts;
+        char    *event_handler;
+        contactgroupsmember *contact_groups;
+        int     notification_interval;
+        int     notify_on_down;
+        int     notify_on_unreachable;
+        int     notify_on_recovery;
+        int     notify_on_flapping;
+        char    *notification_period;
+        char    *check_period;
+        int     flap_detection_enabled;
+        double  low_flap_threshold;
+        double  high_flap_threshold;
+        int     stalk_on_up;
+        int     stalk_on_down;
+        int     stalk_on_unreachable;
+        int     check_freshness;
+        int     freshness_threshold;
+        int     process_performance_data;
+        int     checks_enabled;
+        int     accept_passive_host_checks;
+        int     event_handler_enabled;
+        int     retain_status_information;
+        int     retain_nonstatus_information;
+        int     failure_prediction_enabled;
+        char    *failure_prediction_options;
+        int     obsess_over_host;
+#ifdef NSCORE
+        int     problem_has_been_acknowledged;
+        int     acknowledgement_type;
+        int     check_type;
+        int     current_state;
+        int     last_state;
+        int     last_hard_state;
+        char    *plugin_output;
+        char    *perf_data;
+        int     state_type;
+        int     current_attempt;
+        double  latency;
+        double  execution_time;
+        int     check_options;
+        int     notifications_enabled;
+        time_t  last_host_notification;
+        time_t  next_host_notification;
+        time_t  next_check;
+        int     should_be_scheduled;
+        time_t  last_check;
+        time_t  last_state_change;
+        time_t  last_hard_state_change;
+        time_t  last_time_up;
+        time_t  last_time_down;
+        time_t  last_time_unreachable;
+        int     has_been_checked;
+        int     is_being_freshened;
+        int     notified_on_down;
+        int     notified_on_unreachable;
+        int     current_notification_number;
+        int     no_more_notifications;
+        int     check_flapping_recovery_notification;
+        int     scheduled_downtime_depth;
+        int     pending_flex_downtime;
+        int     state_history[MAX_STATE_HISTORY_ENTRIES];    /* flap detection */
+        int     state_history_index;
+        time_t  last_state_history_update;
+        int     is_flapping;
+        unsigned long flapping_comment_id;
+        double  percent_state_change;
+        int     total_services;
+        unsigned long total_service_check_interval;
+        unsigned long modified_attributes;
+        int     circular_path_checked;
+        int     contains_circular_path;
+#endif
+        struct  host_struct *next;
+        struct  host_struct *nexthash;
+        }host;
+
+
+for(temp_member=temp_hostgroup->members;temp_member!=NULL;temp_member=temp_member->next){
+
+    /* find the host... */
+    temp_host=find_host(temp_member->host_name);
+    if(temp_host==NULL)
+            continue;
+
+    /* find the host status */
+    temp_hoststatus=find_hoststatus(temp_host->name);
+    if(temp_hoststatus==NULL)
+            continue;
+
+    /* make sure we only display hosts of the specified status levels */
+    if(!(host_status_types & temp_hoststatus->status))
+            continue;
+
+    /* make sure we only display hosts that have the desired properties */
+    if(passes_host_properties_filter(temp_hoststatus)==FALSE)
+            continue;
+
+    if(temp_hoststatus->status==HOST_UP)
+            total_up++;
+    else if(temp_hoststatus->status==HOST_DOWN)
+            total_down++;
+    else if(temp_hoststatus->status==HOST_UNREACHABLE)
+            total_unreachable++;
+    else
+            total_pending++;
+}
+
+char **arrayIndices;
+
+// for the "first level"
+arrayIndices = malloc(numLineas * sizeof *arrayIndices);
+
+// In the second level
+arrayIndices[indexArray] = malloc(strlen(numIndice) + 1);
+
+strcpy(arrayIndices[indexArray],numIndice);
+
+
+char **array;
+int num_strings; /* Number of strings */
+int string_width; /* String width */
+
+nstr = 8;
+/* Allocate memory for the array of pointers
+* (which point to the strings) */
+array = (char **) calloc (num_strings, sizeof (char *));
+
+/* Memory is statically allocated for string */
+array[0] = "text";
+
+/* Memory is dynamically allocated for string */
+string_width = 80;
+array[2] = (char *) calloc (string_width, sizeof (char));
+
+/*
+Initialization:
+Create a linked list of host-groups and service-groups. Flag local checks
+from the server config (multiple?)
+
+Client registers with register thread, if it is new registration, calculate what
+affinity groups it is in and add those ID's to it's (DnxNodeRequest) object.
+
+Check should pass affinity ID to dispatcher
+
+Dispatch thread should identify appropriate dnxClient by matching affinity

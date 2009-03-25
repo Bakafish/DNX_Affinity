@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(DNX, 0.19, dnx-devel@lists.sourceforge.net)
+AC_INIT(DNX, 0.20, dnx-devel@lists.sourceforge.net)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([client/dnxWLM.c])
 AC_CONFIG_HEADER([config.h])
@@ -19,11 +19,13 @@ AM_PROG_CC_C_O
 AC_CHECK_LIB([pthread], [pthread_create])
 AC_CHECK_LIB([gcc_s], [_Unwind_Backtrace])
 AC_CHECK_LIB([rt], [nanosleep])
+AC_CHECK_LIB([z], [compress])
+AC_CHECK_LIB([z], [uncompress])
 
 # Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stdlib.h string.h sys/file.h sys/socket.h sys/time.h unistd.h getopt.h])
+AC_CHECK_HEADERS([fcntl.h netdb.h netinet/in.h stdlib.h string.h sys/file.h sys/socket.h sys/time.h unistd.h getopt.h zlib.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -196,4 +198,3 @@ echo "
       rpms               - build source and binary rpms."
 
 echo "------------------------------------------------------------"
-

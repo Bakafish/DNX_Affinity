@@ -24,7 +24,7 @@
  * @attention Please submit patches to http://dnx.sourceforge.net
  * @ingroup DNX_COMMON_IMPL
  */
-
+#include "dnxTypes.h"
 #include "dnxUdp.h"     // temporary
 #include "dnxTSPI.h"
 
@@ -32,6 +32,9 @@
 #include "dnxError.h"
 #include "dnxDebug.h"
 #include "dnxLogging.h"
+
+#include "dnxComStats.h"
+#include "dnxProtocol.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,6 +55,8 @@
 #ifndef HOST_NAME_MAX
 # define HOST_NAME_MAX 256
 #endif
+
+
 
 /** The implementation of the UDP low-level I/O transport. */
 typedef struct iDnxUdpChannel_
@@ -198,11 +203,10 @@ static int dnxUdpClose(iDnxChannel * icp)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size, 
-      int timeout, char * src)
+static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,int timeout, char * src)
 {
-   iDnxUdpChannel * iucp = (iDnxUdpChannel *)
-         ((char *)icp - offsetof(iDnxUdpChannel, ichan));
+   iDnxUdpChannel * iucp = (iDnxUdpChannel *) ((char *)icp - offsetof(iDnxUdpChannel, ichan));
+
    struct sockaddr_in bit_bucket;
    socklen_t slen = sizeof bit_bucket;
    int mlen;
@@ -238,8 +242,8 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,
 
    // read the incoming message
    if (!src) src = (char *)&bit_bucket;
-   if ((mlen = recvfrom(iucp->socket, buf, *size, 0, 
-         (struct sockaddr *)src, &slen)) < 0)
+
+   if ((mlen = recvfrom(iucp->socket, buf, *size, 0,(struct sockaddr *)src, &slen)) < 0)
    {
       // on "connected" UDP sockets, if the server can't be reached -
       //    ICMP returned ICMP_UNREACH - we could get notified here.
@@ -253,6 +257,16 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,
       return DNX_ERR_RECEIVE;
 
    *size = mlen;
+
+   //SM 09/08 DnxNodeList
+
+   struct sockaddr tmp;
+   memcpy(&tmp,src, sizeof(tmp));
+   char * addr = ntop(&tmp);
+   dnxDebug(3,"DnxUdpRead: Recieved %i bytes from %s",mlen,addr);
+   dnxComStatIncrement(addr,PACKETS_IN);
+   xfree(addr);
+   //SM 09/08 DnxNodeList END
 
    return DNX_OK;
 }
@@ -275,14 +289,38 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,
  * @note If this is a stream oriented channel, or if NULL is passed for 
  * the @p dst parameter, The channel destination address is used.
  */
-static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size, 
-      int timeout, char * dst)
+static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,int timeout, char * dst)
 {
-   iDnxUdpChannel * iucp = (iDnxUdpChannel *)
-         ((char *)icp - offsetof(iDnxUdpChannel, ichan));
+   iDnxUdpChannel * iucp = (iDnxUdpChannel *) ((char *)icp - offsetof(iDnxUdpChannel, ichan));
    int ret;
-
+   char * addrStr = NULL;
    assert(icp && iucp->socket && buf && size);
+
+    // Create a hash and add it to the buffer
+    /*
+    char * tbuf = buf;
+    int i = 0;
+    int crc = 0;
+    while(i < size)
+        crc += tbuf++;
+
+    char * crcbuf = xmalloc(255,char);
+    sprintf(crcbuf,"%d",crc);
+
+    char * outbuf = xmalloc(strlen(crcbuf),sizeof(char));
+    i = 0;
+    while(i < strlen(crcbuf))
+    {
+        *outbuf++ = *crcbuf++
+    }
+
+    char * newbuf = xcalloc(strlen(buf)+strlen(outbuf)+1, sizeof(char));
+    strcpy(newbuf,outbuf);
+    strcat(newbuf,buf);
+
+    buf = newbuf;
+    size = strlen(buf);
+    */
 
    // implement timeout logic, if timeout value is greater than zero
    if (timeout > 0)
@@ -298,8 +336,9 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,
       tv.tv_sec = timeout;
 
       if ((nsd = select(iucp->socket + 1, 0, &fd_wrs, 0, &tv)) == 0)
+      {
          return DNX_ERR_TIMEOUT;
-
+      }
       if (nsd < 0)
       {
          if (errno != EINTR) 
@@ -313,17 +352,35 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,
 
    // check for a destination address override
    if (dst)
-      ret = sendto(iucp->socket, buf, size, 0,
-            (struct sockaddr *)dst, sizeof(struct sockaddr_in));
-   else 
+    {
+        ret = sendto(iucp->socket, buf, size, 0,(struct sockaddr *)dst, sizeof(struct sockaddr_in));
+        struct sockaddr_in tmp;
+        memcpy(&tmp,dst, sizeof(tmp));
+        addrStr = ntop(&tmp);
+    }else{
       ret = write(iucp->socket, buf, size);
+        addrStr = xstrdup(iucp->host);
+    }
 
-   if (ret == -1)
-      dnxDebug(4, "sendto/write failed: %s.", strerror(errno));
-
-   if (ret != size)
+   if(ret == -1)
+   {
+      dnxDebug(2, "sendto/write failed: %s.", strerror(errno));
+      dnxComStatIncrement(addrStr,PACKETS_FAILED);
+   }else if (ret != size){
+      dnxComStatIncrement(addrStr,PACKETS_FAILED);
+      xfree(addrStr);
       return DNX_ERR_SEND;
+   }else{
+    //SM 09/08 DnxComStat
+       dnxDebug(3,"DnxUdpWrite: Sent %i bytes to %s",size,addrStr);
+       dnxComStatIncrement(addrStr,PACKETS_OUT);
+   //SM 09/08 DnxComStat END
+   }
    
+    /*
+   xfree(outbuf);
+    */
+   xfree(addrStr);
    return DNX_OK;
 }
 
@@ -357,7 +414,7 @@ static void dnxUdpDelete(iDnxChannel * icp)
 static int dnxUdpNew(char * url, iDnxChannel ** icpp)
 {
    char * cp, * ep, * lastchar;
-   iDnxUdpChannel * iucp;
+   iDnxUdpChannel * iucp = NULL;
    long port;
 
    assert(icpp && url && *url);
@@ -376,10 +433,15 @@ static int dnxUdpNew(char * url, iDnxChannel ** icpp)
          || (*lastchar && *lastchar != '/'))
       return DNX_ERR_BADURL;
 
+    if(iucp)
+        xfree(iucp);
+
    // allocate a new iDnxUdpChannel object
    if ((iucp = (iDnxUdpChannel *)xmalloc(sizeof *iucp)) == 0)
+    {
+        xfree(iucp);
       return DNX_ERR_MEMORY;
-
+    }
    memset(iucp, 0, sizeof *iucp);
 
    // save host name and port

@@ -28,10 +28,11 @@
 /*!@defgroup DNX_STATS_IMPL DNX Management Client Implementation 
  */
 
+#include "../common/dnxProtocol.h"
 #include "dnxTransport.h"
-#include "dnxProtocol.h"
 #include "dnxError.h"
 #include "dnxDebug.h"
+#include "dnxComStats.h"
 
 #if HAVE_CONFIG_H
 # include "config.h"
@@ -45,7 +46,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <assert.h>
 
+extern DCS * gTopDCS;
 /** Print a usage string and exit. 
  * 
  * @param[in] base - the base program name.
@@ -75,7 +78,7 @@ int main(int argc, char ** argv)
 {
    extern char * optarg;
    extern int optind, opterr, optopt;
-
+   gTopDCS = dnxComStatCreateDCS("127.0.0.1");
    int ch, ret;
    char * cp, * prog, * cmdstr;
    char * hoststr, * portstr;
@@ -165,9 +168,8 @@ int main(int argc, char ** argv)
                   if (rsp.status == DNX_REQ_ACK)
                      printf("%s\n", rsp.reply);
                   else
-                     fprintf(stderr, "%s: Request failed on server.\n", prog);
+                     fprintf(stderr, "%s: Request failed on server.\nResponse was (%s)\n", prog,rsp.reply);
       
-                  xfree(rsp.reply);
                }
             }
             dnxDisconnect(channel);

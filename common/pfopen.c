@@ -62,7 +62,7 @@
  */
 PFILE * pfopen(const char * cmdstring, const char * type)
 {
-   PFILE * pfile;
+   PFILE * pfile = NULL;
    int pfd1[2];
    int pfd2[2];
    int pid;
@@ -70,9 +70,13 @@ PFILE * pfopen(const char * cmdstring, const char * type)
    /* only allow "r" or "w" */
    assert((type[0] == 'r' || type[0] == 'w') &&  type[1] == 0);
    
+   if(pfile)
+        xfree(pfile); //placed due to valgrind memory leak complaint
    /* Allocate a PFILE structure */
    if ((pfile = (PFILE *)xmalloc(sizeof(PFILE))) == NULL)
    {
+      if(pfile)
+        xfree(pfile); //placed due to valgrind memory leak complaint
       errno = ENOMEM;
       return NULL;
    }
@@ -198,6 +202,9 @@ int pfclose(PFILE * pfile)
       if (errno != EINTR)
          return -1;  /* error other than EINTR from waitpid() */
    
+   if(pfile)
+    xfree(pfile);
+
    return stat;      /* return child's termination status */
 }
 

@@ -43,6 +43,7 @@
 #include "dnxTransport.h"
 #include "dnxProtocol.h"
 #include "dnxLogging.h"
+#include "dnxNode.h"
 
 #include <assert.h>
 #include <pthread.h>
@@ -117,6 +118,12 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    pReq = *ppMsg;
    pReq->expires = now + pReq->ttl;
 
+   //SM 09/08 DnxNodeList
+   char * addr = ntop(pReq->address,addr);
+   dnxNodeListIncrementNodeMember(addr,JOBS_REQ_RECV);
+   xfree(addr);
+   //SM 09/08 DnxNodeList END
+
    // Get the IP address of the dnxClient
    struct sockaddr_in src_addr;
    in_addr_t addr;
@@ -143,7 +150,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
-      
       *ppMsg = 0;    // we're keeping this message; return NULL
       dnxDebug(2, 
             "dnxRegistrar[%lx]: Added req for [%s] [%lu,%lu] at %u; expires at %u.", 
@@ -273,10 +279,23 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned lon
                 *(char **)node->hostname, node->affinity, flag);
             break;
          } else {
+
+            // DnxNodeList increment may need to be here
+//             char * addr = ntop(node->address,addr);
+//             dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
+//             xfree(addr);
+
             dnxDebug(4, "dnxRegisterNode: dnxClient [%s] can not service request C(%qu) H(%qu).",
                *(char **)node->hostname, node->affinity, flag);
          }
       } else {  
+
+        //SM 09/08 DnxNodeList
+        char * addr = ntop(node->address,addr);
+        dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
+        xfree(addr);
+        //SM 09/08 DnxNodeList END
+
          dnxDebug(3, 
             "dnxRegisterNode: Expired req [%lu,%lu] at %u; expired at %u.", 
             node->xid.objSerial, node->xid.objSlot, 

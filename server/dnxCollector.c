@@ -40,6 +40,7 @@
 #include "dnxProtocol.h"
 #include "dnxJobList.h"
 #include "dnxLogging.h"
+#include "dnxNode.h"
 
 #include <stdlib.h>
 #include <assert.h>
@@ -96,8 +97,14 @@ static void * dnxCollector(void * data)
          // dequeue the matching service request from the pending job queue
          if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
          {
-            ret = dnxPostResult(Job.payload, Job.start_time, sResult.delta, 
-                  0, sResult.resCode, sResult.resData);
+            ret = dnxPostResult(Job.payload, Job.start_time, sResult.delta, 0, sResult.resCode, sResult.resData);
+
+            //SM 09/08 DnxNodeList
+            DnxNodeRequest * pNode = Job.pNode;
+            char * addr = ntop(pNode->address);
+            dnxNodeListIncrementNodeMember(addr,JOBS_HANDLED);
+            xfree(addr);
+            //SM 09/08 DnxNodeList END
 
             /** @todo Wrapper release DnxResult structure. */
             xfree(sResult.resData);
@@ -130,8 +137,7 @@ DnxChannel * dnxCollectorGetChannel(DnxCollector * coll)
 
 //----------------------------------------------------------------------------
 
-int dnxCollectorCreate(char * chname, 
-      char * collurl, DnxJobList * joblist, DnxCollector ** pcoll)
+int dnxCollectorCreate(char * chname, char * collurl, DnxJobList * joblist, DnxCollector ** pcoll)
 {
    iDnxCollector * icoll;
    int ret;

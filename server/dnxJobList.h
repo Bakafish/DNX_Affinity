@@ -28,9 +28,10 @@
 #ifndef _DNXJOBLIST_H_
 #define _DNXJOBLIST_H_
 
-#include "dnxProtocol.h"
-
 #include <time.h>
+
+#include "../common/dnxTypes.h"
+#include "../common/dnxProtocol.h"
 
 typedef struct DnxNewJob
 {
@@ -42,6 +43,7 @@ typedef struct DnxNewJob
    time_t expires;         // Expiration time
    void * payload;         // job payload (service check structure)
    DnxNodeRequest * pNode; // Worker Request that will handle this Job
+   bool ack;                // Boolean to tell us whether or not reciept was acknowledge by the client
 } DnxNewJob;
 
 /** An abstract data type for a DNX Job List object. */
@@ -91,6 +93,8 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob);
  * during this time, no resources will be lost.
  */
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs);
+
+int dnxJobListMarkAck(DnxXID * pXid);
 
 /** Select a dispatchable job from a job list.
  * 
@@ -153,6 +157,8 @@ int dnxJobListCreate(unsigned size, DnxJobList ** ppJobList);
  * @param[in] pJobList - refers to the job list to be destroyed.
  */
 void dnxJobListDestroy(DnxJobList * pJobList);
+
+
 
 #endif   /* _DNXJOBLIST_H_ */
 

@@ -42,12 +42,10 @@ typedef struct iDnxChannel_
    int (*txClose)(struct iDnxChannel_ * icp);
 
    /** Transport read data method. */
-   int (*txRead)(struct iDnxChannel_ * icp, char * buf, int * size, 
-         int timeout, char * src);
+   int (*txRead)(struct iDnxChannel_ * icp, char * buf, int * size, int timeout, char * src);
 
    /** Transport write data method. */
-   int (*txWrite)(struct iDnxChannel_ * icp, char * buf, int size, 
-         int timeout, char * dst);
+   int (*txWrite)(struct iDnxChannel_ * icp, char * buf, int size, int timeout, char * dst);
 
    /** Transport destructor. */
    void (*txDelete)(struct iDnxChannel_ * icp);
