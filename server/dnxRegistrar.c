@@ -126,15 +126,15 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
 
    // Get the IP address of the dnxClient
    struct sockaddr_in src_addr;
-   in_addr_t addr;
+   in_addr_t ip_addr;
    memcpy(&src_addr, pReq->address, sizeof(src_addr));
-   addr = ntohl(src_addr.sin_addr.s_addr);
+   ip_addr = ntohl(src_addr.sin_addr.s_addr);
    dnxDebug(2, "dnxRegisterNode: [%s] IP address [%u.%u.%u.%u]",
       *(char **)pReq->hostname,
-      (unsigned)((addr >> 24) & 0xff),
-      (unsigned)((addr >> 16) & 0xff),
-      (unsigned)((addr >>  8) & 0xff),
-      (unsigned)( addr        & 0xff));
+      (unsigned)((ip_addr >> 24) & 0xff),
+      (unsigned)((ip_addr >> 16) & 0xff),
+      (unsigned)((ip_addr >>  8) & 0xff),
+      (unsigned)( ip_addr        & 0xff));
 
 
    // Store threads affinity flags in struct
