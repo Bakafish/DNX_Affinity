@@ -503,7 +503,7 @@ static int initConfig(char * cfgfile)
       { 0 },
    };
    char cfgdefs[] = 
-      "channelAgent = udp://0:12480\n"
+      "channelAgent = udp://0:12482\n"
       "poolInitial = 20\n"
       "poolMin = 20\n"
       "poolMax = 100\n"

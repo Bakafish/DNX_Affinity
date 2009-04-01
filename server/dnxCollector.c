@@ -312,6 +312,13 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
 
 void dnxJobCleanup(DnxNewJob * pJob) { CHECK_TRUE(pJob != 0); }
 
+unsigned dnxNodeListIncrementNodeMember(char* address,int member)
+{
+   CHECK_TRUE(address != 0);
+   CHECK_TRUE(member != 0);
+   return 0;
+}
+
 void dnxDisconnect(DnxChannel * channel) 
 {
    CHECK_TRUE(channel == test_channel);

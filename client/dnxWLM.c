@@ -450,8 +450,8 @@ static void * dnxWorker(void * data)
 
       // wait for job, even if request was never sent
       if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address,iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
-      dnxLog("Worker[%lx]: Error receiving job: %s.", 
-         tid, dnxErrorString(ret));
+         dnxLog("Worker[%lx]: Error receiving job: %s.",
+               tid, dnxErrorString(ret));
 
       pthread_testcancel();
 

@@ -193,7 +193,7 @@ unsigned dnxNodeListIncrementNodeMember(char* address,int member)
 
     if(pDnxNode)
     {
-        DNX_PT_MUTEX_LOCK(&pDnxNode->mutex)
+        DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
         switch(member)
         {
             case JOBS_DISPATCHED :

@@ -5,6 +5,57 @@ Please make entries to this log (in addition to the SVN log) that describe
 major changes to the DNX code base. All entries should be separated by
 blank lines and include the date, developer's name, and change description.
 =============================================================================
+*** Revsion 265... (Continuing)  TODO: Modify me at release time to reflect Rev range and release id
+Added zlib de/compression to packets
+
+*** Revsion 250-265 Nov 2008 
+Updated Changelog
+Fixed some misc cosmetic flaws in the build system.
+Fixed typos in messages existant to existent etc.
+Stubbed compression into dnxCommon
+Modified configure.ac to check for presence of zlib (now mandatory)
+
+*** Revision 250: Beta dnx-0.19: 29-OCT-08 smorrey
+Updated ChangeLog, TODO, NEWS and README
+Fixed numerous memory leaks.
+Made alot of cosmetic changes to make source code easier to read and understand.
+
+Added stats to common and server, via new global objects gTopDCS and gTopNode respectively.
+
+Changed syntax of stats on client to add underscore seperators to ease readability
+Specifically the following
+
+     "jobsok","jobsfailed","thcreated","thdestroyed","thexist","thactive",
+     "reqsent","jobsrcvd","minexectm","avgexectm","maxexectm","avgthexist",
+     "avgthactive","threadtm","jobtm"
+
+have become
+
+	"jobs_ok","jobs_failed","th_created","th_destroyed",
+	"th_exist","th_active","req_sent","jobs_rcvd","min_exec_tm","avg_exec_tm",
+	"max_exec_tm","avg_th_exist","avg_th_active","thread_tm","job_tm"
+
+Additionally we have added "packets_out","packets_in","packets_failed","jobs_handled" to both client and server.
+
+The readbility changes will likely break any scripts you may have that query stats.
+
+
+We have modified several messages for readability for instance the ubiquitious (Service Check Timed Out) message has been replaced with much more user friendly messages like (DNX: Plugin Timed Out) when a worker node times out, and 
+
+
+common/dnxProtocol.c has been broken into 3 files, client/ and server/dnxProtocol.c
+
+Made some minor changes to begin transition to IPV6 compatibility, these include the use of inet_ntop instead of inet_ntoa in numerous places.
+
+Increased log verbage so Debug lvl 3 now logs things such as packets sent and recieved.
+
+Added an acknowledgement mechanism to jobs so that when a worker node recieves a new job from the server it sends a quick ack to the server.  This ack is used if the job times out.  The server will log that it timed out and was or was not acknowledged.  This is to ensure that a job got through and helps to rule out packet loss.
+
+Those messages are as follows...
+
+(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to return job response in time allowed)
+
+(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to acknowledge job reciept)
 
 *** Revision 249: Released dnx-0.18: 07-APR-08 jcalcote
 
