@@ -1236,6 +1236,8 @@ bool buildStatsReply(char * request,DnxMgmtReply * pReply)
     assert(request);
 
     DnxNode * pDnxNode = gTopNode;
+    DnxAffinityList * temp_aff;
+    temp_aff = hostAffinity;   // Temp hostlist
 
     char * response = NULL;
     char * token = NULL;
@@ -1265,8 +1267,8 @@ bool buildStatsReply(char * request,DnxMgmtReply * pReply)
             } while (pDnxNode = pDnxNode->next);
             
             do {
-                appendString(&pReply->reply,"host (%s) Hostgroup flag [%qu]\n", hostAffinity->name, hostAffinity->flag);
-            } while (hostAffinity = hostAffinity->next);
+                appendString(&pReply->reply,"host (%s) Hostgroup flag [%qu]\n", temp_aff->name, temp_aff->flag);
+            } while (temp_aff = temp_aff->next);
         }
         if(strcmp("ALLSTATS",action) == 0)
         {
