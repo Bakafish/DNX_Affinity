@@ -235,21 +235,16 @@ unsigned dnxNodeListIncrementNodeMember(char* address,int member)
 */
 unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
 {
-    dnxDebug(2, "dnxNodeListSetNodeAffinity: Entering");
-
     //If the IP address is NULL or corrupted it can cause nastiness later on, lets catch it here.
     assert(address && isalnum(*address));
-    dnxDebug(2, "dnxNodeListSetNodeAffinity: Past Assert");
 
     DnxNode* pDnxNode = dnxNodeListFindNode(address);
-    dnxDebug(2, "dnxNodeListSetNodeAffinity: Have Node");
 
     int retval = 0;
 
     if(pDnxNode)
     {
         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
-    dnxDebug(2, "dnxNodeListSetNodeAffinity: Lock");
        if(hostname != NULL){
     dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname [%s]", address, hostname);
         
