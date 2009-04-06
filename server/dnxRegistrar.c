@@ -121,8 +121,9 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    //SM 09/08 DnxNodeList
    char * addr = ntop(pReq->address,addr);
    dnxNodeListIncrementNodeMember(addr,JOBS_REQ_RECV);
-   dnxNodeListIncrementNodeMember(dnxGetAffinity(*(char **)pReq->hostname,AFFINITY_FLAGS);
-   dnxNodeListIncrementNodeMember(addr,JOBS_REQ_RECV);
+   dnxNodeListSetNodeAffinity(pReq->address, *(char **)pReq->hostname)
+//    dnxNodeListIncrementNodeMember(dnxGetAffinity(*(char **)pReq->hostname,AFFINITY_FLAGS);
+//    dnxNodeListIncrementNodeMember(addr,JOBS_REQ_RECV);
    xfree(addr);
    //SM 09/08 DnxNodeList END
 
