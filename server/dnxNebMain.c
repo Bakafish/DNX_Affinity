@@ -1420,6 +1420,15 @@ void dnxStatsRequestListener(void * vpargs)
 
 unsigned long long dnxGetAffinity(char * name)
 {
+
+   dnxDebug(4, "dnxGetAffinity: entering with [%s]", name);
+   extern hostgroup *hostgroup_list;
+   hostgroup * hostgroupObj;
+   unsigned long long flag = 0;
+   short int match = 0;
+   DnxAffinityList * temp_aff;
+   temp_aff = hostAffinity;   // We are probably looking for a host or dnxClient
+
    if(name == NULL) {
         // We were passed either the local host or an unnamed (old) client
       // This is a dnxClient that is unaffiliated with a hostgroup
@@ -1433,13 +1442,6 @@ unsigned long long dnxGetAffinity(char * name)
       return(flag);
    }
 
-   dnxDebug(4, "dnxGetAffinity: entering with [%s]", name);
-   extern hostgroup *hostgroup_list;
-   hostgroup * hostgroupObj;
-   unsigned long long flag = 0;
-   short int match = 0;
-   DnxAffinityList * temp_aff;
-   temp_aff = hostAffinity;   // We are probably looking for a host or dnxClient
    host * hostObj = find_host(name); 
 
 
