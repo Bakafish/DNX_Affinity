@@ -235,6 +235,8 @@ unsigned dnxNodeListIncrementNodeMember(char* address,int member)
 */
 unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
 {
+    dnxDebug(2, "dnxNodeListSetNodeAffinity: Entering");
+
     //If the IP address is NULL or corrupted it can cause nastiness later on, lets catch it here.
     assert(address && isalnum(*address));
 
