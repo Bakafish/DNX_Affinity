@@ -129,16 +129,18 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    in_addr_t ip_addr;
    memcpy(&src_addr, pReq->address, sizeof(src_addr));
    ip_addr = ntohl(src_addr.sin_addr.s_addr);
-   dnxDebug(2, "dnxRegisterNode: [%s] IP address [%u.%u.%u.%u]",
-      *(char **)pReq->hostname,
-      (unsigned)((ip_addr >> 24) & 0xff),
-      (unsigned)((ip_addr >> 16) & 0xff),
-      (unsigned)((ip_addr >>  8) & 0xff),
-      (unsigned)( ip_addr        & 0xff));
-
-
-   // Store threads affinity flags in struct
-   pReq->affinity = getDnxAffinity(*(char **)pReq->hostname);
+   // Store threads affinity flags in struct unless it is the localhost or is unnamed
+   if(!*(char **)pReq->hostname){
+       dnxDebug(2, "dnxRegisterNode: [%s] IP address [%u.%u.%u.%u]",
+          *(char **)pReq->hostname,
+          (unsigned)((ip_addr >> 24) & 0xff),
+          (unsigned)((ip_addr >> 16) & 0xff),
+          (unsigned)((ip_addr >>  8) & 0xff),
+          (unsigned)( ip_addr        & 0xff));
+    
+    
+       pReq->affinity = dnxGetAffinity(*(char **)pReq->hostname);
+   }
    // locate existing node: update expiration time, or add to the queue
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {

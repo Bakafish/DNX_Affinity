@@ -69,7 +69,7 @@ void dnxJobCleanup(DnxNewJob * pJob);
  */
 int dnxAuditJob(DnxNewJob * pJob, char * action);
 
-unsigned long long getDnxAffinity(char * name);
+unsigned long long dnxGetAffinity(char * name);
 
 
 #endif   /* _DNXNEBMAIN_H_ */

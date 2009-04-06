@@ -611,7 +611,7 @@ static int ehSvcCheck(int event_type, void * data)
    }
    
    // use the affinity bitmask to dispatch the check
-   unsigned long long host_flags = getDnxAffinity(hostObj->name);
+   unsigned long long host_flags = dnxGetAffinity(hostObj->name);
    dnxDebug(1, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, host_flags);
 
    if (cfg.bypassHostgroup && (host_flags & 1)) // Affinity bypass group is always the LSB
@@ -1413,9 +1413,9 @@ void dnxStatsRequestListener(void * vpargs)
 
 //----------------------------------------------------------------------------
 
-unsigned long long getDnxAffinity(char * name)
+unsigned long long dnxGetAffinity(char * name)
 {
-   dnxDebug(4, "getDnxAffinity: entering with [%s]", name);
+   dnxDebug(4, "dnxGetAffinity: entering with [%s]", name);
    extern hostgroup *hostgroup_list;
    hostgroup * hostgroupObj;
    unsigned long long flag = 0;
@@ -1432,11 +1432,11 @@ unsigned long long getDnxAffinity(char * name)
          temp_aff = affinity;
    }
    while (temp_aff != NULL) {
-      dnxDebug(8, "getDnxAffinity: Checking cache for [%s]", name);
+      dnxDebug(8, "dnxGetAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0)
       {
          // We have a cached copy so return
-         dnxDebug(4, "getDnxAffinity: Found [%s] in cache with (%qu) flags.", name, temp_aff->flag);
+         dnxDebug(4, "dnxGetAffinity: Found [%s] in cache with (%qu) flags.", name, temp_aff->flag);
          return(temp_aff->flag);
       }
       temp_aff = temp_aff->next;
@@ -1445,7 +1445,7 @@ unsigned long long getDnxAffinity(char * name)
    temp_aff = affinity;
    while (temp_aff != NULL) {
       // Recurse through the affinity list
-      dnxDebug(4, "getDnxAffinity: Recursing affinity list - [%s] = (%qu)", 
+      dnxDebug(4, "dnxGetAffinity: Recursing affinity list - [%s] = (%qu)", 
       temp_aff->name, temp_aff->flag);
       // Is host in this group?
       hostgroupObj = find_hostgroup(temp_aff->name);
@@ -1453,9 +1453,9 @@ unsigned long long getDnxAffinity(char * name)
       {
          flag = flag + temp_aff->flag;
          match++;
-         dnxDebug(4, "getDnxAffinity: matches [%s]", temp_aff->name);
+         dnxDebug(4, "dnxGetAffinity: matches [%s]", temp_aff->name);
       } else {
-         dnxDebug(8, "getDnxAffinity: no match with [%s]", temp_aff->name);
+         dnxDebug(8, "dnxGetAffinity: no match with [%s]", temp_aff->name);
       }
       temp_aff = temp_aff->next;
    }
@@ -1463,7 +1463,7 @@ unsigned long long getDnxAffinity(char * name)
    {
       // Push this into the host cache
       addDnxAffinity(hostAffinity, name, flag);
-      dnxDebug(4, "getDnxAffinity: Adding [%s] dnxClient to host cache with (%qu) flags.",
+      dnxDebug(4, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags.",
          name, flag);
       return(flag);
    } else {
@@ -1473,7 +1473,7 @@ unsigned long long getDnxAffinity(char * name)
       // misconfigured client could steal requests that it can't service.
       flag = (unsigned long long *)(-2); // Match all affinity but local(LSB)
       addDnxAffinity(hostAffinity, name, flag);
-      dnxDebug(4, "getDnxAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
+      dnxDebug(4, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
       return(flag);
    }
