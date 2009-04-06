@@ -121,6 +121,8 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    //SM 09/08 DnxNodeList
    char * addr = ntop(pReq->address,addr);
    dnxNodeListIncrementNodeMember(addr,JOBS_REQ_RECV);
+   dnxNodeListIncrementNodeMember(dnxGetAffinity(*(char **)pReq->hostname,AFFINITY_FLAGS);
+   dnxNodeListIncrementNodeMember(addr,JOBS_REQ_RECV);
    xfree(addr);
    //SM 09/08 DnxNodeList END
 
@@ -129,18 +131,18 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    in_addr_t ip_addr;
    memcpy(&src_addr, pReq->address, sizeof(src_addr));
    ip_addr = ntohl(src_addr.sin_addr.s_addr);
-   // Store threads affinity flags in struct unless it is the localhost or is unnamed
-   if(*(char **)pReq->hostname != NULL){
-       dnxDebug(2, "dnxRegisterNode: [%s] IP address [%u.%u.%u.%u]",
-          *(char **)pReq->hostname,
-          (unsigned)((ip_addr >> 24) & 0xff),
-          (unsigned)((ip_addr >> 16) & 0xff),
-          (unsigned)((ip_addr >>  8) & 0xff),
-          (unsigned)( ip_addr        & 0xff));
-    
-    
-       pReq->affinity = dnxGetAffinity(*(char **)pReq->hostname);
-   }
+//  // Store threads affinity flags in struct unless it is the localhost or is unnamed
+//    if(*(char **)pReq->hostname != NULL){
+//        dnxDebug(2, "dnxRegisterNode: [%s] IP address [%u.%u.%u.%u]",
+//           *(char **)pReq->hostname,
+//           (unsigned)((ip_addr >> 24) & 0xff),
+//           (unsigned)((ip_addr >> 16) & 0xff),
+//           (unsigned)((ip_addr >>  8) & 0xff),
+//           (unsigned)( ip_addr        & 0xff));
+//     
+//     
+//        pReq->affinity = dnxGetAffinity(*(char **)pReq->hostname);
+//    }
    // locate existing node: update expiration time, or add to the queue
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
@@ -373,21 +375,21 @@ void dnxRegistrarDestroy(DnxRegistrar * reg)
    xfree(ireg);
 }
 
-DnxAffinityList* addDnxAffinity(DnxAffinityList *p, char * name, unsigned long long flag) 
+DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long long flag) 
 {
     if (p->next == p) 
     {
        p->name = name;
        p->flag = flag;
        p->next = NULL;
-       dnxDebug(4, "addDnxAffinity: Added [%s]", p->name);    
+       dnxDebug(4, "dnxAddAffinity: Added linked list item [%s]", p->name);    
     } else {
        DnxAffinityList *new_item = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
        new_item->name = name;
        new_item->flag = flag;
        new_item->next = p->next;
        p->next = new_item;
-       dnxDebug(4, "addDnxAffinity: Added [%s] to [%s]", new_item->name, p->name);    
+       dnxDebug(4, "dnxAddAffinity: Added linked list item [%s] to [%s]", new_item->name, p->name);    
     }
     return p;
 }

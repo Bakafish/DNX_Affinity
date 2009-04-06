@@ -18,6 +18,8 @@ enum
     JOBS_REJECTED_NO_NODES,
     JOBS_REQ_RECV,
     JOBS_REQ_EXP,
+    HOSTNAME,
+    AFFINITY_FLAGS
 
 };
 
@@ -30,6 +32,8 @@ typedef struct DnxNode
     struct DnxNode* next; //!< Next Node
     struct DnxNode* prev; //!< Previous Node
     char* address;  //!< IP address or URL of worker
+    char* hostname; //!< Hostname defined in dnxClient.cfg
+    unsigned long long flags; //!< Affinity flags assigned during init
     unsigned jobs_dispatched; //!< How many jobs have been sent to worker
     unsigned jobs_handled;   //!< How many jobs have been handled
     unsigned jobs_rejected_oom;  //!< How many jobs have been rejected due to memory
@@ -107,6 +111,8 @@ unsigned dnxNodeListGetMemberValue(DnxNode* pDnxNode, int member);
 unsigned dnxNodeListCount(char* address, int member);
 
 unsigned dnxNodeListIncrementNodeMember(char* address,int member);
+
+unsigned dnxNodeListSetNode(char* address, int member, void* value);
 
 void dnxStatsRequestListener(void *vptr_args);
 

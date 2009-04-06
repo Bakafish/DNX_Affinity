@@ -214,9 +214,47 @@ unsigned dnxNodeListIncrementNodeMember(char* address,int member)
                 gTopNode->jobs_req_exp++;
                 retval = pDnxNode->jobs_req_exp++;
             break;
-
+            
             dnxLog("Error:  Tried to increment stats for non-existent stat %i",member);
             default : retval = -1;
+        }
+        DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
+
+    }else{
+        dnxDebug(3,"Warning:  Tried to increment stat %i for non-existent node ADDRESS: %s proceeding to create node",member,address);
+        dnxNodeListCreateNode(address);
+        retval = dnxNodeListIncrementNodeMember(address,member);
+    }
+
+    return(retval);
+}
+
+/** Function to set member values
+*   @param address  - The IP address of the node you want
+*   @param  hostname  - the value you want to set member to
+*/
+unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
+{
+    //If the IP address is NULL or corrupted it can cause nastiness later on, lets catch it here.
+    assert(address && isalnum(*address));
+
+    DnxNode* pDnxNode = dnxNodeListFindNode(address);
+
+    int retval = 0;
+
+    if(pDnxNode)
+    {
+        DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
+        if(hostname != NULL){
+            dnxDebug(2, "dnxNodeListSetNodeAffinity: [%s] IP address [%s]",
+                hostname, address;
+//                 (unsigned)((ip_addr >> 24) & 0xff),
+//                 (unsigned)((ip_addr >> 16) & 0xff),
+//                 (unsigned)((ip_addr >>  8) & 0xff),
+//                 (unsigned)( ip_addr        & 0xff));
+        
+        
+//            pReq->affinity = dnxGetAffinity(*hostname);
         }
         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
 

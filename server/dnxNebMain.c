@@ -797,11 +797,11 @@ static int dnxServerInit(void)
      dnxDebug(1, "dnxServerInit: Entering hostgroup init loop: %s", temp_hostgroup->group_name);
      if(strcmp(cfg.bypassHostgroup, temp_hostgroup->group_name)==0) {
         // This is the bypass group and should be assigned the NULL flag
-        addDnxAffinity(affinity, temp_hostgroup->group_name, 0x01);
+        dnxAddAffinity(affinity, temp_hostgroup->group_name, 0x01);
         dnxDebug(1, "dnxServerInit: (bypassHostgroup match) Service for %s hostgroup will execute locally.", 
         temp_hostgroup->group_name);
      } else {
-        addDnxAffinity(affinity, temp_hostgroup->group_name, flag);
+        dnxAddAffinity(affinity, temp_hostgroup->group_name, flag);
         dnxDebug(1, "dnxServerInit: Hostgroup [%s] uses (%li) flag.", temp_hostgroup->group_name, flag);
         flag <<= 1;
      }
@@ -829,7 +829,7 @@ static int dnxServerInit(void)
          }
          temp_aff = temp_aff->next;
       }
-      addDnxAffinity(hostAffinity, temp_host->name, flag);
+      dnxAddAffinity(hostAffinity, temp_host->name, flag);
    }
    // registration for this event starts everything rolling
    neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA, myHandle, 0, ehSvcCheck);
@@ -1259,7 +1259,12 @@ bool buildStatsReply(char * request,DnxMgmtReply * pReply)
 
     // search table for sub-string, append requested stat to response
     DNX_PT_MUTEX_LOCK(&mutex);
-
+        if(strcmp("AFFINITY",action) == 0){
+            appendString(&pReply->reply,"IP ADDRESS: %s", pDnxNode->address);
+            
+        
+ 
+        }
         if(strcmp("ALLSTATS",action) == 0)
         {
             //The requested action is the keyword ALLSTATS, short circuit all normal functionality and just dump all the stats
@@ -1415,6 +1420,10 @@ void dnxStatsRequestListener(void * vpargs)
 
 unsigned long long dnxGetAffinity(char * name)
 {
+   if(name == NULL) {
+        // We were passed either the local host or an unnamed (old) client
+   }
+
    dnxDebug(4, "dnxGetAffinity: entering with [%s]", name);
    extern hostgroup *hostgroup_list;
    hostgroup * hostgroupObj;
@@ -1462,7 +1471,7 @@ unsigned long long dnxGetAffinity(char * name)
    if(match)
    {
       // Push this into the host cache
-      addDnxAffinity(hostAffinity, name, flag);
+      dnxAddAffinity(hostAffinity, name, flag);
       dnxDebug(4, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags.",
          name, flag);
       return(flag);
@@ -1472,7 +1481,7 @@ unsigned long long dnxGetAffinity(char * name)
       // for backwards compatibility. This is dangerous though as a rogue or
       // misconfigured client could steal requests that it can't service.
       flag = (unsigned long long *)(-2); // Match all affinity but local(LSB)
-      addDnxAffinity(hostAffinity, name, flag);
+      dnxAddAffinity(hostAffinity, name, flag);
       dnxDebug(4, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
       return(flag);
@@ -1480,4 +1489,12 @@ unsigned long long dnxGetAffinity(char * name)
 }
 
 /*--------------------------------------------------------------------------*/
+// This is a Hamming Weight function that will count the number of flags set 
+// in the affinity bitmask.
 
+int dnxHammingWeight(unsigned long long x) {
+    uint64 count;
+    for (count=0; x; count++)
+        x &= x-1;
+    return count;
+}
