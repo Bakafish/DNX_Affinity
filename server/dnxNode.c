@@ -268,11 +268,8 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
     } else {
         dnxDebug(3,"Warning:  Tried to set a non-existent node ADDRESS: %s proceeding to create node",address);
         dnxNodeListCreateNode(address);
-        if(hostname != NULL){
-    dnxDebug(2, "dnxNodeListSetNodeAffinity: Hostname [");
-//     dnxDebug(2, "%s", hostname);
-    dnxDebug(2, "]");
-
+//        if(hostname != NULL){
+    dnxDebug(2, "dnxNodeListSetNodeAffinity: Hostname [%s]", hostname);
 //             dnxDebug(2, "dnxNodeListSetNodeAffinity: [%s] IP address [%s]",
 //                 hostname, address);
 //                 (unsigned)((ip_addr >> 24) & 0xff),
@@ -282,7 +279,7 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
         
         
 //            pReq->affinity = dnxGetAffinity(*hostname);
-        }
+//        }
     }
     return(retval);
 }
