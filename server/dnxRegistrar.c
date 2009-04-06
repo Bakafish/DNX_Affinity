@@ -130,7 +130,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    memcpy(&src_addr, pReq->address, sizeof(src_addr));
    ip_addr = ntohl(src_addr.sin_addr.s_addr);
    // Store threads affinity flags in struct unless it is the localhost or is unnamed
-   if(!*(char **)pReq->hostname){
+   if(*(char **)pReq->hostname != NULL){
        dnxDebug(2, "dnxRegisterNode: [%s] IP address [%u.%u.%u.%u]",
           *(char **)pReq->hostname,
           (unsigned)((ip_addr >> 24) & 0xff),
