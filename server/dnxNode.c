@@ -247,7 +247,12 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
     if(pDnxNode)
     {
         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
+    dnxDebug(2, "dnxNodeListSetNodeAffinity: Lock");
         if(hostname != NULL){
+    dnxDebug(2, "dnxNodeListSetNodeAffinity: Hostname [");
+    dnxDebug(2, "%s", hostname);
+    dnxDebug(2, "]");
+
             dnxDebug(2, "dnxNodeListSetNodeAffinity: [%s] IP address [%s]",
                 hostname, address);
 //                 (unsigned)((ip_addr >> 24) & 0xff),
