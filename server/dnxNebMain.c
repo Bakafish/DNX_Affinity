@@ -1261,8 +1261,12 @@ bool buildStatsReply(char * request,DnxMgmtReply * pReply)
     DNX_PT_MUTEX_LOCK(&mutex);
         if(strcmp("AFFINITY",action) == 0){
             do {
-                appendString(&pReply->reply,"IP ADDRESS: [%s] (%s) Hostgroup flag [%qu]\n", pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
+                appendString(&pReply->reply,"dnxClient (%s) IP: [%s]  Hostgroup flag [%qu]\n", pDnxNode->hostname, pDnxNode->address, pDnxNode->flags);
             } while (pDnxNode = pDnxNode->next);
+            
+            do {
+                appendString(&pReply->reply,"host (%s) Hostgroup flag [%qu]\n", hostAffinity->name, hostAffinity->flag);
+            } while (hostAffinity = hostAffinity->next);
         }
         if(strcmp("ALLSTATS",action) == 0)
         {
