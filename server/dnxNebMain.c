@@ -822,7 +822,7 @@ static int dnxServerInit(void)
          hostgroupObj = find_hostgroup(temp_aff->name);
          if(is_host_member_of_hostgroup(hostgroupObj, temp_host))
          {
-            flag &= temp_aff->flag;
+            flag = flag + temp_aff->flag;
             dnxDebug(2, "dnxServerInit: matches [%s]", temp_aff->name);
          } else {
             dnxDebug(4, "dnxServerInit: no match with [%s]", temp_aff->name);
