@@ -264,7 +264,7 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
         
         
 //            pReq->affinity = dnxGetAffinity(*hostname);
-        }
+//        }
         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
 
     } else {
