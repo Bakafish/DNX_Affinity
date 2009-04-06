@@ -1493,7 +1493,7 @@ unsigned long long dnxGetAffinity(char * name)
 // in the affinity bitmask.
 
 int dnxHammingWeight(unsigned long long x) {
-    uint64 count;
+    unsigned long long count;
     for (count=0; x; count++)
         x &= x-1;
     return count;
