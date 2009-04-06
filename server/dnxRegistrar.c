@@ -278,10 +278,10 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned lon
       if (node->expires > now)
       {
          // make sure that this thread has affinity
-         if (node->affinity & flag)
+         if (node->flags & flag)
          {
             dnxDebug(4, "dnxRegisterNode: dnxClient [%s] has affinity C(%qu) H(%qu).",
-                *(char **)node->hostname, node->affinity, flag);
+                *(char **)node->hostname, node->flags, flag);
             break;
          } else {
 
@@ -291,7 +291,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned lon
 //             xfree(addr);
 
             dnxDebug(4, "dnxRegisterNode: dnxClient [%s] can not service request C(%qu) H(%qu).",
-               *(char **)node->hostname, node->affinity, flag);
+               *(char **)node->hostname, node->flags, flag);
          }
       } else {  
 

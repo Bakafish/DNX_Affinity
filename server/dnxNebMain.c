@@ -124,7 +124,7 @@ static DnxJobList * joblist;        //!< The master job list.
 static DnxRegistrar * registrar;    //!< The client node registrar.
 static DnxDispatcher * dispatcher;  //!< The job list dispatcher.
 static DnxCollector * collector;    //!< The job list results collector.
-static DnxAffinityList * affinity;  //!< The list of affinity groups.
+static DnxAffinityList * hostGrpAffinity;  //!< The list of affinity groups.
 static DnxAffinityList * hostAffinity; //!< The affinity list of hosts.
 static time_t start_time;           //!< The module start time.
 static void * myHandle;             //!< Private NEB module handle.
@@ -737,10 +737,10 @@ static int dnxServerInit(void)
    registrar = 0;
    dispatcher = 0;
    collector = 0;
-   affinity = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
+   hostGrpAffinity = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
    hostAffinity = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
    hostAffinity->next = hostAffinity;
-   affinity->next = affinity;
+   hostGrpAffinity->next = hostGrpAffinity;
    DnxAffinityList * temp_aff;
    hostgroup * hostgroupObj;
 
@@ -797,11 +797,11 @@ static int dnxServerInit(void)
      dnxDebug(1, "dnxServerInit: Entering hostgroup init loop: %s", temp_hostgroup->group_name);
      if(strcmp(cfg.bypassHostgroup, temp_hostgroup->group_name)==0) {
         // This is the bypass group and should be assigned the NULL flag
-        dnxAddAffinity(affinity, temp_hostgroup->group_name, 0x01);
+        dnxAddAffinity(hostGrpAffinity, temp_hostgroup->group_name, 0x01);
         dnxDebug(1, "dnxServerInit: (bypassHostgroup match) Service for %s hostgroup will execute locally.", 
         temp_hostgroup->group_name);
      } else {
-        dnxAddAffinity(affinity, temp_hostgroup->group_name, flag);
+        dnxAddAffinity(hostGrpAffinity, temp_hostgroup->group_name, flag);
         dnxDebug(1, "dnxServerInit: Hostgroup [%s] uses (%li) flag.", temp_hostgroup->group_name, flag);
         flag <<= 1;
      }
@@ -811,21 +811,21 @@ static int dnxServerInit(void)
    host * temp_host;
    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
    {
-      dnxDebug(1, "Adding host [%s] to hostAffinity cache.", temp_host->name);
+      dnxDebug(4, "Adding host [%s] to hostAffinity cache.", temp_host->name);
       flag = 0;
-      temp_aff = affinity;
+      temp_aff = hostGrpAffinity;
       while (temp_aff != NULL) {
          // Recurse through the affinity list
-         dnxDebug(1, "dnxServerInit: Recursing affinity list - [%s] = (%li)", 
+         dnxDebug(4, "dnxServerInit: Recursing affinity list - [%s] = (%li)", 
          temp_aff->name, temp_aff->flag);
          // Is host in this group?
          hostgroupObj = find_hostgroup(temp_aff->name);
          if(is_host_member_of_hostgroup(hostgroupObj, temp_host))
          {
-            flag = flag + temp_aff->flag;
-            dnxDebug(2, "dnxServerInit: matches [%s]", temp_aff->name);
+            flag &= temp_aff->flag;
+            dnxDebug(4, "dnxServerInit: matches [%s]", temp_aff->name);
          } else {
-            dnxDebug(1, "dnxServerInit: no match with [%s]", temp_aff->name);
+            dnxDebug(8, "dnxServerInit: no match with [%s]", temp_aff->name);
          }
          temp_aff = temp_aff->next;
       }
@@ -1422,6 +1422,15 @@ unsigned long long dnxGetAffinity(char * name)
 {
    if(name == NULL) {
         // We were passed either the local host or an unnamed (old) client
+      // This is a dnxClient that is unaffiliated with a hostgroup
+      // the default behavior should be that it can handle all requests
+      // for backwards compatibility. This is dangerous though as a rogue or
+      // misconfigured client could steal requests that it can't service.
+      flag = (unsigned long long *)(-2); // Match all affinity but local(LSB)
+      dnxAddAffinity(hostAffinity, name, flag);
+      dnxDebug(4, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
+         name, flag);
+      return(flag);
    }
 
    dnxDebug(4, "dnxGetAffinity: entering with [%s]", name);
@@ -1430,16 +1439,20 @@ unsigned long long dnxGetAffinity(char * name)
    unsigned long long flag = 0;
    short int match = 0;
    DnxAffinityList * temp_aff;
-   temp_aff = hostAffinity;          // We are probably looking for a host or dnxClient
+   temp_aff = hostAffinity;   // We are probably looking for a host or dnxClient
    host * hostObj = find_host(name); 
-   if(!hostObj)                      // If there is no host object
-   {
+
+
+   if(!hostObj) {
       // We might be looking for a specific affinity group flag otherwise it is
       // a dynamically registered dnxClient that isn't in the Nagios hostlist
       hostgroupObj = find_hostgroup(name);
-      if(hostgroupObj) 
-         temp_aff = affinity;
+      if(hostgroupObj) {
+         temp_aff = hostGrpAffinity;
+      }
    }
+
+   // Check the cache first
    while (temp_aff != NULL) {
       dnxDebug(8, "dnxGetAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0)
@@ -1450,17 +1463,19 @@ unsigned long long dnxGetAffinity(char * name)
       }
       temp_aff = temp_aff->next;
    }
+
    // This is the first time we've seen this host/dnxClient
-   temp_aff = affinity;
+   temp_aff = hostGrpAffinity;
    while (temp_aff != NULL) {
-      // Recurse through the affinity list
-      dnxDebug(4, "dnxGetAffinity: Recursing affinity list - [%s] = (%qu)", 
+      // Recurse through the host group affinity list
+      dnxDebug(4, "dnxGetAffinity: Recursing Host Group list - [%s] = (%qu)", 
       temp_aff->name, temp_aff->flag);
+
       // Is host in this group?
       hostgroupObj = find_hostgroup(temp_aff->name);
       if(is_host_member_of_hostgroup(hostgroupObj, hostObj))
       {
-         flag = flag + temp_aff->flag;
+         flag &= temp_aff->flag;
          match++;
          dnxDebug(4, "dnxGetAffinity: matches [%s]", temp_aff->name);
       } else {
@@ -1468,6 +1483,7 @@ unsigned long long dnxGetAffinity(char * name)
       }
       temp_aff = temp_aff->next;
    }
+
    if(match)
    {
       // Push this into the host cache

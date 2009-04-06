@@ -82,7 +82,7 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
          " at node %u.%u.%u.%u. host flags = (%qu)",
          tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
          *(char **)pNode->hostname, sin->sa_data[2], sin->sa_data[3], sin->sa_data[4],
-         sin->sa_data[5], pNode->affinity);
+         sin->sa_data[5], pNode->flags);
 
    memset(&job, 0, sizeof job);
    job.xid      = pSvcReq->xid;
