@@ -111,7 +111,7 @@ static int vlogger(FILE * fp, char * fmt, va_list ap)
 /*--------------------------------------------------------------------------
                                  INTERFACE
   --------------------------------------------------------------------------*/
-/*
+
 void dnxLog(char * fmt, ... )
 {
    FILE * fp_fopened = 0;
@@ -143,7 +143,7 @@ void dnxLog(char * fmt, ... )
         va_end(ap);
    }
 }
-*/
+/*
 
 void dnxLog(char * fmt, ...)
 {
@@ -179,7 +179,7 @@ void dnxDebug(int level, char * fmt, ...)
 }
 
 //----------------------------------------------------------------------------
-/*
+*/
 void dnxDebug(int level, char * fmt, ... )
 {
    assert(fmt);
@@ -215,11 +215,9 @@ void dnxDebug(int level, char * fmt, ... )
       }
    }
 }
-*/
 
 //----------------------------------------------------------------------------
 
-/*
 int dnxAudit(char * fmt, ... )
 {
    int ret = 0;
@@ -249,8 +247,8 @@ int dnxAudit(char * fmt, ... )
    }
    return ret;
 }
-*/
 
+/*
 int dnxAudit(char * fmt, ...)
 {
     va_list ap;
@@ -259,7 +257,7 @@ int dnxAudit(char * fmt, ...)
     va_end(ap);
     return DNX_OK;
 }
-
+*/
 //----------------------------------------------------------------------------
 
 void dnxLogInit(char * logFile, char * debugFile, char * auditFile, 
