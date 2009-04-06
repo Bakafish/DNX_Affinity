@@ -244,12 +244,13 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
 
     if(pDnxNode && (pDnxNode->flags == 0))
     {
-        dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname [%s]", address, hostname);
         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
         pDnxNode->flags = dnxGetAffinity(hostname);
         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
+        dnxDebug(2, "dnxNodeListSetNodeAffinity: (yes) Address: [%s], Hostname: [%s], Flags: [%qu]",
+            address, hostname, pDnxNode->flags);
     } else {
-        dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%qu]",
+        dnxDebug(2, "dnxNodeListSetNodeAffinity: (no) Address: [%s], Hostname: [%s], Flags: [%qu]",
             address, hostname, pDnxNode->flags);
     }
     return(retval);
