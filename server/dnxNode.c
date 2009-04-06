@@ -239,8 +239,10 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
 
     //If the IP address is NULL or corrupted it can cause nastiness later on, lets catch it here.
     assert(address && isalnum(*address));
+    dnxDebug(2, "dnxNodeListSetNodeAffinity: Past Assert");
 
     DnxNode* pDnxNode = dnxNodeListFindNode(address);
+    dnxDebug(2, "dnxNodeListSetNodeAffinity: Have Node");
 
     int retval = 0;
 
