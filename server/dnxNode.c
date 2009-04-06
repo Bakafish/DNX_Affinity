@@ -258,11 +258,6 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
         }
         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
 
-    }else{
-        dnxDebug(3,"Warning:  Tried to increment stat %i for non-existent node ADDRESS: %s proceeding to create node",member,address);
-        dnxNodeListCreateNode(address);
-        retval = dnxNodeListIncrementNodeMember(address,member);
     }
-
     return(retval);
 }
