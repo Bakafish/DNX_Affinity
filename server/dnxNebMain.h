@@ -70,7 +70,7 @@ void dnxJobCleanup(DnxNewJob * pJob);
 int dnxAuditJob(DnxNewJob * pJob, char * action);
 
 unsigned long long dnxGetAffinity(char * name);
-
+int dnxHammingWeight(unsigned long long flag);
 
 #endif   /* _DNXNEBMAIN_H_ */
 
