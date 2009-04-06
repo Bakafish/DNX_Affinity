@@ -1480,7 +1480,7 @@ unsigned long long dnxGetAffinity(char * name)
       hostgroupObj = find_hostgroup(temp_aff->name);
       if(is_host_member_of_hostgroup(hostgroupObj, hostObj))
       {
-         flag &= temp_aff->flag;
+         flag = flag + temp_aff->flag;
          match++;
          dnxDebug(2, "dnxGetAffinity: matches [%s]", temp_aff->name);
       } else {
