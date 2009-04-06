@@ -250,7 +250,7 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
     dnxDebug(2, "dnxNodeListSetNodeAffinity: Lock");
         if(hostname != NULL){
     dnxDebug(2, "dnxNodeListSetNodeAffinity: Hostname [");
-    dnxDebug(2, "%s", hostname);
+//     dnxDebug(2, "%s", hostname);
     dnxDebug(2, "]");
 
             dnxDebug(2, "dnxNodeListSetNodeAffinity: [%s] IP address [%s]",
@@ -270,11 +270,11 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
         dnxNodeListCreateNode(address);
         if(hostname != NULL){
     dnxDebug(2, "dnxNodeListSetNodeAffinity: Hostname [");
-    dnxDebug(2, "%s", hostname);
+//     dnxDebug(2, "%s", hostname);
     dnxDebug(2, "]");
 
-            dnxDebug(2, "dnxNodeListSetNodeAffinity: [%s] IP address [%s]",
-                hostname, address);
+//             dnxDebug(2, "dnxNodeListSetNodeAffinity: [%s] IP address [%s]",
+//                 hostname, address);
 //                 (unsigned)((ip_addr >> 24) & 0xff),
 //                 (unsigned)((ip_addr >> 16) & 0xff),
 //                 (unsigned)((ip_addr >>  8) & 0xff),
