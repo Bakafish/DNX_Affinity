@@ -1260,10 +1260,9 @@ bool buildStatsReply(char * request,DnxMgmtReply * pReply)
     // search table for sub-string, append requested stat to response
     DNX_PT_MUTEX_LOCK(&mutex);
         if(strcmp("AFFINITY",action) == 0){
-            appendString(&pReply->reply,"IP ADDRESS: %s", pDnxNode->address);
-            
-        
- 
+            do {
+                appendString(&pReply->reply,"IP ADDRESS: [%s] Hostgroup flag [%qu]\n", pDnxNode->address, pDnxNode->flags);
+            } while (pDnxNode = pDnxNode->next);
         }
         if(strcmp("ALLSTATS",action) == 0)
         {
