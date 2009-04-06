@@ -254,6 +254,8 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
     dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname [%s]", address, hostname);
         
 //            pReq->affinity = dnxGetAffinity(*hostname);
+       } else {
+    dnxDebug(2, "dnxNodeListSetNodeAffinity: Hostname is NULL - Address: [%s], Hostname [%s]", address, hostname);
        }
         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
 
