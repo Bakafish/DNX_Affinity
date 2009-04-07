@@ -587,6 +587,7 @@ static int ehSvcCheck(int event_type, void * data)
    DnxNodeRequest * pNode;
    DnxJobData * jdp;
    int ret;
+   void * svcdata;
 
    if ( !(event_type != NEBCALLBACK_SERVICE_CHECK_DATA ||
         event_type != NEBCALLBACK_HOST_CHECK_DATA))
