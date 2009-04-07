@@ -404,124 +404,124 @@ DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long l
   --------------------------------------------------------------------------*/
 
 #ifdef DNX_REGISTRAR_TEST
-
-#include "utesthelp.h"
-
-static int verbose;
-static int passes = 0;
-static DnxNodeRequest * test_req1;
-static DnxNodeRequest * test_req2;
-
-// functional stubs
-IMPLEMENT_DNX_DEBUG(verbose);
-IMPLEMENT_DNX_SYSLOG(verbose);
-
-int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, 
-      char * address, int timeout)
-{
-   CHECK_TRUE(channel == (DnxChannel *)17);
-   CHECK_TRUE(pReg != 0);
-   CHECK_TRUE(address != 0);
-   CHECK_TRUE(timeout == DNX_REGISTRAR_REQUEST_TIMEOUT);
-
-   passes++;      // bump registrar loop pass count
-
-   // complex test harness -
-   //   pass 1: add a new registration
-   //   pass 2: update an existing registration
-   //   pass 3: remove an existing registration
-
-   memset(pReg, 0, sizeof *pReg);
-   pReg->ttl = 10;   // seconds - won't timeout during test
-   if (passes < 3)
-      pReg->reqType = DNX_REQ_REGISTER;
-   else
-      pReg->reqType = DNX_REQ_DEREGISTER;
-
-   if (passes < 4)
-      return 0;
-
-   return DNX_ERR_TIMEOUT;
-}
-
-DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, 
-      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
-{
-   CHECK_TRUE(queue = (DnxQueue *)37);
-   if (passes == 1)
-      return DNX_QRES_CONTINUE;  // pass 1: return not-found
-   *ppPayload = test_req1;
-   return DNX_QRES_FOUND;        // pass 2: return found
-}
-
-int dnxQueuePut(DnxQueue * queue, void * pPayload)
-{
-   CHECK_TRUE(queue = (DnxQueue *)37);
-   CHECK_TRUE(pPayload != 0);
-   test_req1 = (DnxNodeRequest *)pPayload;
-   return 0;                     // pass 1: add new registration
-}
-
-DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload, 
-      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
-{
-   CHECK_TRUE(queue = (DnxQueue *)37);
-   CHECK_TRUE(ppPayload != 0);
-   CHECK_TRUE(Compare == dnxCompareNodeReq);
-   *ppPayload = test_req1;       // pass 3: remove existing registration
-   return DNX_QRES_FOUND;
-}
-
-int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
-{
-   CHECK_TRUE(queue = (DnxQueue *)37);
-   CHECK_TRUE(ppPayload != 0);
-   *ppPayload = test_req1;       // pass 4+: called from dnxGetNodeRequest
-   return 0;
-}
-
-int dnxQueueCreate(unsigned maxsz, void (*pldtor)(void *), DnxQueue ** pqueue)
-{
-   CHECK_TRUE(pqueue != 0);
-   *pqueue = (DnxQueue *)37;
-   return 0;
-}
-
-void dnxQueueDestroy(DnxQueue * queue)
-{
-   CHECK_TRUE(queue == (DnxQueue *)37);
-}
-
-int main(int argc, char ** argv)
-{
-   DnxRegistrar * reg;
-   iDnxRegistrar * ireg;
-   DnxNodeRequest * node;
-
-   verbose = argc > 1 ? 1 : 0;
-
-   CHECK_ZERO(dnxRegistrarCreate(5, (DnxChannel *)17, &reg));
-
-   ireg = (iDnxRegistrar *)reg;
-
-   CHECK_TRUE(ireg->dispchan == (DnxChannel *)17);
-   CHECK_TRUE(ireg->rqueue == (DnxQueue *)37);
-   CHECK_TRUE(ireg->tid != 0);
-
-   while (passes < 4)
-      dnxCancelableSleep(10);
-
-   CHECK_ZERO(dnxGetNodeRequest(reg, &node));
-   CHECK_TRUE(node == test_req1);
-
-   dnxRegistrarDestroy(reg);
-
-#ifdef DEBUG_HEAP
-   CHECK_ZERO(dnxCheckHeap());
-#endif
-
-   return 0;
-}
+// 
+// #include "utesthelp.h"
+// 
+// static int verbose;
+// static int passes = 0;
+// static DnxNodeRequest * test_req1;
+// static DnxNodeRequest * test_req2;
+// 
+// // functional stubs
+// IMPLEMENT_DNX_DEBUG(verbose);
+// IMPLEMENT_DNX_SYSLOG(verbose);
+// 
+// int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, 
+//       char * address, int timeout)
+// {
+//    CHECK_TRUE(channel == (DnxChannel *)17);
+//    CHECK_TRUE(pReg != 0);
+//    CHECK_TRUE(address != 0);
+//    CHECK_TRUE(timeout == DNX_REGISTRAR_REQUEST_TIMEOUT);
+// 
+//    passes++;      // bump registrar loop pass count
+// 
+//    // complex test harness -
+//    //   pass 1: add a new registration
+//    //   pass 2: update an existing registration
+//    //   pass 3: remove an existing registration
+// 
+//    memset(pReg, 0, sizeof *pReg);
+//    pReg->ttl = 10;   // seconds - won't timeout during test
+//    if (passes < 3)
+//       pReg->reqType = DNX_REQ_REGISTER;
+//    else
+//       pReg->reqType = DNX_REQ_DEREGISTER;
+// 
+//    if (passes < 4)
+//       return 0;
+// 
+//    return DNX_ERR_TIMEOUT;
+// }
+// 
+// DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, 
+//       DnxQueueResult (*Compare)(void * pLeft, void * pRight))
+// {
+//    CHECK_TRUE(queue = (DnxQueue *)37);
+//    if (passes == 1)
+//       return DNX_QRES_CONTINUE;  // pass 1: return not-found
+//    *ppPayload = test_req1;
+//    return DNX_QRES_FOUND;        // pass 2: return found
+// }
+// 
+// int dnxQueuePut(DnxQueue * queue, void * pPayload)
+// {
+//    CHECK_TRUE(queue = (DnxQueue *)37);
+//    CHECK_TRUE(pPayload != 0);
+//    test_req1 = (DnxNodeRequest *)pPayload;
+//    return 0;                     // pass 1: add new registration
+// }
+// 
+// DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload, 
+//       DnxQueueResult (*Compare)(void * pLeft, void * pRight))
+// {
+//    CHECK_TRUE(queue = (DnxQueue *)37);
+//    CHECK_TRUE(ppPayload != 0);
+//    CHECK_TRUE(Compare == dnxCompareNodeReq);
+//    *ppPayload = test_req1;       // pass 3: remove existing registration
+//    return DNX_QRES_FOUND;
+// }
+// 
+// int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
+// {
+//    CHECK_TRUE(queue = (DnxQueue *)37);
+//    CHECK_TRUE(ppPayload != 0);
+//    *ppPayload = test_req1;       // pass 4+: called from dnxGetNodeRequest
+//    return 0;
+// }
+// 
+// int dnxQueueCreate(unsigned maxsz, void (*pldtor)(void *), DnxQueue ** pqueue)
+// {
+//    CHECK_TRUE(pqueue != 0);
+//    *pqueue = (DnxQueue *)37;
+//    return 0;
+// }
+// 
+// void dnxQueueDestroy(DnxQueue * queue)
+// {
+//    CHECK_TRUE(queue == (DnxQueue *)37);
+// }
+// 
+// int main(int argc, char ** argv)
+// {
+//    DnxRegistrar * reg;
+//    iDnxRegistrar * ireg;
+//    DnxNodeRequest * node;
+// 
+//    verbose = argc > 1 ? 1 : 0;
+// 
+//    CHECK_ZERO(dnxRegistrarCreate(5, (DnxChannel *)17, &reg));
+// 
+//    ireg = (iDnxRegistrar *)reg;
+// 
+//    CHECK_TRUE(ireg->dispchan == (DnxChannel *)17);
+//    CHECK_TRUE(ireg->rqueue == (DnxQueue *)37);
+//    CHECK_TRUE(ireg->tid != 0);
+// 
+//    while (passes < 4)
+//       dnxCancelableSleep(10);
+// 
+//    CHECK_ZERO(dnxGetNodeRequest(reg, &node));
+//    CHECK_TRUE(node == test_req1);
+// 
+//    dnxRegistrarDestroy(reg);
+// 
+// #ifdef DEBUG_HEAP
+//    CHECK_ZERO(dnxCheckHeap());
+// #endif
+// 
+//    return 0;
+// }
 
 #endif   /* DNX_REGISTRAR_TEST */
 

@@ -440,113 +440,113 @@ void dnxQueueDestroy(DnxQueue * queue)
 
 #ifdef DNX_QUEUE_TEST
 
-#include "utesthelp.h"
-#include <time.h>
-
-#define elemcount(x) (sizeof(x)/sizeof(*(x)))
-
-static int free_count;
-static int verbose;
-
-IMPLEMENT_DNX_DEBUG(verbose);
-
-// functional stubs
-static DnxQueueResult qtcmp(void * left, void * right)
-      { return strcmp((char *)left, (char *)right) == 0? 
-            DNX_QRES_FOUND: DNX_QRES_CONTINUE; }
-
-static void qtfree(void * p)
-{
-   free_count++;
-   free(p);
-}
-
-int main(int argc, char ** argv)
-{
-   DnxQueue * queue;
-   iDnxQueue * iqueue;
-   DnxQueueResult qres;
-   char * msg100_static = "message 100";
-   char * msg25_static = "message 25";
-   char * msg250_static = "message 250";
-   char * msgs[101];
-   char * msg2;
-   int i;
-
-   verbose = argc > 1? 1: 0;
-
-   // create a new queue and get a concrete reference to it for testing
-   CHECK_ZERO(dnxQueueCreate(100, qtfree, &queue));
-   iqueue = (iDnxQueue *)queue;
-
-   // check internal data structure state
-   CHECK_TRUE(iqueue->head == 0);
-   CHECK_TRUE(iqueue->tail == 0);
-   CHECK_TRUE(iqueue->current == 0);
-   CHECK_TRUE(iqueue->freepayload == qtfree);
-   CHECK_TRUE(iqueue->size == 0);
-   CHECK_TRUE(iqueue->maxsz == 100);
-
-   // enqueue the messages
-   free_count = 0;
-   for (i = 0; i < elemcount(msgs); i++)
-   {
-      char buf[32];
-      sprintf(buf, "message %d", i);
-      CHECK_NONZERO(msgs[i] = strdup(buf));
-      CHECK_ZERO(dnxQueuePut(queue, msgs[i]));
-   }
-
-   // we pushed one more than the size of the queue
-   // item 0 should have been freed by the destructor
-   CHECK_TRUE(free_count == 1);
-
-   // get item 1 from the queue - we'll own it after this call
-   CHECK_ZERO(dnxQueueGet(queue, (void **)&msg2));
-   CHECK_TRUE(strcmp(msg2, "message 1") == 0);
-   free(msg2);
-
-   // find and remove item 100 from the queue - we'll own it on success
-   msg2 = msg100_static;
-   CHECK_TRUE(dnxQueueRemove(queue, (void **)&msg2, qtcmp) == DNX_QRES_FOUND);
-   CHECK_NONZERO(msg2);
-   CHECK_TRUE(msg2 != msg100_static);
-   free(msg2);
-
-   // attempt to find an existing item
-   msg2 = msg25_static;
-   CHECK_TRUE(dnxQueueFind(queue, (void **)&msg2, qtcmp) == DNX_QRES_FOUND);
-   CHECK_TRUE(msg2 != msg25_static);
-   CHECK_TRUE(strcmp(msg2, msgs[25]) == 0);
-
-   // attempt to find a non-existent item
-   msg2 = msg250_static;
-   CHECK_TRUE(dnxQueueFind(queue, (void **)&msg2, qtcmp) == DNX_QRES_CONTINUE);
-
-   // remove remaining entries
-   for (i = 3; i < elemcount(msgs); i++)
-   {
-      CHECK_ZERO(dnxQueueGet(queue, (void **)&msg2));
-      free(msg2);
-   }
-
-   // attempt to remove one more entry
-   CHECK_NONZERO(dnxQueueGet(queue, (void **)&msg2));
-
-   // ensure queue is now empty
-   CHECK_TRUE(dnxQueueSize(queue) == 0);
-
-   dnxQueueDestroy(queue);
-
-   // we should have called the destructor only once
-   CHECK_TRUE(free_count == 1);
-
-#ifdef DEBUG_HEAP
-   CHECK_ZERO(dnxCheckHeap());
-#endif
-
-   return 0;
-}
+// #include "utesthelp.h"
+// #include <time.h>
+// 
+// #define elemcount(x) (sizeof(x)/sizeof(*(x)))
+// 
+// static int free_count;
+// static int verbose;
+// 
+// IMPLEMENT_DNX_DEBUG(verbose);
+// 
+// // functional stubs
+// static DnxQueueResult qtcmp(void * left, void * right)
+//       { return strcmp((char *)left, (char *)right) == 0? 
+//             DNX_QRES_FOUND: DNX_QRES_CONTINUE; }
+// 
+// static void qtfree(void * p)
+// {
+//    free_count++;
+//    free(p);
+// }
+// 
+// int main(int argc, char ** argv)
+// {
+//    DnxQueue * queue;
+//    iDnxQueue * iqueue;
+//    DnxQueueResult qres;
+//    char * msg100_static = "message 100";
+//    char * msg25_static = "message 25";
+//    char * msg250_static = "message 250";
+//    char * msgs[101];
+//    char * msg2;
+//    int i;
+// 
+//    verbose = argc > 1? 1: 0;
+// 
+//    // create a new queue and get a concrete reference to it for testing
+//    CHECK_ZERO(dnxQueueCreate(100, qtfree, &queue));
+//    iqueue = (iDnxQueue *)queue;
+// 
+//    // check internal data structure state
+//    CHECK_TRUE(iqueue->head == 0);
+//    CHECK_TRUE(iqueue->tail == 0);
+//    CHECK_TRUE(iqueue->current == 0);
+//    CHECK_TRUE(iqueue->freepayload == qtfree);
+//    CHECK_TRUE(iqueue->size == 0);
+//    CHECK_TRUE(iqueue->maxsz == 100);
+// 
+//    // enqueue the messages
+//    free_count = 0;
+//    for (i = 0; i < elemcount(msgs); i++)
+//    {
+//       char buf[32];
+//       sprintf(buf, "message %d", i);
+//       CHECK_NONZERO(msgs[i] = strdup(buf));
+//       CHECK_ZERO(dnxQueuePut(queue, msgs[i]));
+//    }
+// 
+//    // we pushed one more than the size of the queue
+//    // item 0 should have been freed by the destructor
+//    CHECK_TRUE(free_count == 1);
+// 
+//    // get item 1 from the queue - we'll own it after this call
+//    CHECK_ZERO(dnxQueueGet(queue, (void **)&msg2));
+//    CHECK_TRUE(strcmp(msg2, "message 1") == 0);
+//    free(msg2);
+// 
+//    // find and remove item 100 from the queue - we'll own it on success
+//    msg2 = msg100_static;
+//    CHECK_TRUE(dnxQueueRemove(queue, (void **)&msg2, qtcmp) == DNX_QRES_FOUND);
+//    CHECK_NONZERO(msg2);
+//    CHECK_TRUE(msg2 != msg100_static);
+//    free(msg2);
+// 
+//    // attempt to find an existing item
+//    msg2 = msg25_static;
+//    CHECK_TRUE(dnxQueueFind(queue, (void **)&msg2, qtcmp) == DNX_QRES_FOUND);
+//    CHECK_TRUE(msg2 != msg25_static);
+//    CHECK_TRUE(strcmp(msg2, msgs[25]) == 0);
+// 
+//    // attempt to find a non-existent item
+//    msg2 = msg250_static;
+//    CHECK_TRUE(dnxQueueFind(queue, (void **)&msg2, qtcmp) == DNX_QRES_CONTINUE);
+// 
+//    // remove remaining entries
+//    for (i = 3; i < elemcount(msgs); i++)
+//    {
+//       CHECK_ZERO(dnxQueueGet(queue, (void **)&msg2));
+//       free(msg2);
+//    }
+// 
+//    // attempt to remove one more entry
+//    CHECK_NONZERO(dnxQueueGet(queue, (void **)&msg2));
+// 
+//    // ensure queue is now empty
+//    CHECK_TRUE(dnxQueueSize(queue) == 0);
+// 
+//    dnxQueueDestroy(queue);
+// 
+//    // we should have called the destructor only once
+//    CHECK_TRUE(free_count == 1);
+// 
+// #ifdef DEBUG_HEAP
+//    CHECK_ZERO(dnxCheckHeap());
+// #endif
+// 
+//    return 0;
+// }
 
 #endif   /* DNX_QUEUE_TEST */
 

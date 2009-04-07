@@ -214,93 +214,93 @@ void dnxTimerDestroy(DnxTimer * timer)
   --------------------------------------------------------------------------*/
 
 #ifdef DNX_TIMER_TEST
-
-#include "utesthelp.h"
-#include <time.h>
-
-#define elemcount(x) (sizeof(x)/sizeof(*(x)))
-
-static int verbose;
-static DnxNewJob fakejob;
-static DnxJobList fakejoblist;
-static int fakepayload;
-static DnxNodeRequest fakenode;
-static int entered_dnxJobListExpire;
-
-// functional stubs
-IMPLEMENT_DNX_SYSLOG(verbose);
-IMPLEMENT_DNX_DEBUG(verbose);
-
-int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs)
-{
-   CHECK_TRUE(pJobList == &fakejoblist);
-   CHECK_TRUE(*totalJobs > 0);
-   memcpy(&pExpiredJobs[0], &fakejob, sizeof *pExpiredJobs);
-   *totalJobs = 1;
-   entered_dnxJobListExpire = 1;
-   return 0;
-}
-int dnxPostResult(void * payload, time_t start_time, unsigned delta, 
-      int early_timeout, int res_code, char * res_data)
-{
-   CHECK_TRUE(payload == &fakepayload);
-   CHECK_TRUE(start_time == 100);
-   CHECK_TRUE(early_timeout != 0);
-   CHECK_TRUE(res_code == 0);
-   CHECK_ZERO(memcmp(res_data, "(DNX Service", 12));
-   return 0;
-}
-int dnxAuditJob(DnxNewJob * pJob, char * action) { return 0; }
-void dnxJobCleanup(DnxNewJob * pJob) { }
-
-int main(int argc, char ** argv)
-{
-   DnxTimer * timer;
-   iDnxTimer * itimer;
-
-   verbose = argc > 1? 1: 0;
-
-   // setup test harness
-   fakenode.xid.objType    = DNX_OBJ_JOB;
-   fakenode.xid.objSerial  = 1;
-   fakenode.xid.objSlot    = 2;
-   fakenode.reqType        = DNX_REQ_DEREGISTER;
-   fakenode.jobCap         = 1;
-   fakenode.ttl            = 2;
-   fakenode.expires        = 3;
-   strcpy(fakenode.address, "fake address");
-
-   fakejob.state           = DNX_JOB_INPROGRESS;
-   fakejob.xid.objType     = DNX_OBJ_JOB;
-   fakejob.xid.objSerial   = 1;
-   fakejob.xid.objSlot     = 2;
-   fakejob.cmd             = "fake command line";
-   fakejob.start_time      = 100;
-   fakejob.timeout         = 10;
-   fakejob.expires         = fakejob.start_time + fakejob.timeout;
-   fakejob.payload         = &fakepayload;
-   fakejob.pNode           = &fakenode;
-
-   entered_dnxJobListExpire = 0;
-
-   // create a short timer and reference it as a concrete object for testing
-   CHECK_ZERO(dnxTimerCreate(&fakejoblist, 100, &timer));
-   itimer = (iDnxTimer *)timer;
-
-   // check internal state
-   CHECK_TRUE(itimer->joblist == &fakejoblist);
-   CHECK_TRUE(itimer->tid != 0);
-   CHECK_TRUE(itimer->sleepms == 100);
-
-   // wait for timer to have made one pass though timer thread loop
-   while (!entered_dnxJobListExpire)
-      dnxCancelableSleep(10);
-
-   // shut down
-   dnxTimerDestroy(timer);
-
-   return 0;
-}
+// 
+// #include "utesthelp.h"
+// #include <time.h>
+// 
+// #define elemcount(x) (sizeof(x)/sizeof(*(x)))
+// 
+// static int verbose;
+// static DnxNewJob fakejob;
+// static DnxJobList fakejoblist;
+// static int fakepayload;
+// static DnxNodeRequest fakenode;
+// static int entered_dnxJobListExpire;
+// 
+// // functional stubs
+// IMPLEMENT_DNX_SYSLOG(verbose);
+// IMPLEMENT_DNX_DEBUG(verbose);
+// 
+// int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs)
+// {
+//    CHECK_TRUE(pJobList == &fakejoblist);
+//    CHECK_TRUE(*totalJobs > 0);
+//    memcpy(&pExpiredJobs[0], &fakejob, sizeof *pExpiredJobs);
+//    *totalJobs = 1;
+//    entered_dnxJobListExpire = 1;
+//    return 0;
+// }
+// int dnxPostResult(void * payload, time_t start_time, unsigned delta, 
+//       int early_timeout, int res_code, char * res_data)
+// {
+//    CHECK_TRUE(payload == &fakepayload);
+//    CHECK_TRUE(start_time == 100);
+//    CHECK_TRUE(early_timeout != 0);
+//    CHECK_TRUE(res_code == 0);
+//    CHECK_ZERO(memcmp(res_data, "(DNX Service", 12));
+//    return 0;
+// }
+// int dnxAuditJob(DnxNewJob * pJob, char * action) { return 0; }
+// void dnxJobCleanup(DnxNewJob * pJob) { }
+// 
+// int main(int argc, char ** argv)
+// {
+//    DnxTimer * timer;
+//    iDnxTimer * itimer;
+// 
+//    verbose = argc > 1? 1: 0;
+// 
+//    // setup test harness
+//    fakenode.xid.objType    = DNX_OBJ_JOB;
+//    fakenode.xid.objSerial  = 1;
+//    fakenode.xid.objSlot    = 2;
+//    fakenode.reqType        = DNX_REQ_DEREGISTER;
+//    fakenode.jobCap         = 1;
+//    fakenode.ttl            = 2;
+//    fakenode.expires        = 3;
+//    strcpy(fakenode.address, "fake address");
+// 
+//    fakejob.state           = DNX_JOB_INPROGRESS;
+//    fakejob.xid.objType     = DNX_OBJ_JOB;
+//    fakejob.xid.objSerial   = 1;
+//    fakejob.xid.objSlot     = 2;
+//    fakejob.cmd             = "fake command line";
+//    fakejob.start_time      = 100;
+//    fakejob.timeout         = 10;
+//    fakejob.expires         = fakejob.start_time + fakejob.timeout;
+//    fakejob.payload         = &fakepayload;
+//    fakejob.pNode           = &fakenode;
+// 
+//    entered_dnxJobListExpire = 0;
+// 
+//    // create a short timer and reference it as a concrete object for testing
+//    CHECK_ZERO(dnxTimerCreate(&fakejoblist, 100, &timer));
+//    itimer = (iDnxTimer *)timer;
+// 
+//    // check internal state
+//    CHECK_TRUE(itimer->joblist == &fakejoblist);
+//    CHECK_TRUE(itimer->tid != 0);
+//    CHECK_TRUE(itimer->sleepms == 100);
+// 
+//    // wait for timer to have made one pass though timer thread loop
+//    while (!entered_dnxJobListExpire)
+//       dnxCancelableSleep(10);
+// 
+//    // shut down
+//    dnxTimerDestroy(timer);
+// 
+//    return 0;
+// }
 
 #endif   /* DNX_TIMER_TEST */
 

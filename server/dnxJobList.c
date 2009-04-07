@@ -359,118 +359,118 @@ void dnxJobListDestroy(DnxJobList * pJobList)
 
 #ifdef DNX_JOBLIST_TEST
 
-#include "utesthelp.h"
-#include <time.h>
-
-#define elemcount(x) (sizeof(x)/sizeof(*(x)))
-
-static int verbose;
-
-// functional stubs
-IMPLEMENT_DNX_DEBUG(verbose);
-IMPLEMENT_DNX_SYSLOG(verbose);
-
-int dnxTimerCreate(DnxJobList * jl, int s, DnxTimer ** pt) { *pt = 0; return 0; }
-void dnxTimerDestroy(DnxTimer * t) { }
-
-int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb)
-      { return pxa->objType == pxb->objType && pxa->objSerial == pxb->objSerial 
-            && pxa->objSlot == pxb->objSlot; }
-
-int dnxMakeXID(DnxXID * x, DnxObjType t, unsigned long s, unsigned long l)
-      { x->objType = t; x->objSerial = s; x->objSlot = l; return DNX_OK; }
-
-int main(int argc, char ** argv)
-{
-   DnxJobList * jobs;
-   DnxNodeRequest n1[101];
-   DnxNewJob j1[101];
-   DnxNewJob jtmp;
-   DnxXID xid;
-   int serial, xlsz, expcount;
-   iDnxJobList * ijobs;
-   time_t now;
-
-   verbose = argc > 1;
-
-   // create a new job list and get a concrete reference to it for testing
-   CHECK_ZERO(dnxJobListCreate(100, &jobs));
-   ijobs = (iDnxJobList *)jobs;
-
-   // force entire array to non-zero values for testing
-   memset(j1, 0xcc, sizeof j1);
-   memset(n1, 0xdd, sizeof n1);
-   
-   // test that we CAN add 100 jobs to the 100-job list
-   now = time(0);
-   for (serial = 0; serial < elemcount(j1); serial++)
-   {
-      // configure request node
-      dnxMakeXID(&n1[serial].xid, DNX_OBJ_WORKER, serial, 0);
-      n1[serial].reqType      = DNX_REQ_REGISTER;
-      n1[serial].jobCap       = 1;     // jobs
-      n1[serial].ttl          = 5;     // seconds
-      n1[serial].expires      = 5;     // seconds
-      strcpy(n1[serial].address, "localhost");
-
-      // configure job
-      dnxMakeXID(&j1[serial].xid, DNX_OBJ_JOB, serial, 0);
-      j1[serial].cmd          = "some command line";
-      j1[serial].start_time   = now;
-      j1[serial].timeout      = serial < 50? 0: 5;  // 50 expire immediately
-      j1[serial].expires      = j1[serial].start_time + j1[serial].timeout;
-      j1[serial].payload      = 0;     // no payload for tests
-      j1[serial].pNode        = &n1[serial];
-
-      if (serial < 100)
-         CHECK_ZERO(dnxJobListAdd(jobs, &j1[serial]));
-      else  // test that we CAN'T add 101 jobs
-         CHECK_NONZERO(dnxJobListAdd(jobs, &j1[serial]));
-   }
-
-   // test job expiration - ensure first 50 jobs have already expired
-   expcount = 0;
-   do
-   {
-      DnxNewJob xl[10];
-      xlsz = (int)elemcount(xl);
-      CHECK_ZERO(dnxJobListExpire(jobs, xl, &xlsz));
-      expcount += xlsz;
-   } while (xlsz != 0);
-   CHECK_TRUE(expcount == 50);
-
-   // dispatch 49 of the remaining 50 jobs
-   for (serial = 50; serial < elemcount(j1) - 2; serial++)
-      CHECK_ZERO(dnxJobListDispatch(jobs, &jtmp));
-
-   // ensure the dispatch head is valid and not in progress
-   CHECK_TRUE(ijobs->dhead != 0);
-   CHECK_TRUE(ijobs->list[ijobs->dhead].state != DNX_JOB_INPROGRESS);
-   CHECK_TRUE(ijobs->list[ijobs->head].state == DNX_JOB_INPROGRESS);
-
-   // ensure dispatch head points to last item in list
-   CHECK_TRUE(ijobs->dhead == 99);
-
-   // collect all pending jobs
-   for (serial = 50; serial < elemcount(j1) - 2; serial++)
-   {
-      dnxMakeXID(&xid, DNX_OBJ_JOB, serial, serial);
-      CHECK_ZERO(dnxJobListCollect(jobs, &xid, &jtmp));
-   }
-
-   // ensure there's one left
-   CHECK_TRUE(ijobs->head == ijobs->tail);
-   CHECK_TRUE(ijobs->head != 0);
-
-   // ensure head, tail and dhead all point to the last element (99)
-   CHECK_TRUE(ijobs->head == 99);
-   CHECK_TRUE(ijobs->tail == 99);
-   CHECK_TRUE(ijobs->dhead == 99);
-
-   dnxJobListDestroy(jobs);
-
-   return 0;
-}
+// #include "utesthelp.h"
+// #include <time.h>
+// 
+// #define elemcount(x) (sizeof(x)/sizeof(*(x)))
+// 
+// static int verbose;
+// 
+// // functional stubs
+// IMPLEMENT_DNX_DEBUG(verbose);
+// IMPLEMENT_DNX_SYSLOG(verbose);
+// 
+// int dnxTimerCreate(DnxJobList * jl, int s, DnxTimer ** pt) { *pt = 0; return 0; }
+// void dnxTimerDestroy(DnxTimer * t) { }
+// 
+// int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb)
+//       { return pxa->objType == pxb->objType && pxa->objSerial == pxb->objSerial 
+//             && pxa->objSlot == pxb->objSlot; }
+// 
+// int dnxMakeXID(DnxXID * x, DnxObjType t, unsigned long s, unsigned long l)
+//       { x->objType = t; x->objSerial = s; x->objSlot = l; return DNX_OK; }
+// 
+// int main(int argc, char ** argv)
+// {
+//    DnxJobList * jobs;
+//    DnxNodeRequest n1[101];
+//    DnxNewJob j1[101];
+//    DnxNewJob jtmp;
+//    DnxXID xid;
+//    int serial, xlsz, expcount;
+//    iDnxJobList * ijobs;
+//    time_t now;
+// 
+//    verbose = argc > 1;
+// 
+//    // create a new job list and get a concrete reference to it for testing
+//    CHECK_ZERO(dnxJobListCreate(100, &jobs));
+//    ijobs = (iDnxJobList *)jobs;
+// 
+//    // force entire array to non-zero values for testing
+//    memset(j1, 0xcc, sizeof j1);
+//    memset(n1, 0xdd, sizeof n1);
+//    
+//    // test that we CAN add 100 jobs to the 100-job list
+//    now = time(0);
+//    for (serial = 0; serial < elemcount(j1); serial++)
+//    {
+//       // configure request node
+//       dnxMakeXID(&n1[serial].xid, DNX_OBJ_WORKER, serial, 0);
+//       n1[serial].reqType      = DNX_REQ_REGISTER;
+//       n1[serial].jobCap       = 1;     // jobs
+//       n1[serial].ttl          = 5;     // seconds
+//       n1[serial].expires      = 5;     // seconds
+//       strcpy(n1[serial].address, "localhost");
+// 
+//       // configure job
+//       dnxMakeXID(&j1[serial].xid, DNX_OBJ_JOB, serial, 0);
+//       j1[serial].cmd          = "some command line";
+//       j1[serial].start_time   = now;
+//       j1[serial].timeout      = serial < 50? 0: 5;  // 50 expire immediately
+//       j1[serial].expires      = j1[serial].start_time + j1[serial].timeout;
+//       j1[serial].payload      = 0;     // no payload for tests
+//       j1[serial].pNode        = &n1[serial];
+// 
+//       if (serial < 100)
+//          CHECK_ZERO(dnxJobListAdd(jobs, &j1[serial]));
+//       else  // test that we CAN'T add 101 jobs
+//          CHECK_NONZERO(dnxJobListAdd(jobs, &j1[serial]));
+//    }
+// 
+//    // test job expiration - ensure first 50 jobs have already expired
+//    expcount = 0;
+//    do
+//    {
+//       DnxNewJob xl[10];
+//       xlsz = (int)elemcount(xl);
+//       CHECK_ZERO(dnxJobListExpire(jobs, xl, &xlsz));
+//       expcount += xlsz;
+//    } while (xlsz != 0);
+//    CHECK_TRUE(expcount == 50);
+// 
+//    // dispatch 49 of the remaining 50 jobs
+//    for (serial = 50; serial < elemcount(j1) - 2; serial++)
+//       CHECK_ZERO(dnxJobListDispatch(jobs, &jtmp));
+// 
+//    // ensure the dispatch head is valid and not in progress
+//    CHECK_TRUE(ijobs->dhead != 0);
+//    CHECK_TRUE(ijobs->list[ijobs->dhead].state != DNX_JOB_INPROGRESS);
+//    CHECK_TRUE(ijobs->list[ijobs->head].state == DNX_JOB_INPROGRESS);
+// 
+//    // ensure dispatch head points to last item in list
+//    CHECK_TRUE(ijobs->dhead == 99);
+// 
+//    // collect all pending jobs
+//    for (serial = 50; serial < elemcount(j1) - 2; serial++)
+//    {
+//       dnxMakeXID(&xid, DNX_OBJ_JOB, serial, serial);
+//       CHECK_ZERO(dnxJobListCollect(jobs, &xid, &jtmp));
+//    }
+// 
+//    // ensure there's one left
+//    CHECK_TRUE(ijobs->head == ijobs->tail);
+//    CHECK_TRUE(ijobs->head != 0);
+// 
+//    // ensure head, tail and dhead all point to the last element (99)
+//    CHECK_TRUE(ijobs->head == 99);
+//    CHECK_TRUE(ijobs->tail == 99);
+//    CHECK_TRUE(ijobs->dhead == 99);
+// 
+//    dnxJobListDestroy(jobs);
+// 
+//    return 0;
+// }
 
 #endif   /* DNX_JOBLIST_TEST */
 

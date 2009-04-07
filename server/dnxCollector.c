@@ -232,142 +232,142 @@ void dnxCollectorDestroy(DnxCollector  * coll)
 
 #ifdef DNX_COLLECTOR_TEST
 
-#include "utesthelp.h"
-
-static int verbose;
-static int once = 0;
-static char * test_url = "udp://0.0.0.0:12489";
-static char * test_chname = "TestCollector";
-static char * test_cmd = "test command";
-static DnxChannel * test_channel = (DnxChannel *)1;
-static DnxJobList * test_joblist = (DnxJobList *)1;
-static DnxResult test_result;
-static int test_payload;
-
-// test stubs
-IMPLEMENT_DNX_DEBUG(verbose);
-IMPLEMENT_DNX_SYSLOG(verbose);
-
-int dnxChanMapAdd(char * name, char * url) 
-{
-   CHECK_TRUE(name != 0);
-   CHECK_TRUE(strcmp(name, test_chname) == 0);
-   CHECK_TRUE(url != 0);
-   CHECK_TRUE(strcmp(url, test_url) == 0);
-   return 0;
-}
-
-int dnxConnect(char * name, int active, DnxChannel ** channel) 
-{
-   *channel = test_channel;
-   CHECK_TRUE(name != 0);
-   CHECK_TRUE(strcmp(name, test_chname) == 0);
-   CHECK_TRUE(active == 0);
-   return 0;
-}
-
-int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, int timeout) 
-{
-   CHECK_TRUE(pResult != 0);
-
-   memset(pResult, 1, sizeof *pResult);
-   pResult->resData = 0;
-
-   CHECK_TRUE(channel == test_channel);
-   CHECK_TRUE(timeout == DNX_COLLECTOR_TIMEOUT);
-
-   once++;     // stop the test after first pass
-
-   return 0; 
-}
-
-int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
-{
-   CHECK_TRUE(pJob != 0);
-   CHECK_TRUE(pxid != 0);
-   CHECK_TRUE(pJobList == test_joblist);
-
-   memset(pJob, 0, sizeof *pJob);
-   memcpy(&pJob->xid, pxid, sizeof pJob->xid);
-   pJob->state = DNX_JOB_COMPLETE;
-   pJob->cmd = test_cmd;
-   pJob->payload = &test_payload;
-
-   return 0; 
-}
-
-int dnxPostResult(void * payload, time_t start_time, unsigned delta, 
-      int early_timeout, int res_code, char * res_data)
-{
-   CHECK_TRUE(payload == &test_payload);
-   return 0;
-}
-
-int dnxAuditJob(DnxNewJob * pJob, char * action)
-{
-   CHECK_TRUE(pJob != 0);
-   CHECK_TRUE(action != 0);
-   return 0;
-}
-
-void dnxJobCleanup(DnxNewJob * pJob) { CHECK_TRUE(pJob != 0); }
-
-unsigned dnxNodeListIncrementNodeMember(char* address,int member)
-{
-   CHECK_TRUE(address != 0);
-   CHECK_TRUE(member != 0);
-   return 0;
-}
-
-void dnxDisconnect(DnxChannel * channel) 
-{
-   CHECK_TRUE(channel == test_channel);
-}
-
-void dnxChanMapDelete(char * name) 
-{
-   CHECK_TRUE(name != 0);
-   CHECK_TRUE(strcmp(name, test_chname) == 0);
-}
-
-int main(int argc, char ** argv)
-{
-   DnxCollector * cp;
-   iDnxCollector * icp;
-
-   verbose = argc > 1 ? 1 : 0;
-
-   memset(&test_result, 0, sizeof test_result);
-
-   test_result.xid.objSerial = 1;
-   test_result.xid.objSlot = 1;
-   test_result.xid.objType = DNX_OBJ_COLLECTOR;
-   test_result.state = DNX_JOB_INPROGRESS;
-   test_result.delta = 1;
-   test_result.resCode = 1;
-
-   CHECK_ZERO(dnxCollectorCreate(test_chname, test_url, test_joblist, &cp));
-
-   icp = (iDnxCollector *)cp;
-
-   CHECK_TRUE(strcmp(icp->chname, test_chname) == 0);
-   CHECK_TRUE(icp->joblist == test_joblist);
-   CHECK_TRUE(icp->tid != 0);
-   CHECK_TRUE(strcmp(icp->url, test_url) == 0);
-
-   CHECK_TRUE(dnxCollectorGetChannel(cp) == icp->channel);
-
-   while (!once)
-      dnxCancelableSleep(10);
-
-   dnxCollectorDestroy(cp);
-
-#ifdef DEBUG_HEAP
-   CHECK_ZERO(dnxCheckHeap());
-#endif
-
-   return 0;
-}
+// #include "utesthelp.h"
+// 
+// static int verbose;
+// static int once = 0;
+// static char * test_url = "udp://0.0.0.0:12489";
+// static char * test_chname = "TestCollector";
+// static char * test_cmd = "test command";
+// static DnxChannel * test_channel = (DnxChannel *)1;
+// static DnxJobList * test_joblist = (DnxJobList *)1;
+// static DnxResult test_result;
+// static int test_payload;
+// 
+// // test stubs
+// IMPLEMENT_DNX_DEBUG(verbose);
+// IMPLEMENT_DNX_SYSLOG(verbose);
+// 
+// int dnxChanMapAdd(char * name, char * url) 
+// {
+//    CHECK_TRUE(name != 0);
+//    CHECK_TRUE(strcmp(name, test_chname) == 0);
+//    CHECK_TRUE(url != 0);
+//    CHECK_TRUE(strcmp(url, test_url) == 0);
+//    return 0;
+// }
+// 
+// int dnxConnect(char * name, int active, DnxChannel ** channel) 
+// {
+//    *channel = test_channel;
+//    CHECK_TRUE(name != 0);
+//    CHECK_TRUE(strcmp(name, test_chname) == 0);
+//    CHECK_TRUE(active == 0);
+//    return 0;
+// }
+// 
+// int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, int timeout) 
+// {
+//    CHECK_TRUE(pResult != 0);
+// 
+//    memset(pResult, 1, sizeof *pResult);
+//    pResult->resData = 0;
+// 
+//    CHECK_TRUE(channel == test_channel);
+//    CHECK_TRUE(timeout == DNX_COLLECTOR_TIMEOUT);
+// 
+//    once++;     // stop the test after first pass
+// 
+//    return 0; 
+// }
+// 
+// int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
+// {
+//    CHECK_TRUE(pJob != 0);
+//    CHECK_TRUE(pxid != 0);
+//    CHECK_TRUE(pJobList == test_joblist);
+// 
+//    memset(pJob, 0, sizeof *pJob);
+//    memcpy(&pJob->xid, pxid, sizeof pJob->xid);
+//    pJob->state = DNX_JOB_COMPLETE;
+//    pJob->cmd = test_cmd;
+//    pJob->payload = &test_payload;
+// 
+//    return 0; 
+// }
+// 
+// int dnxPostResult(void * payload, time_t start_time, unsigned delta, 
+//       int early_timeout, int res_code, char * res_data)
+// {
+//    CHECK_TRUE(payload == &test_payload);
+//    return 0;
+// }
+// 
+// int dnxAuditJob(DnxNewJob * pJob, char * action)
+// {
+//    CHECK_TRUE(pJob != 0);
+//    CHECK_TRUE(action != 0);
+//    return 0;
+// }
+// 
+// void dnxJobCleanup(DnxNewJob * pJob) { CHECK_TRUE(pJob != 0); }
+// 
+// unsigned dnxNodeListIncrementNodeMember(char* address,int member)
+// {
+//    CHECK_TRUE(address != 0);
+//    CHECK_TRUE(member != 0);
+//    return 0;
+// }
+// 
+// void dnxDisconnect(DnxChannel * channel) 
+// {
+//    CHECK_TRUE(channel == test_channel);
+// }
+// 
+// void dnxChanMapDelete(char * name) 
+// {
+//    CHECK_TRUE(name != 0);
+//    CHECK_TRUE(strcmp(name, test_chname) == 0);
+// }
+// 
+// int main(int argc, char ** argv)
+// {
+//    DnxCollector * cp;
+//    iDnxCollector * icp;
+// 
+//    verbose = argc > 1 ? 1 : 0;
+// 
+//    memset(&test_result, 0, sizeof test_result);
+// 
+//    test_result.xid.objSerial = 1;
+//    test_result.xid.objSlot = 1;
+//    test_result.xid.objType = DNX_OBJ_COLLECTOR;
+//    test_result.state = DNX_JOB_INPROGRESS;
+//    test_result.delta = 1;
+//    test_result.resCode = 1;
+// 
+//    CHECK_ZERO(dnxCollectorCreate(test_chname, test_url, test_joblist, &cp));
+// 
+//    icp = (iDnxCollector *)cp;
+// 
+//    CHECK_TRUE(strcmp(icp->chname, test_chname) == 0);
+//    CHECK_TRUE(icp->joblist == test_joblist);
+//    CHECK_TRUE(icp->tid != 0);
+//    CHECK_TRUE(strcmp(icp->url, test_url) == 0);
+// 
+//    CHECK_TRUE(dnxCollectorGetChannel(cp) == icp->channel);
+// 
+//    while (!once)
+//       dnxCancelableSleep(10);
+// 
+//    dnxCollectorDestroy(cp);
+// 
+// #ifdef DEBUG_HEAP
+//    CHECK_ZERO(dnxCheckHeap());
+// #endif
+// 
+//    return 0;
+// }
 
 #endif   /* DNX_COLLECTOR_TEST */
 

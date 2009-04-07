@@ -272,131 +272,131 @@ void dnxDispatcherDestroy(DnxDispatcher * disp)
 
 #ifdef DNX_DISPATCHER_TEST
 
-#include "utesthelp.h"
-
-static int verbose;
-static int once = 0;
-static char * test_url = "udp://0.0.0.0:12489";
-static char * test_chname = "TestCollector";
-static DnxChannel * test_channel = (DnxChannel *)1;
-static DnxJobList * test_joblist = (DnxJobList *)1;
-static DnxNewJob test_job;
-static int test_payload;
-static DnxNodeRequest test_node;
-
-
-// functional stubs
-IMPLEMENT_DNX_DEBUG(verbose);
-IMPLEMENT_DNX_SYSLOG(verbose);
-
-int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb)
-{
-   return pxa->objType == pxb->objType 
-         && pxa->objSerial == pxb->objSerial 
-         && pxa->objSlot == pxb->objSlot;
-}
-
-int dnxChanMapAdd(char * name, char * url) 
-{
-   CHECK_TRUE(name != 0);
-   CHECK_TRUE(strcmp(name, test_chname) == 0);
-   CHECK_TRUE(url != 0);
-   CHECK_TRUE(strcmp(url, test_url) == 0);
-   return 0;
-}
-
-int dnxConnect(char * name, int active, DnxChannel ** channel) 
-{
-   *channel = test_channel;
-   CHECK_TRUE(name != 0);
-   CHECK_TRUE(strcmp(name, test_chname) == 0);
-   CHECK_TRUE(active == 0);
-   return 0;
-}
-
-int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
-{
-   CHECK_TRUE(pJobList == test_joblist);
-   CHECK_TRUE(pJob != 0);
-   memcpy(pJob, &test_job, sizeof *pJob);
-
-   once++; 
-
-   return 0;
-}
-
-int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address) 
-{
-   CHECK_TRUE(channel != 0);
-   CHECK_TRUE(pJob != 0);
-
-   CHECK_TRUE(dnxEqualXIDs(&pJob->xid, &test_job.xid));
-   CHECK_TRUE(pJob->state == DNX_JOB_PENDING);
-   CHECK_TRUE(pJob->priority == 1);
-   CHECK_TRUE(pJob->timeout == test_job.timeout);
-   CHECK_TRUE(pJob->cmd == test_job.cmd);
-
-   return 0;
-}
-
-int dnxAuditJob(DnxNewJob * pJob, char * action)
-{
-   CHECK_TRUE(pJob != 0);
-   CHECK_TRUE(strcmp(action, "DISPATCH") == 0);
-   return 0;
-}
-
-void dnxDisconnect(DnxChannel * channel) 
-{
-   CHECK_TRUE(channel == test_channel);
-}
-
-void dnxChanMapDelete(char * name) 
-{
-   CHECK_TRUE(name != 0);
-   CHECK_TRUE(strcmp(name, test_chname) == 0);
-}
-
-int main(int argc, char ** argv)
-{
-   DnxDispatcher * dp;
-   iDnxDispatcher * idp;
-
-   verbose = argc > 1 ? 1 : 0;
-
-   memset(&test_node, 0, sizeof test_node);
-   test_job.state = DNX_JOB_PENDING;
-   memset(&test_job.xid, 1, sizeof test_job.xid);
-   test_job.cmd = "test command";
-   test_job.start_time = 1000;
-   test_job.timeout = 5;
-   test_job.expires = 5000;
-   test_job.payload = &test_payload;
-   test_job.pNode = &test_node;
-
-   CHECK_ZERO(dnxDispatcherCreate(test_chname, test_url, test_joblist, &dp));
-
-   idp = (iDnxDispatcher *)dp;
-
-   CHECK_TRUE(strcmp(idp->chname, test_chname) == 0);
-   CHECK_TRUE(idp->joblist == test_joblist);
-   CHECK_TRUE(idp->tid != 0);
-   CHECK_TRUE(strcmp(idp->url, test_url) == 0);
-
-   CHECK_TRUE(dnxDispatcherGetChannel(dp) == idp->channel);
-
-   while (!once)
-      dnxCancelableSleep(10);
-
-   dnxDispatcherDestroy(dp);
-
-#ifdef DEBUG_HEAP
-   CHECK_ZERO(dnxCheckHeap());
-#endif
-
-   return 0;
-}
-
+// #include "utesthelp.h"
+// 
+// static int verbose;
+// static int once = 0;
+// static char * test_url = "udp://0.0.0.0:12489";
+// static char * test_chname = "TestCollector";
+// static DnxChannel * test_channel = (DnxChannel *)1;
+// static DnxJobList * test_joblist = (DnxJobList *)1;
+// static DnxNewJob test_job;
+// static int test_payload;
+// static DnxNodeRequest test_node;
+// 
+// 
+// // functional stubs
+// IMPLEMENT_DNX_DEBUG(verbose);
+// IMPLEMENT_DNX_SYSLOG(verbose);
+// 
+// int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb)
+// {
+//    return pxa->objType == pxb->objType 
+//          && pxa->objSerial == pxb->objSerial 
+//          && pxa->objSlot == pxb->objSlot;
+// }
+// 
+// int dnxChanMapAdd(char * name, char * url) 
+// {
+//    CHECK_TRUE(name != 0);
+//    CHECK_TRUE(strcmp(name, test_chname) == 0);
+//    CHECK_TRUE(url != 0);
+//    CHECK_TRUE(strcmp(url, test_url) == 0);
+//    return 0;
+// }
+// 
+// int dnxConnect(char * name, int active, DnxChannel ** channel) 
+// {
+//    *channel = test_channel;
+//    CHECK_TRUE(name != 0);
+//    CHECK_TRUE(strcmp(name, test_chname) == 0);
+//    CHECK_TRUE(active == 0);
+//    return 0;
+// }
+// 
+// int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
+// {
+//    CHECK_TRUE(pJobList == test_joblist);
+//    CHECK_TRUE(pJob != 0);
+//    memcpy(pJob, &test_job, sizeof *pJob);
+// 
+//    once++; 
+// 
+//    return 0;
+// }
+// 
+// int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address) 
+// {
+//    CHECK_TRUE(channel != 0);
+//    CHECK_TRUE(pJob != 0);
+// 
+//    CHECK_TRUE(dnxEqualXIDs(&pJob->xid, &test_job.xid));
+//    CHECK_TRUE(pJob->state == DNX_JOB_PENDING);
+//    CHECK_TRUE(pJob->priority == 1);
+//    CHECK_TRUE(pJob->timeout == test_job.timeout);
+//    CHECK_TRUE(pJob->cmd == test_job.cmd);
+// 
+//    return 0;
+// }
+// 
+// int dnxAuditJob(DnxNewJob * pJob, char * action)
+// {
+//    CHECK_TRUE(pJob != 0);
+//    CHECK_TRUE(strcmp(action, "DISPATCH") == 0);
+//    return 0;
+// }
+// 
+// void dnxDisconnect(DnxChannel * channel) 
+// {
+//    CHECK_TRUE(channel == test_channel);
+// }
+// 
+// void dnxChanMapDelete(char * name) 
+// {
+//    CHECK_TRUE(name != 0);
+//    CHECK_TRUE(strcmp(name, test_chname) == 0);
+// }
+// 
+// int main(int argc, char ** argv)
+// {
+//    DnxDispatcher * dp;
+//    iDnxDispatcher * idp;
+// 
+//    verbose = argc > 1 ? 1 : 0;
+// 
+//    memset(&test_node, 0, sizeof test_node);
+//    test_job.state = DNX_JOB_PENDING;
+//    memset(&test_job.xid, 1, sizeof test_job.xid);
+//    test_job.cmd = "test command";
+//    test_job.start_time = 1000;
+//    test_job.timeout = 5;
+//    test_job.expires = 5000;
+//    test_job.payload = &test_payload;
+//    test_job.pNode = &test_node;
+// 
+//    CHECK_ZERO(dnxDispatcherCreate(test_chname, test_url, test_joblist, &dp));
+// 
+//    idp = (iDnxDispatcher *)dp;
+// 
+//    CHECK_TRUE(strcmp(idp->chname, test_chname) == 0);
+//    CHECK_TRUE(idp->joblist == test_joblist);
+//    CHECK_TRUE(idp->tid != 0);
+//    CHECK_TRUE(strcmp(idp->url, test_url) == 0);
+// 
+//    CHECK_TRUE(dnxDispatcherGetChannel(dp) == idp->channel);
+// 
+//    while (!once)
+//       dnxCancelableSleep(10);
+// 
+//    dnxDispatcherDestroy(dp);
+// 
+// #ifdef DEBUG_HEAP
+//    CHECK_ZERO(dnxCheckHeap());
+// #endif
+// 
+//    return 0;
+// }
+// 
 #endif   /* DNX_DISPATCHER_TEST */
 
 /*--------------------------------------------------------------------------*/
