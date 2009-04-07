@@ -584,15 +584,21 @@ static int ehSvcCheck(int event_type, void * data)
 {
    static unsigned long serial = 0; // the number of service checks processed
 
-   nebstruct_service_check_data * svcdata = (nebstruct_service_check_data *)data;
    DnxNodeRequest * pNode;
    DnxJobData * jdp;
    int ret;
-   host * hostObj = find_host(svcdata->host_name);
 
    if ( !(event_type != NEBCALLBACK_SERVICE_CHECK_DATA ||
         event_type != NEBCALLBACK_HOST_CHECK_DATA))
       return OK;
+      
+   if (event_type == NEBCALLBACK_SERVICE_CHECK_DATA) {
+        nebstruct_service_check_data * svcdata = (nebstruct_service_check_data *)data;
+   } else {
+        nebstruct_host_check_data * svcdata = (nebstruct_host_check_data *)data;
+   }
+
+   host * hostObj = find_host(svcdata->host_name);
 
    if (svcdata == 0)
    {
@@ -694,6 +700,7 @@ static int dnxServerDeInit(void)
    // deregister for all nagios events we previously registered for...
    neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ehProcessData);
    neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ehSvcCheck);
+   neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ehSvcCheck);
 
    // ensure we don't destroy non-existent objects from here on out...
    if (registrar)
@@ -835,8 +842,10 @@ static int dnxServerInit(void)
    }
    // registration for this event starts everything rolling
    neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA, myHandle, 0, ehSvcCheck);
-
    dnxLog("Registered for SERVICE_CHECK_DATA event.");
+   neb_register_callback(NEBCALLBACK_HOST_CHECK_DATA, myHandle, 0, ehSvcCheck);
+
+   dnxLog("Registered for HOST_CHECK_DATA event.");
    dnxLog("Server initialization completed.");
 
    return 0;
