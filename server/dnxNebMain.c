@@ -426,7 +426,11 @@ static int nagios3xPostResult(service * svc, int check_type,
    /* write check result to file */
    fprintf(fp, "### Active Check Result File ###\n");
    fprintf(fp, "file_time=%lu\n\n", (unsigned long)start_time);
-   fprintf(fp, "### Nagios Service Check Result ###\n");
+   if(check_type == SERVICE_CHECK_ACTIVE) {
+        fprintf(fp, "### Nagios Service Check Result ###\n");
+   } else {
+        fprintf(fp, "### Nagios Host Check Result ###\n");
+   }
    fprintf(fp, "# Time: %s", ctime(&start_time));
    fprintf(fp, "host_name=%s\n", svc->host_name);
    fprintf(fp, "service_description=%s\n", svc->description);
@@ -474,7 +478,7 @@ int dnxPostResult(void * data, time_t start_time, unsigned delta,
 
 #elif CURRENT_NEB_API_VERSION == 3
 
-   return nagios3xPostResult(jdp->svc, SERVICE_CHECK_ACTIVE,
+   return nagios3xPostResult(jdp->svc, jdp->type,
          jdp->chkopts, jdp->schedule, jdp->reschedule, jdp->latency,
          start_time, start_time + delta, early_timeout,
          1, res_code, res_data);
@@ -528,7 +532,7 @@ static int dnxCalculateJobListSize(void)
 
 //----------------------------------------------------------------------------
 
-/** Post a new job from Nagios to the dnxServer job queue.
+/** Post a new service job from Nagios to the dnxServer job queue.
  *
  * @param[in] joblist - the job list to which the new job should be posted.
  * @param[in] serial - the serial number of the new job.
@@ -540,7 +544,7 @@ static int dnxCalculateJobListSize(void)
  *
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial, DnxJobData * jdp, nebstruct_service_check_data * ds, DnxNodeRequest * pNode)
+static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial, DnxJobData * jdp, nebstruct_service_check_data * ds, DnxNodeRequest * pNode)
 {
    DnxNewJob Job;
    int ret;
@@ -557,12 +561,57 @@ static int dnxPostNewJob(DnxJobList * joblist, unsigned long serial, DnxJobData 
    Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
    Job.pNode      = pNode;
    Job.ack        = false;
+   Job.type       = SERVICE_CHECK_ACTIVE;
 
-   dnxDebug(2, "DnxNebMain: Posting Job [%lu]: %s.", serial, Job.cmd);
+   dnxDebug(2, "DnxNebMain: Posting Service Job [%lu]: %s.", serial, Job.cmd);
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
-      dnxLog("Failed to post Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
+      dnxLog("Failed to post Service Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
+
+   dnxAuditJob(&Job, "ASSIGN");
+
+   return ret;
+}
+
+//----------------------------------------------------------------------------
+
+/** Post a new host job from Nagios to the dnxServer job queue.
+ *
+ * @param[in] joblist - the job list to which the new job should be posted.
+ * @param[in] serial - the serial number of the new job.
+ * @param[in] jdp - a pointer to a job data structure.
+ * @param[in] ds - a pointer to the nagios job that's being posted.
+ * @param[in] pNode - a dnxClient node request structure that is being
+ *    posted with this job. The dispatcher thread will send the job to the
+ *    associated node.
+ *
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial, DnxJobData * jdp, nebstruct_host_check_data * ds, DnxNodeRequest * pNode)
+{
+   DnxNewJob Job;
+   int ret;
+
+   assert(ds);
+   assert(ds->command_line);
+
+   // fill-in the job structure with the necessary information
+   dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
+   Job.payload    = jdp;
+   Job.cmd        = xstrdup(ds->command_line);
+   Job.start_time = ds->start_time.tv_sec;
+   Job.timeout    = ds->timeout;
+   Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
+   Job.pNode      = pNode;
+   Job.ack        = false;
+   Job.type       = HOST_CHECK_ACTIVE;
+
+   dnxDebug(2, "DnxNebMain: Posting Host Job [%lu]: %s.", serial, Job.cmd);
+
+   // post to the Job Queue
+   if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
+      dnxLog("Failed to post Host Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
 
    dnxAuditJob(&Job, "ASSIGN");
 
@@ -587,19 +636,12 @@ static int ehSvcCheck(int event_type, void * data)
    DnxNodeRequest * pNode;
    DnxJobData * jdp;
    int ret;
-   void * svcdata;
+   nebstruct_service_check_data * svcdata = (nebstruct_service_check_data *)data;
+   host * hostObj = find_host(svcdata->host_name);
 
-   if ( !(event_type != NEBCALLBACK_SERVICE_CHECK_DATA ||
-        event_type != NEBCALLBACK_HOST_CHECK_DATA))
+   if ( event_type != NEBCALLBACK_SERVICE_CHECK_DATA )
       return OK;
       
-   if (event_type == NEBCALLBACK_SERVICE_CHECK_DATA) {
-        nebstruct_service_check_data * svcdata = (nebstruct_service_check_data *)data;
-   } else {
-        nebstruct_host_check_data * svcdata = (nebstruct_host_check_data *)data;
-   }
-
-   host * hostObj = find_host(svcdata->host_name);
 
    if (svcdata == 0)
    {
@@ -607,8 +649,7 @@ static int ehSvcCheck(int event_type, void * data)
       return ERROR;  // shouldn't happen - internal Nagios error
    }
 
-   if ( !(svcdata->type == NEBTYPE_SERVICECHECK_INITIATE ||
-        svcdata->type == NEBTYPE_HOSTCHECK_INITIATE))
+   if ( svcdata->type != NEBTYPE_SERVICECHECK_INITIATE )
       return OK;  // ignore non-initiate service checks
 
    // check for local execution pattern on command line
@@ -675,7 +716,117 @@ static int ehSvcCheck(int event_type, void * data)
    }
 #endif
 
-   if ((ret = dnxPostNewJob(joblist, serial, jdp, svcdata, pNode)) != DNX_OK)
+   if ((ret = dnxPostNewServiceJob(joblist, serial, jdp, svcdata, pNode)) != DNX_OK)
+   {
+      dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+      xfree(jdp);
+      return OK;     // tell nagios execute locally
+   }
+
+   serial++;                           // bump serial number
+
+   return NEBERROR_CALLBACKOVERRIDE;   // tell nagios we want it
+}
+
+//----------------------------------------------------------------------------
+
+/** Host Check Event Handler.
+ *
+ * @param[in] event_type - the event type for which we're being called.
+ * @param[in] data - an opaque pointer to nagios event-specific data.
+ *
+ * @return Zero if we want Nagios to handle the event;
+ *    NEBERROR_CALLBACKOVERRIDE indicates that we want to handle the event
+ *    ourselves; any other non-zero value represents an error.
+ */
+static int ehHstCheck(int event_type, void * data)
+{
+   static unsigned long serial = 0; // the number of service checks processed
+
+   DnxNodeRequest * pNode;
+   DnxJobData * jdp;
+   int ret;
+   nebstruct_host_check_data * svcdata = (nebstruct_host_check_data *)data;
+   host * hostObj = find_host(svcdata->host_name);
+
+   if ( event_type != NEBCALLBACK_HOST_CHECK_DATA )
+      return OK;
+      
+
+   if (svcdata == 0)
+   {
+      dnxLog("Service handler received NULL service data structure.");
+      return ERROR;  // shouldn't happen - internal Nagios error
+   }
+
+   if ( svcdata->type != NEBTYPE_HOSTCHECK_INITIATE )
+      return OK;  // ignore non-initiate service checks
+
+   // check for local execution pattern on command line
+   if (cfg.localCheckPattern && regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
+   {
+      dnxDebug(1, "(localCheckPattern match) Service for %s will execute locally: %s.", 
+         hostObj->name, svcdata->command_line);
+      return OK;     // tell nagios execute locally
+   }
+   
+   // use the affinity bitmask to dispatch the check
+   unsigned long long host_flags = dnxGetAffinity(hostObj->name);
+   dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", hostObj->name, host_flags);
+
+   if (cfg.bypassHostgroup && (host_flags & 1)) // Affinity bypass group is always the LSB
+   {
+      dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
+         hostObj->name, svcdata->command_line);
+      return OK;     // tell nagios execute locally
+   }
+
+   dnxDebug(4, "ehHstCheck: Received Job [%lu] at %lu (%lu).",
+         serial, (unsigned long)time(0), 
+         (unsigned long)svcdata->start_time.tv_sec);
+
+   if ((ret = dnxGetNodeRequest(registrar, &pNode, host_flags)) != DNX_OK)
+   {
+      dnxDebug(1, "ehHstCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
+
+      //SM 09/08 DnxNodeList
+      gTopNode->jobs_rejected_no_nodes++;
+      //SM 09/08 DnxNodeList
+
+      return OK;     // tell nagios execute locally
+   }
+
+   // allocate and populate a new job payload object
+   if ((jdp = (DnxJobData *)xmalloc(sizeof *jdp)) == 0)
+   {
+      dnxDebug(1, "ehHstCheck: Out of memory!");
+
+      //SM 09/08 DnxNodeList
+      gTopNode->jobs_rejected_oom++;
+      //SM 09/08 DnxNodeList
+
+      return OK;
+   }
+   memset(jdp, 0, sizeof *jdp);
+   jdp->svc = (service *)svcdata->OBJECT_FIELD_NAME;
+
+   assert(jdp->svc);
+
+#if CURRENT_NEB_API_VERSION == 3
+   {
+      // a nagios 3.x global variable
+      extern check_result check_result_info;
+
+      /** @todo patch nagios to pass these values to the event handler. */
+
+      jdp->chkopts    = check_result_info.check_options;
+      jdp->schedule   = check_result_info.scheduled_check;
+      jdp->reschedule = check_result_info.reschedule_check;
+      jdp->latency    = jdp->svc->latency;
+   }
+#endif
+
+   if ((ret = dnxPostNewHostJob(joblist, serial, jdp, svcdata, pNode)) != DNX_OK)
    {
       dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
       xfree(jdp);
@@ -701,7 +852,7 @@ static int dnxServerDeInit(void)
    // deregister for all nagios events we previously registered for...
    neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ehProcessData);
    neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ehSvcCheck);
-   neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ehSvcCheck);
+   neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ehHstCheck);
 
    // ensure we don't destroy non-existent objects from here on out...
    if (registrar)
@@ -844,7 +995,7 @@ static int dnxServerInit(void)
    // registration for this event starts everything rolling
    neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA, myHandle, 0, ehSvcCheck);
    dnxLog("Registered for SERVICE_CHECK_DATA event.");
-   neb_register_callback(NEBCALLBACK_HOST_CHECK_DATA, myHandle, 0, ehSvcCheck);
+   neb_register_callback(NEBCALLBACK_HOST_CHECK_DATA, myHandle, 0, ehHstCheck);
 
    dnxLog("Registered for HOST_CHECK_DATA event.");
    dnxLog("Server initialization completed.");
