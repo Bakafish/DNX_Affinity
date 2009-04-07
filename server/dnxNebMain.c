@@ -594,9 +594,9 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;
       
    if (event_type == NEBCALLBACK_SERVICE_CHECK_DATA) {
-        svcdata = (nebstruct_service_check_data *)data;
+        nebstruct_service_check_data * svcdata = (nebstruct_service_check_data *)data;
    } else {
-        svcdata = (nebstruct_host_check_data *)data;
+        nebstruct_host_check_data * svcdata = (nebstruct_host_check_data *)data;
    }
 
    host * hostObj = find_host(svcdata->host_name);

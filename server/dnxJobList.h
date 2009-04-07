@@ -44,6 +44,7 @@ typedef struct DnxNewJob
    void * payload;         // job payload (service check structure)
    DnxNodeRequest * pNode; // Worker Request that will handle this Job
    bool ack;                // Boolean to tell us whether or not reciept was acknowledge by the client
+   int type;                // What kind of nagios check this job is
 } DnxNewJob;
 
 /** An abstract data type for a DNX Job List object. */
