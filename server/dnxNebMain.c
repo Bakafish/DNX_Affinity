@@ -590,7 +590,9 @@ static int ehSvcCheck(int event_type, void * data)
    int ret;
    host * hostObj = find_host(svcdata->host_name);
 
-   if (event_type != NEBCALLBACK_SERVICE_CHECK_DATA)
+   if ( event_type != NEBCALLBACK_SERVICE_CHECK_DATA ||
+        event_type != NEBCALLBACK_HOST_CHECK_DATA
+   )
       return OK;
 
    if (svcdata == 0)
@@ -599,7 +601,8 @@ static int ehSvcCheck(int event_type, void * data)
       return ERROR;  // shouldn't happen - internal Nagios error
    }
 
-   if (svcdata->type != NEBTYPE_SERVICECHECK_INITIATE)
+   if ( svcdata->type != NEBTYPE_SERVICECHECK_INITIATE ||
+        svcdata->type != NEBTYPE_HOSTCHECK_INITIATE)
       return OK;  // ignore non-initiate service checks
 
    // check for local execution pattern on command line
