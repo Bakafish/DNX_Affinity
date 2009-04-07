@@ -136,6 +136,8 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
+      // This is new, add the affinity flags  
+      pReq->flags = dnxGetAffinity(addr);
       *ppMsg = 0;    // we're keeping this message; return NULL
       dnxDebug(2, 
             "dnxRegistrar[%lx]: Added req for [%s] [%lu,%lu] at %u; expires at %u.", 
@@ -258,11 +260,15 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned lon
       // that this thread has affinity
       if (node->expires > now)
       {
+      dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] checking affinity C(%qu) H(%qu).",
+                *(char **)node->hostname, node->flags, flag);
+      
+      
          // make sure that this thread has affinity
          if (node->flags & flag)
          {
-            dnxDebug(4, "dnxRegisterNode: dnxClient [%s] has affinity C(%qu) H(%qu).",
-                *(char **)node->hostname, node->flags, flag);
+            dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity.",
+                *(char **)node->hostname);
             break;
          } else {
 
@@ -271,8 +277,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned lon
 //             dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
 //             xfree(addr);
 
-            dnxDebug(4, "dnxRegisterNode: dnxClient [%s] can not service request C(%qu) H(%qu).",
-               *(char **)node->hostname, node->flags, flag);
+            dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] can not service request.",
+               *(char **)node->hostname);
          }
       } else {  
 
@@ -283,7 +289,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned lon
         //SM 09/08 DnxNodeList END
 
          dnxDebug(3, 
-            "dnxRegisterNode: Expired req [%lu,%lu] at %u; expired at %u.", 
+            "dnxGetNodeRequest: Expired req [%lu,%lu] at %u; expired at %u.", 
             node->xid.objSerial, node->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(node->expires % 1000));
 
