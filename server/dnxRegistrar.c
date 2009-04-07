@@ -137,7 +137,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       // This is new, add the affinity flags  
-      pReq->flags = dnxGetAffinity(addr);
+      pReq->flags = dnxGetAffinity(*(char **)pReq->hostname);
       *ppMsg = 0;    // we're keeping this message; return NULL
       dnxDebug(2, 
             "dnxRegistrar[%lx]: Added req for [%s] [%lu,%lu] at %u; expires at %u.", 
