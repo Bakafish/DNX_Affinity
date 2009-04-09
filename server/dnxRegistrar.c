@@ -252,7 +252,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned lon
 
    assert(reg && ppNode);
 
-dnxDebug(4, "dnxGetNodeRequest: Entering loop");
+dnxDebug(4, "dnxGetNodeRequest: Entering loop (%i)", ireg->tid);
 
    while ((ret = dnxQueueGet(ireg->rqueue, (void **)&node)) == DNX_OK)
    {
