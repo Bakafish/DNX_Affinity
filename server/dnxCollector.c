@@ -97,7 +97,7 @@ static void * dnxCollector(void * data)
          // dequeue the matching service request from the pending job queue
          if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
          {
-            ret = dnxPostResult(Job.payload, Job.start_time, sResult.delta, 0, sResult.resCode, sResult.resData);
+            ret = dnxPostResult(Job.check_data, Job.start_time, sResult.delta, 0, sResult.resCode, sResult.resData);
 
             //SM 09/08 DnxNodeList
             DnxNodeRequest * pNode = Job.pNode;
