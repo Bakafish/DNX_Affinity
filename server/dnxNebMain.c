@@ -940,7 +940,7 @@ static int ehHstCheck(int event_type, void * data)
    if ((ret = dnxPostNewHostJob(joblist, serial, &check_result_info, hstdata, pNode)) != DNX_OK)
    {
       dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
-      xfree(jdp);
+//      xfree(jdp);
       return OK;     // tell nagios execute locally
    }
 
