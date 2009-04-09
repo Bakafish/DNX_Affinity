@@ -298,7 +298,7 @@ static int nagiosGetServiceCount(void)
    return total_services;
 }
 
-{
+
 // #if CURRENT_NEB_API_VERSION == 2
 // 
 // //----------------------------------------------------------------------------
@@ -523,7 +523,7 @@ static int nagiosGetServiceCount(void)
 //    return 0;
 // }
 // #endif   // CURRENT_NEB_API_VERSION == 3
-}
+
 
 int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char *plugin_output, time_t check_time)
 {
