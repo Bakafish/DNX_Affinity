@@ -153,7 +153,7 @@ static void * dnxTimer(void * data)
             nebstruct_host_check_data * hst;
             int result_code;
 
-            if(chkResult.object_check_type == 0) {
+            if(chkResult->object_check_type == 0) {
                 // It's a Service check
                 srv = (nebstruct_service_check_data *)job->check_data;
                 svc_description = xstrdup(srv->service_description);
