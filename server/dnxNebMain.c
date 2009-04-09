@@ -793,7 +793,7 @@ static int ehSvcCheck(int event_type, void * data)
    }
 
    dnxDebug(2, "ehSvcCheck: Service Check Type[%i] (Should be 0)",
-         check_result_info->object_check_type);
+         check_result_info.object_check_type);
 
    dnxDebug(4, "ehSvcCheck: Received Job [%lu] at %lu (%lu).",
          serial, (unsigned long)time(0), 
@@ -905,7 +905,7 @@ static int ehHstCheck(int event_type, void * data)
    }
 
    dnxDebug(2, "ehSvcCheck: Service Check Type[%i] (Should be 1)",
-         check_result_info->object_check_type);
+         check_result_info.object_check_type);
 
    dnxDebug(4, "ehHstCheck: Received Job [%lu] at %lu (%lu).",
          serial, (unsigned long)time(0), 
