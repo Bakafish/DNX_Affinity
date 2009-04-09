@@ -262,6 +262,8 @@ int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
    
    DNX_PT_MUTEX_LOCK(&iqueue->mutex);
    
+dnxDebug(4, "dnxQueueGet: iQueue size(%i)", iqueue->size);
+   
    if (iqueue->size > 0) 
    {
       // remove the 'head' item from the queue
