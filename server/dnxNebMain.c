@@ -783,7 +783,7 @@ static int ehSvcCheck(int event_type, void * data)
    
    // use the affinity bitmask to dispatch the check
    unsigned long long host_flags = dnxGetAffinity(hostObj->name);
-   dnxDebug(1, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, host_flags);
+   dnxDebug(2, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, host_flags);
 
    if (cfg.bypassHostgroup && (host_flags & 1)) // Affinity bypass group is always the LSB
    {
@@ -791,6 +791,9 @@ static int ehSvcCheck(int event_type, void * data)
          hostObj->name, svcdata->command_line);
       return OK;     // tell nagios execute locally
    }
+
+   dnxDebug(2, "ehSvcCheck: Service Check Type[%i] (Should be 0)",
+         check_result_info->object_check_type);
 
    dnxDebug(4, "ehSvcCheck: Received Job [%lu] at %lu (%lu).",
          serial, (unsigned long)time(0), 
@@ -900,6 +903,9 @@ static int ehHstCheck(int event_type, void * data)
          hostObj->name, hstdata->command_line);
       return OK;     // tell nagios execute locally
    }
+
+   dnxDebug(2, "ehSvcCheck: Service Check Type[%i] (Should be 1)",
+         check_result_info->object_check_type);
 
    dnxDebug(4, "ehHstCheck: Received Job [%lu] at %lu (%lu).",
          serial, (unsigned long)time(0), 
