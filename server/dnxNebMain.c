@@ -1206,6 +1206,7 @@ void dnxJobCleanup(DnxNewJob * pJob)
    {
       xfree(pJob->cmd);
       xfree(pJob->check_data);
+      xfree(pJob->result);
       xfree(pJob->pNode->addr);
       xfree(pJob->pNode);
    }

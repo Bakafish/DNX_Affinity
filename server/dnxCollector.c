@@ -97,10 +97,20 @@ static void * dnxCollector(void * data)
          // dequeue the matching service request from the pending job queue
          if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
          {
-            char * svc_description = xstrdup(Job.check_data->service_description);
+            
+            check_result * chkResult = (check_result *)Job.check_data->result;
+            char * svc_description;
+            char * host_name;
+            if(chkResult.object_check_type == 0) {
+                // It's a Service check
+                svc_description = xstrdup((nebstruct_service_check_data *)Job.check_data->service_description);
+                host_name = xstrdup((nebstruct_service_check_data *)Job.check_data->host_name);
+            } else {
+                host_name = xstrdup((nebstruct_host_check_data *)Job.check_data->host_name);
+            }
             time_t check_time = Job.start_time + sResult.delta;
-            ret = dnxSubmitCheck(Job.check_data->host_name, svc_description, sResult.resCode, sResult.resData, check_time);
-//            ret = dnxSubmitCheck(Job.check_data->host_name, Job.start_time, sResult.delta, 0, sResult.resCode, sResult.resData);
+            ret = dnxSubmitCheck(host_name, svc_description, sResult.resCode, sResult.resData, check_time);
+
             //SM 09/08 DnxNodeList
             DnxNodeRequest * pNode = Job.pNode;
             char * addr = ntop(pNode->address);
