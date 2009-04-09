@@ -877,12 +877,13 @@ static int ehHstCheck(int event_type, void * data)
 
    if (hstdata == 0)
    {
-      dnxLog("Service handler received NULL service data structure.");
+      dnxDebug(1, "Service handler received NULL service data structure.");
       return ERROR;  // shouldn't happen - internal Nagios error
    }
 
    if ( hstdata->type != NEBTYPE_HOSTCHECK_INITIATE )
-      dnxDebug(1, "ehHstCheck: type (%i) check (%s)", hstdata->type, hstdata->command_line);
+      dnxDebug(1, "ehHstCheck: type (%i) host(%s) check (%s)", 
+            hstdata->type, hstdata->host_name, hstdata->command_name);
       return OK;  // ignore non-initiate service checks
 
       
