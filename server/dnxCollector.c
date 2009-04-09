@@ -109,7 +109,7 @@ static void * dnxCollector(void * data)
             check_result * chkResult = (check_result *)Job.result;
             char * svc_description;
             char * host_name;
-            if(chkResult.object_check_type == 0) {
+            if(chkResult->object_check_type == 0) {
                 // It's a Service check
                 svc_description = xstrdup((nebstruct_service_check_data *)Job.check_data->service_description);
                 host_name = xstrdup((nebstruct_service_check_data *)Job.check_data->host_name);
