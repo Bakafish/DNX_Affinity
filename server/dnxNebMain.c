@@ -559,7 +559,7 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
     chk_result->start_time.tv_usec = 0;
     chk_result->finish_time = chk_result->start_time;
 
-    dnxLog("dnxSubmitCheck: hostname=%s description=%s check_type=%d",
+    dnxDebug(2, "dnxSubmitCheck: hostname=%s description=%s check_type=%d",
         chk_result->host_name, chk_result->service_description, chk_result->check_type);
 
     /* Call the nagios function to insert the result into the result linklist */
