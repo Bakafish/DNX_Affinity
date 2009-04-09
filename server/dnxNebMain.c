@@ -957,6 +957,8 @@ static int ehHstCheck(int event_type, void * data)
 
    serial++;                           // bump serial number
 
+ dnxDebug(1, "ehHstCheck: Taking the callback!");
+
    return NEBERROR_CALLBACKOVERRIDE;   // tell nagios we want it
 }
 
