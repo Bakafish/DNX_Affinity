@@ -572,14 +572,14 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
 
 //----------------------------------------------------------------------------
 
-int dnxPostResult(void * data, time_t start_time, unsigned delta,
-      int early_timeout, int res_code, char * res_data)
-{
+// int dnxPostResult(void * data, time_t start_time, unsigned delta,
+//       int early_timeout, int res_code, char * res_data)
+// {
 //   DnxJobData * jdp = (DnxJobData *)data;
 
-   if (early_timeout)
-      res_code = STATE_UNKNOWN;
-
+//    if (early_timeout)
+//       res_code = STATE_UNKNOWN;
+// 
    /** @todo Nagios 3.x: Collect a better value for exited_ok. */
    /** @todo Nagios 3.x: Collect a better value for check_type. */
 
@@ -595,15 +595,15 @@ int dnxPostResult(void * data, time_t start_time, unsigned delta,
 //          start_time, start_time + delta, early_timeout,
 //          1, res_code, res_data);
 
-   return nagios3xPostResult(start_time, start_time + delta, early_timeout,
-         1, res_code, res_data);
+//    return nagios3xPostResult(start_time, start_time + delta, early_timeout,
+//          1, res_code, res_data);
 //     nebstruct_host_check_data * hstData;
 //     check_result * resultInfo;
 
 // #else
 // # error Unsupported NEB API version.
 // #endif
-}
+// }
 
 //----------------------------------------------------------------------------
 
