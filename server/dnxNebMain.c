@@ -835,7 +835,7 @@ static int ehSvcCheck(int event_type, void * data)
 //    jdp->reschedule = check_result_info.reschedule_check;
 //    jdp->latency    = jdp->svc->latency;
 
-   if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info, svcdata, pNode)) != DNX_OK)
+   if ((ret = dnxPostNewServiceJob(joblist, serial, &check_result_info, svcdata, pNode)) != DNX_OK)
    {
       dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
 //      xfree(jdp);
@@ -937,7 +937,7 @@ static int ehHstCheck(int event_type, void * data)
 
 */
 
-   if ((ret = dnxPostNewHostJob(joblist, serial, check_result_info, hstdata, pNode)) != DNX_OK)
+   if ((ret = dnxPostNewHostJob(joblist, serial, &check_result_info, hstdata, pNode)) != DNX_OK)
    {
       dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
       xfree(jdp);
