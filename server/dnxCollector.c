@@ -106,7 +106,7 @@ static void * dnxCollector(void * data)
          if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
          {
             
-            check_result * chkResult = (check_result *)Job.check_data->result;
+            check_result * chkResult = Job.check_data->result;
             char * svc_description;
             char * host_name;
             if(chkResult.object_check_type == 0) {
