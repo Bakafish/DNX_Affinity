@@ -45,6 +45,14 @@
 # include "config.h"
 #endif
 
+#include "nagios.h"
+#include "objects.h"    // for nagios service data type
+#include "nebmodules.h"
+#include "nebstructs.h"
+#include "nebcallbacks.h"
+#include "neberrors.h"
+#include "broker.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -45,6 +45,14 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include "nagios.h"
+#include "objects.h"    // for nagios service data type
+#include "nebmodules.h"
+#include "nebstructs.h"
+#include "nebcallbacks.h"
+#include "neberrors.h"
+#include "broker.h"
+
 #define DNX_COLLECTOR_TIMEOUT 30
 
 /** The implementation data structure for a collector object. */
