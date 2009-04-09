@@ -252,9 +252,13 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned lon
 
    assert(reg && ppNode);
 
+dnxDebug(4, "dnxGetNodeRequest: Entering loop");
+
    while ((ret = dnxQueueGet(ireg->rqueue, (void **)&node)) == DNX_OK)
    {
       time_t now = time(0);
+
+dnxDebug(4, "dnxGetNodeRequest: Node (%s)", *(char **)node->hostname);
 
       // verify that this request's Time-To-Live (TTL) has not expired and
       // that this thread has affinity
@@ -299,6 +303,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned lon
          node = 0;
       }
    }
+
+dnxDebug(4, "dnxGetNodeRequest: Exiting loop");
 
    if (discard_count > 0)
       dnxDebug(1, "dnxGetNodeRequest: Discarded %d expired node requests.", 
