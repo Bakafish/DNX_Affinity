@@ -882,8 +882,10 @@ static int ehHstCheck(int event_type, void * data)
    }
 
    if ( hstdata->type != NEBTYPE_HOSTCHECK_INITIATE )
-      dnxDebug(1, "ehHstCheck: type (%i) host(%s) check (%s)", 
-            hstdata->type, hstdata->host_name, hstdata->command_name);
+      dnxDebug(1, "ehHstCheck: type (%i) host(%s) check (%s)(%s)(%s)(%s)", 
+            hstdata->type, hstdata->host_name, hstdata->command_name,
+            hstdata->command_line,hstdata->command_args,hstdata->output);
+      
       return OK;  // ignore non-initiate service checks
 
       
