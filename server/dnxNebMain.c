@@ -881,11 +881,12 @@ static int ehHstCheck(int event_type, void * data)
       return ERROR;  // shouldn't happen - internal Nagios error
    }
 
-   if ( hstdata->type != NEBTYPE_HOSTCHECK_INITIATE )
-      dnxDebug(1, "ehHstCheck: type (%i) host(%s) check (%s)(%s)(%s)(%s)", 
+   dnxDebug(1, "ehHstCheck: type (%i) host(%s) check (%s)(%s)(%s)(%s)", 
             hstdata->type, hstdata->host_name, hstdata->command_name,
             hstdata->command_line,hstdata->command_args,hstdata->output);
-      
+
+
+   if ( hstdata->type != NEBTYPE_HOSTCHECK_INITIATE )      
       return OK;  // ignore non-initiate service checks
 
       
