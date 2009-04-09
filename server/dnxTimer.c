@@ -144,19 +144,24 @@ static void * dnxTimer(void * data)
             dnxDebug(2,msg);
 
             xfree(addr);
+
             // report the expired job to Nagios
-            check_result * chkResult = (check_result *)Job.check_data->result;
+            check_result * chkResult = (check_result *)Job.result;
             char * svc_description;
             char * host_name;
+            nebstruct_service_check_data * srv;
+            nebstruct_host_check_data * hst;
             int result_code;
 
             if(chkResult.object_check_type == 0) {
                 // It's a Service check
-                svc_description = xstrdup((nebstruct_service_check_data *)Job.check_data->service_description);
-                host_name = xstrdup((nebstruct_service_check_data *)Job.check_data->host_name);
+                srv = (nebstruct_service_check_data *)Job.check_data;
+                svc_description = xstrdup(srv->service_description);
+                host_name = xstrdup(srv->host_name);
                 result_code = 3;
             } else {
-                host_name = xstrdup((nebstruct_host_check_data *)Job.check_data->host_name);
+                hst = (nebstruct_host_check_data *)Job.check_data;
+                host_name = xstrdup(hst->host_name);
                 result_code = 2;
             }
 
