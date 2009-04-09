@@ -904,7 +904,7 @@ static int ehHstCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   dnxDebug(2, "ehSvcCheck: Service Check Type[%i] (Should be 1)",
+   dnxDebug(2, "ehHstCheck: Service Check Type[%i] (Should be 1)",
          check_result_info.object_check_type);
 
    dnxDebug(4, "ehHstCheck: Received Job [%lu] at %lu (%lu).",
@@ -1204,11 +1204,13 @@ void dnxJobCleanup(DnxNewJob * pJob)
 {
    if (pJob)
    {
+      dnxDebug(4, "dnxJobCleanup: Entering.");
       xfree(pJob->cmd);
       xfree(pJob->check_data);
       xfree(pJob->result);
       xfree(pJob->pNode->addr);
       xfree(pJob->pNode);
+      dnxDebug(4, "dnxJobCleanup: Exiting.");
    }
 }
 
