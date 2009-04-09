@@ -165,7 +165,7 @@ static void * dnxTimer(void * data)
                 result_code = 2;
             }
 
-            time_t check_time = Job.start_time + sResult.delta;
+            time_t check_time = job->start_time;
             ret = dnxSubmitCheck(host_name, svc_description, result_code, msg, check_time);
 
             dnxJobCleanup(job);
