@@ -909,7 +909,7 @@ static int ehHstCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   dnxDebug(2, "ehHstCheck: Service Check Type[%i] (Should be 1)",
+   dnxDebug(2, "ehHstCheck: Host Check Type[%i] (Should be 1)",
          check_result_info.object_check_type);
 
    dnxDebug(4, "ehHstCheck: Received Job [%lu] at %lu (%lu).",
