@@ -304,12 +304,16 @@ dnxDebug(4, "dnxGetNodeRequest: Node (%s)", *(char **)node->hostname);
       }
    }
 
+// If we break out of the loop with affinity then we should have set
+// the node to a correct dnxClient object
 dnxDebug(4, "dnxGetNodeRequest: Exiting loop");
 
    if (discard_count > 0)
       dnxDebug(1, "dnxGetNodeRequest: Discarded %d expired node requests.", 
             discard_count);
 
+// If no affinity matches or there are no dnxClient job requests in the
+// queue we send it back to Nagios
    if (ret != DNX_OK)
       dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s.",
             dnxErrorString(ret));

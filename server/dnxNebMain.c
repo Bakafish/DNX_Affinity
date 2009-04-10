@@ -673,6 +673,8 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    assert(ds);
    assert(ds->command_line);
 
+   dnxDebug(2, "dnxPostNewServiceJob: Posting Service Job [%lu]: Host %s.", serial, ds->host_name);
+
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.check_data = ds;
@@ -685,7 +687,7 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    Job.ack        = false;
    Job.type       = SERVICE_CHECK_ACTIVE;
 
-   dnxDebug(2, "DnxNebMain: Posting Service Job [%lu]: %s.", serial, Job.cmd);
+   dnxDebug(2, "dnxPostNewServiceJob: Posting Service Job [%lu]: %s.", serial, Job.cmd);
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
@@ -718,6 +720,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 
    assert(ds);
    assert(ds->command_line);
+   dnxDebug(2, "dnxPostNewHostJob: Posting Service Job [%lu]: Host %s.", serial, ds->host_name);
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
@@ -730,7 +733,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    Job.pNode      = pNode;
    Job.ack        = false;
 
-   dnxDebug(2, "DnxNebMain: Posting Host Job [%lu]: %s.", serial, Job.cmd);
+   dnxDebug(2, "dnxPostNewHostJob: Posting Host Job [%lu]: %s.", serial, Job.cmd);
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
