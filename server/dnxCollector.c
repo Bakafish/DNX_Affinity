@@ -117,13 +117,17 @@ static void * dnxCollector(void * data)
                 srv = (nebstruct_service_check_data *)Job.check_data;
                 svc_description = xstrdup(srv->service_description);
                 host_name = xstrdup(srv->host_name);
+            dnxDebug(2, "dnxCollector[%lx]: Service-check Hostname(%s) Service(%s)", 
+               tid, srv->host_name, srv->service_description);
             } else {
                 hst = (nebstruct_host_check_data *)Job.check_data;
                 host_name = xstrdup(hst->host_name);
+            dnxDebug(2, "dnxCollector[%lx]: Host-check Hostname(%s)", 
+               tid, hst->host_name);
             }
             time_t check_time = Job.start_time + sResult.delta;
-            dnxDebug(2, "dnxCollector[%lx]: Hostname(%s) Service(%s) Result(%s)", 
-               tid, host_name, svc_description, sResult.resData);
+            dnxDebug(2, "dnxCollector[%lx]: Hostname(%s) Service(%s)", 
+               tid, host_name, svc_description);
             ret = dnxSubmitCheck(host_name, svc_description, sResult.resCode, sResult.resData, check_time);
 
             DnxNodeRequest * pNode = Job.pNode;
