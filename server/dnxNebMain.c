@@ -532,6 +532,9 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
     /* Set the default values in the check result structure */
     init_check_result(chk_result);
 
+    dnxDebug(2, "dnxSubmitCheck: [pre copy] hostname=(%s) description=(%s)",
+        host_name, svc_description);
+
     /*
      * Set up the check result structure with information that we were passed
      * Nagios normally reads the check results from a diskfile specified in
@@ -559,8 +562,8 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
     chk_result->start_time.tv_usec = 0;
     chk_result->finish_time = chk_result->start_time;
 
-    dnxDebug(2, "dnxSubmitCheck: hostname=%s description=%s check_type=%d",
-        chk_result->host_name, chk_result->service_description, chk_result->check_type);
+    dnxDebug(2, "dnxSubmitCheck: hostname=(%s) description=(%s)",
+        chk_result->host_name, chk_result->service_description);
 
     /* Call the nagios function to insert the result into the result linklist */
     add_check_result_to_list(chk_result);
