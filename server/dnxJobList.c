@@ -250,18 +250,25 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long current;
    int ret = DNX_OK;
+   dnxDebug(4, "dnxJobListCollect: Entering");
 
    assert(pJobList && pxid && pJob);   // parameter validation
+   dnxDebug(4, "dnxJobListCollect: Good params");
 
    current = pxid->objSlot;
+   dnxDebug(4, "dnxJobListCollect: Job id (%i) list length(%i)", 
+        current, ilist->size);
 
    assert(current < ilist->size);
+   dnxDebug(4, "dnxJobListCollect: Job id smaller than list length");
+
+
    if (current >= ilist->size)         // runtime validation requires check
       return DNX_ERR_INVALID;          // corrupt client network message
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
 
-   dnxDebug(8, 
+   dnxDebug(4, 
          "dnxJobListCollect: Compare job [%lu,%lu] to job [%lu,%lu]: "
          "Head=%lu, DHead=%lu, Tail=%lu.", pxid->objSerial, pxid->objSlot,
          ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot, 
