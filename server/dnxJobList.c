@@ -276,20 +276,26 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
 
    // verify that the XID of this result matches the XID of the service check
    if (ilist->list[current].state == DNX_JOB_NULL 
-         || !dnxEqualXIDs(pxid, &ilist->list[current].xid))
+         || !dnxEqualXIDs(pxid, &ilist->list[current].xid)) 
+   {
+      dnxDebug(4, "dnxJobListCollect: Job expired before retrieval");      
       ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
+   }
    else
    {
       // make a copy for the Collector
       memcpy(pJob, &ilist->list[current], sizeof *pJob);
       pJob->state = DNX_JOB_COMPLETE;
-   
+      dnxDebug(4, "dnxJobListCollect: Job complete");      
+
       // dequeue this job; make slot available for another job
       ilist->list[current].state = DNX_JOB_NULL;
+      dnxDebug(4, "dnxJobListCollect: Job freed");      
    
       // update the job list head
       if (current == ilist->head && current != ilist->tail)
          ilist->head = (current + 1) % ilist->size;
+         dnxDebug(4, "dnxJobListCollect: Set head to (%i)", ilist->head);      
    }
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
