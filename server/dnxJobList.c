@@ -250,7 +250,8 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long current;
    int ret = DNX_OK;
-   dnxDebug(4, "dnxJobListCollect: Entering");
+   dnxDebug(4, "dnxJobListCollect: Entering id(%lu) slot(%lu)", 
+        pxid->objSerial, pxid->objSlot);
 
    assert(pJobList && pxid && pJob);   // parameter validation
    dnxDebug(4, "dnxJobListCollect: Good params");

@@ -142,6 +142,7 @@ void dnxLog(char * fmt, ... )
         syslog(LOG_ERR,"DNX Logging Error: an error occured while writing log file. Error code was %s\nMessage to be written was %s",((errcode == EOF)?"End of file or file to large.":strerror(errcode)),fmt);
         va_end(ap);
    }
+   dnxDebug(1, "dnxLog: %s", fmt);
 }
 /*
 
