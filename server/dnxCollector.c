@@ -107,6 +107,7 @@ static void * dnxCollector(void * data)
          {
             dnxDebug(2, "dnxCollector: Collecting Job");
             check_result * chkResult = (check_result *)Job.result;
+            dnxDebug(2, "dnxCollector: Check Description (%s)", chkResult->service_description);
             char * svc_description;
             char * host_name;
             nebstruct_service_check_data * srv;
