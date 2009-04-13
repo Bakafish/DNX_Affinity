@@ -472,7 +472,10 @@ static void * dnxWorker(void * data)
       {
          iwlm->jobsrcvd++;
          iwlm->active++;
-         dnxSendJobAck(ws->dispatch, &job, &job.address);
+         dnxSendJobAck(ws->collect, &job, &job.address);
+         dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] (T/O %d): %s.", 
+               tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
+         
          // check pool size before we get too busy -
          // if we're not shutting down and we haven't reached the configured
          // maximum and this is the last thread out, then increase the pool
