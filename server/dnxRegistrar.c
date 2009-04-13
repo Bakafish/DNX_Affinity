@@ -118,12 +118,10 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    pReq = *ppMsg;
    pReq->expires = now + pReq->ttl;
 
-   //SM 09/08 DnxNodeList
    char * addr = ntop(pReq->address,addr);
    dnxNodeListIncrementNodeMember(addr,JOBS_REQ_RECV);
    dnxNodeListSetNodeAffinity(addr, *(char **)pReq->hostname);
    xfree(addr);
-   //SM 09/08 DnxNodeList END
 
    // locate existing node: update expiration time, or add to the queue
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
@@ -145,9 +143,12 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
    else
+   {
+      dnxDebug(1, "DNX Registrar: Unable to enqueue node request: %s.", 
+            dnxErrorString(ret));
       dnxLog("DNX Registrar: Unable to enqueue node request: %s.", 
             dnxErrorString(ret));
-
+   }
    return ret;
 }
 
@@ -341,12 +342,16 @@ int dnxRegistrarCreate(unsigned queuesz, DnxChannel * dispchan,
 
    if ((ret = dnxQueueCreate(queuesz, xfree, &ireg->rqueue)) != 0)
    {
+      dnxDebug(1, "DNX Registrar: Queue creation failed: %s.", dnxErrorString(ret));
+      xfree(ireg);
       dnxLog("DNX Registrar: Queue creation failed: %s.", dnxErrorString(ret));
       xfree(ireg);
       return ret;
    }
    if ((ret = pthread_create(&ireg->tid, 0, dnxRegistrar, ireg)) != 0)
    {
+      dnxDebug(1, "DNX Registrar: Thread creation failed: %s.", strerror(ret));
+      xfree(ireg);
       dnxLog("DNX Registrar: Thread creation failed: %s.", strerror(ret));
       xfree(ireg);
       return DNX_ERR_THREAD;
