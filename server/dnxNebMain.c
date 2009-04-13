@@ -669,6 +669,8 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
 {
    DnxNewJob Job;
    int ret;
+   nebstruct_service_check_data * local_ds;
+   memcpy(local_ds, &ds, sizeof *local_ds);
 
    assert(ds);
    assert(ds->command_line);
@@ -678,8 +680,7 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
-   memcpy(Job.check_data, &ds, sizeof *ds);
-//   Job.check_data = ds;
+   Job.check_data = local_ds;
    Job.object_check_type  = check_type;
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
@@ -719,7 +720,9 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 {
    DnxNewJob Job;
    int ret;
-
+   nebstruct_host_check_data * local_ds;
+   memcpy(local_ds, &ds, sizeof *local_ds);
+   
    assert(ds);
    assert(ds->command_line);
    dnxDebug(2, "dnxPostNewHostJob: Posting Host Job [%lu]: Host (%s)",
@@ -727,8 +730,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
-   memcpy(Job.check_data, &ds, sizeof *ds);
-//   Job.check_data = ds;
+   Job.check_data = local_ds;
    Job.object_check_type = check_type;
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
