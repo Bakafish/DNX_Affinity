@@ -270,9 +270,9 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    DNX_PT_MUTEX_LOCK(&ilist->mut);
 
    dnxDebug(4, 
-         "dnxJobListCollect: Compare job [%lu,%lu] to job [%lu,%lu]: "
-         "Head=%lu, DHead=%lu, Tail=%lu.", pxid->objSerial, pxid->objSlot,
-         ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot, 
+         "dnxJobListCollect: Compare job (%s) [%lu,%lu] to job [%lu,%lu]: "
+         "Head=%lu, DHead=%lu, Tail=%lu.", ilist->list[current].cmd, pxid->objSerial, pxid->objSlot,
+         xid.objSerial, ilist->list[current].xid.objSlot, 
          ilist->head, ilist->dhead, ilist->tail);
 
    // verify that the XID of this result matches the XID of the service check
@@ -295,8 +295,10 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    
       // update the job list head
       if (current == ilist->head && current != ilist->tail)
+      {
          ilist->head = (current + 1) % ilist->size;
-         dnxDebug(4, "dnxJobListCollect: Set head to (%i)", ilist->head);      
+         dnxDebug(4, "dnxJobListCollect: Set head to (%i)", ilist->head);
+      }
    }
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
