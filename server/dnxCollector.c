@@ -106,7 +106,6 @@ static void * dnxCollector(void * data)
          if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
          {
             dnxDebug(2, "dnxCollector: Collecting Job");
-            dnxDebug(2, "dnxCollector: Check Description (%s)", chkResult->service_description);
             char * svc_description;
             char * host_name;
             nebstruct_service_check_data * srv;
