@@ -147,10 +147,14 @@ static void * dnxCollector(void * data)
             dnxJobCleanup(&Job);
          }
          else
+            dnxDebug(1, "dnxCollector[%lx]: Dequeue job failed: %s.",
+                  tid, dnxErrorString(ret));
             dnxLog("dnxCollector[%lx]: Dequeue job failed: %s.",
                   tid, dnxErrorString(ret));
       }
       else if (ret != DNX_ERR_TIMEOUT)
+         dnxDebug(1, "dnxCollector[%lx]: Receive failed: %s.", 
+               tid, dnxErrorString(ret));
          dnxLog("dnxCollector[%lx]: Receive failed: %s.", 
                tid, dnxErrorString(ret));
    }
@@ -186,12 +190,16 @@ int dnxCollectorCreate(char * chname, char * collurl, DnxJobList * joblist, DnxC
    }
    if ((ret = dnxChanMapAdd(chname, collurl)) != DNX_OK)
    {
+      dnxDebug(1, "dnxCollectorCreate: dnxChanMapAdd(%s) failed: %s.", 
+            chname, dnxErrorString(ret));
       dnxLog("dnxCollectorCreate: dnxChanMapAdd(%s) failed: %s.", 
             chname, dnxErrorString(ret));
       goto e1;
    }
    if ((ret = dnxConnect(chname, 0, &icoll->channel)) != DNX_OK)
    {
+      dnxDebug(1, "dnxCollectorCreate: dnxConnect(%s) failed: %s.", 
+            chname, dnxErrorString(ret));
       dnxLog("dnxCollectorCreate: dnxConnect(%s) failed: %s.", 
             chname, dnxErrorString(ret));
       goto e2;
@@ -200,6 +208,8 @@ int dnxCollectorCreate(char * chname, char * collurl, DnxJobList * joblist, DnxC
    // create the collector thread
    if ((ret = pthread_create(&icoll->tid, 0, dnxCollector, icoll)) != 0)
    {
+      dnxDebug(1, "dnxCollectorCreate: thread creation failed: %s.", 
+            dnxErrorString(ret));
       dnxLog("dnxCollectorCreate: thread creation failed: %s.", 
             dnxErrorString(ret));
       ret = DNX_ERR_THREAD;

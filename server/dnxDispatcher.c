@@ -93,7 +93,12 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
 
    if ((ret = dnxSendJob(idisp->channel, &job, pNode->address)) != DNX_OK)
    {
-      dnxLog("Unable to send job [%lu,%lu] (%s) to worker node %u.%u.%u.%u: %s.",
+            dnxDebug(1,"Unable to send job [%lu,%lu] (%s) to worker node %u.%u.%u.%u: %s.",
+            tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
+            sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5], 
+            dnxErrorString(ret));
+
+            dnxLog("Unable to send job [%lu,%lu] (%s) to worker node %u.%u.%u.%u: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
             sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5], 
             dnxErrorString(ret));
@@ -197,12 +202,16 @@ int dnxDispatcherCreate(char * chname, char * dispurl, DnxJobList * joblist,
    }
    if ((ret = dnxChanMapAdd(chname, dispurl)) != DNX_OK)
    {
+      dnxDebug(1, "dnxDispatcherCreate: dnxChanMapAdd(%s) failed: %s.",
+            chname, dnxErrorString(ret));
       dnxLog("dnxDispatcherCreate: dnxChanMapAdd(%s) failed: %s.",
             chname, dnxErrorString(ret));
       goto e1;
    }
    if ((ret = dnxConnect(chname, 0, &idisp->channel)) != DNX_OK)
    {
+      dnxDebug(1, "dnxDispatcherCreate: dnxConnect(%s) failed: %s.",
+            chname, dnxErrorString(ret));
       dnxLog("dnxDispatcherCreate: dnxConnect(%s) failed: %s.",
             chname, dnxErrorString(ret));
       goto e2;
@@ -211,6 +220,8 @@ int dnxDispatcherCreate(char * chname, char * dispurl, DnxJobList * joblist,
    // create the dispatcher thread
    if ((ret = pthread_create(&idisp->tid, 0, dnxDispatcher, idisp)) != 0)
    {
+      dnxDebug(1, "dnxDispatcherCreate: thread creation failed: %s.",
+            dnxErrorString(ret));
       dnxLog("dnxDispatcherCreate: thread creation failed: %s.",
             dnxErrorString(ret));
       ret = DNX_ERR_THREAD;
