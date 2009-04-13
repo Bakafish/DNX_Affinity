@@ -105,7 +105,7 @@ static void * dnxCollector(void * data)
          // dequeue the matching service request from the pending job queue
          if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
          {
-            dnxDebug(2, "dnxCollector: Collecting Job", 
+            dnxDebug(2, "dnxCollector: Collecting Job");
             check_result * chkResult = (check_result *)Job.result;
             char * svc_description;
             char * host_name;
