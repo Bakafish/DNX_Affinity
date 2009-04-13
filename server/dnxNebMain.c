@@ -726,13 +726,13 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    memcpy(local_ds, ds, sizeof *local_ds);
    
    assert(ds);
-   assert(ds->command_line);
+//   assert(ds->command_line);
    dnxDebug(2, "dnxPostNewHostJob: Posting Host Job [%lu]: Host (%s)",
     serial, ds->host_name);
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
-   Job.check_data = local_ds;
+   Job.check_data = ds;
    Job.object_check_type = check_type;
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
