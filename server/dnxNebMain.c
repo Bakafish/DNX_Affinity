@@ -665,7 +665,7 @@ static int dnxCalculateJobListSize(void)
  * @return Zero on success, or a non-zero error value.
  */
 static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial, 
-    check_result * result, nebstruct_service_check_data * ds, DnxNodeRequest * pNode)
+    int check_type, nebstruct_service_check_data * ds, DnxNodeRequest * pNode)
 {
    DnxNewJob Job;
    int ret;
@@ -679,7 +679,7 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.check_data = ds;
-   Job.result     = result;
+   Job.object_check_type  = check_type;
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
@@ -714,7 +714,7 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
  * @return Zero on success, or a non-zero error value.
  */
 static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial, 
-    check_result * result, nebstruct_host_check_data * ds, DnxNodeRequest * pNode)
+    int check_type, nebstruct_host_check_data * ds, DnxNodeRequest * pNode)
 {
    DnxNewJob Job;
    int ret;
@@ -727,7 +727,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.check_data = ds;
-   Job.result     = result;
+   Job.object_check_type = check_type;
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
@@ -767,7 +767,6 @@ static int ehSvcCheck(int event_type, void * data)
 
    DnxNodeRequest * pNode;
    extern check_result check_result_info;
-   check_result local_chk_rst = check_result_info;
    host * hostObj = find_host(svcdata->host_name);
    int ret;
 
@@ -847,7 +846,7 @@ static int ehSvcCheck(int event_type, void * data)
 //    jdp->reschedule = check_result_info.reschedule_check;
 //    jdp->latency    = jdp->svc->latency;
 
-   if ((ret = dnxPostNewServiceJob(joblist, serial, &local_chk_rst, svcdata, pNode)) != DNX_OK)
+   if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
    {
       dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
 //      xfree(jdp);
@@ -880,7 +879,6 @@ static int ehHstCheck(int event_type, void * data)
 
    DnxNodeRequest * pNode;
    extern check_result check_result_info;
-   check_result local_chk_rst = check_result_info;
    host * hostObj = find_host(hstdata->host_name);
    int ret;
 
@@ -958,7 +956,7 @@ static int ehHstCheck(int event_type, void * data)
 
 */
 
-   if ((ret = dnxPostNewHostJob(joblist, serial, &local_chk_rst, hstdata, pNode)) != DNX_OK)
+   if ((ret = dnxPostNewHostJob(joblist, serial, check_result_info.object_check_type, hstdata, pNode)) != DNX_OK)
    {
       dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
 //      xfree(jdp);

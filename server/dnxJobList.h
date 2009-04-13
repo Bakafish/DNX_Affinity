@@ -42,7 +42,7 @@ typedef struct DnxNewJob
    int timeout;            // Service check timeout in seconds
    time_t expires;         // Expiration time
    void * check_data;      // Nagios check structure (nebstruct_service_check_data/nebstruct_host_check_data)
-   void * result;          // Nagios check result (check_result)
+   int object_check_type;  // Nagios object type (service = 0, host = 1)
    DnxNodeRequest * pNode; // Worker Request that will handle this Job
    bool ack;               // Boolean to tell us whether or not reciept was acknowledge by the client
 } DnxNewJob;
