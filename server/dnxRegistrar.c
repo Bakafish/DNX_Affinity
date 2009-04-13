@@ -111,7 +111,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    DnxNodeRequest * pReq;
    time_t now = time(0);
    int ret = DNX_OK;
-
+   dnxDebug(2, "dnxRegisterNode: Entering");
    assert(ireg && ppMsg && *ppMsg);
 
    // compute expiration time of this request
@@ -120,6 +120,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
 
    char * addr = ntop(pReq->address,addr);
    dnxNodeListIncrementNodeMember(addr,JOBS_REQ_RECV);
+
    dnxNodeListSetNodeAffinity(addr, *(char **)pReq->hostname);
    xfree(addr);
 
@@ -128,7 +129,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    {
       pReq->expires = (*ppMsg)->expires;
       dnxDebug(2, 
-            "dnxRegistrar[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
+            "dnxRegisterNode[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
             tid, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
@@ -138,15 +139,15 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
       pReq->flags = dnxGetAffinity(*(char **)pReq->hostname);
       *ppMsg = 0;    // we're keeping this message; return NULL
       dnxDebug(2, 
-            "dnxRegistrar[%lx]: Added req for [%s] [%lu,%lu] at %u; expires at %u.", 
+            "dnxRegisterNode[%lx]: Added req for [%s] [%lu,%lu] at %u; expires at %u.", 
             tid, *(char **)pReq->hostname, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
    }
    else
    {
-      dnxDebug(1, "DNX Registrar: Unable to enqueue node request: %s.", 
+      dnxDebug(1, "dnxRegisterNode: Unable to enqueue node request: %s.", 
             dnxErrorString(ret));
-      dnxLog("DNX Registrar: Unable to enqueue node request: %s.", 
+      dnxLog("dnxRegisterNode: Unable to enqueue node request: %s.", 
             dnxErrorString(ret));
    }
    return ret;
