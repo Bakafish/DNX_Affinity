@@ -146,17 +146,21 @@ static void * dnxCollector(void * data)
 
             dnxJobCleanup(&Job);
          }
-         else
+         else 
+         {
             dnxDebug(1, "dnxCollector[%lx]: Dequeue job failed: %s.",
                   tid, dnxErrorString(ret));
             dnxLog("dnxCollector[%lx]: Dequeue job failed: %s.",
                   tid, dnxErrorString(ret));
+         }
       }
       else if (ret != DNX_ERR_TIMEOUT)
+      {
          dnxDebug(1, "dnxCollector[%lx]: Receive failed: %s.", 
                tid, dnxErrorString(ret));
          dnxLog("dnxCollector[%lx]: Receive failed: %s.", 
                tid, dnxErrorString(ret));
+      }
    }
    return 0;
 }
