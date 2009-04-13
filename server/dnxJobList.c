@@ -291,7 +291,7 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
 
       // dequeue this job; make slot available for another job
       ilist->list[current].state = DNX_JOB_NULL;
-      dnxDebug(4, "dnxJobListCollect: Job freed. Copy (%s)", pJob.cmd);      
+      dnxDebug(4, "dnxJobListCollect: Job freed. Copy (%s)", pJob->cmd);      
    
       // update the job list head
       if (current == ilist->head && current != ilist->tail)
