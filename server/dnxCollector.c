@@ -114,15 +114,15 @@ static void * dnxCollector(void * data)
             if(Job.object_check_type == 0) {
                 // It's a Service check
                 dnxDebug(4, "dnxCollector: Service Check");
-                srv = (nebstruct_service_check_data *)Job->check_data;
+                srv = (nebstruct_service_check_data *)Job.check_data;
                 svc_description = xstrdup(srv->service_description);
                 host_name = xstrdup(srv->host_name);
-                dnxDebug(4, "dnxCollector: Service Check Hostname (%s)(%s)", host_name, srv->host_name);
+                dnxDebug(4, "dnxCollector: Service Check (%s)", srv->command_line);
             } else {
                 dnxDebug(4, "dnxCollector: Host Check");
-                hst = (nebstruct_host_check_data *)Job->check_data;
+                hst = (nebstruct_host_check_data *)Job.check_data;
                 host_name = xstrdup(hst->host_name);
-                dnxDebug(4, "dnxCollector: Host Check Hostname (%s)(%s)", host_name, hst->host_name);
+                dnxDebug(4, "dnxCollector: Host Check (%s)", hst->command_line);
             }
             time_t check_time = Job.start_time + sResult.delta;
             dnxDebug(2, "dnxCollector[%lx]: Hostname(%s) Service(%s)", 
