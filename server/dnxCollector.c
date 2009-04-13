@@ -106,14 +106,13 @@ static void * dnxCollector(void * data)
          if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
          {
             dnxDebug(2, "dnxCollector: Collecting Job");
-            check_result * chkResult = (check_result *)Job.result;
             dnxDebug(2, "dnxCollector: Check Description (%s)", chkResult->service_description);
             char * svc_description;
             char * host_name;
             nebstruct_service_check_data * srv;
             nebstruct_host_check_data * hst;
             
-            if(chkResult->object_check_type == 0) {
+            if(Job.object_check_type == 0) {
                 // It's a Service check
                 srv = (nebstruct_service_check_data *)Job.check_data;
                 svc_description = xstrdup(srv->service_description);
