@@ -43,6 +43,7 @@ typedef struct DnxNewJob
    time_t expires;         // Expiration time
 //   void * check_data;      // Nagios check structure (nebstruct_service_check_data/nebstruct_host_check_data)
    char * host_name;       // Name of the host
+   char * service_description; // Name of the check being run
    int object_check_type;  // Nagios object type (service = 0, host = 1)
    DnxNodeRequest * pNode; // Worker Request that will handle this Job
    bool ack;               // Boolean to tell us whether or not reciept was acknowledge by the client

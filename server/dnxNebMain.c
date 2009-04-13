@@ -679,6 +679,7 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.host_name  = ds->host_name;
+   Job.service_description = ds->service_description;
    Job.object_check_type  = check_type;
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
@@ -727,6 +728,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.host_name  = ds->host_name;
+   Job.service_description = ds->service_description;
    Job.object_check_type = check_type;
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
@@ -818,8 +820,8 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   dnxDebug(2, "ehSvcCheck: Host Check found worker (%s)[%lu,%lu]", 
-    pNode->hn, pNode->xid.objSerial, pNode->xid.objSlot);
+   dnxDebug(2, "ehSvcCheck: Host Check found worker [%lu,%lu]",
+        pNode->xid.objSerial, pNode->xid.objSlot);
 
    // allocate and populate a new job payload object
 /*
