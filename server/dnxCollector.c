@@ -124,7 +124,7 @@ static void * dnxCollector(void * data)
 //             }
             time_t check_time = Job.start_time + sResult.delta;
             dnxDebug(2, "dnxCollector[%lx]: Hostname(%s)", tid, Job.host_name);
-            ret = dnxSubmitCheck(host_name, 0, sResult.resCode, sResult.resData, check_time);
+            ret = dnxSubmitCheck(Job.host_name, 0, sResult.resCode, sResult.resData, check_time);
 
             DnxNodeRequest * pNode = Job.pNode;
             char * addr = ntop(pNode->address);
