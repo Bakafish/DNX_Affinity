@@ -669,8 +669,9 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
 {
    DnxNewJob Job;
    int ret;
+   dnxDebug(2, "dnxPostNewServiceJob: Enter");
    nebstruct_service_check_data * local_ds;
-   memcpy(local_ds, &ds, sizeof *local_ds);
+   memcpy(local_ds, ds, sizeof *local_ds);
 
    assert(ds);
    assert(ds->command_line);
@@ -720,8 +721,9 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 {
    DnxNewJob Job;
    int ret;
+   dnxDebug(2, "dnxPostNewHostJob: Enter");
    nebstruct_host_check_data * local_ds;
-   memcpy(local_ds, &ds, sizeof *local_ds);
+   memcpy(local_ds, ds, sizeof *local_ds);
    
    assert(ds);
    assert(ds->command_line);
