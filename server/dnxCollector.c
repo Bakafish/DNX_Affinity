@@ -106,28 +106,25 @@ static void * dnxCollector(void * data)
          if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
          {
             dnxDebug(2, "dnxCollector: Collecting Job");
-            char * svc_description;
-            char * host_name;
-            nebstruct_service_check_data * srv;
-            nebstruct_host_check_data * hst;
+//             char * svc_description;
+//             char * host_name;
+//             nebstruct_service_check_data * srv;
+//             nebstruct_host_check_data * hst;
             
-            if(Job.object_check_type == 0) {
-                // It's a Service check
-                dnxDebug(4, "dnxCollector: Service Check (%s)", Job.cmd);
-                srv = (nebstruct_service_check_data *)Job.check_data;
-                svc_description = xstrdup(srv->service_description);
-                host_name = xstrdup(srv->host_name);
-                dnxDebug(4, "dnxCollector: Service Check (%s)", srv->command_line);
-            } else {
-                dnxDebug(4, "dnxCollector: Host Check (%s)", Job.cmd);
-                hst = (nebstruct_host_check_data *)Job.check_data;
-                host_name = xstrdup(hst->host_name);
-                dnxDebug(4, "dnxCollector: Host Check (%s)", hst->command_line);
-            }
+//             if(Job.object_check_type == 0) {
+//                 // It's a Service check
+//                 dnxDebug(4, "dnxCollector: Service Check (%s)", Job.cmd);
+//                 srv = (nebstruct_service_check_data *)Job.check_data;
+//                 svc_description = xstrdup(srv->service_description);
+//                 host_name = xstrdup(srv->host_name);
+//             } else {
+//                 dnxDebug(4, "dnxCollector: Host Check (%s)", Job.cmd);
+//                 hst = (nebstruct_host_check_data *)Job.check_data;
+//                 host_name = xstrdup(hst->host_name);
+//             }
             time_t check_time = Job.start_time + sResult.delta;
-            dnxDebug(2, "dnxCollector[%lx]: Hostname(%s) Service(%s)", 
-               tid, host_name, svc_description);
-            ret = dnxSubmitCheck(host_name, svc_description, sResult.resCode, sResult.resData, check_time);
+            dnxDebug(2, "dnxCollector[%lx]: Hostname(%s)", tid, Job.host_name);
+            ret = dnxSubmitCheck(host_name, 0, sResult.resCode, sResult.resData, check_time);
 
             DnxNodeRequest * pNode = Job.pNode;
             char * addr = ntop(pNode->address);

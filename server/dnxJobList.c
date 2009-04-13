@@ -287,6 +287,7 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
       // make a copy for the Collector
       memcpy(pJob, &ilist->list[current], sizeof *pJob);
       pJob->state = DNX_JOB_COMPLETE;
+//      pJob->check_data = ilist->list[current].check_data;
       dnxDebug(4, "dnxJobListCollect: Job complete");      
 
       // dequeue this job; make slot available for another job
