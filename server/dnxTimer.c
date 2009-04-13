@@ -123,6 +123,7 @@ static void * dnxTimer(void * data)
       totalExpired = MAX_EXPIRED;
       if ((ret = dnxJobListExpire(itimer->joblist, ExpiredList, &totalExpired)) == DNX_OK && totalExpired > 0)
       {
+         dnxDebug(4, "Expired Checks");
          for (i = 0; i < totalExpired; i++)
          {
             char msg[128];
@@ -154,11 +155,13 @@ static void * dnxTimer(void * data)
 
             if(job->object_check_type == 0) {
                 // It's a Service check
+                dnxDebug(4, "Expired Service Check");
                 srv = (nebstruct_service_check_data *)job->check_data;
                 svc_description = xstrdup(srv->service_description);
                 host_name = xstrdup(srv->host_name);
                 result_code = 3;
             } else {
+                dnxDebug(4, "Expired Host Check");
                 hst = (nebstruct_host_check_data *)job->check_data;
                 host_name = xstrdup(hst->host_name);
                 result_code = 2;
