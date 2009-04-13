@@ -272,7 +272,7 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    dnxDebug(4, 
          "dnxJobListCollect: Compare job (%s) [%lu,%lu] to job [%lu,%lu]: "
          "Head=%lu, DHead=%lu, Tail=%lu.", ilist->list[current].cmd, pxid->objSerial, pxid->objSlot,
-         xid.objSerial, ilist->list[current].xid.objSlot, 
+         ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot, 
          ilist->head, ilist->dhead, ilist->tail);
 
    // verify that the XID of this result matches the XID of the service check
