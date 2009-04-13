@@ -117,6 +117,7 @@ static void * dnxCollector(void * data)
                 srv = (nebstruct_service_check_data *)Job.check_data;
                 svc_description = xstrdup(srv->service_description);
                 host_name = xstrdup(srv->host_name);
+                dnxDebug(4, "dnxCollector: Hostname (%s)", host_name);
             } else {
                 dnxDebug(4, "dnxCollector: Host Check");
                 hst = (nebstruct_host_check_data *)Job.check_data;
