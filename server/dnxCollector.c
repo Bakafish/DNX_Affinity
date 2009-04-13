@@ -132,14 +132,14 @@ static void * dnxCollector(void * data)
             xfree(addr);
 
             /** @todo Wrapper release DnxResult structure. */
+            dnxAuditJob(&Job, "COLLECT");
+            dnxLog("RESPONSE: %s", sResult.resData);
             xfree(sResult.resData);
 
             dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s.", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot, 
                   dnxErrorString(ret));
 
-            dnxAuditJob(&Job, "COLLECT");
-            dnxLog("RESPONSE: %s", sResult.resData);
             dnxJobCleanup(&Job);
          }
          else 
