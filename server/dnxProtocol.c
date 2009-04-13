@@ -58,6 +58,7 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
 {
    DnxXmlBuf xbuf;
    int ret;
+   char * req;
 
    assert(channel && pReg);
 
@@ -74,8 +75,11 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
 
    // verify this is a "NodeRequest" message
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "NodeRequest")) != DNX_OK)
+   {
+      dnxXmlGet(&xbuf, "Request", DNX_XML_STR, req);
+      dnxDebug(4, "dnxWaitForNodeRequest: Request (%s) != NodeRequest", req);
       return ret;
-
+   }
    // decode the worker node's XID (support older GUID format as well)
    if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pReg->xid)) != DNX_OK
          && (ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pReg->xid)) != DNX_OK)
