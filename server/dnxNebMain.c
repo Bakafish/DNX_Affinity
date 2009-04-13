@@ -673,8 +673,8 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    assert(ds);
    assert(ds->command_line);
 
-   dnxDebug(2, "dnxPostNewServiceJob: Posting Service Job [%lu]: Host (%s) Check Description (%s)", 
-    serial, ds->host_name, result->service_description);
+   dnxDebug(2, "dnxPostNewServiceJob: Posting Service Job [%lu]: Host (%s)", 
+    serial, ds->host_name);
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
@@ -721,8 +721,8 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 
    assert(ds);
    assert(ds->command_line);
-   dnxDebug(2, "dnxPostNewHostJob: Posting Service Job [%lu]: Host (%s) Check Description (%s)",
-    serial, ds->host_name, result->service_description);
+   dnxDebug(2, "dnxPostNewHostJob: Posting Service Job [%lu]: Host (%s)",
+    serial, ds->host_name);
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
