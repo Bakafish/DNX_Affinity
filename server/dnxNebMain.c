@@ -767,7 +767,7 @@ static int ehSvcCheck(int event_type, void * data)
 
    DnxNodeRequest * pNode;
    extern check_result check_result_info;
-   check_result * local_chk_rst = check_result_info;
+   check_result local_chk_rst = check_result_info;
    host * hostObj = find_host(svcdata->host_name);
    int ret;
 
@@ -847,7 +847,7 @@ static int ehSvcCheck(int event_type, void * data)
 //    jdp->reschedule = check_result_info.reschedule_check;
 //    jdp->latency    = jdp->svc->latency;
 
-   if ((ret = dnxPostNewServiceJob(joblist, serial, local_chk_rst, svcdata, pNode)) != DNX_OK)
+   if ((ret = dnxPostNewServiceJob(joblist, serial, &local_chk_rst, svcdata, pNode)) != DNX_OK)
    {
       dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
 //      xfree(jdp);
@@ -880,7 +880,7 @@ static int ehHstCheck(int event_type, void * data)
 
    DnxNodeRequest * pNode;
    extern check_result check_result_info;
-   check_result * local_chk_rst = check_result_info;
+   check_result local_chk_rst = check_result_info;
    host * hostObj = find_host(hstdata->host_name);
    int ret;
 
@@ -958,7 +958,7 @@ static int ehHstCheck(int event_type, void * data)
 
 */
 
-   if ((ret = dnxPostNewHostJob(joblist, serial, local_chk_rst, hstdata, pNode)) != DNX_OK)
+   if ((ret = dnxPostNewHostJob(joblist, serial, &local_chk_rst, hstdata, pNode)) != DNX_OK)
    {
       dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
 //      xfree(jdp);
