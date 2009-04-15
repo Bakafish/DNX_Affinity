@@ -1009,6 +1009,9 @@ static int ehHstCheck(int event_type, void * data)
    
    dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]", 
      pNode->xid.objSerial, pNode->xid.objSlot);
+   
+   // Push the command into our Host Check Data Object
+   hstdata->command_line = processed_command;
 
    // allocate and populate a new job payload object
 /*   if ((jdp = (DnxHostJobData *)xmalloc(sizeof *jdp)) == 0)
