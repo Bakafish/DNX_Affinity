@@ -961,8 +961,8 @@ static int ehHstCheck(int event_type, void * data)
 	adjust_host_check_attempt_3x(hostObj, TRUE);
 
 	/* set latency (temporarily) for macros and event broker */
-	old_latency=hostObj->latency;
-	hostObj->latency=latency;
+// 	old_latency=hostObj->latency;
+// 	hostObj->latency=latency;
 
 	/* get the command start time */
 	gettimeofday(&start_time,NULL);
