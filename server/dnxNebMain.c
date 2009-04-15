@@ -688,7 +688,6 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
    Job.pNode      = pNode;
    Job.ack        = false;
-   Job.type       = SERVICE_CHECK_ACTIVE;
 
    dnxDebug(2, "dnxPostNewServiceJob: Posting Service Job [%lu]: %s.", serial, Job.cmd);
 
