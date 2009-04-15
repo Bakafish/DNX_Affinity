@@ -549,6 +549,7 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
         chk_result->service_description = xstrdup(svc_description);
         chk_result->object_check_type=SERVICE_CHECK;
     } else {
+        strcpy(chk_result->service_description, "");
         chk_result->object_check_type=HOST_CHECK;
     }
 //    normalize_plugin_output(plugin_output, "B2");
