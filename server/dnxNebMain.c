@@ -550,15 +550,25 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
         chk_result->object_check_type=SERVICE_CHECK;
         chk_result->check_type = SERVICE_CHECK_ACTIVE;
     } else {
-        strcpy(chk_result->service_description, "");
+        chk_result->service_description=NULL;
         chk_result->object_check_type=HOST_CHECK;
         chk_result->check_type = HOST_CHECK_ACTIVE;
     }
+
+/*
+	chk_result->check_options=check_options;
+	chk_result->latency=latency;
+*/
+
+
 //    normalize_plugin_output(plugin_output, "B2");
     chk_result->output = xstrdup(plugin_output);
 
-    chk_result->return_code = return_code;
+    chk_result->return_code = return_code; // STATE_OK = 0
     chk_result->exited_ok = TRUE;
+    chk_result->early_timeout = FALSE;
+	chk_result->scheduled_check = TRUE;
+	chk_result->reschedule_check = TRUE;
 
     chk_result->start_time.tv_sec = check_time;
     chk_result->start_time.tv_usec = 0;
@@ -729,7 +739,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.host_name  = ds->host_name;
-   Job.service_description = ds->command_name;
+   Job.service_description = NULL;
    Job.object_check_type = check_type;
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
@@ -884,10 +894,11 @@ static int ehHstCheck(int event_type, void * data)
       return OK;
 
    DnxNodeRequest * pNode;
-   extern check_result check_result_info;
+//   extern check_result check_result_info;
    host * hostObj = find_host(hstdata->host_name);
+   char * raw_command = NULL;
+   char * processed_command = NULL;
    int ret;
-
 
    if (hstdata == 0)
    {
@@ -900,18 +911,41 @@ static int ehHstCheck(int event_type, void * data)
             hstdata->command_line,hstdata->command_args,hstdata->output);
 
 
-   if ( hstdata->type != NEBTYPE_HOSTCHECK_INITIATE )      
-      return OK;  // ignore non-initiate service checks
+   if ( hstdata->type != NEBTYPE_HOSTCHECK_ASYNC_PRECHECK )      
+      return OK;  // ignore non-setup service checks
 
-      
+    /*  Because this callback doesn't short circuit like a service check
+    *   we have to intercept the event earlier in it's lifecycle
+    *   this requires us to do some additional setup to put the check structs
+    *   into a viable configuration
+    */
+
+	/* grab the host macro variables */
+	clear_volatile_macros();
+	grab_host_macros(hostObj);
+
+	/* get the raw command line */
+	get_raw_command_line(hostObj->check_command_ptr,hostObj->host_check_command,&raw_command,0);
+	if(raw_command==NULL){
+		dnxDebug(1,"Raw check command for host '%s' was NULL - aborting.\n",hostObj->name);
+		return OK;
+    }
+
+	/* process any macros contained in the argument */
+	process_macros(raw_command, &processed_command, 0);
+	if(processed_command==NULL){
+		dnxDebug(1,"Processed check command for host '%s' was NULL - aborting.\n",hostObj->name);
+		return OK;
+    }
+
    // check for local execution pattern on command line
-   if (cfg.localCheckPattern && regexec(&regEx, hstdata->command_line, 0, 0, 0) == 0)
+   if (cfg.localCheckPattern && regexec(&regEx, processed_command, 0, 0, 0) == 0)
    {
       dnxDebug(1, "(localCheckPattern match) Service for %s will execute locally: %s.", 
-         hostObj->name, hstdata->command_line);
+         hostObj->name, processed_command);
       return OK;     // tell nagios execute locally
    }
-   
+
    // use the affinity bitmask to dispatch the check
    unsigned long long host_flags = dnxGetAffinity(hostObj->name);
    dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", hostObj->name, host_flags);
@@ -919,12 +953,33 @@ static int ehHstCheck(int event_type, void * data)
    if (cfg.bypassHostgroup && (host_flags & 1)) // Affinity bypass group is always the LSB
    {
       dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
-         hostObj->name, hstdata->command_line);
+         hostObj->name, processed_command);
       return OK;     // tell nagios execute locally
    }
 
-   dnxDebug(2, "ehHstCheck: Host Check Type[%i] (Should be 1)",
-         check_result_info.object_check_type);
+	/* adjust host check attempt */
+	adjust_host_check_attempt_3x(hostObj, TRUE);
+
+	/* set latency (temporarily) for macros and event broker */
+	old_latency=hostObj->latency;
+	hostObj->latency=latency;
+
+	/* get the command start time */
+	gettimeofday(&start_time,NULL);
+
+	/* set check time for on-demand checks, so they're not incorrectly detected as being orphaned - Luke Ross 5/16/08 */
+	/* NOTE: 06/23/08 EG not sure if there will be side effects to this or not.... */
+	if(scheduled_check==FALSE)
+		hostObj->next_check=hstdata->start_time.tv_sec;
+
+	/* increment number of host checks that are currently running... */
+	extern currently_running_host_checks++;
+
+	/* set the execution flag */
+	hostObj->is_executing=TRUE;
+      
+//    dnxDebug(2, "ehHstCheck: Host Check Type[%i] (Should be 1)",
+//          check_result_info.object_check_type);
 
    dnxDebug(4, "ehHstCheck: Received Job [%lu] at %lu (%lu).",
          serial, (unsigned long)time(0), 
@@ -965,7 +1020,10 @@ static int ehHstCheck(int event_type, void * data)
 
 */
 
-   if ((ret = dnxPostNewHostJob(joblist, serial, check_result_info.object_check_type, hstdata, pNode)) != DNX_OK)
+
+
+
+   if ((ret = dnxPostNewHostJob(joblist, serial, HOST_CHECK, hstdata, pNode)) != DNX_OK)
    {
       dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
 //      xfree(jdp);
