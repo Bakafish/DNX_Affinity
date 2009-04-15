@@ -973,7 +973,7 @@ static int ehHstCheck(int event_type, void * data)
 // 		hostObj->next_check=hstdata->start_time.tv_sec;
 
 	/* increment number of host checks that are currently running... */
-	extern currently_running_host_checks++;
+	extern int currently_running_host_checks++;
 
 	/* set the execution flag */
 	hostObj->is_executing=TRUE;
