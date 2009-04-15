@@ -936,6 +936,9 @@ static int ehHstCheck(int event_type, void * data)
 	if(processed_command==NULL){
 		dnxDebug(1,"Processed check command for host '%s' was NULL - aborting.\n",hostObj->name);
 		return OK;
+    } else {
+		dnxDebug(4,"ehHstCheck: Processed check command for host '%s' was (%s) - aborting.\n",
+		    processed_command, hostObj->name);
     }
 
    // check for local execution pattern on command line
@@ -975,6 +978,9 @@ static int ehHstCheck(int event_type, void * data)
 	/* increment number of host checks that are currently running... */
 	extern int currently_running_host_checks;
 	currently_running_host_checks++;
+    dnxDebug(4,"ehHstCheck: Host checks in process (%i)", 
+        currently_running_host_checks);
+
 
 	/* set the execution flag */
 	hostObj->is_executing=TRUE;
