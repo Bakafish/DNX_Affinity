@@ -965,7 +965,7 @@ static int ehHstCheck(int event_type, void * data)
 // 	hostObj->latency=latency;
 
 	/* get the command start time */
-	gettimeofday(&start_time,NULL);
+//	gettimeofday(&start_time,NULL);
 
 	/* set check time for on-demand checks, so they're not incorrectly detected as being orphaned - Luke Ross 5/16/08 */
 	/* NOTE: 06/23/08 EG not sure if there will be side effects to this or not.... */
