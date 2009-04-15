@@ -548,16 +548,17 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
     if(svc_description) {
         chk_result->service_description = xstrdup(svc_description);
         chk_result->object_check_type=SERVICE_CHECK;
+        chk_result->check_type = SERVICE_CHECK_ACTIVE;
     } else {
         strcpy(chk_result->service_description, "");
         chk_result->object_check_type=HOST_CHECK;
+        chk_result->check_type = HOST_CHECK_ACTIVE;
     }
 //    normalize_plugin_output(plugin_output, "B2");
     chk_result->output = xstrdup(plugin_output);
 
     chk_result->return_code = return_code;
     chk_result->exited_ok = TRUE;
-    chk_result->check_type = SERVICE_CHECK_PASSIVE;
 
     chk_result->start_time.tv_sec = check_time;
     chk_result->start_time.tv_usec = 0;
