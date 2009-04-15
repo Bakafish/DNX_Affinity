@@ -831,7 +831,7 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   dnxDebug(2, "ehSvcCheck: Host Check found worker [%lu,%lu]",
+   dnxDebug(2, "ehSvcCheck: Service Check found worker [%lu,%lu]",
         pNode->xid.objSerial, pNode->xid.objSlot);
 
    // allocate and populate a new job payload object
@@ -911,8 +911,11 @@ static int ehHstCheck(int event_type, void * data)
             hstdata->command_line,hstdata->command_args,hstdata->output);
 
 
-   if ( hstdata->type != NEBTYPE_HOSTCHECK_ASYNC_PRECHECK )      
+   if ( hstdata->type != NEBTYPE_HOSTCHECK_ASYNC_PRECHECK ){      
       return OK;  // ignore non-setup service checks
+    } else {
+      dnxDebug(4, "ehHstCheck: Processing Host Check");
+    }
 
     /*  Because this callback doesn't short circuit like a service check
     *   we have to intercept the event earlier in it's lifecycle
@@ -926,6 +929,7 @@ static int ehHstCheck(int event_type, void * data)
 
 	/* get the raw command line */
 	get_raw_command_line(hostObj->check_command_ptr,hostObj->host_check_command,&raw_command,0);
+
 	if(raw_command==NULL){
 		dnxDebug(1,"Raw check command for host '%s' was NULL - aborting.\n",hostObj->name);
 		return OK;
@@ -937,8 +941,8 @@ static int ehHstCheck(int event_type, void * data)
 		dnxDebug(1,"Processed check command for host '%s' was NULL - aborting.\n",hostObj->name);
 		return OK;
     } else {
-		dnxDebug(4,"ehHstCheck: Processed check command for host '%s' was (%s) - aborting.\n",
-		    processed_command, hostObj->name);
+		dnxDebug(4,"ehHstCheck: Processed check command for host '%s' was (%s)",
+		    hostObj->name, processed_command);
     }
 
    // check for local execution pattern on command line
@@ -1003,8 +1007,8 @@ static int ehHstCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
    
-   dnxDebug(2, "ehHstCheck: Host Check found worker (%s)[%lu,%lu]", 
-    pNode->hn, pNode->xid.objSerial, pNode->xid.objSlot);
+   dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]", 
+     pNode->xid.objSerial, pNode->xid.objSlot);
 
    // allocate and populate a new job payload object
 /*   if ((jdp = (DnxHostJobData *)xmalloc(sizeof *jdp)) == 0)
