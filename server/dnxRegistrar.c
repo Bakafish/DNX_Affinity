@@ -275,21 +275,21 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       time_t now = time(0);
 
 dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
-    **ppNode->hn, *(char **)node->hostname);
+    ppNode->hn, *(char **)node->hostname);
 
       // verify that this request's Time-To-Live (TTL) has not expired and
       // that this thread has affinity
       if (node->expires > now)
       {
       dnxDebug(4, "dnxGetNodeRequest: Affinity Client [%s]:(%qu) Host [%s]:(%qu).",
-                *(char **)node->hostname, node->flags, **ppNode->hn, **ppNode->flags);
+                *(char **)node->hostname, node->flags, ppNode->hn, ppNode->flags);
       
       
          // make sure that this thread has affinity
-         if (node->flags & **ppNode->flags)
+         if (node->flags & ppNode->flags)
          {
             dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity to (%s).",
-                *(char **)node->hostname, **ppNode->hn);
+                *(char **)node->hostname, ppNode->hn);
             break;
          } else {
 
@@ -299,7 +299,7 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
 //             xfree(addr);
 
             dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
-               *(char **)node->hostname, **ppNode->hn);
+               *(char **)node->hostname, ppNode->hn);
          }
       } else {  
 
