@@ -287,7 +287,7 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
       
       
          // make sure that this thread has affinity
-         if (node->flags & ppNode->flags)
+         if (node->flags & hostNode->flags)
          {
             dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity to (%s).",
                 *(char **)node->hostname, hostNode->hn);
