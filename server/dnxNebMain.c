@@ -1800,7 +1800,7 @@ void dnxStatsRequestListener(void * vpargs)
 unsigned long long dnxGetAffinity(char * name)
 {
 
-   dnxDebug(2, "dnxGetAffinity: entering with [%s]", name);
+   dnxDebug(6, "dnxGetAffinity: entering with [%s]", name);
    extern hostgroup *hostgroup_list;
    hostgroup * hostgroupObj;
    unsigned long long flag = 0;
@@ -1816,7 +1816,7 @@ unsigned long long dnxGetAffinity(char * name)
       // misconfigured client could steal requests that it can't service.
       flag = (unsigned long long *)(-2); // Match all affinity but local(LSB)
       dnxAddAffinity(hostAffinity, name, flag);
-      dnxDebug(4, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
+      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
       return(flag);
    }
@@ -1835,7 +1835,7 @@ unsigned long long dnxGetAffinity(char * name)
 
    // Check the cache first
    while (temp_aff != NULL) {
-      dnxDebug(2, "dnxGetAffinity: Checking cache for [%s]", name);
+      dnxDebug(6, "dnxGetAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0)
       {
          // We have a cached copy so return
@@ -1849,7 +1849,7 @@ unsigned long long dnxGetAffinity(char * name)
    temp_aff = hostGrpAffinity;
    while (temp_aff != NULL) {
       // Recurse through the host group affinity list
-      dnxDebug(2, "dnxGetAffinity: Recursing Host Group list - [%s] = (%qu)", 
+      dnxDebug(4, "dnxGetAffinity: Recursing Host Group list - [%s] = (%qu)", 
       temp_aff->name, temp_aff->flag);
 
       // Is host in this group?
@@ -1858,9 +1858,9 @@ unsigned long long dnxGetAffinity(char * name)
       {
          flag = flag + temp_aff->flag;
          match++;
-         dnxDebug(2, "dnxGetAffinity: matches [%s]", temp_aff->name);
+         dnxDebug(4, "dnxGetAffinity: matches [%s]", temp_aff->name);
       } else {
-         dnxDebug(2, "dnxGetAffinity: no match with [%s]", temp_aff->name);
+         dnxDebug(4, "dnxGetAffinity: no match with [%s]", temp_aff->name);
       }
       temp_aff = temp_aff->next;
    }
