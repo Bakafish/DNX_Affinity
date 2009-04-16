@@ -250,15 +250,16 @@ static void * dnxRegistrar(void * data)
                                  INTERFACE
   --------------------------------------------------------------------------*/
 
-int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, unsigned long long flag)
+int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode,
+    unsigned long long flag, char * host_name)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)reg;
-   int ret, discard_count = 0;
+   int ret, discard_count, unmatched_count = 0;
    DnxNodeRequest * node = 0;
 
    assert(reg && ppNode);
 
-dnxDebug(4, "dnxGetNodeRequest: Entering loop (%i)", ireg->tid);
+dnxDebug(6, "dnxGetNodeRequest: Entering loop (%i)", ireg->tid);
 
    while ((ret = dnxQueueGet(ireg->rqueue, (void **)&node)) == DNX_OK)
    {
@@ -277,8 +278,8 @@ dnxDebug(4, "dnxGetNodeRequest: Node (%s)", *(char **)node->hostname);
          // make sure that this thread has affinity
          if (node->flags & flag)
          {
-            dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity.",
-                *(char **)node->hostname);
+            dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity to (%s).",
+                *(char **)node->hostname, host_name);
             break;
          } else {
 
@@ -287,8 +288,8 @@ dnxDebug(4, "dnxGetNodeRequest: Node (%s)", *(char **)node->hostname);
 //             dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
 //             xfree(addr);
 
-            dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] can not service request.",
-               *(char **)node->hostname);
+            dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
+               *(char **)node->hostname, host_name);
          }
       } else {  
 
@@ -312,7 +313,7 @@ dnxDebug(4, "dnxGetNodeRequest: Node (%s)", *(char **)node->hostname);
 
 // If we break out of the loop with affinity then we should have set
 // the node to a correct dnxClient object
-dnxDebug(4, "dnxGetNodeRequest: Exiting loop");
+dnxDebug(6, "dnxGetNodeRequest: Exiting loop");
 
    if (discard_count > 0)
       dnxDebug(1, "dnxGetNodeRequest: Discarded %d expired node requests.", 

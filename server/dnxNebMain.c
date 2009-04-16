@@ -804,7 +804,7 @@ static int ehSvcCheck(int event_type, void * data)
    
    // use the affinity bitmask to dispatch the check
    unsigned long long host_flags = dnxGetAffinity(hostObj->name);
-   dnxDebug(2, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, host_flags);
+   dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, host_flags);
 
    if (cfg.bypassHostgroup && (host_flags & 1)) // Affinity bypass group is always the LSB
    {
@@ -813,14 +813,11 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   dnxDebug(2, "ehSvcCheck: Service Check Type[%i] (Should be 0)",
-         check_result_info.object_check_type);
-
    dnxDebug(4, "ehSvcCheck: Received Job [%lu] at %lu (%lu).",
          serial, (unsigned long)time(0), 
          (unsigned long)svcdata->start_time.tv_sec);
 
-   if ((ret = dnxGetNodeRequest(registrar, &pNode, host_flags)) != DNX_OK)
+   if ((ret = dnxGetNodeRequest(registrar, &pNode, host_flags, hostObj->name)) != DNX_OK)
    {
       dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
 
@@ -996,7 +993,7 @@ static int ehHstCheck(int event_type, void * data)
          serial, (unsigned long)time(0), 
          (unsigned long)hstdata->start_time.tv_sec);
 
-   if ((ret = dnxGetNodeRequest(registrar, &pNode, host_flags)) != DNX_OK)
+   if ((ret = dnxGetNodeRequest(registrar, &pNode, host_flags, hostObj->name)) != DNX_OK)
    {
       dnxDebug(1, "ehHstCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
 
