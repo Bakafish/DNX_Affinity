@@ -256,7 +256,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    int ret, discard_count, unmatched_count = 0;
    DnxNodeRequest * node = 0;
    int client_queue_len = dnxQueueSize(ireg->rqueue);
-   DnxNodeRequest * hostNode = (DnxNodeRequest **)ppNode;
+   DnxNodeRequest * hostNode = (DnxNodeRequest *)ppNode;
    
    assert(reg && ppNode);
 
