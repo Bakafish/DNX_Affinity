@@ -948,7 +948,7 @@ static int ehHstCheck(int event_type, void * data)
 //    unsigned long long host_flags = dnxGetAffinity(hostObj->name);
 
    pNode->flags = dnxGetAffinity(hostObj->name);
-   pNode->hn = hostObj->name;
+   pNode->hn = xstrdup(hostObj->name);
 
 
    dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", pNode->hn, pNode->flags);
