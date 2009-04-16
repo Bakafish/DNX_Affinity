@@ -806,6 +806,7 @@ static int ehSvcCheck(int event_type, void * data)
    // use the affinity bitmask to dispatch the check
 //   unsigned long long host_flags = dnxGetAffinity(hostObj->name);
    // set the flags in the Check request node
+   dnxDebug(1, "ehSvcCheck: Flag(%lu)",  dnxGetAffinity(hostObj->name));
    
    pNode->flags = dnxGetAffinity(hostObj->name);
    dnxDebug(1, "ehSvcCheck: Here");
@@ -947,6 +948,8 @@ static int ehHstCheck(int event_type, void * data)
 
    // use the affinity bitmask to dispatch the check
 //    unsigned long long host_flags = dnxGetAffinity(hostObj->name);
+
+   dnxDebug(1, "ehHstCheck: Flag(%lu)",  dnxGetAffinity(hostObj->name));
 
    pNode->flags = dnxGetAffinity(hostObj->name);
    dnxDebug(1, "ehHstCheck: Here");
