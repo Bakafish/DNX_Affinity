@@ -268,7 +268,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
     }
 
     dnxDebug(6, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
-        ireg->tid, );
+        ireg->tid, client_queue_len);
 
    while ((ret = dnxQueueGet(ireg->rqueue, (void **)&node)) == DNX_OK)
    {
