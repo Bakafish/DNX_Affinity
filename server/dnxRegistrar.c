@@ -275,7 +275,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       time_t now = time(0);
 
 dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
-    (DnxNodeRequest *)ppNode->hn, *(char **)node->hostname);
+    *(DnxNodeRequest *)ppNode->hn, *(char **)node->hostname);
 
       // verify that this request's Time-To-Live (TTL) has not expired and
       // that this thread has affinity
