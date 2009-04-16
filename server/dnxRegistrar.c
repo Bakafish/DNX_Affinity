@@ -267,7 +267,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
         // It's also possable that all our Clients are down
     }
 
-    dnxDebug(6, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
+    dnxDebug(4, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
         ireg->tid, client_queue_len);
 
    while ((ret = dnxQueueGet(ireg->rqueue, (void **)&node)) == DNX_OK)
