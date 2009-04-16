@@ -780,6 +780,7 @@ static int ehSvcCheck(int event_type, void * data)
 
    DnxNode * pDnxNode = gTopNode;
    DnxNodeRequest * pNode;
+   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);
    extern check_result check_result_info;
    host * hostObj = find_host(svcdata->host_name);
    int ret, client_match = 0;
@@ -888,6 +889,7 @@ static int ehHstCheck(int event_type, void * data)
       return OK;
 
    DnxNodeRequest * pNode;
+   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);
    host * hostObj = find_host(hstdata->host_name);
    char * raw_command = NULL;
    char * processed_command = NULL;
