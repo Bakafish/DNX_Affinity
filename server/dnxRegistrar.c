@@ -340,9 +340,12 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
 // If no affinity matches or there are no dnxClient job requests in the
 // queue we send it back to Nagios
    if (ret != DNX_OK)
+   {
       dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s.",
             dnxErrorString(ret));
-
+   }
+   
+   xfree(hostNode);  // Get rid of the struct we used to pass the host data
    *ppNode = node;   // return a node or NULL
 
    return ret;
