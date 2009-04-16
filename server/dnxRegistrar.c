@@ -283,14 +283,14 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
       {
       dnxDebug(4, "dnxGetNodeRequest: Affinity Client [%s]:(%qu) Host [%s]:(%qu).",
                 *(char **)node->hostname, node->flags, 
-                (DnxNodeRequest *)ppNode->hn, (DnxNodeRequest *)ppNode->flags);
+                hostNode->hn, hostNode->flags);
       
       
          // make sure that this thread has affinity
          if (node->flags & ppNode->flags)
          {
             dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity to (%s).",
-                *(char **)node->hostname, (DnxNodeRequest *)ppNode->hn);
+                *(char **)node->hostname, hostNode->hn);
             break;
          } else {
 
@@ -300,7 +300,7 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
 //             xfree(addr);
 
             dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
-               *(char **)node->hostname, (DnxNodeRequest *)ppNode->hn);
+               *(char **)node->hostname, hostNode->hn);
          }
       } else {  
 
