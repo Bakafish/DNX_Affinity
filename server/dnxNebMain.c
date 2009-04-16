@@ -778,10 +778,11 @@ static int ehSvcCheck(int event_type, void * data)
    if ( event_type != NEBCALLBACK_SERVICE_CHECK_DATA )
       return OK;
 
+   DnxNode * pDnxNode = gTopNode;
    DnxNodeRequest * pNode;
    extern check_result check_result_info;
    host * hostObj = find_host(svcdata->host_name);
-   int ret;
+   int ret, client_match = 0;
 
       
 
@@ -803,10 +804,15 @@ static int ehSvcCheck(int event_type, void * data)
    }
    
    // use the affinity bitmask to dispatch the check
-   unsigned long long host_flags = dnxGetAffinity(hostObj->name);
-   dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, host_flags);
+//   unsigned long long host_flags = dnxGetAffinity(hostObj->name);
+   // set the flags in the Check request node
+   
+   pNode->flags = dnxGetAffinity(hostObj->name);
+   pNode->hn = hostObj->name;
+   
+   dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, pNode->flags);
 
-   if (cfg.bypassHostgroup && (host_flags & 1)) // Affinity bypass group is always the LSB
+   if (cfg.bypassHostgroup && (pNode->flags & 1)) // Affinity bypass group is always the LSB
    {
       dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
          hostObj->name, svcdata->command_line);
@@ -817,7 +823,22 @@ static int ehSvcCheck(int event_type, void * data)
          serial, (unsigned long)time(0), 
          (unsigned long)svcdata->start_time.tv_sec);
 
-   if ((ret = dnxGetNodeRequest(registrar, &pNode, host_flags, hostObj->name)) != DNX_OK)
+   // 1) We get a good thread
+        // Reset the thread timeout and post the job
+   // 2) No threads match
+        // give it back to Nagios
+   // 3) No threads available
+        // Wait a second and then try again or just register it and wait for it to be reaped
+
+    do {
+        if(pNode->flags & pDnxNode->flags) {
+            client_match++;
+        }
+        //pDnxNode->hostname, pDnxNode->address, pDnxNode->flags
+    } while (pDnxNode = pDnxNode->next);
+    
+
+   if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
    {
       dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
 
@@ -827,37 +848,11 @@ static int ehSvcCheck(int event_type, void * data)
 
       return OK;     // tell nagios execute locally
    }
-
+   
+   
    dnxDebug(2, "ehSvcCheck: Service Check found worker [%lu,%lu]",
         pNode->xid.objSerial, pNode->xid.objSlot);
 
-   // allocate and populate a new job payload object
-/*
-   if ((jdp = (DnxJobData *)xmalloc(sizeof *jdp)) == 0)
-   {
-      dnxDebug(1, "ehSvcCheck: Out of memory!");
-
-      //SM 09/08 DnxNodeList
-      gTopNode->jobs_rejected_oom++;
-      //SM 09/08 DnxNodeList
-
-      return OK;
-   }
-   memset(jdp, 0, sizeof *jdp);
-   // This is getting the service object for the check, but do we really need it?
-//   jdp->svc = (service *)svcdata->OBJECT_FIELD_NAME;
-
-//   assert(jdp->svc);
-
-*/
-
-    
-   /** @todo patch nagios to pass these values to the event handler. */
-    
-//    jdp->chkopts    = check_result_info.check_options;
-//    jdp->schedule   = check_result_info.scheduled_check;
-//    jdp->reschedule = check_result_info.reschedule_check;
-//    jdp->latency    = jdp->svc->latency;
 
    if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
    {
@@ -891,7 +886,6 @@ static int ehHstCheck(int event_type, void * data)
       return OK;
 
    DnxNodeRequest * pNode;
-//   extern check_result check_result_info;
    host * hostObj = find_host(hstdata->host_name);
    char * raw_command = NULL;
    char * processed_command = NULL;
@@ -951,13 +945,18 @@ static int ehHstCheck(int event_type, void * data)
    }
 
    // use the affinity bitmask to dispatch the check
-   unsigned long long host_flags = dnxGetAffinity(hostObj->name);
-   dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", hostObj->name, host_flags);
+//    unsigned long long host_flags = dnxGetAffinity(hostObj->name);
 
-   if (cfg.bypassHostgroup && (host_flags & 1)) // Affinity bypass group is always the LSB
+   pNode->flags = dnxGetAffinity(hostObj->name);
+   pNode->hn = hostObj->name;
+
+
+   dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", pNode->hn, pNode->flags);
+
+   if (cfg.bypassHostgroup && (pNode->flags & 1)) // Affinity bypass group is always the LSB
    {
       dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
-         hostObj->name, processed_command);
+         pNode->hn, processed_command);
       return OK;     // tell nagios execute locally
    }
 
@@ -993,7 +992,7 @@ static int ehHstCheck(int event_type, void * data)
          serial, (unsigned long)time(0), 
          (unsigned long)hstdata->start_time.tv_sec);
 
-   if ((ret = dnxGetNodeRequest(registrar, &pNode, host_flags, hostObj->name)) != DNX_OK)
+   if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
    {
       dnxDebug(1, "ehHstCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
 
@@ -1644,56 +1643,60 @@ bool buildStatsReply(char * request,DnxMgmtReply * pReply)
                 appendString(&pReply->reply,"host (%s) Hostgroup flag [%qu]\n", temp_aff->name, temp_aff->flag);
             } while (temp_aff = temp_aff->next);
         }
-        if(strcmp("ALLSTATS",action) == 0)
+        else
         {
-            //The requested action is the keyword ALLSTATS, short circuit all normal functionality and just dump all the stats
-
-            //Build the header
-
-                appendString(&pReply->reply,"IP ADDRESS: ");
-                buildStatsReplyForNode(NULL,action,pReply);
-                trim(pReply->reply,',');
-                appendString(&pReply->reply,"\n");
-            //Build the response by looping through all the nodes in order
-            do
+            if(strcmp("ALLSTATS",action) == 0)
             {
-                appendString(&pReply->reply,"%s,",pDnxNode->address);
-                buildStatsReplyForNode(pDnxNode,action,pReply);
-                trim(pReply->reply,',');
-                appendString(&pReply->reply,"\n");
-            }while(pDnxNode = pDnxNode->next);
-
-        }else{
-
-           //Get first token
-            token = strtok(action,",");
-
-            do
-            {
-                 //Check request to see if it's an IP address
-                if(strchr(token,'.'))
+                //The requested action is the keyword ALLSTATS, short circuit all normal functionality and just dump all the stats
+    
+                //Build the header
+    
+                    appendString(&pReply->reply,"IP ADDRESS: ");
+                    buildStatsReplyForNode(NULL,action,pReply);
+                    trim(pReply->reply,',');
+                    appendString(&pReply->reply,"\n");
+                //Build the response by looping through all the nodes in order
+                do
                 {
-                    dnxLog("buildStatsReply: Request appears to contain an IP address, address is %s",token);
-
-                    //it does contain an IP address so we want to find the DnxNode with that address and set pDnxNode
-                    pDnxNode = dnxNodeListFindNode(token);
-
-                    if(!pDnxNode)
+                    appendString(&pReply->reply,"%s,",pDnxNode->address);
+                    buildStatsReplyForNode(pDnxNode,action,pReply);
+                    trim(pReply->reply,',');
+                    appendString(&pReply->reply,"\n");
+                }while(pDnxNode = pDnxNode->next);
+    
+            }
+            else
+            {
+    
+               //Get first token
+                token = strtok(action,",");
+    
+                do
+                {
+                     //Check request to see if it's an IP address
+                    if(strchr(token,'.'))
                     {
-                        //We couldn't find a node for that IP address
-                        appendString(&pReply->reply, "%s","Invalid Worker Node Requested");
-                        return false;
+                        dnxLog("buildStatsReply: Request appears to contain an IP address, address is %s",token);
+    
+                        //it does contain an IP address so we want to find the DnxNode with that address and set pDnxNode
+                        pDnxNode = dnxNodeListFindNode(token);
+    
+                        if(!pDnxNode)
+                        {
+                            //We couldn't find a node for that IP address
+                            appendString(&pReply->reply, "%s","Invalid Worker Node Requested");
+                            return false;
+                        }else{
+                            //We did find a node for it
+                            //Prefix the result with an IP address
+                            appendString(&pReply->reply, "%s,",token);
+                        }
                     }else{
-                        //We did find a node for it
-                        //Prefix the result with an IP address
-                        appendString(&pReply->reply, "%s,",token);
+                        buildStatsReplyForNode(pDnxNode,token,pReply);
                     }
-                }else{
-                    buildStatsReplyForNode(pDnxNode,token,pReply);
-                }
-            }while(token = strtok(NULL,","));
+                }while(token = strtok(NULL,","));
+            }
         }
-
         //Get rid of that very annoying trailing comma
 
         if (pReply->reply)

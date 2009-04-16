@@ -250,38 +250,46 @@ static void * dnxRegistrar(void * data)
                                  INTERFACE
   --------------------------------------------------------------------------*/
 
-int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode,
-    unsigned long long flag, char * host_name)
+int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)reg;
    int ret, discard_count, unmatched_count = 0;
    DnxNodeRequest * node = 0;
-
+   int client_queue_len = dnxQueueSize(ireg->rqueue);
+//   DnxNodeRequest * hostNode = 
+   
    assert(reg && ppNode);
 
-dnxDebug(6, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
-    ireg->tid, dnxQueueSize(ireg->rqueue));
+    if(! client_queue_len)
+    {
+        dnxDebug(1, "dnxGetNodeRequest: There are no DNX client threads regestered.");
+        // We probably just started up and no threads are registered yet.
+        // It's also possable that all our Clients are down
+    }
+
+    dnxDebug(6, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
+        ireg->tid, );
 
    while ((ret = dnxQueueGet(ireg->rqueue, (void **)&node)) == DNX_OK)
    {
       time_t now = time(0);
 
 dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
-    host_name, *(char **)node->hostname);
+    ppNode->hn, *(char **)node->hostname);
 
       // verify that this request's Time-To-Live (TTL) has not expired and
       // that this thread has affinity
       if (node->expires > now)
       {
       dnxDebug(4, "dnxGetNodeRequest: Affinity Client [%s]:(%qu) Host [%s]:(%qu).",
-                *(char **)node->hostname, node->flags, host_name, flag);
+                *(char **)node->hostname, node->flags, *ppNode->hn, *ppNode->flags);
       
       
          // make sure that this thread has affinity
-         if (node->flags & flag)
+         if (node->flags & *ppNode->flags)
          {
             dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity to (%s).",
-                *(char **)node->hostname, host_name);
+                *(char **)node->hostname, *ppNode->hn);
             break;
          } else {
 
@@ -291,7 +299,7 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
 //             xfree(addr);
 
             dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
-               *(char **)node->hostname, host_name);
+               *(char **)node->hostname, *ppNode->hn);
          }
       } else {  
 
@@ -313,10 +321,17 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
       }
    }
 
-// If we break out of the loop with affinity then we should have set
-// the node to a correct dnxClient object
-dnxDebug(6, "dnxGetNodeRequest: Exiting loop");
+    // If we break out of the loop with affinity then we should have set
+    // the node to a correct dnxClient object
+    dnxDebug(6, "dnxGetNodeRequest: Exiting loop");
 
+    if (discard_count >= client_queue_len)
+    {
+        dnxDebug(1, "dnxGetNodeRequest: All the DNX client treads were expired.");
+        // We should wait a moment and run through again to see if new threads 
+        // got regestered
+    }
+    
    if (discard_count > 0)
       dnxDebug(1, "dnxGetNodeRequest: Discarded %d expired node requests.", 
             discard_count);

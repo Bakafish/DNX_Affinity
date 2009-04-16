@@ -53,8 +53,7 @@ typedef struct { int unused; } DnxRegistrar;
  * 
  * @return Zero on success, or a non-zero error value.
  */
-int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode, 
-    unsigned long long flag, char * host_name);
+int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode);
 
 /** Create a new registrar object.
  * 
