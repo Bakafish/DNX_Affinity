@@ -265,14 +265,15 @@ dnxDebug(6, "dnxGetNodeRequest: Entering loop (%i)", ireg->tid);
    {
       time_t now = time(0);
 
-dnxDebug(4, "dnxGetNodeRequest: Node (%s)", *(char **)node->hostname);
+dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
+    host_name, *(char **)node->hostname);
 
       // verify that this request's Time-To-Live (TTL) has not expired and
       // that this thread has affinity
       if (node->expires > now)
       {
-      dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] checking affinity C(%qu) H(%qu).",
-                *(char **)node->hostname, node->flags, flag);
+      dnxDebug(4, "dnxGetNodeRequest: Affinity Client [%s]:(%qu) Host [%s]:(%qu).",
+                *(char **)node->hostname, node->flags, host_name, flag);
       
       
          // make sure that this thread has affinity
