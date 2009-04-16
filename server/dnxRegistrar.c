@@ -345,7 +345,7 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
             dnxErrorString(ret));
    }
    
-   xfree(hostNode);  // Get rid of the struct we used to pass the host data
+//   xfree(hostNode);  // Get rid of the struct we used to pass the host data
    *ppNode = node;   // return a node or NULL
 
    return ret;
