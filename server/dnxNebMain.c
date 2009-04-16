@@ -808,7 +808,8 @@ static int ehSvcCheck(int event_type, void * data)
    // set the flags in the Check request node
    
    pNode->flags = dnxGetAffinity(hostObj->name);
-   pNode->hn = hostObj->name;
+   dnxDebug(1, "ehSvcCheck: Here");
+   pNode->hn = xstrdup(hostObj->name);
    
    dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, pNode->flags);
 
