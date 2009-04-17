@@ -217,7 +217,10 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 
       if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, 
             &timeout)) == ETIMEDOUT)
+      {
+         dnxDebug(8, "dnxJobListDispatch: Timeout.");      
          break;
+      }
 
       current = ilist->dhead;
    }

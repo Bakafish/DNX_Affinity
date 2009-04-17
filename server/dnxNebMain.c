@@ -1219,12 +1219,12 @@ static int dnxServerInit(void)
    dnxLog("Registered for HOST_CHECK_DATA event.");
 
     // sit in a loop for up to 30 seconds waiting for nodes to register
-    int loop_count = 0;
-    do { 
-        wait 5;
-        dnxLog("Waiting for client to register worker threads.");
-        if (loop_count++ > 20) { break; }
-    } while (dnxNodeListCountNodes(gTopNode) < 2);
+//     int loop_count = 0;
+//     do { 
+//         wait 5;
+//         dnxLog("Waiting for client to register worker threads.");
+//         if (loop_count++ > 20) { break; }
+//     } while (dnxNodeListCountNodes(gTopNode) < 2);
 
 
    dnxLog("Server initialization completed.");
