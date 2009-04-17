@@ -111,7 +111,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    DnxNodeRequest * pReq;
    time_t now = time(0);
    int ret = DNX_OK;
-   dnxDebug(2, "dnxRegisterNode: Entering");
+   dnxDebug(6, "dnxRegisterNode: Entering");
    assert(ireg && ppMsg && *ppMsg);
 
    // compute expiration time of this request

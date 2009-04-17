@@ -820,7 +820,7 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   dnxDebug(4, "ehSvcCheck: Received Job [%lu] at %lu (%lu).",
+   dnxDebug(4, "ehSvcCheck: Received Job [%lu] at Now (%lu), Start Time (%lu).",
          serial, (unsigned long)time(0), 
          (unsigned long)svcdata->start_time.tv_sec);
 
@@ -991,7 +991,7 @@ static int ehHstCheck(int event_type, void * data)
 //    dnxDebug(2, "ehHstCheck: Host Check Type[%i] (Should be 1)",
 //          check_result_info.object_check_type);
 
-   dnxDebug(4, "ehHstCheck: Received Job [%lu] at %lu (%lu).",
+   dnxDebug(4, "ehHstCheck: Received Job [%lu] at Now (%lu), Start Time (%lu).",
          serial, (unsigned long)time(0), 
          (unsigned long)hstdata->start_time.tv_sec);
 
@@ -1295,16 +1295,21 @@ static int ehProcessData(int event_type, void * data)
 
 void dnxJobCleanup(DnxNewJob * pJob)
 {
+   dnxDebug(8, "dnxJobCleanup: Entering.");
    if (pJob)
    {
-      dnxDebug(4, "dnxJobCleanup: Entering.");
       xfree(pJob->cmd);
 //      xfree(pJob->check_data);
 //      xfree(pJob->result);
       xfree(pJob->pNode->addr);
       xfree(pJob->pNode);
-      dnxDebug(4, "dnxJobCleanup: Exiting.");
+      dnxDebug(4, "dnxJobCleanup: Job objects freed.");
    }
+   else
+   {
+      dnxDebug(1, "dnxJobCleanup: Unable to free job.");
+   }
+   dnxDebug(8, "dnxJobCleanup: Exiting.");
 }
 
 //----------------------------------------------------------------------------
