@@ -906,9 +906,9 @@ static int ehHstCheck(int event_type, void * data)
 
    if ( hstdata->type != NEBTYPE_HOSTCHECK_ASYNC_PRECHECK ){      
       return OK;  // ignore non-setup service checks
-    } else {
+   } else {
       dnxDebug(4, "ehHstCheck: Processing Host Check");
-    }
+   }
 
     /*  Because this callback doesn't short circuit like a service check
     *   we have to intercept the event earlier in it's lifecycle
@@ -921,17 +921,20 @@ static int ehHstCheck(int event_type, void * data)
 	grab_host_macros(hostObj);
 
 	/* get the raw command line */
-	get_raw_command_line(hostObj->check_command_ptr,hostObj->host_check_command,&raw_command,0);
+	get_raw_command_line(hostObj->check_command_ptr, hostObj->host_check_command, 
+	    &raw_command,   0);
 
 	if(raw_command==NULL){
-		dnxDebug(1,"Raw check command for host '%s' was NULL - aborting.\n",hostObj->name);
+		dnxDebug(1,"Raw check command for host '%s' was NULL - aborting.\n",
+		    hostObj->name);
 		return OK;
     }
 
 	/* process any macros contained in the argument */
 	process_macros(raw_command, &processed_command, 0);
 	if(processed_command==NULL){
-		dnxDebug(1,"Processed check command for host '%s' was NULL - aborting.\n",hostObj->name);
+		dnxDebug(1,"Processed check command for host '%s' was NULL - aborting.\n",
+		    hostObj->name);
 		return OK;
     } else {
 		dnxDebug(4,"ehHstCheck: Processed check command for host '%s' was (%s)",
@@ -970,20 +973,26 @@ static int ehHstCheck(int event_type, void * data)
 // 	old_latency=hostObj->latency;
 // 	hostObj->latency=latency;
 
-	/* get the command start time */
-//	gettimeofday(&start_time,NULL);
+	/* Set the command start time */
+	gettimeofday(hstdata->start_time,NULL);
 
 	/* set check time for on-demand checks, so they're not incorrectly detected as being orphaned - Luke Ross 5/16/08 */
 	/* NOTE: 06/23/08 EG not sure if there will be side effects to this or not.... */
-// 	if(scheduled_check==FALSE)
-// 		hostObj->next_check=hstdata->start_time.tv_sec;
+    extern int scheduled_check;
+	if(scheduled_check==FALSE) 
+	{
+		hostObj->next_check=hstdata->start_time.tv_sec;
+    } else {
+	/* clear check options - we don't want old check options retained */
+	/* only clear options if this was a scheduled check - on demand check options shouldn't affect retained info */
+		hostObj->check_options=CHECK_OPTION_NONE;
+    }
 
 	/* increment number of host checks that are currently running... */
 	extern int currently_running_host_checks;
 	currently_running_host_checks++;
     dnxDebug(4,"ehHstCheck: Host checks in process (%i)", 
         currently_running_host_checks);
-
 
 	/* set the execution flag */
 	hostObj->is_executing=TRUE;
