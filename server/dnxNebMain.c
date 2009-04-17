@@ -974,9 +974,8 @@ static int ehHstCheck(int event_type, void * data)
 // 	hostObj->latency=latency;
 
 	/* Set the command start time */
-	timeval st;
-	gettimeofday(&st, NULL);
-    hstdata->start_time = &st;
+	gettimeofday((time_t *)hstdata->start_time, NULL);
+
 	/* set check time for on-demand checks, so they're not incorrectly detected as being orphaned - Luke Ross 5/16/08 */
 	/* NOTE: 06/23/08 EG not sure if there will be side effects to this or not.... */
     extern int scheduled_check;
