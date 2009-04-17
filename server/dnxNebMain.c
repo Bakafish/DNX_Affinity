@@ -975,7 +975,7 @@ static int ehHstCheck(int event_type, void * data)
 
 	/* Set the command start time */
 // 	gettimeofday(hstdata->start_time.tv_sec, NULL);
-//    hstdata->start_time.tv_sec = time(0);
+   hstdata->start_time.tv_sec = time(0);
 
 	/* set check time for on-demand checks, so they're not incorrectly detected as being orphaned - Luke Ross 5/16/08 */
 	/* NOTE: 06/23/08 EG not sure if there will be side effects to this or not.... */
