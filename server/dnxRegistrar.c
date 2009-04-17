@@ -265,7 +265,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
     {
         dnxDebug(1, "dnxGetNodeRequest: There are no DNX client threads regestered.");
         // We probably just started up and no threads are registered yet.
-        // It's also possable that all our Clients are down
+        // It's also possable that all our Clients are down or a previous run 
+        // has expired all our threads and we haven't registered any new workers
     }
 
     dnxDebug(4, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
