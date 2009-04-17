@@ -979,15 +979,15 @@ static int ehHstCheck(int event_type, void * data)
 
 	/* set check time for on-demand checks, so they're not incorrectly detected as being orphaned - Luke Ross 5/16/08 */
 	/* NOTE: 06/23/08 EG not sure if there will be side effects to this or not.... */
-    extern int scheduled_check;
-	if(scheduled_check==FALSE) 
-	{
-		hostObj->next_check=hstdata->start_time.tv_sec;
-    } else {
-	/* clear check options - we don't want old check options retained */
-	/* only clear options if this was a scheduled check - on demand check options shouldn't affect retained info */
-		hostObj->check_options=CHECK_OPTION_NONE;
-    }
+//     extern int scheduled_check;
+// 	if(scheduled_check==FALSE) 
+// 	{
+// 		hostObj->next_check=hstdata->start_time.tv_sec;
+//     } else {
+// 	/* clear check options - we don't want old check options retained */
+// 	/* only clear options if this was a scheduled check - on demand check options shouldn't affect retained info */
+// 		hostObj->check_options=CHECK_OPTION_NONE;
+//     }
 
 	/* increment number of host checks that are currently running... */
 	extern int currently_running_host_checks;
