@@ -260,9 +260,9 @@ int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
    
    assert(queue && ppPayload);
    
-   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
-   
 dnxDebug(8, "dnxQueueGet: iQueue size(%i)", iqueue->size);
+
+   DNX_PT_MUTEX_LOCK(&iqueue->mutex);
    
    if (iqueue->size > 0) 
    {

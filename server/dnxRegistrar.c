@@ -91,6 +91,25 @@ static DnxQueueResult dnxCompareNodeReq(void * pLeft, void * pRight)
          ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
 }
 
+/** Compare two node "request for work" requests for affinity.
+ * 
+ * @param[in] pLeft - the left node to be compared.
+ * @param[in] pRight - the right node to be compared.
+ * 
+ * @return DNX_QRES_FOUND on match; DNX_QRES_CONTINUE if no match.
+ */
+static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
+{
+   unsigned long long pxl = ((DnxNodeRequest *)pLeft)->flags;
+   unsigned long long pxr = ((DnxNodeRequest *)pRight)->flags;
+
+   assert(pLeft && pRight);
+
+   dnxDebug(5, "dnxCompareNodeReq: dnxClient flags [%lu]", pxl);
+
+   return pxl & pxr ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
+}
+
 //----------------------------------------------------------------------------
 
 /** Register a new client node "request for work" request.
@@ -303,7 +322,7 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
 
             dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
                *(char **)node->hostname, hostNode->hn);
-            ret = DNX_ERR_NOTFOUND;
+//             ret = DNX_ERR_NOTFOUND;
          }
       } else {  
       
@@ -327,7 +346,9 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
 
     // If we break out of the loop with affinity then we should have set
     // the node to a correct dnxClient object
-    dnxDebug(6, "dnxGetNodeRequest: Exiting loop");
+    int after_client_queue_len = dnxQueueSize(ireg->rqueue);
+    dnxDebug(6, "dnxGetNodeRequest: Exiting loop (%i) Number of elements [%i]",
+        ireg->tid, after_client_queue_len);
 
     if (discard_count >= client_queue_len)
     {
@@ -335,7 +356,7 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
         "client threads were expired.", discard_count, client_queue_len);
         // We should wait a moment and run through again to see if new threads 
         // got regestered
-        ret = DNX_ERR_NOTFOUND;
+//         ret = DNX_ERR_NOTFOUND;
     }
     
    if (discard_count > 0)
