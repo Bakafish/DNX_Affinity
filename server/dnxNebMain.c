@@ -839,17 +839,38 @@ static int ehSvcCheck(int event_type, void * data)
     } while (pDnxNode = pDnxNode->next);
     
 
-   if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
-   {
-      dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
-
-      //SM 09/08 DnxNodeList
-      gTopNode->jobs_rejected_no_nodes++;
-      //SM 09/08 DnxNodeList
-
-      return OK;     // tell nagios execute locally
-   }
+//    if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
+//    {
+//       dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
+// 
+//       //SM 09/08 DnxNodeList
+//       gTopNode->jobs_rejected_no_nodes++;
+//       //SM 09/08 DnxNodeList
+// 
+//       return OK;     // tell nagios execute locally
+//    }
    
+   int try_count = 1;
+   while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
+   {
+      if(ret == DNX_ERR_NOTFOUND)
+      {
+        // Keep trying to get a worker
+        dnxDebug(4, "ehSvcCheck: Trying to find client for(%s) %i...", pNode->hn, try_count++);
+        sleep(1);
+        if(try_count > 3) { break; }
+      }
+      else
+      {      
+          dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
+    
+          //SM 09/08 DnxNodeList
+          gTopNode->jobs_rejected_no_nodes++;
+          //SM 09/08 DnxNodeList
+    
+          return OK;     // tell nagios execute locally
+      }
+   }
    
    dnxDebug(2, "ehSvcCheck: Service Check found worker [%lu,%lu]",
         pNode->xid.objSerial, pNode->xid.objSlot);
