@@ -289,6 +289,11 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
         // We probably just started up and no threads are registered yet.
         // It's also possable that all our Clients are down or a previous run 
         // has expired all our threads and we haven't registered any new workers
+        node = 0;
+        xfree(hostNode);  // Get rid of the struct we used to pass the host data
+        *ppNode = node;   // return a node or NULL
+        return DNX_ERR_NOTFOUND;
+        
     }
 
     dnxDebug(4, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
