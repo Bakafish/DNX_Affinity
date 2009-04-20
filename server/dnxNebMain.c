@@ -855,10 +855,13 @@ static int ehSvcCheck(int event_type, void * data)
    {
       if(ret == DNX_ERR_NOTFOUND)
       {
-        // Keep trying to get a worker
-        dnxDebug(4, "ehSvcCheck: Trying to find client for(%s) %i...", pNode->hn, try_count++);
-        sleep(1);
-        if(try_count > 3) { break; }
+         // Keep trying to get a worker
+         if(try_count == 3) { 
+            dnxDebug(1, "ehSvcCheck: Failed to find any worker nodes for job [%lu].", serial);
+            return OK;     // tell nagios execute locally
+         }
+         dnxDebug(4, "ehSvcCheck: Trying to find client for(%s) %i...", pNode->hn, try_count++);
+         sleep(2);
       }
       else
       {      
@@ -1024,10 +1027,13 @@ static int ehHstCheck(int event_type, void * data)
    {
       if(ret == DNX_ERR_NOTFOUND)
       {
-        // Keep trying to get a worker
-        dnxDebug(4, "ehHstCheck: Trying to find client for(%s) %i...", pNode->hn, try_count++);
-        sleep(1);
-        if(try_count > 3) { break; }
+         // Keep trying to get a worker
+         if(try_count == 3) { 
+            dnxDebug(1, "ehHstCheck: Failed to find any worker nodes for job [%lu].", serial);
+            return OK;     // tell nagios execute locally
+         }
+         dnxDebug(4, "ehHstCheck: Trying to find client for(%s) %i...", pNode->hn, try_count++);
+         sleep(2);
       }
       else
       {      
