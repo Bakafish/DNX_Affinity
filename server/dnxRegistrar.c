@@ -415,6 +415,7 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
       dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s.",
             dnxErrorString(ret));
       node = 0;
+      ret = DNX_ERR_NOTFOUND;
    } else {
       ret = DNX_OK;
    }
