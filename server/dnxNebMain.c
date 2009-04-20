@@ -1007,7 +1007,7 @@ static int ehHstCheck(int event_type, void * data)
          while ((ret = dnxGetNodeRequest(registrar, &pNode)) == DNX_ERR_NOTFOUND)
          {
             // Keep trying to get a worker
-            dnxDebug(4, "ehHstCheck: Trying %i...", count++);
+            dnxDebug(4, "ehHstCheck: Trying %i...", try_count++);
          }
          if(ret == DNX_OK) 
          { 
