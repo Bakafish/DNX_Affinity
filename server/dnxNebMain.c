@@ -1012,7 +1012,6 @@ static int ehHstCheck(int event_type, void * data)
          if(ret == DNX_OK) 
          { 
             dnxDebug(4, "ehHstCheck: Found a worker.");            
-            break; 
          }
       }
       else
