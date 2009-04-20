@@ -1008,6 +1008,8 @@ static int ehHstCheck(int event_type, void * data)
          {
             // Keep trying to get a worker
             dnxDebug(4, "ehHstCheck: Trying %i...", try_count++);
+            wait(5);
+            if(try_count > 3) { break; }
          }
          if(ret == DNX_OK) 
          { 
