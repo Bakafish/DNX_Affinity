@@ -997,23 +997,34 @@ static int ehHstCheck(int event_type, void * data)
 
 	/* set the execution flag */
 	hostObj->is_executing=TRUE;
-      
-//    dnxDebug(2, "ehHstCheck: Host Check Type[%i] (Should be 1)",
-//          check_result_info.object_check_type);
-
-   dnxDebug(4, "ehHstCheck: Received Job [%lu] at Now (%lu), Start Time (%lu).",
-         serial, (unsigned long)time(0), 
-         (unsigned long)hstdata->start_time.tv_sec);
-
+   
+   
    if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
    {
-      dnxDebug(1, "ehHstCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
-
-      //SM 09/08 DnxNodeList
-      gTopNode->jobs_rejected_no_nodes++;
-      //SM 09/08 DnxNodeList
-
-      return OK;     // tell nagios execute locally
+      if(ret == DNX_ERR_NOTFOUND)
+      {
+         int try_count = 1;
+         while ((ret = dnxGetNodeRequest(registrar, &pNode)) == DNX_ERR_NOTFOUND)
+         {
+            // Keep trying to get a worker
+            dnxDebug(4, "ehHstCheck: Trying %i...", count++);
+         }
+         if(ret == DNX_OK) 
+         { 
+            dnxDebug(4, "ehHstCheck: Found a worker.");            
+            break; 
+         }
+      }
+      else
+      {      
+          dnxDebug(1, "ehHstCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
+    
+          //SM 09/08 DnxNodeList
+          gTopNode->jobs_rejected_no_nodes++;
+          //SM 09/08 DnxNodeList
+    
+          return OK;     // tell nagios execute locally
+      }
    }
    
    dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]", 

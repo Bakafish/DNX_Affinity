@@ -303,9 +303,10 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
 
             dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
                *(char **)node->hostname, hostNode->hn);
+            ret = DNX_ERR_NOTFOUND;
          }
       } else {  
-
+      
         //SM 09/08 DnxNodeList
         char * addr = ntop(node->address,addr);
         dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
@@ -334,6 +335,7 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
         "client threads were expired.", discard_count, client_queue_len);
         // We should wait a moment and run through again to see if new threads 
         // got regestered
+        ret = DNX_ERR_NOTFOUND;
     }
     
    if (discard_count > 0)
