@@ -1004,7 +1004,7 @@ static int ehHstCheck(int event_type, void * data)
       if(ret == DNX_ERR_NOTFOUND)
       {
         // Keep trying to get a worker
-        dnxDebug(4, "ehHstCheck: Trying %i...", try_count++);
+        dnxDebug(4, "ehHstCheck: Trying to find client for(%s) %i...", pNode->hn, try_count++);
         sleep(1);
         if(try_count > 3) { break; }
       }
