@@ -998,7 +998,7 @@ static int ehHstCheck(int event_type, void * data)
 	/* set the execution flag */
 	hostObj->is_executing=TRUE;
    
-   int try_count = 0;
+   int try_count = 1;
    while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
    {
       if(ret == DNX_ERR_NOTFOUND)
