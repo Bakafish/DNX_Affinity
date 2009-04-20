@@ -998,26 +998,18 @@ static int ehHstCheck(int event_type, void * data)
 	/* set the execution flag */
 	hostObj->is_executing=TRUE;
    
-   
-   if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
+   int try_count = 0;
+   while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
    {
-//       if(ret == DNX_ERR_NOTFOUND)
-//       {
-//          int try_count = 1;
-//          while ((ret = dnxGetNodeRequest(registrar, &pNode)) == DNX_ERR_NOTFOUND)
-//          {
-//             // Keep trying to get a worker
-//             dnxDebug(4, "ehHstCheck: Trying %i...", try_count++);
-//             sleep(5);
-//             if(try_count > 3) { break; }
-//          }
-//          if(ret == DNX_OK) 
-//          { 
-//             dnxDebug(4, "ehHstCheck: Found a worker.");            
-//          }
-//       }
-//       else
-//       {      
+      if(ret == DNX_ERR_NOTFOUND)
+      {
+        // Keep trying to get a worker
+        dnxDebug(4, "ehHstCheck: Trying %i...", try_count++);
+        sleep(1);
+        if(try_count > 3) { break; }
+      }
+      else
+      {      
           dnxDebug(1, "ehHstCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
     
           //SM 09/08 DnxNodeList
@@ -1025,7 +1017,7 @@ static int ehHstCheck(int event_type, void * data)
           //SM 09/08 DnxNodeList
     
           return OK;     // tell nagios execute locally
-//       }
+      }
    }
    
    dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]", 

@@ -275,7 +275,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    iDnxRegistrar * ireg = (iDnxRegistrar *)reg;
    int ret = DNX_ERR_NOTFOUND;
    int discard_count = 0;
-   int unmatched_count = 0;
+   int matched_count = 0;
    int client_queue_len = dnxQueueSize(ireg->rqueue);
    DnxNodeRequest * hostNode = *(DnxNodeRequest **)ppNode;
    // Temperarily assign so we can find a affinity match
@@ -302,6 +302,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    while ((ret = dnxQueueRemove(ireg->rqueue, (void **)&node, dnxCompareAffinityNodeReq)) == DNX_QRES_FOUND)
    {
       time_t now = time(0);
+      matched_count++;
 
 dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
     hostNode->hn, *(char **)node->hostname);
@@ -393,13 +394,12 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
     dnxDebug(6, "dnxGetNodeRequest: Exiting loop (%i) Number of elements [%i]",
         ireg->tid, after_client_queue_len);
 
-    if (discard_count >= client_queue_len)
+    if (discard_count == matched_count)
     {
-        dnxDebug(1, "dnxGetNodeRequest: Dis(%i) Q(%i) All the DNX"
+        dnxDebug(1, "dnxGetNodeRequest: Dis(%i) Q(%i) All the matching DNX"
         "client threads were expired.", discard_count, client_queue_len);
         // We should wait a moment and run through again to see if new threads 
         // got regestered
-//         ret = DNX_ERR_NOTFOUND;
     }
     
    if (discard_count > 0)
