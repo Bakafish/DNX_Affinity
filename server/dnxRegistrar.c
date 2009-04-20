@@ -105,7 +105,7 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
 
    assert(pLeft && pRight);
 
-   dnxDebug(5, "dnxCompareNodeReq: dnxClient flags [%lu]", pxl);
+   dnxDebug(5, "dnxCompareAffinityNodeReq: dnxClient flags [%lu]", pxl);
 
    return pxl & pxr ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
 }
@@ -273,7 +273,9 @@ static void * dnxRegistrar(void * data)
 int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)reg;
-   int ret, discard_count, unmatched_count = 0;
+   int ret= 0;
+   int discard_count = 0;
+   int unmatched_count = 0;
    int client_queue_len = dnxQueueSize(ireg->rqueue);
    DnxNodeRequest * hostNode = *(DnxNodeRequest **)ppNode;
    // Temperarily assign so we can find a affinity match
