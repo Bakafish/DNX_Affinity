@@ -273,7 +273,7 @@ static void * dnxRegistrar(void * data)
 int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)reg;
-   int ret= 0;
+   int ret = DNX_ERR_NOTFOUND;
    int discard_count = 0;
    int unmatched_count = 0;
    int client_queue_len = dnxQueueSize(ireg->rqueue);
@@ -292,7 +292,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
         node = 0;
         xfree(hostNode);  // Get rid of the struct we used to pass the host data
         *ppNode = node;   // return a node or NULL
-        return DNX_ERR_NOTFOUND;
+        return ret;
         
     }
 
@@ -315,23 +315,6 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
                 hostNode->hn, hostNode->flags);
       
         break;
-// make sure that this thread has affinity
-//          if (node->flags & hostNode->flags)
-//          {
-//             dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity to (%s).",
-//                 *(char **)node->hostname, hostNode->hn);
-//             break;
-//          } else {
-// 
-//             // DnxNodeList increment may need to be here
-// //             char * addr = ntop(node->address,addr);
-// //             dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
-// //             xfree(addr);
-// 
-//             dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
-//                *(char **)node->hostname, hostNode->hn);
-// //             ret = DNX_ERR_NOTFOUND;
-//          }
       } else {  
       
         //SM 09/08 DnxNodeList
