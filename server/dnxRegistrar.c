@@ -274,9 +274,10 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)reg;
    int ret, discard_count, unmatched_count = 0;
-   DnxNodeRequest * node = 0;
    int client_queue_len = dnxQueueSize(ireg->rqueue);
    DnxNodeRequest * hostNode = *(DnxNodeRequest **)ppNode;
+   // Temperarily assign so we can find a affinity match
+   DnxNodeRequest * node = hostNode;
    
    assert(reg && ppNode);
 
@@ -291,7 +292,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
     dnxDebug(4, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
         ireg->tid, client_queue_len);
 
-   while ((ret = dnxQueueGet(ireg->rqueue, (void **)&node)) == DNX_OK)
+   while ((ret = dnxQueueRemove(ireg->rqueue, (void **)&node, dnxCompareAffinityNodeReq)) == DNX_QRES_FOUND)
    {
       time_t now = time(0);
 
@@ -302,28 +303,28 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
       // that this thread has affinity
       if (node->expires > now)
       {
-      dnxDebug(4, "dnxGetNodeRequest: Affinity Client [%s]:(%qu) Host [%s]:(%qu).",
+        dnxDebug(4, "dnxGetNodeRequest: Affinity with Client [%s]:(%qu) Host [%s]:(%qu).",
                 *(char **)node->hostname, node->flags, 
                 hostNode->hn, hostNode->flags);
       
-      
-         // make sure that this thread has affinity
-         if (node->flags & hostNode->flags)
-         {
-            dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity to (%s).",
-                *(char **)node->hostname, hostNode->hn);
-            break;
-         } else {
-
-            // DnxNodeList increment may need to be here
-//             char * addr = ntop(node->address,addr);
-//             dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
-//             xfree(addr);
-
-            dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
-               *(char **)node->hostname, hostNode->hn);
-//             ret = DNX_ERR_NOTFOUND;
-         }
+        break;
+// make sure that this thread has affinity
+//          if (node->flags & hostNode->flags)
+//          {
+//             dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity to (%s).",
+//                 *(char **)node->hostname, hostNode->hn);
+//             break;
+//          } else {
+// 
+//             // DnxNodeList increment may need to be here
+// //             char * addr = ntop(node->address,addr);
+// //             dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
+// //             xfree(addr);
+// 
+//             dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
+//                *(char **)node->hostname, hostNode->hn);
+// //             ret = DNX_ERR_NOTFOUND;
+//          }
       } else {  
       
         //SM 09/08 DnxNodeList
@@ -340,9 +341,61 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
          discard_count++;
 
          xfree(node); 
-         node = 0;
+         node = hostNode;
       }
    }
+//   while ((ret = dnxQueueGet(ireg->rqueue, (void **)&node)) == DNX_OK)
+//    {
+//       time_t now = time(0);
+// 
+// dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
+//     hostNode->hn, *(char **)node->hostname);
+// 
+//       // verify that this request's Time-To-Live (TTL) has not expired and
+//       // that this thread has affinity
+//       if (node->expires > now)
+//       {
+//       dnxDebug(4, "dnxGetNodeRequest: Affinity Client [%s]:(%qu) Host [%s]:(%qu).",
+//                 *(char **)node->hostname, node->flags, 
+//                 hostNode->hn, hostNode->flags);
+//       
+//       
+//          // make sure that this thread has affinity
+//          if (node->flags & hostNode->flags)
+//          {
+//             dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity to (%s).",
+//                 *(char **)node->hostname, hostNode->hn);
+//             break;
+//          } else {
+// 
+//             // DnxNodeList increment may need to be here
+// //             char * addr = ntop(node->address,addr);
+// //             dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
+// //             xfree(addr);
+// 
+//             dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
+//                *(char **)node->hostname, hostNode->hn);
+// //             ret = DNX_ERR_NOTFOUND;
+//          }
+//       } else {  
+//       
+//         //SM 09/08 DnxNodeList
+//         char * addr = ntop(node->address,addr);
+//         dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
+//         xfree(addr);
+//         //SM 09/08 DnxNodeList END
+// 
+//          dnxDebug(3, 
+//             "dnxGetNodeRequest: Expired req [%lu,%lu] at %u; expired at %u.", 
+//             node->xid.objSerial, node->xid.objSlot, 
+//             (unsigned)(now % 1000), (unsigned)(node->expires % 1000));
+// 
+//          discard_count++;
+// 
+//          xfree(node); 
+//          node = 0;
+//       }
+//    }
 
     // If we break out of the loop with affinity then we should have set
     // the node to a correct dnxClient object
@@ -361,16 +414,19 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
     
    if (discard_count > 0)
    {
-      dnxDebug(1, "dnxGetNodeRequest: Discarded %d expired node requests.", 
+      dnxDebug(4, "dnxGetNodeRequest: Discarded %d expired node requests.", 
             discard_count);
 
    }
 // If no affinity matches or there are no dnxClient job requests in the
 // queue we send it back to Nagios
-   if (ret != DNX_OK)
+   if (ret != DNX_QRES_FOUND)
    {
       dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s.",
             dnxErrorString(ret));
+      node = 0;
+   } else {
+      ret = DNX_OK;
    }
    
    xfree(hostNode);  // Get rid of the struct we used to pass the host data
