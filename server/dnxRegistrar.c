@@ -330,8 +330,10 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
             (unsigned)(now % 1000), (unsigned)(node->expires % 1000));
 
          discard_count++;
-
+         
+         // Delete the expired node
          xfree(node); 
+         // Re-initialize with host node so we can try and match affinity again
          node = hostNode;
       }
    }
@@ -412,15 +414,28 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
 // queue we send it back to Nagios
    if (ret != DNX_QRES_FOUND)
    {
+      if(ret == DNX_QRES_CONTINUE) {
+         // The only way we should be hitting this is if we expired 
+         // all valid workers.
+         ret = DNX_ERR_NOTFOUND;
+         // set the pointer back to the original object we passed
+         node = hostNode;
+      } 
+      else 
+      {
+        // A real error, we shouldn't return any object
+          node = 0;
+        // Get rid of the struct we used to pass the host data
+          xfree(hostNode);
+      }
       dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s.",
             dnxErrorString(ret));
-      node = 0;
-      ret = DNX_ERR_NOTFOUND;
    } else {
       ret = DNX_OK;
+    // Get rid of the struct we used to pass the host data
+      xfree(hostNode);
    }
    
-   xfree(hostNode);  // Get rid of the struct we used to pass the host data
    *ppNode = node;   // return a node or NULL
 
    return ret;
