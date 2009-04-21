@@ -137,7 +137,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    pReq = *ppMsg;
    pReq->expires = now + pReq->ttl;
 
-   char * addr = ntop(pReq->address,addr);
+   char * addr = (char *)ntop(pReq->address,addr);
    dnxNodeListIncrementNodeMember(addr,JOBS_REQ_RECV);
 
 
@@ -319,7 +319,7 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
       } else {  
       
         //SM 09/08 DnxNodeList
-        char * addr = ntop(node->address,addr);
+        char * addr = (char *)ntop(node->address,addr);
         dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
         xfree(addr);
         //SM 09/08 DnxNodeList END
@@ -502,7 +502,7 @@ DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long l
        p->next = NULL;
        dnxDebug(4, "dnxAddAffinity: Added linked list item [%s]", p->name);    
     } else {
-       DnxAffinityList *new_item = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
+       DnxAffinityList * new_item = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
        new_item->name = name;
        new_item->flag = flag;
        new_item->next = p->next;

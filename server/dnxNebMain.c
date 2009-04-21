@@ -1775,7 +1775,7 @@ bool buildStatsReply(char * request,DnxMgmtReply * pReply)
 *   Start the stats request listener and run it.
 *   @return void : returns nothing
 */
-void dnxStatsRequestListener(void * vpargs)
+static void dnxStatsRequestListener(void * vpargs)
 {
     dnxLog("dnxStatsRequestListener: Starting up!\n");
     int maxsize = DNX_MAX_MSG; //This is an ugly hack we have to do this because dnxGet requires a point to an INT and DNX_MAX_MSG is a macro
@@ -1814,18 +1814,18 @@ void dnxStatsRequestListener(void * vpargs)
                 reply.reply =   (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
 
                 dnxDebug(2,"dnxStatsRequestListener: Listening For Data!\n");
-                if ((ret = dnxGet(channel, buf, &maxsize, timeout, addr)) != DNX_OK)
+                if ((ret = dnxGet(channel, buf, &maxsize, timeout, (char *)ntop(addr))) != DNX_OK)
                 {
                     quit = true;
                     dnxLog("dnxStatsRequestListener Error: Error reading from socket, data retrieved if any was %s\n",buf);
                 }else{
-                    pHost = ntop(addr);
+                    pHost = (char *)ntop(addr);
                     dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n",pHost,buf);
                     result = buildStatsReply(buf,&reply);
                     if(result)
                     {
                         dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s",pHost);
-                        if(dnxSendMgmtReply(channel, &reply, addr)!=0)
+                        if(dnxSendMgmtReply(channel, &reply, (char *)ntop(addr))!=0)
                         {
                             dnxLog("dnxStatsRequestListener Error: Error writing to socket for reply to %s\n",pHost);
                         }else{
@@ -1875,7 +1875,7 @@ unsigned long long dnxGetAffinity(char * name)
       // the default behavior should be that it can handle all requests
       // for backwards compatibility. This is dangerous though as a rogue or
       // misconfigured client could steal requests that it can't service.
-      flag = (unsigned long long *)(-2); // Match all affinity but local(LSB)
+      flag = (unsigned long long *)-2; // Match all affinity but local(LSB)
       dnxAddAffinity(hostAffinity, name, flag);
       dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
@@ -1938,7 +1938,7 @@ unsigned long long dnxGetAffinity(char * name)
       // the default behavior should be that it can handle all requests
       // for backwards compatibility. This is dangerous though as a rogue or
       // misconfigured client could steal requests that it can't service.
-      flag = (unsigned long long *)(-2); // Match all affinity but local(LSB)
+      flag = (unsigned long long *)-2; // Match all affinity but local(LSB)
       dnxAddAffinity(hostAffinity, name, flag);
       dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
