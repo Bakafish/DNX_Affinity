@@ -32,6 +32,8 @@
 #include "dnxTransport.h"
 #include "dnxXml.h"
 #include "dnxLogging.h"
+#include "dnxHeap.h"
+
 
 #include <stdio.h>
 #include <stdlib.h>
