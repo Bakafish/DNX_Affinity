@@ -114,7 +114,7 @@ unsigned dnxNodeListIncrementNodeMember(char* address,int member);
 
 unsigned dnxNodeListSetNode(char* address, int member, void* value);
 
-void dnxStatsRequestListener(void *vptr_args);
+static void dnxStatsRequestListener(void *vptr_args);
 
 #endif
 
