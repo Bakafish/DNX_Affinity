@@ -396,19 +396,17 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
     dnxDebug(6, "dnxGetNodeRequest: Exiting loop (%i) Number of elements [%i]",
         ireg->tid, after_client_queue_len);
 
-    if (discard_count == matched_count)
-    {
-        dnxDebug(1, "dnxGetNodeRequest: Dis(%i) Q(%i) All the matching DNX"
-        "client threads were expired.", discard_count, client_queue_len);
-        // We should wait a moment and run through again to see if new threads 
-        // got regestered
-    }
     
    if (discard_count > 0)
    {
       dnxDebug(4, "dnxGetNodeRequest: Discarded %d expired node requests.", 
             discard_count);
 
+      if (discard_count == matched_count)
+      {
+         dnxDebug(1, "dnxGetNodeRequest: Dis(%i) Q(%i) All the matching DNX"
+         "client threads were expired.", discard_count, client_queue_len);
+      }
    }
 // If no affinity matches or there are no dnxClient job requests in the
 // queue we send it back to Nagios

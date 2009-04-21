@@ -119,13 +119,14 @@ static void * dnxCollector(void * data)
 
             /** @todo Wrapper release DnxResult structure. */
             dnxAuditJob(&Job, "COLLECT");
+ // Something bad happening here
             dnxLog("RESPONSE: %s", sResult.resData);
-            xfree(sResult.resData);
 
             dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s.", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot, 
                   dnxErrorString(ret));
 
+            xfree(sResult.resData);
             dnxJobCleanup(&Job);
          }
          else 
