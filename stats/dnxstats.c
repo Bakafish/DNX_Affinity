@@ -33,7 +33,6 @@
 #include "dnxError.h"
 #include "dnxDebug.h"
 #include "dnxComStats.h"
-#include "dnxHeap.h"
 
 #if HAVE_CONFIG_H
 # include "config.h"

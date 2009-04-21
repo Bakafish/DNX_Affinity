@@ -37,6 +37,7 @@
 #include "dnxCfgParser.h"
 #include "dnxError.h"
 #include "dnxDebug.h"
+#include "dnxHeap.h"
 #include "dnxLogging.h"
 #include "dnxCollector.h"
 #include "dnxDispatcher.h"
