@@ -1191,7 +1191,7 @@ static int dnxServerInit(void)
     //SM 09/08 DnxNodeList
     gTopNode = dnxNodeListCreateNode("127.0.0.1");
     pthread_t tid;
-   if ((ret = pthread_create(&tid, NULL, dnxStatsRequestListener, NULL)) != 0)
+   if ((ret = pthread_create(&tid, 0, dnxStatsRequestListener, NULL)) != 0)
    {
       dnxLog("dnx dnxServerInit: thread creation failed for stats listener: %s.",dnxErrorString(ret));
       ret = DNX_ERR_THREAD;
