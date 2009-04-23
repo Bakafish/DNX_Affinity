@@ -1613,6 +1613,7 @@ void buildStatsReplyForNode(DnxNode* pDnxNode, char* requested_stat, DnxMgmtRepl
         if(strncmp("HELP",token,strlen(token))==0)
         {
             appendString(&pReply->reply,"HELP: Format is [node ip address* (optional)], HELP, CLEAR, RESETSTATS, ALLSTATS, ");
+            return;
         }
 
        //build the response by looping through the response_struct looking for matching values
