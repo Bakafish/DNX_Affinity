@@ -201,6 +201,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 
    // start at current dispatch head
    current = ilist->dhead;
+   dnxDebug(8, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu.", 
+       ilist->head, ilist->dhead, ilist->tail);
 
    // see if we have a pending job
    while (ilist->list[current].state != DNX_JOB_PENDING)
@@ -211,14 +213,13 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       gettimeofday(&now, 0);
       timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
       timeout.tv_nsec = now.tv_usec * 1000;
-
-      dnxDebug(8, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu.", 
-            ilist->head, ilist->dhead, ilist->tail);
+      dnxDebug(8, "dnxJobListDispatch: Waiting for Job Id (%lu) State(%lu)", 
+        ilist->list[current], ilist->list[current].state);
 
       if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, 
             &timeout)) == ETIMEDOUT)
       {
-         dnxDebug(8, "dnxJobListDispatch: Timeout.");      
+         dnxDebug(8, "dnxJobListDispatch: No jobs found.");      
          break;
       }
 
@@ -237,9 +238,10 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       if (ilist->dhead != ilist->tail)
          ilist->dhead = (current + 1) % ilist->size;
    
-      dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu.", 
-            pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
    }
+
+   dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu.", 
+      pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
 
@@ -253,8 +255,8 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long current;
    int ret = DNX_OK;
-   dnxDebug(4, "dnxJobListCollect: Entering id(%lu) slot(%lu)", 
-        pxid->objSerial, pxid->objSlot);
+   dnxDebug(4, "dnxJobListCollect: Entering Job id(%lu) serial(%lu)", 
+        pxid->objSlot, pxid->objSerial);
 
    assert(pJobList && pxid && pJob);   // parameter validation
    dnxDebug(4, "dnxJobListCollect: Good params");
@@ -262,10 +264,6 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    current = pxid->objSlot;
    dnxDebug(4, "dnxJobListCollect: Job id (%i) list length(%i)", 
         current, ilist->size);
-
-   assert(current < ilist->size);
-   dnxDebug(4, "dnxJobListCollect: Job id smaller than list length");
-
 
    if (current >= ilist->size)         // runtime validation requires check
       return DNX_ERR_INVALID;          // corrupt client network message
