@@ -351,6 +351,10 @@ int dnxJobListCreate(unsigned size, DnxJobList ** ppJobList)
    memset(ilist->list, 0, sizeof *ilist->list * size);
 
    ilist->size = size;
+   // I'm pretty sure we should initialize these...
+   ilist->head = 0;
+   ilist->tail = 0;
+   ilist->dhead = 0;
 
    DNX_PT_MUTEX_INIT(&ilist->mut);
    pthread_cond_init(&ilist->cond, 0);
