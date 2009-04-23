@@ -248,8 +248,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    if (ret == 0)
    {
    
-      dnxDebug(8, "dnxJobListDispatch(%i)(%i): Change state of job (%lu) to In Progress.",
-         job_cntr, current, ilist->list[current]);
+      dnxDebug(8, "dnxJobListDispatch(%i)(%lu): Change state of job (%s) (%lu) to In Progress.",
+         job_cntr, current, ilist->list[current].host_name, ilist->list[current]);
   
       // transition this job's state to InProgress
       ilist->list[current].state = DNX_JOB_INPROGRESS;
