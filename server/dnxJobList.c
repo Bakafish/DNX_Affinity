@@ -214,8 +214,26 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       gettimeofday(&now, 0);
       timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
       timeout.tv_nsec = now.tv_usec * 1000;
-      dnxDebug(8, "dnxJobListDispatch(%i): Waiting for Job Id (%lu) State(%s)", 
-        job_list_id, ilist->list[current], 
+      job_list_id++;
+      
+      dnxDebug(8, "dnxJobListDispatch(%i): Waiting for Job Id (%lu)", 
+        job_list_id, ilist->list[current]);
+      if( ilist->list[current].state == DNX_JOB_COMPLETE )
+      {
+         dnxDebug(8, "dnxJobListDispatch(%i): Completed Item", job_list_id);
+      }
+      if( ilist->list[current].state == DNX_JOB_NULL )
+      {
+         dnxDebug(8, "dnxJobListDispatch(%i): Null Item", job_list_id);
+      }
+      if( ilist->list[current].state == DNX_JOB_EXPIRED )
+      {
+         dnxDebug(8, "dnxJobListDispatch(%i): Expired Item", job_list_id);
+      }
+      if( ilist->list[current].state == DNX_JOB_INPROGRESS )
+      {
+         dnxDebug(8, "dnxJobListDispatch(%i): In Progress Item", job_list_id);
+      }
         ilist->list[current].state == DNX_JOB_COMPLETE ? "complete" : "in progress/expired");
 
       if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, 
