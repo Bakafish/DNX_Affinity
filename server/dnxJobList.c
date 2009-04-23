@@ -38,6 +38,7 @@
 #define DNX_TIMER_SLEEP       5000  /*!< Timer sleep interval, in milliseconds */
 
 DnxJobList * joblist; // Fwd declaration
+int job_list_id = 0;  // Keep the logs straight 
 
 /** The JobList implementation data structure. */
 typedef struct iDnxJobList_ 
@@ -201,25 +202,26 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 
    // start at current dispatch head
    current = ilist->dhead;
-   dnxDebug(8, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu.", 
-       ilist->head, ilist->dhead, ilist->tail);
+   dnxDebug(8, "dnxJobListDispatch(%i): BEFORE: Head=%lu, DHead=%lu, Tail=%lu.", 
+       job_list_id, ilist->head, ilist->dhead, ilist->tail);
 
    // see if we have a pending job
    while (ilist->list[current].state != DNX_JOB_PENDING)
    {
       struct timeval now;
       struct timespec timeout;
-
+      
       gettimeofday(&now, 0);
       timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
       timeout.tv_nsec = now.tv_usec * 1000;
-      dnxDebug(8, "dnxJobListDispatch: Waiting for Job Id (%lu) State(%lu)", 
-        ilist->list[current], ilist->list[current].state);
+      dnxDebug(8, "dnxJobListDispatch(%i): Waiting for Job Id (%lu) State(%s)", 
+        job_list_id, ilist->list[current], 
+        ilist->list[current].state == DNX_JOB_COMPLETE ? "complete" : "in progress/expired");
 
       if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, 
             &timeout)) == ETIMEDOUT)
       {
-         dnxDebug(8, "dnxJobListDispatch: No jobs found.");      
+         dnxDebug(8, "dnxJobListDispatch(%i): Thread timer.", job_list_id);      
          break;
       }
 
@@ -240,8 +242,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    
    }
 
-   dnxDebug(8, "dnxJobListDispatch: AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu.", 
-      pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
+   dnxDebug(8, "dnxJobListDispatch(%i): AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu.", 
+      job_list_id, pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
 

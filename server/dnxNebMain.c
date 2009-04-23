@@ -879,6 +879,7 @@ static int ehSvcCheck(int event_type, void * data)
    dnxDebug(2, "ehSvcCheck: Service Check found worker [%lu,%lu]",
         pNode->xid.objSerial, pNode->xid.objSlot);
 
+// Set the check type in the job object
 
    if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
    {
@@ -1076,6 +1077,7 @@ static int ehHstCheck(int event_type, void * data)
 */
 
 
+// Set the check type in the job object
 
 
    if ((ret = dnxPostNewHostJob(joblist, serial, HOST_CHECK, hstdata, pNode)) != DNX_OK)
