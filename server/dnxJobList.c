@@ -218,6 +218,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       
       dnxDebug(8, "dnxJobListDispatch(%i): Waiting for Job Id (%lu)", 
         job_list_id, ilist->list[current]);
+
       if( ilist->list[current].state == DNX_JOB_COMPLETE )
       {
          dnxDebug(8, "dnxJobListDispatch(%i): Completed Item", job_list_id);
@@ -234,7 +235,6 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       {
          dnxDebug(8, "dnxJobListDispatch(%i): In Progress Item", job_list_id);
       }
-        ilist->list[current].state == DNX_JOB_COMPLETE ? "complete" : "in progress/expired");
 
       if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, 
             &timeout)) == ETIMEDOUT)
