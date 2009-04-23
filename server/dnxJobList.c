@@ -259,11 +259,10 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
         pxid->objSlot, pxid->objSerial);
 
    assert(pJobList && pxid && pJob);   // parameter validation
-   dnxDebug(4, "dnxJobListCollect: Good params");
 
    current = pxid->objSlot;
-   dnxDebug(4, "dnxJobListCollect: Job id (%i) list length(%i)", 
-        current, ilist->size);
+   dnxDebug(4, "dnxJobListCollect: Job id (%i) list head(%i)", 
+        current, ilist->head);
 
    if (current >= ilist->size)         // runtime validation requires check
       return DNX_ERR_INVALID;          // corrupt client network message
