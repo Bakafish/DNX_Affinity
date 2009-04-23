@@ -233,11 +233,9 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
          dnxDebug(8, "dnxJobListDispatch(%i): In Progress Item", current);
       }
 
-      if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, 
-            &timeout)) == ETIMEDOUT)
+      if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, &timeout)) == ETIMEDOUT)
       {
-         dnxDebug(8, "dnxJobListDispatch(%i): Thread timer returned (%i).", 
-            current, ret);      
+         dnxDebug(8, "dnxJobListDispatch(%i): Thread timer returned.", current);      
          break;
       }
       dnxDebug(8, "dnxJobListDispatch(%i): Changing current to (%i).", 
