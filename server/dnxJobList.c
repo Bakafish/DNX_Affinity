@@ -270,10 +270,11 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    DNX_PT_MUTEX_LOCK(&ilist->mut);
 
    dnxDebug(4, 
-         "dnxJobListCollect: Compare job (%s) [%lu,%lu] to job [%lu,%lu]: "
-         "Head=%lu, DHead=%lu, Tail=%lu.", ilist->list[current].cmd, pxid->objSerial, pxid->objSlot,
-         ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot, 
-         ilist->head, ilist->dhead, ilist->tail);
+         "dnxJobListCollect: Compare job (%s:%s) [%lu,%lu] to job [%lu,%lu]: "
+         "Head=%lu, DHead=%lu, Tail=%lu.", 
+         ilist->list[current].host_name, ilist->list[current].service_description,
+         pxid->objSerial, pxid->objSlot, ilist->list[current].xid.objSerial, 
+         ilist->list[current].xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
 
    // verify that the XID of this result matches the XID of the service check
    if (ilist->list[current].state == DNX_JOB_NULL 
