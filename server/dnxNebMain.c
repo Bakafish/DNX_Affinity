@@ -1107,7 +1107,7 @@ static int dnxServerDeInit(void)
    neb_deregister_callback(NEBCALLBACK_PROCESS_DATA, ehProcessData);
    neb_deregister_callback(NEBCALLBACK_SERVICE_CHECK_DATA, ehSvcCheck);
    neb_deregister_callback(NEBCALLBACK_HOST_CHECK_DATA, ehHstCheck);
-
+//   neb_deregister_callback(NEBTYPE_PROCESS_EVENTLOOPEND, dnxCleanup);
    // ensure we don't destroy non-existent objects from here on out...
    if (registrar)
       dnxRegistrarDestroy(registrar);
@@ -1251,6 +1251,8 @@ static int dnxServerInit(void)
    dnxLog("Registered for SERVICE_CHECK_DATA event.");
    neb_register_callback(NEBCALLBACK_HOST_CHECK_DATA, myHandle, 0, ehHstCheck);
    dnxLog("Registered for HOST_CHECK_DATA event.");
+//    neb_register_callback(NEBTYPE_PROCESS_EVENTLOOPEND, myHandle, 0, dnxCleanup);
+//    dnxLog("Registered for NEBTYPE_PROCESS_EVENTLOOPEND event.");
 
     // sit in a loop for up to 30 seconds waiting for nodes to register
 //     int loop_count = 0;
@@ -1338,6 +1340,15 @@ static int ehProcessData(int event_type, void * data)
       // if server init fails, do server shutdown
       if (dnxServerInit() != 0)
          dnxServerDeInit();
+   }
+
+   // look for process event loop end event
+   if (procdata->type == NEBTYPE_PROCESS_EVENTLOOPEND)
+   {
+      dnxDebug(2, "Startup handler received PROCESS_EVENTLOOPEND event.");
+      // See if we have any outstanding checks and get them back, we may need
+      // to save state or write out the checks to a temp file in the queue
+      dnxServerDeInit();
    }
    return OK;
 }
