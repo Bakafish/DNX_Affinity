@@ -241,7 +241,10 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,int timeout, cha
    }
 
    // read the incoming message
-   if (!src) src = (char *)&bit_bucket;
+   if (!src) {
+      dnxDebug(4, "dnxUdpRead: Source undefined.");
+      src = (char *)&bit_bucket;
+   }
 
    if ((mlen = recvfrom(iucp->socket, buf, *size, 0,(struct sockaddr *)src, &slen)) < 0)
    {
@@ -353,12 +356,14 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,int timeout, char
    // check for a destination address override
    if (dst)
     {
+        dnxDebug(8,"DnxUdpWrite: Overriding Destination");
         ret = sendto(iucp->socket, buf, size, 0,(struct sockaddr *)dst, sizeof(struct sockaddr_in));
         struct sockaddr_in tmp;
         memcpy(&tmp,dst, sizeof(tmp));
         addrStr = ntop(&tmp);
     }else{
-      ret = write(iucp->socket, buf, size);
+        dnxDebug(8,"DnxUdpWrite: Sending to channel");
+        ret = write(iucp->socket, buf, size);
         addrStr = xstrdup(iucp->host);
     }
 
