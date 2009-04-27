@@ -112,7 +112,7 @@ char *ntop(const struct sockaddr *sa)
             break;
 
         default:
-            strncpy(buf, "Unknown AF", maxlen);
+//            strncpy(buf, "Unknown AF", maxlen);
             return NULL;
     }
 
