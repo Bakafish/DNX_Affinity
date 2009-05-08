@@ -255,9 +255,7 @@ static int dnxTcpRead(iDnxChannel * icp, char * buf, int * size,
    {
       socklen_t slen;
       *src = 0;   // clear first byte in case getpeeraddr fails
-      if(getpeername(itcp->socket, (struct sockaddr *)src, &slen) != 0) {
-           dnxLog("dnxTcpRead: getpeername() failed!");
-      }
+      getpeername(itcp->socket, (struct sockaddr *)src, &slen);
    } 
    
    return DNX_OK;
