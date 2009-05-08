@@ -230,7 +230,7 @@ static void * dnxRegistrar(void * data)
          continue;
       }
 
-      pthread_cleanup_push(xfree, pMsg);
+      pthread_cleanup_push(xfree, pMsg); // the thread cleanup handler
 
       pthread_testcancel();
 
@@ -253,7 +253,7 @@ static void * dnxRegistrar(void * data)
          }
       }
 
-      pthread_cleanup_pop(0);
+      pthread_cleanup_pop(0); // clean up the thread
 
       if (ret != DNX_OK && ret != DNX_ERR_TIMEOUT)
       {

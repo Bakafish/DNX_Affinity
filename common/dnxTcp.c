@@ -250,13 +250,16 @@ static int dnxTcpRead(iDnxChannel * icp, char * buf, int * size,
       memcpy(buf, mbuf, *size);
    }
 
-   // set source addr/port information, if desired
+   // set source addr/port information, if desired (This is Failing somehow)
    if (src)
    {
       socklen_t slen;
       *src = 0;   // clear first byte in case getpeeraddr fails
-      getpeername(itcp->socket, (struct sockaddr *)src, &slen);
-   }
+      if((getpeername(itcp->socket, (struct sockaddr *)src, &slen) != 0) {
+           dnxErrorLog(2, "dnxTcpRead: getpeername() failed!");
+      }
+   } 
+   
    return DNX_OK;
 }
 

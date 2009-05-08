@@ -96,9 +96,16 @@ char *ntop(const struct sockaddr *sa)
 {
     size_t maxlen;
     char * buf = (char *)xcalloc(DNX_MAX_ADDRESS,sizeof(char));
+    
+    assert(buf);
+    
     assert(sa);
-    if(!sa)
-        return xstrdup("DNX Error:  Address Unkown or Corrupt! ");
+    
+    if(!sa) {
+        strncpy(buf, "0.0.0.0", maxlen);
+//        return xstrdup("DNX Error:  Address Unkown or Corrupt! ");
+        return buf;
+    }
 
     switch(sa->sa_family) {
         case AF_INET:
@@ -112,7 +119,7 @@ char *ntop(const struct sockaddr *sa)
             break;
 
         default:
-//            strncpy(buf, "Unknown AF", maxlen);
+            strncpy(buf, "Unknown AF", maxlen);
             return NULL;
     }
 

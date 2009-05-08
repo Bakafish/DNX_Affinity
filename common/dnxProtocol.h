@@ -205,10 +205,10 @@ typedef struct DnxNodeRequest
    DnxXID xid;                      //!< Worker node transaction ID.
    DnxReqType reqType;              //!< Request type.
    unsigned int jobCap;             //!< Job capacity.
-   unsigned long long flags;//!< Affinity groups bitmask.
+   unsigned long long flags;        //!< Affinity groups bitmask.
    unsigned int ttl;                //!< Request Time-To-Live (in seconds).
    time_t expires;                  //!< Job expiration time (not transmitted).
-   char address[DNX_MAX_ADDRESS];   //!< Source address.
+   char address[DNX_MAX_ADDRESS];   //!< Source address. (should be initialized as at least the same size as  a struct sockaddr_storage)
    char * addr;                     //!< Source address as char * for easier logging later
    char hostname[MAX_HOSTNAME];     //!< Hostname from client config.
    char * hn;
