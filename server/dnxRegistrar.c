@@ -280,7 +280,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    int matched_count = 0;
    int client_queue_len = dnxQueueSize(ireg->rqueue);
    DnxNodeRequest * hostNode = *(DnxNodeRequest **)ppNode;
-   // Temperarily assign so we can find a affinity match
+   // Temperarily assign so we can find a affinity match, dnxQueueRemove should
+   // replace it with an appropriate worker node
    DnxNodeRequest * node = hostNode;
    
    assert(reg && ppNode);
@@ -293,7 +294,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
         // has expired all our threads and we haven't registered any new workers
 //        node = 0;
 //        xfree(hostNode);  // Get rid of the struct we used to pass the host data
-        *ppNode = node;   // return a node or NULL
+        *ppNode = NULL;   // return a node or NULL
         return ret;
         
     }
@@ -321,9 +322,9 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
       } else {  
       
         //SM 09/08 DnxNodeList
-        char * addr = (char *)ntop(node->address,addr);
-        dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
-        xfree(addr);
+//        char * addr = (char *)ntop(node->address,addr);
+        dnxNodeListIncrementNodeMember(node->addr,JOBS_REQ_EXP);
+//        xfree(addr);
         //SM 09/08 DnxNodeList END
 
          dnxDebug(3, 
@@ -334,7 +335,10 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
          discard_count++;
          
          // Delete the expired node
+         xfree(node->hn); 
+         xfree(node->addr); 
          xfree(node); 
+
          // Re-initialize with host node so we can try and match affinity again
          node = hostNode;
       }
