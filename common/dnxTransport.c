@@ -104,6 +104,7 @@ char *ntop(const struct sockaddr *sa)
     if(!sa) {
 //        strncpy(buf, "0.0.0.0", maxlen);
 //        return xstrdup("DNX Error:  Address Unkown or Corrupt! ");
+        xfree(buf);
         return NULL;
     }
 
@@ -120,6 +121,7 @@ char *ntop(const struct sockaddr *sa)
 
         default:
 //            strncpy(buf, "Unknown AF", maxlen);
+            xfree(buf);
             return NULL;
     }
 
