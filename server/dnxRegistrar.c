@@ -193,6 +193,7 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
    if (dnxQueueRemove(ireg->rqueue, (void **)&pReq, 
          dnxCompareNodeReq) == DNX_QRES_FOUND) {
       xfree(pReq->addr);
+      xfree(pReq->hn);
       xfree(pReq);      // free the dequeued DnxNodeRequest message
    }
    

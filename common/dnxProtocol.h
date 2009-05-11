@@ -211,6 +211,7 @@ typedef struct DnxNodeRequest
    char address[DNX_MAX_ADDRESS];   //!< Source address. (should be initialized as at least the same size as  a struct sockaddr_storage)
    char * addr;                     //!< Source address as char * for easier logging later
    char hostname[MAX_HOSTNAME];     //!< Hostname from client config.
+   char * hn;
 } DnxNodeRequest;
 
 /** Send job wire structure. */
