@@ -94,7 +94,7 @@ static DnxChanMap gChannelMap[DNX_MAX_CHAN_MAP]; //!< The global channel map.
   --------------------------------------------------------------------------*/
 char *ntop(const struct sockaddr *sa)
 {
-    size_t maxlen = DNX_MAX_ADDRESS + 1;
+    size_t maxlen;
     char * buf = (char *)xcalloc(DNX_MAX_ADDRESS,sizeof(char));
     
     assert(buf);
@@ -102,9 +102,9 @@ char *ntop(const struct sockaddr *sa)
     assert(sa);
     
     if(!sa) {
-        strncpy(buf, "0.0.0.0", maxlen);
+//        strncpy(buf, "0.0.0.0", maxlen);
 //        return xstrdup("DNX Error:  Address Unkown or Corrupt! ");
-        return buf;
+        return NULL;
     }
 
     switch(sa->sa_family) {
@@ -119,7 +119,7 @@ char *ntop(const struct sockaddr *sa)
             break;
 
         default:
-            strncpy(buf, "Unknown AF", maxlen);
+//            strncpy(buf, "Unknown AF", maxlen);
             return NULL;
     }
 
