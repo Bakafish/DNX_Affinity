@@ -83,6 +83,7 @@ DnxNode* dnxNodeListRemoveNode(DnxNode* pDnxNode)
 
     //Bye, Bye I'm leaving
     xfree(pDnxNode->address);
+    xfree(pDnxNode->hostname);
     DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
     xfree(pDnxNode);
 
@@ -239,10 +240,10 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
     assert(address && isalnum(*address));
 
     DnxNode* pDnxNode = dnxNodeListFindNode(address);
-
+    
     int retval = 0;
 
-    if(pDnxNode && (pDnxNode->flags == 0))
+    if(pDnxNode) //&& (pDnxNode->flags == 0))
     {
         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
         pDnxNode->hostname = xstrdup(hostname);
@@ -251,8 +252,13 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
         dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%qu]",
             pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
     } else {
-        dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%qu]",
+        dnxDebug(2, "dnxNodeListSetNodeAffinity: No exsisting node:: Address: [%s], Hostname: [%s], Flags: [%qu]",
             pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
+        pDnxNode = dnxNodeListCreateNode(address);
+        DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
+        pDnxNode->hostname = xstrdup(hostname);
+        pDnxNode->flags = dnxGetAffinity(hostname);
+        DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
     }
     return(retval);
 }
