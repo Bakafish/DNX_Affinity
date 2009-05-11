@@ -137,8 +137,8 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    pReq = *ppMsg;
    pReq->expires = now + pReq->ttl;
 
-   char * addr = (char *)ntop(pReq->address,addr);
-   dnxNodeListIncrementNodeMember(addr,JOBS_REQ_RECV);
+   pReq->addr = ntop(pReq->address);
+   dnxNodeListIncrementNodeMember(pReq->addr,JOBS_REQ_RECV);
 
 
    // locate existing node: update expiration time, or add to the queue
@@ -153,7 +153,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       // This is new, add the affinity flags  
-      dnxNodeListSetNodeAffinity(addr, *(char **)pReq->hostname);
+      dnxNodeListSetNodeAffinity(pReq->addr, *(char **)pReq->hostname);
       pReq->flags = dnxGetAffinity(*(char **)pReq->hostname);
       *ppMsg = 0;    // we're keeping this message; return NULL
       dnxDebug(2, 
@@ -169,7 +169,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
             dnxErrorString(ret));
    }
    
-   xfree(addr);
    return ret;
 }
 
@@ -192,9 +191,11 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
    assert(ireg && pMsg);
 
    if (dnxQueueRemove(ireg->rqueue, (void **)&pReq, 
-         dnxCompareNodeReq) == DNX_QRES_FOUND)
+         dnxCompareNodeReq) == DNX_QRES_FOUND) {
+      xfree(pReq->addr);
       xfree(pReq);      // free the dequeued DnxNodeRequest message
-
+   }
+   
    return DNX_OK;
 }
 
