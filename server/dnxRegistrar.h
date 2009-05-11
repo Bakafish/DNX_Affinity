@@ -86,7 +86,7 @@ void dnxRegistrarDestroy(DnxRegistrar * reg);
 *
 * @return Affinity object on success, NULL on failure.
 */
-DnxAffinityList * addDnxAffinity(DnxAffinityList *p, char * name, unsigned long long flag);
+DnxAffinityList * dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long long flag);
 
 #endif   /* _DNXREGISTRAR_H_ */
 

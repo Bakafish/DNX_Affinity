@@ -76,11 +76,11 @@
 				<string>7A1FCBF6-0C68-449B-9CF4-706E79376F09</string>
 				<string>1D032D31-C7EF-4121-BC65-2144C87054B3</string>
 				<string>8FB154F1-6C1A-4A48-9D95-3B8E77E312A6</string>
+				<string>6687240B-58BA-455A-B25E-E7A9587A3B4E</string>
 				<string>809B2A81-BB11-40A4-B177-4AFB427FF07A</string>
 				<string>9A342661-3B63-4E6E-826B-3848998A43D6</string>
 				<string>43177980-2457-41D7-9EB4-FA1B9D6262C3</string>
 				<string>64D5E5FC-D016-4CF6-B0CE-18B57AF3AA4D</string>
-				<string>EB205BEB-969B-442F-B44F-52499C54DFB2</string>
 			</array>
 		</dict>
 		<dict>
@@ -833,6 +833,40 @@
 			</dict>
 			<key>ItemName</key>
 			<string>dnxProtocol.c</string>
+			<key>ItemType</key>
+			<string>FileReference</string>
+		</dict>
+		<key>6687240B-58BA-455A-B25E-E7A9587A3B4E</key>
+		<dict>
+			<key>ItemData</key>
+			<dict>
+				<key>AliasData</key>
+				<data>
+				AAAAAAGWAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAA
+				AAAAAADD8dwcSCsAAAALapMOZG54UmVnaXN0cmFyLmMA
+				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+				AAAAAAAAAAAAAAAAAAAAAAtqnsRPNkJURVhUAAAAAP//
+				//8AAAkgAAAAAAAAAAAAAAAAAAAABnNlcnZlcgAQAAgA
+				AMPxXYwAAAARAAgAAMROt7IAAAABABQAC2qTAAtqJAAL
+				Z/UACqTMAAB62wACAD1NYWNpbnRvc2ggSEQ6VXNlcnM6
+				amFzb246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueFJl
+				Z2lzdHJhci5jAAAOAB4ADgBkAG4AeABSAGUAZwBpAHMA
+				dAByAGEAcgAuAGMADwAaAAwATQBhAGMAaQBuAHQAbwBz
+				AGgAIABIAEQAEgAwVXNlcnMvamFzb24vQ29kZS9kbnhf
+				bG9jYWwvc2VydmVyL2RueFJlZ2lzdHJhci5jABMAAS8A
+				ABUAAgAM//8AAA==
+				</data>
+				<key>FileURL</key>
+				<string>file://localhost/Users/jason/Code/dnx_local/server/dnxRegistrar.c</string>
+				<key>RelativePath</key>
+				<string>./server/dnxRegistrar.c</string>
+				<key>TypeID</key>
+				<string>_CFileLocator</string>
+				<key>Version</key>
+				<integer>1</integer>
+			</dict>
+			<key>ItemName</key>
+			<string>dnxRegistrar.c</string>
 			<key>ItemType</key>
 			<string>FileReference</string>
 		</dict>
@@ -1894,40 +1928,6 @@
 			</dict>
 			<key>ItemName</key>
 			<string>dnxJobList.h</string>
-			<key>ItemType</key>
-			<string>FileReference</string>
-		</dict>
-		<key>EB205BEB-969B-442F-B44F-52499C54DFB2</key>
-		<dict>
-			<key>ItemData</key>
-			<dict>
-				<key>AliasData</key>
-				<data>
-				AAAAAAGWAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAA
-				AAAAAADD8dwcSCsAAAALapMOZG54UmVnaXN0cmFyLmMA
-				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-				AAAAAAAAAAAAAAAAAAAAAAtqnsRPNkJURVhUAAAAAP//
-				//8AAAkgAAAAAAAAAAAAAAAAAAAABnNlcnZlcgAQAAgA
-				AMPxXYwAAAARAAgAAMROt7IAAAABABQAC2qTAAtqJAAL
-				Z/UACqTMAAB62wACAD1NYWNpbnRvc2ggSEQ6VXNlcnM6
-				amFzb246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueFJl
-				Z2lzdHJhci5jAAAOAB4ADgBkAG4AeABSAGUAZwBpAHMA
-				dAByAGEAcgAuAGMADwAaAAwATQBhAGMAaQBuAHQAbwBz
-				AGgAIABIAEQAEgAwVXNlcnMvamFzb24vQ29kZS9kbnhf
-				bG9jYWwvc2VydmVyL2RueFJlZ2lzdHJhci5jABMAAS8A
-				ABUAAgAM//8AAA==
-				</data>
-				<key>FileURL</key>
-				<string>file://localhost/Users/jason/Code/dnx_local/server/dnxRegistrar.c</string>
-				<key>RelativePath</key>
-				<string>./server/dnxRegistrar.c</string>
-				<key>TypeID</key>
-				<string>_CFileLocator</string>
-				<key>Version</key>
-				<integer>1</integer>
-			</dict>
-			<key>ItemName</key>
-			<string>dnxRegistrar.c</string>
 			<key>ItemType</key>
 			<string>FileReference</string>
 		</dict>
