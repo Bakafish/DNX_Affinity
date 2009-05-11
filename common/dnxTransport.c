@@ -94,7 +94,7 @@ static DnxChanMap gChannelMap[DNX_MAX_CHAN_MAP]; //!< The global channel map.
   --------------------------------------------------------------------------*/
 char *ntop(const struct sockaddr *sa)
 {
-    size_t maxlen;
+    size_t maxlen = DNX_MAX_ADDRESS + 1;
     char * buf = (char *)xcalloc(DNX_MAX_ADDRESS,sizeof(char));
     
     assert(buf);
