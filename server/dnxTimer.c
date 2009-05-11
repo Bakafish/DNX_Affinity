@@ -132,19 +132,19 @@ static void * dnxTimer(void * data)
             dnxDebug(1, "dnxTimer[%lx]: Expiring Job [%lu,%lu]: %s.",pthread_self(), job->xid.objSerial, job->xid.objSlot, job->cmd);
 
             dnxAuditJob(job, "EXPIRE");
-            char * addr = ntop(job->pNode->address);
+//            char * addr = ntop(job->pNode->address);
 
             if(job->ack)
             {
-                sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to return job response in time allowed)",job->xid.objSerial, job->xid.objSlot, addr);
+                sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to return job response in time allowed)",job->xid.objSerial, job->xid.objSlot, job->pNode->addr);
 
             }else{
-                sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to acknowledge job reciept)",job->xid.objSerial, job->xid.objSlot, addr);
+                sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to acknowledge job reciept)",job->xid.objSerial, job->xid.objSlot, job->pNode->addr);
             }
 
             dnxDebug(2,msg);
 
-            xfree(addr);
+//            xfree(addr);
 
             // report the expired job to Nagios
 //             char * svc_description;

@@ -1363,9 +1363,10 @@ void dnxJobCleanup(DnxNewJob * pJob)
    if (pJob)
    {
       xfree(pJob->cmd);
-//      xfree(pJob->check_data);
-//      xfree(pJob->result);
+      xfree(pJob->host_name);
+      xfree(pJob->service_description);
       xfree(pJob->pNode->addr);
+      xfree(pJob->pNode->hn);
       xfree(pJob->pNode);
       dnxDebug(4, "dnxJobCleanup: Job objects freed.");
    }
