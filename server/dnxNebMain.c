@@ -917,7 +917,7 @@ static int ehHstCheck(int event_type, void * data)
    host * hostObj = find_host(hstdata->host_name);
    char * raw_command = NULL;
    char * processed_command = NULL;
-   int ret;
+   int ret = 0;
 
    if (hstdata == 0)
    {
@@ -1034,7 +1034,8 @@ static int ehHstCheck(int event_type, void * data)
             dnxDebug(1, "ehHstCheck: Failed to find any worker nodes for job [%lu].", serial);
             return OK;     // tell nagios execute locally
          }
-         dnxDebug(4, "ehHstCheck: Trying to find client for(%s) %i...", pNode->hn, try_count++);
+         dnxDebug(4, "ehHstCheck: Trying to find client for(%s) %i...", 
+            pNode->hn, try_count++);
          sleep(2);
       }
       else

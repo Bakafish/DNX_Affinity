@@ -292,11 +292,10 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
         // We probably just started up and no threads are registered yet.
         // It's also possable that all our Clients are down or a previous run 
         // has expired all our threads and we haven't registered any new workers
-//        node = 0;
+
 //        xfree(hostNode);  // Get rid of the struct we used to pass the host data
-        *ppNode = NULL;   // return a node or NULL
+//        *ppNode = NULL;   // return a node or NULL
         return ret;
-        
     }
 
     dnxDebug(4, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
@@ -307,8 +306,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       time_t now = time(0);
       matched_count++;
 
-dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
-    hostNode->hn, *(char **)node->hostname);
+      dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
+      hostNode->hn, *(char **)node->hostname);
 
       // verify that this request's Time-To-Live (TTL) has not expired and
       // that this thread has affinity
@@ -436,10 +435,11 @@ dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
             dnxErrorString(ret));
    } else {
       ret = DNX_OK;
-    // Get rid of the struct we used to pass the host data
-      xfree(hostNode);
    }
-   
+
+   // Get rid of the hostname pointer in the struct we used to pass the host data
+   xfree(hostNode->hn);
+
    *ppNode = node;   // return a node or NULL
 
    return ret;
