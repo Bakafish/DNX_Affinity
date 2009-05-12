@@ -95,7 +95,6 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
       return ret;
 
    pReg->addr = ntop(address); //Do this now save time in logging later
-   xfree(address);
    
    // decode the hostname
    if ((ret = dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hostname)) != DNX_OK)
