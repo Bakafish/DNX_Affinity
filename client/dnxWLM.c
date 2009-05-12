@@ -712,7 +712,9 @@ int dnxWlmCreate(DnxWlmCfgData * cfg, DnxWlm ** pwlm)
          // cache binary and presentation (string) versions of the ip address
          iwlm->myipaddr = (unsigned long)
                ((struct sockaddr_in *)ifcur->ifa_addr)->sin_addr.s_addr;
-         inet_ntop(ifcur->ifa_addr->sa_family,&((struct sockaddr_in *)ifcur->ifa_addr)->sin_addr,iwlm->myipaddrstr, sizeof iwlm->myipaddrstr);
+         inet_ntop(ifcur->ifa_addr->sa_family,
+                &((struct sockaddr_in *)ifcur->ifa_addr)->sin_addr,
+                iwlm->myipaddrstr, sizeof iwlm->myipaddrstr);
       }
       freeifaddrs(ifa);
    }

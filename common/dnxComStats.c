@@ -31,7 +31,7 @@ DCS* dnxComStatCreateDCS(char* address)
     }
     DNX_PT_MUTEX_UNLOCK(&mutex);
     //We don't have to initialize the remaining values since we used calloc they are already set to 0
-    dnxDebug(2,"New DCS  was created at %s by thread %i",address, pthread_self());
+    dnxDebug(2,"dnxComStatCreateDCS: New DCS was created at %s by thread %i",address, pthread_self());
     return pDCS;
 }
 
@@ -46,7 +46,7 @@ DCS* dnxComStatFindDCS(char* address)
     DNX_PT_MUTEX_INIT(&mutex);
     DNX_PT_MUTEX_LOCK(&mutex);
 
-    dnxDebug(3,"Attempting to find DCS for %s\n",address);
+    dnxDebug(3,"dnxComStatFindDCS: Attempting to find DCS for %s\n",address);
 
     DCS* pDCS = gTopDCS;
 
@@ -55,9 +55,9 @@ DCS* dnxComStatFindDCS(char* address)
         pDCS = pDCS->next;
     }
     if(pDCS)
-        dnxDebug(3,"Found DCS %s for thread %i", pDCS->address, pthread_self());
+        dnxDebug(3,"dnxComStatFindDCS: Found DCS %s for thread %i", pDCS->address, pthread_self());
     else
-        dnxDebug(2,"Warning:  Could not find DCS %s for thread %i", address, pthread_self());
+        dnxDebug(2,"dnxComStatFindDCS: Could not find DCS %s for thread %i", address, pthread_self());
 
     DNX_PT_MUTEX_UNLOCK(&mutex);
     return pDCS;
@@ -81,7 +81,7 @@ unsigned dnxComStatIncrement(char * address, int member)
             DNX_PT_MUTEX_LOCK(&gTopDCS->mutex);
 
         long ret =0;
-        dnxDebug(3,"Incrementing stat %i on DCS %s for thread %i",member, pDCS->address,pthread_self());
+        dnxDebug(3,"dnxComStatIncrement: Incrementing stat %i on DCS %s for thread %i",member, pDCS->address,pthread_self());
         switch(member)
         {
             case PACKETS_IN :
@@ -104,11 +104,11 @@ unsigned dnxComStatIncrement(char * address, int member)
 
         DNX_PT_MUTEX_UNLOCK(&pDCS->mutex);
     }else{
-        dnxDebug(3,"Warning:  Tried to increment stat %i for non-existent DCS ADDRESS: %s proceeding to create DCS",member,address);
+        dnxDebug(3,"dnxComStatIncrement: Warning:  Tried to increment stat %i for non-existent DCS ADDRESS: %s proceeding to create DCS",member,address);
         pDCS = dnxComStatCreateDCS(address);
         assert(pDCS);
         ////assert(dnxComStatFindDCS(address));
-        dnxDebug(2,"Created DCS at %s",pDCS->address);
+        dnxDebug(2,"dnxComStatIncrement: Created DCS at %s",pDCS->address);
     }
 
     DNX_PT_MUTEX_UNLOCK(&mutex);
@@ -120,9 +120,9 @@ DCS* dnxComStatRemoveDCS(DCS* pDCS)
 {
     if(pDCS)
     {
-        dnxDebug(3,"Deleting DCS at %s\n",pDCS->address);
+        dnxDebug(3,"dnxComStatRemoveDCS: Deleting DCS at %s\n",pDCS->address);
     }else{
-        dnxDebug(3,"Cannot delete non-existent DCS!\n");
+        dnxDebug(3,"dnxComStatRemoveDCS: Cannot delete non-existent DCS!\n");
         return pDCS;
     }
 
@@ -168,7 +168,7 @@ void dnxComStatDestroy()
 ///Reset all DCS values
 void dnxComStatReset()
 {
-    dnxDebug(3,"dnxComStatReset Called, reseting all DCS(s) stats!");
+    dnxDebug(3,"dnxComStatReset: dnxComStatReset Called, reseting all DCS(s) stats!");
     DCS * pDCS = gTopDCS;
     while(pDCS)
     {

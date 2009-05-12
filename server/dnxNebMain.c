@@ -286,17 +286,17 @@ static int initConfig(char * cfgfile)
 // This is supposedly broken
 static int nagiosGetServiceCount(void)
 {
-   extern service * service_list;      // the global nagios service list
-
-   service * temp_service;
-   int total_services = 0;
-
-   // walk the service list, count the nodes
-   for (temp_service = service_list; temp_service;
-         temp_service = temp_service->next)
-      total_services++;
-
-   return total_services;
+//    extern service * service_list;      // the global nagios service list
+// 
+//    service * temp_service;
+//    int total_services = 0;
+// 
+//    // walk the service list, count the nodes
+//    for (temp_service = service_list; temp_service;
+//          temp_service = temp_service->next)
+//       total_services++;
+// 
+//    return total_services;
 }
 
 
