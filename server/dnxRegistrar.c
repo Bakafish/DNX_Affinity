@@ -151,12 +151,10 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       // This is new, add the affinity flags  
-      dnxNodeListSetNodeAffinity(pReq->addr, *(char **)pReq->hostname);
-      pReq->flags = dnxGetAffinity(*(char **)pReq->hostname);
-      
-      char * tmp = strndup(pReq->address, DNX_MAX_ADDRESS);
-      pReq->addr = ntop(tmp);
-      xfree(tmp);
+//       dnxNodeListSetNodeAffinity(pReq->addr, *(char **)pReq->hostname);
+//       pReq->flags = dnxGetAffinity(*(char **)pReq->hostname);
+//       
+//       pReq->addr = ntop(pReq->address);
       
       *ppMsg = 0;    // Registered new request node
       dnxDebug(2, 
