@@ -311,9 +311,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
         // We probably just started up and no threads are registered yet.
         // It's also possable that all our Clients are down or a previous run 
         // has expired all our threads and we haven't registered any new workers
-
-//        xfree(hostNode);  // Get rid of the struct we used to pass the host data
-//        *ppNode = NULL;   // return a node or NULL
+        // Just return the original request node and let the mail loop try again
         return ret;
     }
 
@@ -432,6 +430,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
          "client threads were expired.", discard_count, client_queue_len);
       }
    }
+
 // If no affinity matches or there are no dnxClient job requests in the
 // queue we send it back to Nagios
    if (ret != DNX_QRES_FOUND)
@@ -446,9 +445,9 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       else 
       {
         // A real error, we shouldn't return any object
-          node = 0;
+        node = 0;
         // Get rid of the struct we used to pass the host data
-          xfree(hostNode);
+        dnxDeleteNodeReq(hostNode);
       }
       dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s.",
             dnxErrorString(ret));

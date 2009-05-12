@@ -873,7 +873,8 @@ static int ehSvcCheck(int event_type, void * data)
           //SM 09/08 DnxNodeList
           gTopNode->jobs_rejected_no_nodes++;
           //SM 09/08 DnxNodeList
-          dnxDeleteNodeReq(pNode); // DELETE pNode!!!!!
+// should be done by dnxGetNodeRequest          
+          // dnxDeleteNodeReq(pNode); // DELETE pNode!!!!!
           return OK;     // tell nagios execute locally
       }
    }
@@ -1048,7 +1049,8 @@ static int ehHstCheck(int event_type, void * data)
           //SM 09/08 DnxNodeList
           gTopNode->jobs_rejected_no_nodes++;
           //SM 09/08 DnxNodeList
-          dnxDeleteNodeReq(pNode); // delete pNode
+// should be done by dnxGetNodeRequest          
+          // dnxDeleteNodeReq(pNode); // delete pNode
 
           return OK;     // tell nagios execute locally
       }
