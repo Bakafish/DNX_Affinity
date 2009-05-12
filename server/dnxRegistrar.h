@@ -43,6 +43,8 @@
 /** An abstraction data type for the DNX registrar object. */
 typedef struct { int unused; } DnxRegistrar;
 
+int dnxDeleteNodeReq(DnxNodeRequest * pMsg);
+
 /** Return an available node "request for work" object pointer.
  * 
  * @param[in] reg - the registrar from which a node request should be returned.
@@ -88,7 +90,6 @@ void dnxRegistrarDestroy(DnxRegistrar * reg);
 */
 DnxAffinityList * dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long long flag);
 
-static int dnxDeleteNodeReq(DnxNodeRequest * pMsg);
 
 #endif   /* _DNXREGISTRAR_H_ */
 
