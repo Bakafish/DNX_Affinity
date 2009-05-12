@@ -137,29 +137,29 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    pReq = *ppMsg;
    pReq->expires = now + pReq->ttl;
 
-   pReq->addr = ntop(pReq->address);
-   dnxNodeListIncrementNodeMember(pReq->addr,JOBS_REQ_RECV);
-
-
    // locate existing node: update expiration time, or add to the queue
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
-      pReq->expires = (*ppMsg)->expires;
+ //     pReq->expires = (*ppMsg)->expires;
+            
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
         tid, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
+      dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       // This is new, add the affinity flags  
       dnxNodeListSetNodeAffinity(pReq->addr, *(char **)pReq->hostname);
       pReq->flags = dnxGetAffinity(*(char **)pReq->hostname);
-      *ppMsg = 0;    // we're keeping this message; return NULL
+      pReq->addr = ntop(pReq->address);
+      *ppMsg = 0;    // Registered new request node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
         tid, *(char **)pReq->hostname, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
+      dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
    }
    else
    {
@@ -169,6 +169,8 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
             dnxErrorString(ret));
    }
    
+
+
    return ret;
 }
 
