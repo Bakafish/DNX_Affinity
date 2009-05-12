@@ -88,5 +88,7 @@ void dnxRegistrarDestroy(DnxRegistrar * reg);
 */
 DnxAffinityList * dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long long flag);
 
+static int dnxDeleteNodeReq(DnxNodeRequest * pMsg);
+
 #endif   /* _DNXREGISTRAR_H_ */
 
