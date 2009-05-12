@@ -252,13 +252,15 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
         dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%qu]",
             pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
     } else {
-        dnxDebug(2, "dnxNodeListSetNodeAffinity: No exsisting node:: Address: [%s], Hostname: [%s], Flags: [%qu]",
-            pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
+        dnxDebug(2, "dnxNodeListSetNodeAffinity: No exsisting node:: Address: [%s], Hostname: [%s]",
+            address, hostname);
         pDnxNode = dnxNodeListCreateNode(address);
         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
         pDnxNode->hostname = xstrdup(hostname);
         pDnxNode->flags = dnxGetAffinity(hostname);
         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
+        dnxDebug(2, "dnxNodeListSetNodeAffinity: Created Address: [%s], Hostname: [%s], Flags: [%qu]",
+            pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
     }
     return(retval);
 }
