@@ -100,10 +100,9 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
    if ((ret = dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hostname)) != DNX_OK)
       return ret;
    
-   pReq->flags = dnxGetAffinity(pReq->hostname);
-   dnxNodeListSetNodeAffinity(pReq->addr, pReq->hostname);
-   
-   
+   dnxNodeListSetNodeAffinity(pReg->addr, pReg->hostname);
+   pReg->flags = dnxGetAffinity(pReg->hostname);
+     
    // decode job expiration (Time-To-Live in seconds)
    return dnxXmlGet(&xbuf, "TTL", DNX_XML_INT, &pReg->ttl);
 }
