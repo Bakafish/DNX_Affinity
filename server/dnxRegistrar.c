@@ -174,6 +174,20 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    return ret;
 }
 
+
+static int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
+{
+   DnxNodeRequest * pReq = pMsg;
+
+   assert(pMsg);
+
+   xfree(pReq->addr);
+   xfree(pReq->hn);
+   xfree(pReq);
+   
+   return DNX_OK;
+}
+
 //----------------------------------------------------------------------------
 
 /** Deregister a node "request for work" request.
@@ -194,13 +208,12 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 
    if (dnxQueueRemove(ireg->rqueue, (void **)&pReq, 
          dnxCompareNodeReq) == DNX_QRES_FOUND) {
-      xfree(pReq->addr);
-      xfree(pReq->hn);
-      xfree(pReq);      // free the dequeued DnxNodeRequest message
+      dnxDeleteNodeReq(pReq);      // free the dequeued DnxNodeRequest message
    }
    
    return DNX_OK;
 }
+
 
 //----------------------------------------------------------------------------
 
@@ -234,8 +247,10 @@ static void * dnxRegistrar(void * data)
          continue;
       }
 
-      pthread_cleanup_push(xfree, pMsg); // the thread cleanup handler
+//      pthread_cleanup_push(xfree, pMsg); // the thread cleanup handler
 
+      pthread_cleanup_push(dnxDeleteNodeReq, pMsg); // the thread cleanup handler
+      
       pthread_testcancel();
 
       // wait on the dispatch socket for a request
