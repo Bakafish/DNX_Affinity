@@ -95,7 +95,7 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
       return ret;
 
    struct sockaddr tmp;
-   memcpy(&tmp, address, sizeof(tmp));
+   memcpy(&tmp, address, sizeof(address));
    pReg->addr = ntop(tmp); //Do this now save time in logging later
    xfree(tmp);
     
