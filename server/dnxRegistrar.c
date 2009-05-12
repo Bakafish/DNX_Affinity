@@ -140,7 +140,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    // locate existing node: update expiration time, or add to the queue
    if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
- //     pReq->expires = (*ppMsg)->expires;
+      pReq->expires = (*ppMsg)->expires;
             
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
