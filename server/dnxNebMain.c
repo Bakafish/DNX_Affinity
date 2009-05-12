@@ -962,6 +962,8 @@ static int ehHstCheck(int event_type, void * data)
 
 	/* process any macros contained in the argument */
 	process_macros(raw_command, &processed_command, 0);
+	xfree(raw_command);
+	
 	if(processed_command==NULL){
 		dnxDebug(1,"Processed check command for host '%s' was NULL - aborting.\n",
 		    hostObj->name);
@@ -976,6 +978,7 @@ static int ehHstCheck(int event_type, void * data)
    {
       dnxDebug(1, "(localCheckPattern match) Service for %s will execute locally: %s.", 
          hostObj->name, processed_command);
+      xfree(processed_command);
       return OK;     // tell nagios execute locally
    }
 
@@ -992,8 +995,12 @@ static int ehHstCheck(int event_type, void * data)
          pNode->hn, processed_command);
       
       dnxDeleteNodeReq(pNode); // delete pNode
+      xfree(processed_command);
+
       return OK;     // tell nagios execute locally
-   }
+   } 
+      
+   
 
 	/* adjust host check attempt */
 	adjust_host_check_attempt_3x(hostObj, TRUE);
@@ -1061,6 +1068,7 @@ static int ehHstCheck(int event_type, void * data)
    
    // Push the command into our Host Check Data Object
    hstdata->command_line = processed_command;
+   xfree(processed_command);
 
    // allocate and populate a new job payload object
 /*   if ((jdp = (DnxHostJobData *)xmalloc(sizeof *jdp)) == 0)
@@ -1369,7 +1377,7 @@ void dnxJobCleanup(DnxNewJob * pJob)
    if (pJob)
    {
       dnxDebug(1, "dnxJobCleanup: Job objects freed for (%s) [%s].", 
-            pJob->pNode->hn, pJob->pNode->addr);
+            pJob->host_name, pJob->pNode->addr);
       xfree(pJob->cmd);
       xfree(pJob->host_name);
       xfree(pJob->service_description);
