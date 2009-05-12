@@ -1089,7 +1089,6 @@ static int ehHstCheck(int event_type, void * data)
    }
 
    serial++;                           // bump serial number
-
    return NEBERROR_CALLBACKOVERRIDE;   // tell nagios we want it
 }
 
@@ -1363,13 +1362,14 @@ void dnxJobCleanup(DnxNewJob * pJob)
    dnxDebug(8, "dnxJobCleanup: Entering.");
    if (pJob)
    {
+      dnxDebug(1, "dnxJobCleanup: Job objects freed for (%s) [%s].", 
+            pJob->pNode->hn, pJob->pNode->addr);
       xfree(pJob->cmd);
       xfree(pJob->host_name);
       xfree(pJob->service_description);
       xfree(pJob->pNode->addr);
       xfree(pJob->pNode->hn);
       xfree(pJob->pNode);
-      dnxDebug(4, "dnxJobCleanup: Job objects freed.");
    }
    else
    {
