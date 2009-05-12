@@ -183,8 +183,12 @@ int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
 
    assert(pMsg);
 
-   xfree(pReq->addr);
-   xfree(pReq->hn);
+   if(pReq->addr) {
+      xfree(pReq->addr);
+   }
+   if(pReq->hn) {
+      xfree(pReq->hn);
+   }
    xfree(pReq);
    
    return DNX_OK;
