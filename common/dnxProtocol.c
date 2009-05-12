@@ -134,8 +134,11 @@ int dnxSendMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address
    dnxXmlAdd  (&xbuf, "Status", DNX_XML_INT, &pReply->status);
    dnxXmlAdd  (&xbuf, "Result", DNX_XML_STR,  pReply->reply);
    dnxXmlClose(&xbuf);
-
-   char * addr = ntop(address);
+   
+   char * temp = xstrdup(address);
+   char * addr = ntop(temp);
+   xfree(temp);
+   
    dnxDebug(3, "dnxSendMgmtReply: XML msg(%d bytes)=%s to %s.", xbuf.size, xbuf.buf,addr);
    xfree(addr);
    // send it on the specified channel

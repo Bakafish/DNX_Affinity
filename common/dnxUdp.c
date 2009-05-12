@@ -266,6 +266,7 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,int timeout, cha
    struct sockaddr tmp;
    memcpy(&tmp, src, sizeof(tmp));
    char * addr = ntop(&tmp);
+   xfree(tmp);
    
    dnxDebug(3,"DnxUdpRead: Recieved %i bytes from %s",mlen,addr);
    dnxComStatIncrement(addr,PACKETS_IN);
@@ -360,8 +361,9 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,int timeout, char
         dnxDebug(8,"DnxUdpWrite: Overriding Destination");
         ret = sendto(iucp->socket, buf, size, 0,(struct sockaddr *)dst, sizeof(struct sockaddr_in));
         struct sockaddr_in tmp;
-        memcpy(&tmp,dst, sizeof(tmp));
+        memcpy(&tmp, dst, sizeof(tmp));
         addrStr = ntop(&tmp);
+        xfree(tmp);
     }else{
         dnxDebug(8,"DnxUdpWrite: Sending to channel");
         ret = write(iucp->socket, buf, size);

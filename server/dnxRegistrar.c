@@ -153,7 +153,11 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
       // This is new, add the affinity flags  
       dnxNodeListSetNodeAffinity(pReq->addr, *(char **)pReq->hostname);
       pReq->flags = dnxGetAffinity(*(char **)pReq->hostname);
-      pReq->addr = ntop(pReq->address);
+      
+      char * temp = xstrdup(pReq->address);
+      pReq->addr = ntop(temp);
+      xfree(temp);
+      
       *ppMsg = 0;    // Registered new request node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
