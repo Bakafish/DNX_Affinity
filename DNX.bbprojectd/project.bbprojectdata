@@ -73,6 +73,7 @@
 				<string>9DECA669-CAD1-4F04-BE50-E16FA4B38E6C</string>
 				<string>26105DEA-CC48-47EE-A1C9-8C14553CB752</string>
 				<string>EF602AEA-DADB-4EFD-8BCA-835A5EA21A9B</string>
+				<string>0B47E1CA-278E-4354-83FD-E4C956C85EFD</string>
 				<string>7A1FCBF6-0C68-449B-9CF4-706E79376F09</string>
 				<string>1D032D31-C7EF-4121-BC65-2144C87054B3</string>
 				<string>8FB154F1-6C1A-4A48-9D95-3B8E77E312A6</string>
@@ -80,7 +81,6 @@
 				<string>809B2A81-BB11-40A4-B177-4AFB427FF07A</string>
 				<string>9A342661-3B63-4E6E-826B-3848998A43D6</string>
 				<string>43177980-2457-41D7-9EB4-FA1B9D6262C3</string>
-				<string>64D5E5FC-D016-4CF6-B0CE-18B57AF3AA4D</string>
 			</array>
 		</dict>
 		<dict>
@@ -164,6 +164,40 @@
 			</dict>
 			<key>ItemName</key>
 			<string>dnxComStats.c</string>
+			<key>ItemType</key>
+			<string>FileReference</string>
+		</dict>
+		<key>0B47E1CA-278E-4354-83FD-E4C956C85EFD</key>
+		<dict>
+			<key>ItemData</key>
+			<dict>
+				<key>AliasData</key>
+				<data>
+				AAAAAAGSAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAA
+				AAAAAADD8dwcSCsAAAALapMNZG54UHJvdG9jb2wuYwAA
+				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+				AAAAAAAAAAAAAAAAAAAAAD21bcXv2nJURVhUAAAAAP//
+				//8AAAkgAAAAAAAAAAAAAAAAAAAABnNlcnZlcgAQAAgA
+				AMPxXYwAAAARAAgAAMXvW+IAAAABABQAC2qTAAtqJAAL
+				Z/UACqTMAAB62wACADxNYWNpbnRvc2ggSEQ6VXNlcnM6
+				amFzb246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueFBy
+				b3RvY29sLmMADgAcAA0AZABuAHgAUAByAG8AdABvAGMA
+				bwBsAC4AYwAPABoADABNAGEAYwBpAG4AdABvAHMAaAAg
+				AEgARAASAC9Vc2Vycy9qYXNvbi9Db2RlL2RueF9sb2Nh
+				bC9zZXJ2ZXIvZG54UHJvdG9jb2wuYwAAEwABLwAAFQAC
+				AAz//wAA
+				</data>
+				<key>FileURL</key>
+				<string>file://localhost/Users/jason/Code/dnx_local/server/dnxProtocol.c</string>
+				<key>RelativePath</key>
+				<string>./server/dnxProtocol.c</string>
+				<key>TypeID</key>
+				<string>_CFileLocator</string>
+				<key>Version</key>
+				<integer>1</integer>
+			</dict>
+			<key>ItemName</key>
+			<string>dnxProtocol.c</string>
 			<key>ItemType</key>
 			<string>FileReference</string>
 		</dict>
@@ -799,40 +833,6 @@
 			</dict>
 			<key>ItemName</key>
 			<string>dnxUdp.c</string>
-			<key>ItemType</key>
-			<string>FileReference</string>
-		</dict>
-		<key>64D5E5FC-D016-4CF6-B0CE-18B57AF3AA4D</key>
-		<dict>
-			<key>ItemData</key>
-			<dict>
-				<key>AliasData</key>
-				<data>
-				AAAAAAGSAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAA
-				AAAAAADD8dwcSCsAAAALapMNZG54UHJvdG9jb2wuYwAA
-				AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-				AAAAAAAAAAAAAAAAAAAAAD21bcXv2nJURVhUAAAAAP//
-				//8AAAkgAAAAAAAAAAAAAAAAAAAABnNlcnZlcgAQAAgA
-				AMPxXYwAAAARAAgAAMXvW+IAAAABABQAC2qTAAtqJAAL
-				Z/UACqTMAAB62wACADxNYWNpbnRvc2ggSEQ6VXNlcnM6
-				amFzb246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueFBy
-				b3RvY29sLmMADgAcAA0AZABuAHgAUAByAG8AdABvAGMA
-				bwBsAC4AYwAPABoADABNAGEAYwBpAG4AdABvAHMAaAAg
-				AEgARAASAC9Vc2Vycy9qYXNvbi9Db2RlL2RueF9sb2Nh
-				bC9zZXJ2ZXIvZG54UHJvdG9jb2wuYwAAEwABLwAAFQAC
-				AAz//wAA
-				</data>
-				<key>FileURL</key>
-				<string>file://localhost/Users/jason/Code/dnx_local/server/dnxProtocol.c</string>
-				<key>RelativePath</key>
-				<string>./server/dnxProtocol.c</string>
-				<key>TypeID</key>
-				<string>_CFileLocator</string>
-				<key>Version</key>
-				<integer>1</integer>
-			</dict>
-			<key>ItemName</key>
-			<string>dnxProtocol.c</string>
 			<key>ItemType</key>
 			<string>FileReference</string>
 		</dict>

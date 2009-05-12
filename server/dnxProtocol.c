@@ -94,7 +94,8 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
          && (ret = dnxXmlGet(&xbuf, "Capacity", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
       return ret;
 
-   char * tmp = strndup(address, DNX_MAX_ADDRESS);
+   struct sockaddr tmp;
+   memcpy(&tmp, address, sizeof(tmp));
    pReg->addr = ntop(tmp); //Do this now save time in logging later
    xfree(tmp);
     
