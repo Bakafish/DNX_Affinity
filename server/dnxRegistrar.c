@@ -503,13 +503,13 @@ DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long l
 {
     if (p->next == p) 
     {
-       p->name = name;
+       p->name = xstrdup(name);
        p->flag = flag;
        p->next = NULL;
        dnxDebug(4, "dnxAddAffinity: Added linked list item [%s]", p->name);    
     } else {
        DnxAffinityList * new_item = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
-       new_item->name = name;
+       new_item->name = xstrdup(name);
        new_item->flag = flag;
        new_item->next = p->next;
        p->next = new_item;
