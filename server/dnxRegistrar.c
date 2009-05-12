@@ -438,7 +438,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    }
 
    // Get rid of the hostname pointer in the struct we used to pass the host data
-   xfree(hostNode->hn);
+//   xfree(hostNode->hn);
 
    *ppNode = node;   // return a node or NULL
 
