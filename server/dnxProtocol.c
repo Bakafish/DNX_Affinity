@@ -94,11 +94,9 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
          && (ret = dnxXmlGet(&xbuf, "Capacity", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
       return ret;
 
-   struct sockaddr tmp;
-   memcpy(&tmp, address, sizeof(address));
-   pReg->addr = ntop(tmp); //Do this now save time in logging later
-   xfree(tmp);
-    
+   pReg->addr = ntop(address); //Do this now save time in logging later
+   xfree(address);
+   
    // decode the hostname
    if ((ret = dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hostname)) != DNX_OK)
       return ret;
