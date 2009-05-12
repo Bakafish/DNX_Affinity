@@ -154,7 +154,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
       dnxNodeListSetNodeAffinity(pReq->addr, *(char **)pReq->hostname);
       pReq->flags = dnxGetAffinity(*(char **)pReq->hostname);
       
-      char * tmp = xstrndup(pReq->address, DNX_MAX_ADDRESS);
+      char * tmp = strndup(pReq->address, DNX_MAX_ADDRESS);
       pReq->addr = ntop(tmp);
       xfree(tmp);
       

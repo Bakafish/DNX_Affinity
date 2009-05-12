@@ -94,7 +94,7 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
          && (ret = dnxXmlGet(&xbuf, "Capacity", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
       return ret;
 
-   char * tmp = xstrndup(address, DNX_MAX_ADDRESS);
+   char * tmp = strndup(address, DNX_MAX_ADDRESS);
    pReg->addr = ntop(tmp); //Do this now save time in logging later
    xfree(tmp);
     
@@ -173,7 +173,7 @@ int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, 
 
         dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &xid);
 
-        char * tmp = xstrndup(address, DNX_MAX_ADDRESS);
+        char * tmp = strndup(address, DNX_MAX_ADDRESS);
         char * addr = ntop(tmp);
         xfree(tmp);
         dnxDebug(3,"Received JobAck for Job XID %s from Node: %s",xid,addr);
