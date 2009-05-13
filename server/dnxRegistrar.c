@@ -323,14 +323,14 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       matched_count++;
 
       dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
-      hostNode->hn, *(char **)node->hn);
+      hostNode->hn, node->hn);
 
       // verify that this request's Time-To-Live (TTL) has not expired and
       // that this thread has affinity
       if (node->expires > now)
       {
         dnxDebug(4, "dnxGetNodeRequest: Affinity with Client [%s]:(%qu) Host [%s]:(%qu).",
-                *(char **)node->hn, node->flags, 
+                node->hn, node->flags, 
                 hostNode->hn, hostNode->flags);
       
         break;
@@ -363,14 +363,14 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 //       time_t now = time(0);
 // 
 // dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
-//     hostNode->hn, *(char **)node->hostname);
+//     hostNode->hn, node->hostname);
 // 
 //       // verify that this request's Time-To-Live (TTL) has not expired and
 //       // that this thread has affinity
 //       if (node->expires > now)
 //       {
 //       dnxDebug(4, "dnxGetNodeRequest: Affinity Client [%s]:(%qu) Host [%s]:(%qu).",
-//                 *(char **)node->hostname, node->flags, 
+//                 node->hostname, node->flags, 
 //                 hostNode->hn, hostNode->flags);
 //       
 //       
