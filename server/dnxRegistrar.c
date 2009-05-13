@@ -148,6 +148,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
         tid, pMsg->xid.objSerial, pMsg->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pMsg->expires % 1000));
       dnxNodeListIncrementNodeMember(pMsg->addr, JOBS_REQ_RECV);
+      *ppMsg = pMsg;
       dnxDeleteNodeReq(args);      
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
