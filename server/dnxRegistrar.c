@@ -157,7 +157,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
 //       
 //       pReq->addr = ntop(pReq->address);
       
-      dnxDeleteNodeReq(*ppMsg);
+//      dnxDeleteNodeReq(*ppMsg);
       *ppMsg = 0;    // Registered new request node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
