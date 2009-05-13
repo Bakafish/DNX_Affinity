@@ -62,7 +62,7 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
 
    assert(channel && pReg);
 
-//   memset(pReg, 0, sizeof *pReg);
+   memset(pReg, 0, sizeof *pReg);
 
    // await a message from the specified channel
    xbuf.size = sizeof xbuf.buf - 1;
