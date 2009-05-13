@@ -243,7 +243,7 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
     
     int retval = 0;
 
-    if(pDnxNode) //&& (pDnxNode->flags == 0))
+    if(pDnxNode && (pDnxNode->flags == 0))
     {
         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
         pDnxNode->hostname = xstrdup(hostname);
