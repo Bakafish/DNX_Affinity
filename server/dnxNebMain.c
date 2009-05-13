@@ -1827,6 +1827,9 @@ static void * dnxStatsRequestListener(void * vpargs)
 
     char url[1024];
     snprintf(url, sizeof url, "udp://%s:%s", pHost, pPort);
+    xfree(pHost);
+    xfree(pPort);
+
     dnxLog("dnxStatsRequestListener: Adding Channel Map\n");
     if ((ret = dnxChanMapAdd("StatsServer", url)) != 0)
     {
@@ -1837,7 +1840,7 @@ static void * dnxStatsRequestListener(void * vpargs)
         if ((ret = dnxConnect("StatsServer", 0, &channel)) != 0)
         {
             dnxLog("dnxStatsRequestListener Error: opening stats listener (%s): %s.\n", url, dnxErrorString(ret));
-        }else{
+        } else {
             while(!quit)
             {
                 struct sockaddr_in * addr = (struct sockaddr_in*) xcalloc(1,sizeof(struct sockaddr_in));
@@ -1846,31 +1849,33 @@ static void * dnxStatsRequestListener(void * vpargs)
                 reply.reply =   (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
 
                 dnxDebug(2,"dnxStatsRequestListener: Listening For Data!\n");
-                if ((ret = dnxGet(channel, buf, &maxsize, timeout, (char**)ntop(addr))) != DNX_OK)
+                if ((ret = dnxGet(channel, buf, &maxsize, timeout, addr)) != DNX_OK)
                 {
                     quit = true;
                     dnxLog("dnxStatsRequestListener Error: Error reading from socket, data retrieved if any was %s\n",buf);
-                }else{
-                    pHost = (char**)ntop(addr);
-                    dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n",pHost,buf);
-                    result = buildStatsReply(buf,&reply);
+                } else {
+                    char * address = ntop(addr);
+                    dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n", address, buf);
+                    result = buildStatsReply(buf, &reply);
                     if(result)
                     {
-                        dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s",pHost);
-                        if(dnxSendMgmtReply(channel, &reply, (char**)ntop(addr))!=0)
+                        dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s", address);
+                        if(dnxSendMgmtReply(channel, &reply, address)!=0)
                         {
-                            dnxLog("dnxStatsRequestListener Error: Error writing to socket for reply to %s\n",pHost);
-                        }else{
-                            dnxDebug(2,"dnxStatsRequestListener: Sent requested data to source %s, reply was %s\n",pHost,reply.reply);
+                            dnxLog("dnxStatsRequestListener Error: Error writing to socket for reply to %s\n", address);
+                        } else {
+                            dnxDebug(2,"dnxStatsRequestListener: Sent requested data to source %s, reply was %s\n",
+                                address, reply.reply);
                         }
-                    }else{
+                    } else {
+                        
                         dnxLog("dnxStatsRequestListener Error: building stats result failed, stats result was NULL\n");
                     }
+                    xfree(address);
                 }
-                maxsize = DNX_MAX_MSG; //We have to do this because dnxUdpRead is changing the size of the maxsize variable to whatever was read from last time.
+
                 xfree(buf);
                 xfree(addr);
-                xfree(pHost);
                 if(reply.reply)
                 {
                     xfree(reply.reply);
@@ -1880,6 +1885,7 @@ static void * dnxStatsRequestListener(void * vpargs)
                 }
             }
             dnxDisconnect(channel);
+            xfree(reply);
         }
         dnxChanMapDelete("StatsServer\n");
     }
