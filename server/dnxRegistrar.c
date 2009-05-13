@@ -151,15 +151,15 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       // This is new, add the affinity flags  
-       dnxNodeListSetNodeAffinity(pReq->addr, *(char **)pReq->hn);
-       pReq->flags = dnxGetAffinity(*(char **)pReq->hn);
+       dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
+       pReq->flags = dnxGetAffinity(pReq->hn);
 //       
 //       pReq->addr = ntop(pReq->address);
       
       *ppMsg = 0;    // Registered new request node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
-        tid, *(char **)pReq->hn, pReq->xid.objSerial, pReq->xid.objSlot, 
+        tid, pReq->hn, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
    }
