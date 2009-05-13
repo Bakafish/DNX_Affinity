@@ -127,44 +127,44 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
 static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
 {
    pthread_t tid = pthread_self();
-   DnxNodeRequest * args;
-   DnxNodeRequest * pMsg;
+   DnxNodeRequest * pReq;
    time_t now = time(0);
    int ret = DNX_OK;
    dnxDebug(6, "dnxRegisterNode: Entering");
    assert(ireg && ppMsg && *ppMsg);
 
    // compute expiration time of this request
-   pMsg = args = *ppMsg;
-   pMsg->expires = now + pMsg->ttl;
+   pReq = *ppMsg;
+   pReq->expires = now + pReq->ttl;
 
    // locate existing node: update expiration time, or add to the queue
-   if (dnxQueueFind(ireg->rqueue, (void **)&pMsg, dnxCompareNodeReq) == DNX_QRES_FOUND)
+   if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
-      pMsg->expires = now + pMsg->ttl;
+      pReq->expires = (*ppMsg)->expires;
             
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
-        tid, pMsg->xid.objSerial, pMsg->xid.objSlot, 
-        (unsigned)(now % 1000), (unsigned)(pMsg->expires % 1000));
-      dnxNodeListIncrementNodeMember(pMsg->addr, JOBS_REQ_RECV);
-      *ppMsg = pMsg;
-      dnxDeleteNodeReq(args);      
+        tid, pReq->xid.objSerial, pReq->xid.objSlot, 
+        (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
+      dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
+      *ppMsg = pReq;
+//      dnxDeleteNodeReq(*ppMsg);
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       // This is new, add the affinity flags  
-      dnxNodeListSetNodeAffinity(pMsg->addr, pMsg->hn);
-      pMsg->flags = dnxGetAffinity(pMsg->hn);
+       dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
+       pReq->flags = dnxGetAffinity(pReq->hn);
 //       
 //       pReq->addr = ntop(pReq->address);
       
+//      dnxDeleteNodeReq(*ppMsg);
       *ppMsg = 0;    // Registered new request node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
-        tid, pMsg->hn, pMsg->xid.objSerial, pMsg->xid.objSlot, 
-        (unsigned)(now % 1000), (unsigned)(pMsg->expires % 1000));
-      dnxNodeListIncrementNodeMember(pMsg->addr, JOBS_REQ_RECV);
+        tid, pReq->hn, pReq->xid.objSerial, pReq->xid.objSlot, 
+        (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
+      dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
    }
    else
    {
@@ -172,7 +172,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
             dnxErrorString(ret));
       dnxLog("dnxRegisterNode: Unable to enqueue node request: %s.", 
             dnxErrorString(ret));
-      dnxDeleteNodeReq(args);
+      dnxDeleteNodeReq(*ppMsg);
    }
    
 
