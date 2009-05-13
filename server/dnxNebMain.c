@@ -813,6 +813,7 @@ static int ehSvcCheck(int event_type, void * data)
    pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);  //LEAK
    pNode->flags = dnxGetAffinity(hostObj->name);
    pNode->hn = xstrdup(hostObj->name);
+   pNode->addr = NULL;
    
    dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, pNode->flags);
 
@@ -987,6 +988,7 @@ static int ehHstCheck(int event_type, void * data)
    pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);  //LEAK
    pNode->flags = dnxGetAffinity(hostObj->name);
    pNode->hn = xstrdup(hostObj->name);
+   pNode->addr = NULL;
 
 
    dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", pNode->hn, pNode->flags);

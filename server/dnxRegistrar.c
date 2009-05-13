@@ -172,7 +172,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
             dnxErrorString(ret));
       dnxLog("dnxRegisterNode: Unable to enqueue node request: %s.", 
             dnxErrorString(ret));
-      dnxDeleteNodeReq(*ppMsg);
+//      dnxDeleteNodeReq(*ppMsg);
    }
    
 

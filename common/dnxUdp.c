@@ -265,11 +265,11 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,int timeout, cha
 
 //    struct sockaddr tmp;
 //    memcpy(&tmp, src, sizeof(tmp));
-   char * addr = ntop(src);
-   
-   dnxDebug(3,"DnxUdpRead: Recieved %i bytes from %s",mlen,addr);
-   dnxComStatIncrement(addr,PACKETS_IN);
-   xfree(addr);
+//    char * addr = ntop(src);
+//    
+//    dnxDebug(3,"DnxUdpRead: Recieved %i bytes from %s",mlen,addr);
+//    dnxComStatIncrement(addr,PACKETS_IN);
+//    xfree(addr);
    //SM 09/08 DnxNodeList END
 
    return DNX_OK;
