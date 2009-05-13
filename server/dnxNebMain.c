@@ -1706,7 +1706,7 @@ bool buildStatsReply(char * request, DnxMgmtReply * pReply)
 
     char * response = NULL;
     char * token = NULL;
-    char * action = (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
+    char * action; // = (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
 
     int count = 0;
     DnxXmlBuf xreq_buf;
@@ -1721,7 +1721,7 @@ bool buildStatsReply(char * request, DnxMgmtReply * pReply)
     strcpy(xreq_buf.buf,request);
     xreq_buf.size = strlen(request);
     dnxXmlGet(&xreq_buf, "XID", DNX_XML_STR, &pReply->xid);
-    dnxXmlGet(&xreq_buf, "Action", DNX_XML_STR,&action);
+    dnxXmlGet(&xreq_buf, "Action", DNX_XML_STR, &action);
     pReply->status = DNX_REQ_ACK;
 
     // search table for sub-string, append requested stat to response
