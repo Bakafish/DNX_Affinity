@@ -353,9 +353,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
          discard_count++;
          
          // Delete the expired node
-         xfree(node->hn); 
-         xfree(node->addr); 
-         xfree(node); 
+         dnxDeleteNodeRequest(node); 
 
          // Re-initialize with host node so we can try and match affinity again
          node = hostNode;
@@ -454,11 +452,9 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s.",
             dnxErrorString(ret));
    } else {
+      dnxDeleteNodeRequest(hostNode); 
       ret = DNX_OK;
    }
-
-   // Get rid of the hostname pointer in the struct we used to pass the host data
-//   xfree(hostNode->hn);
 
    *ppNode = node;   // return a node or NULL
 
