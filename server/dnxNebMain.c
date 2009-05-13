@@ -1642,7 +1642,7 @@ void buildStatsReplyForNode(DnxNode* pDnxNode, char* requested_stat, DnxMgmtRepl
         //They want help
         if(strncmp("HELP",token,strlen(token))==0)
         {
-            appendString(&pReply->reply,"HELP: Format is [node ip address* (optional)], HELP, CLEAR, RESETSTATS, ALLSTATS, ");
+            appendString(&pReply->reply,"HELP: Format is [node ip address* (optional)], HELP, CLEAR, RESETSTATS, ALLSTATS, AFFINITY");
             return;
         }
 
@@ -1695,7 +1695,7 @@ void buildStatsReplyForNode(DnxNode* pDnxNode, char* requested_stat, DnxMgmtRepl
  * @param[in] pReply - A pointer to an allocated reply buffer
  * @return false if out of memory true otherwise
  */
-bool buildStatsReply(char * request,DnxMgmtReply * pReply)
+bool buildStatsReply(char * request, DnxMgmtReply * pReply)
 {
 
     assert(request);
@@ -1799,7 +1799,7 @@ bool buildStatsReply(char * request,DnxMgmtReply * pReply)
         }
 
     DNX_PT_MUTEX_UNLOCK(&mutex);
-
+    xfree(action);
     return true;
 }
 
