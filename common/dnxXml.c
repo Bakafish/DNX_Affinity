@@ -520,7 +520,7 @@ int dnxXmlGet(DnxXmlBuf * xbuf, char * xTag, DnxXmlType xType, void * xData)
          break;
 
       case DNX_XML_STR:
-         if ((temp = xstrdup(buf)) == 0)
+         if ((temp = xstrdup(buf)) == 0) //LEAK
          {
             ret = DNX_ERR_MEMORY;
          }else{

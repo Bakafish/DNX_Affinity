@@ -1851,7 +1851,7 @@ static void dnxStatsRequestListener(void * vpargs)
                     quit = true;
                     dnxLog("dnxStatsRequestListener Error: Error reading from socket, data retrieved if any was %s\n",buf);
                 }else{
-                    pHost = (char *)ntop(addr);
+                    pHost = ntop(addr);
                     dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n",pHost,buf);
                     result = buildStatsReply(buf,&reply);
                     if(result)
@@ -1907,7 +1907,7 @@ unsigned long long dnxGetAffinity(char * name)
       // the default behavior should be that it can handle all requests
       // for backwards compatibility. This is dangerous though as a rogue or
       // misconfigured client could steal requests that it can't service.
-      flag = (unsigned long long *)-2; // Match all affinity but local(LSB)
+      flag = (unsigned long long)-2; // Match all affinity but local(LSB)
       dnxAddAffinity(hostAffinity, name, flag);
       dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
@@ -1970,7 +1970,7 @@ unsigned long long dnxGetAffinity(char * name)
       // the default behavior should be that it can handle all requests
       // for backwards compatibility. This is dangerous though as a rogue or
       // misconfigured client could steal requests that it can't service.
-      flag = (unsigned long long *)-2; // Match all affinity but local(LSB)
+      flag = (unsigned long long)-2; // Match all affinity but local(LSB)
       dnxAddAffinity(hostAffinity, name, flag);
       dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
