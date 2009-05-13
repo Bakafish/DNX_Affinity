@@ -704,11 +704,12 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    dnxDebug(2, "dnxPostNewServiceJob: Posting Service Job [%lu]: %s.", serial, Job.cmd);
 
    // post to the Job Queue
-   if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
+   if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
       dnxLog("Failed to post Service Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
-
-   dnxAuditJob(&Job, "ASSIGN");
-
+   } else { 
+       dnxAuditJob(&Job, "ASSIGN");
+   }
+   
    return ret;
 }
 
@@ -752,11 +753,12 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    dnxDebug(2, "dnxPostNewHostJob: Posting Host Job [%lu]: %s.", serial, Job.cmd);
 
    // post to the Job Queue
-   if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK)
-      dnxLog("Failed to post Host Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
-
-   dnxAuditJob(&Job, "ASSIGN");
-
+   if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
+      dnxLog("dnxPostNewHostJob: Failed to post Host Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
+   } else {
+       dnxAuditJob(&Job, "ASSIGN");
+   }
+   
    return ret;
 }
 

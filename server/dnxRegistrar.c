@@ -256,7 +256,7 @@ static void * dnxRegistrar(void * data)
 
       // wait on the dispatch socket for a request
       if ((ret = dnxWaitForNodeRequest(ireg->dispchan, pMsg, pMsg->address, 
-            DNX_REGISTRAR_REQUEST_TIMEOUT)) == DNX_OK)
+            DNX_REGISTRAR_REQUEST_TIMEOUT)) == DNX_OK) // LEAKING
       {
          switch (pMsg->reqType)
          {
