@@ -153,18 +153,17 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       // This is new, add the affinity flags  
-       dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
-       pReq->flags = dnxGetAffinity(pReq->hn);
+      dnxNodeListSetNodeAffinity(pMsg->addr, pMsg->hn);
+      pMsg->flags = dnxGetAffinity(pMsg->hn);
 //       
 //       pReq->addr = ntop(pReq->address);
       
-//      dnxDeleteNodeReq(*ppMsg);
       *ppMsg = 0;    // Registered new request node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
-        tid, pReq->hn, pReq->xid.objSerial, pReq->xid.objSlot, 
-        (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
-      dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
+        tid, pMsg->hn, pMsg->xid.objSerial, pMsg->xid.objSlot, 
+        (unsigned)(now % 1000), (unsigned)(pMsg->expires % 1000));
+      dnxNodeListIncrementNodeMember(pMsg->addr, JOBS_REQ_RECV);
    }
    else
    {
@@ -172,7 +171,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
             dnxErrorString(ret));
       dnxLog("dnxRegisterNode: Unable to enqueue node request: %s.", 
             dnxErrorString(ret));
-      dnxDeleteNodeReq(*ppMsg);
+      dnxDeleteNodeReq(args);
    }
    
 
