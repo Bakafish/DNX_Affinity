@@ -1807,7 +1807,7 @@ bool buildStatsReply(char * request,DnxMgmtReply * pReply)
 *   Start the stats request listener and run it.
 *   @return void : returns nothing
 */
-void dnxStatsRequestListener(void * vpargs)
+static void * dnxStatsRequestListener(void * vpargs)
 {
     dnxLog("dnxStatsRequestListener: Starting up!\n");
     int maxsize = DNX_MAX_MSG; //This is an ugly hack we have to do this because dnxGet requires a point to an INT and DNX_MAX_MSG is a macro
