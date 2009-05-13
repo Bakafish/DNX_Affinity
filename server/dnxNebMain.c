@@ -1044,7 +1044,7 @@ static int ehHstCheck(int event_type, void * data)
          // Keep trying to get a worker
          if(try_count == 3) { 
             dnxDebug(1, "ehHstCheck: Failed to find any worker nodes for job [%lu].", serial);
-            //dnxDeleteNodeReq(pNode); // delete pNode
+            dnxDeleteNodeReq(pNode); // delete pNode
             xfree(processed_command);
             return OK;     // tell nagios execute locally
          }
