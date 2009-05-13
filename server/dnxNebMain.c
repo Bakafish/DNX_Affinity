@@ -984,7 +984,7 @@ static int ehHstCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);  //LEAK
+   pNode = (DnxNodeRequest *)xcalloc(sizeof *pNode);  //LEAK
    pNode->flags = dnxGetAffinity(hostObj->name);
    pNode->hn = xstrdup(hostObj->name);
 
