@@ -353,7 +353,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
          discard_count++;
          
          // Delete the expired node
-         dnxDeleteNodeRequest(node); 
+         dnxDeleteNodeReq(node); 
 
          // Re-initialize with host node so we can try and match affinity again
          node = hostNode;
@@ -452,7 +452,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s.",
             dnxErrorString(ret));
    } else {
-      dnxDeleteNodeRequest(hostNode); 
+      dnxDeleteNodeReq(hostNode); 
       ret = DNX_OK;
    }
 
