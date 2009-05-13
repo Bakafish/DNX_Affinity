@@ -147,6 +147,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
         tid, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
+      dnxDeleteNodeReq(*ppMsg);
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
@@ -156,6 +157,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
 //       
 //       pReq->addr = ntop(pReq->address);
       
+      dnxDeleteNodeReq(*ppMsg);
       *ppMsg = 0;    // Registered new request node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
