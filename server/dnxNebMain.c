@@ -808,7 +808,7 @@ static int ehSvcCheck(int event_type, void * data)
 //   unsigned long long host_flags = dnxGetAffinity(hostObj->name);
    // set the flags in the Check request node
    
-   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);
+   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);  //LEAK
    pNode->flags = dnxGetAffinity(hostObj->name);
    pNode->hn = xstrdup(hostObj->name);
    
@@ -982,7 +982,7 @@ static int ehHstCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);
+   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);  //LEAK
    pNode->flags = dnxGetAffinity(hostObj->name);
    pNode->hn = xstrdup(hostObj->name);
 
@@ -1043,6 +1043,7 @@ static int ehHstCheck(int event_type, void * data)
          if(try_count == 3) { 
             dnxDebug(1, "ehHstCheck: Failed to find any worker nodes for job [%lu].", serial);
             dnxDeleteNodeReq(pNode); // delete pNode
+            xfree(processed_command);
             return OK;     // tell nagios execute locally
          }
          dnxDebug(4, "ehHstCheck: Trying to find client for(%s) %i...", 
@@ -1057,8 +1058,8 @@ static int ehHstCheck(int event_type, void * data)
           gTopNode->jobs_rejected_no_nodes++;
           //SM 09/08 DnxNodeList
 // should be done by dnxGetNodeRequest          
-          // dnxDeleteNodeReq(pNode); // delete pNode
-
+          //dnxDeleteNodeReq(pNode); // delete pNode
+          xfree(processed_command);
           return OK;     // tell nagios execute locally
       }
    }

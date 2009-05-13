@@ -151,15 +151,15 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
       // This is new, add the affinity flags  
-       dnxNodeListSetNodeAffinity(pReq->addr, *(char **)pReq->hostname);
-       pReq->flags = dnxGetAffinity(*(char **)pReq->hostname);
+       dnxNodeListSetNodeAffinity(pReq->addr, *(char **)pReq->hn);
+       pReq->flags = dnxGetAffinity(*(char **)pReq->hn);
 //       
 //       pReq->addr = ntop(pReq->address);
       
       *ppMsg = 0;    // Registered new request node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
-        tid, *(char **)pReq->hostname, pReq->xid.objSerial, pReq->xid.objSlot, 
+        tid, *(char **)pReq->hn, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
    }
@@ -179,15 +179,12 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
 
 int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
 {
-   DnxNodeRequest * pReq = pMsg;
 
    assert(pMsg);
    
-   if(pReq->addr != NULL)
-      xfree(pReq->addr);
-   
-   xfree(pReq->hn);
-   xfree(pReq);
+   xfree(pMsg->addr);
+   xfree(pMsg->hn);
+   xfree(pMsg);
    
    return DNX_OK;
 }
@@ -326,14 +323,14 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       matched_count++;
 
       dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
-      hostNode->hn, *(char **)node->hostname);
+      hostNode->hn, *(char **)node->hn);
 
       // verify that this request's Time-To-Live (TTL) has not expired and
       // that this thread has affinity
       if (node->expires > now)
       {
         dnxDebug(4, "dnxGetNodeRequest: Affinity with Client [%s]:(%qu) Host [%s]:(%qu).",
-                *(char **)node->hostname, node->flags, 
+                *(char **)node->hn, node->flags, 
                 hostNode->hn, hostNode->flags);
       
         break;

@@ -97,7 +97,7 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
    pReg->addr = ntop(address); //Do this now save time in logging later
    
    // decode the hostname
-   if ((ret = dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hostname)) != DNX_OK)
+   if ((ret = dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hn)) != DNX_OK) // LEAK
       return ret;
         
    // decode job expiration (Time-To-Live in seconds)

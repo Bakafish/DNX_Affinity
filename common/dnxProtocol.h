@@ -210,7 +210,7 @@ typedef struct DnxNodeRequest
    time_t expires;                  //!< Job expiration time (not transmitted).
    char address[DNX_MAX_ADDRESS];   //!< Source address. (should be initialized as at least the same size as  a struct sockaddr_storage)
    char * addr;                     //!< Source address as char * for easier logging later
-   char hostname[MAX_HOSTNAME];     //!< Hostname from client config.
+//   char hostname[MAX_HOSTNAME];     //!< Hostname from client config.
    char * hn;
 } DnxNodeRequest;
 
