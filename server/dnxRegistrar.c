@@ -292,7 +292,6 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    iDnxRegistrar * ireg = (iDnxRegistrar *)reg;
    int ret = DNX_ERR_NOTFOUND;
    int discard_count = 0;
-   int matched_count = 0;
    int client_queue_len = dnxQueueSize(ireg->rqueue);
    DnxNodeRequest * hostNode = *(DnxNodeRequest **)ppNode;
    // Temperarily assign so we can find a affinity match, dnxQueueRemove should
@@ -317,7 +316,6 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    while ((ret = dnxQueueRemove(ireg->rqueue, (void **)&node, dnxCompareAffinityNodeReq)) == DNX_QRES_FOUND)
    {
       time_t now = time(0);
-      matched_count++;
 
       dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
       hostNode->hn, node->hn);
@@ -416,12 +414,6 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    {
       dnxDebug(4, "dnxGetNodeRequest: Discarded %d expired node requests.", 
             discard_count);
-
-      if (discard_count == matched_count)
-      {
-         dnxDebug(1, "dnxGetNodeRequest: Dis(%i) Q(%i) All the matching DNX"
-         "client threads were expired.", discard_count, client_queue_len);
-      }
    }
 
 // If no affinity matches or there are no dnxClient job requests in the
@@ -442,8 +434,6 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
         // Get rid of the struct we used to pass the host data
         dnxDeleteNodeReq(hostNode);
       }
-      dnxDebug(2, "dnxGetNodeRequest: Unable to fulfill node request: %s.",
-            dnxErrorString(ret));
    } else {
       dnxDeleteNodeReq(hostNode); 
       ret = DNX_OK;
