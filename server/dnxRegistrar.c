@@ -140,7 +140,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    {
       (*ppMsg)->expires = expires;
             
-      dnxDebug(3, 
+      dnxDebug(2, 
         "dnxRegisterNode[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
         tid, (*ppMsg)->xid.objSerial, (*ppMsg)->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)((*ppMsg)->expires % 1000));

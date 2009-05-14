@@ -857,9 +857,24 @@ static int ehSvcCheck(int event_type, void * data)
    
     time_t now = time(0);
     time_t expires = now + svcdata->timeout;
-    while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
+    while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK) // If OK we dispatch
     {
-        if(ret == DNX_ERR_NOTFOUND && (time(0) > expires))
+        // If NOT_FOUND we have never seen a client, shorten TTL, wait and try again
+        if (ret == DNX_ERR_NOTFOUND && (time(0) > expires)) 
+        {
+            
+        
+         sleep(1);       
+        } 
+        // If CONTINUE we have seen a client, but it isn't available
+        else if (ret == DNX_QRES_CONTINUE && (time(0) < expires))
+        {
+        
+        
+        
+        }
+        // We still haven't matched and our time is up
+        else
         {
             dnxDebug(1, "ehSvcCheck: No worker nodes for (%s) Job [%s].",
                 pNode->hn, svcdata->command_line);
@@ -867,7 +882,6 @@ static int ehSvcCheck(int event_type, void * data)
             gTopNode->jobs_rejected_no_nodes++;
             return OK;     // tell nagios execute locally
         }
-        sleep(5);
     }
    
    dnxDebug(2, "ehSvcCheck: Service Check found worker [%lu,%lu]",
@@ -1199,7 +1213,7 @@ static int dnxServerInit(void)
    extern hostgroup *hostgroup_list;
    hostgroup * temp_hostgroup;
    // Create affinity linked list
-   unsigned int flag = 0x02;
+   unsigned long long flag = 0x02;
    for (temp_hostgroup=hostgroup_list; temp_hostgroup!=NULL; temp_hostgroup=temp_hostgroup->next) 
    {
      dnxDebug(1, "dnxServerInit: Entering hostgroup init loop: %s", temp_hostgroup->group_name);
@@ -1239,6 +1253,27 @@ static int dnxServerInit(void)
       }
       dnxAddAffinity(hostAffinity, temp_host->name, flag);
    }
+   
+   unsigned long long clientless = 0; 
+   for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
+   {
+      flag = dnxGetAffinity(temp_host->name);
+      if(dnxIsDnxClient(flag)) {
+         clientless = clientless | flag;
+         dnxDebug(2, "dnxServerInit: [%s] is a dnxClient", temp_host->name);
+      }
+   }
+  
+   for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
+   {
+      flag = dnxGetAffinity(temp_host->name);
+      if((flag | clientless) != clientless) {
+         dnxAddAffinity(hostAffinity, temp_host->name, 0x01);
+         dnxDebug(2, "dnxServerInit: [%s] is in a hostgroup with no dnxClient",
+            temp_host->name);
+      }
+   }
+return 0;   
    // registration for this event starts everything rolling
    neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA, myHandle, 0, ehSvcCheck);
    dnxLog("Registered for SERVICE_CHECK_DATA event.");
@@ -1966,4 +2001,12 @@ int dnxHammingWeight(unsigned long long x) {
     for (count=0; x; count++)
         x &= x-1;
     return count;
+}
+
+int dnxIsDnxClient(unsigned long long x) {
+    if ((dnxHammingWeight(x) > 1) && (x & 1)) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
