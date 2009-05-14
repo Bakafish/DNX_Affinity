@@ -855,31 +855,17 @@ static int ehSvcCheck(int event_type, void * data)
 //       return OK;     // tell nagios execute locally
 //    }
    
-   int try_count = 1;
-   while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
-   {
-      if(ret == DNX_ERR_NOTFOUND)
+    time_t now = time(0);
+    time_t expires = now + svcdata->timeout;
+    while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
+    {
+      if(ret == DNX_ERR_NOTFOUND && (time(0) > expires))
       {
-         // Keep trying to get a worker
-         if(try_count == 3) { 
             dnxDebug(1, "ehSvcCheck: No worker nodes for (%s) Job [%s].",
                 pNode->hn, svcdata->command_line);
-            dnxDeleteNodeReq(pNode); // DELETE pNode!!!!!
+            dnxDeleteNodeReq(pNode);
+            gTopNode->jobs_rejected_no_nodes++;
             return OK;     // tell nagios execute locally
-         }
-         dnxDebug(4, "ehSvcCheck: Trying to find client for(%s) %i...", pNode->hn, try_count++);
-         sleep(2);
-      }
-      else
-      {      
-          dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
-    
-          //SM 09/08 DnxNodeList
-          gTopNode->jobs_rejected_no_nodes++;
-          //SM 09/08 DnxNodeList
-// should be done by dnxGetNodeRequest          
-          // dnxDeleteNodeReq(pNode); // DELETE pNode!!!!!
-          return OK;     // tell nagios execute locally
       }
    }
    
@@ -991,7 +977,6 @@ static int ehHstCheck(int event_type, void * data)
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
 
-
    dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", pNode->hn, pNode->flags);
 
    if (cfg.bypassHostgroup && (pNode->flags & 1)) // Affinity bypass group is always the LSB
@@ -1016,7 +1001,7 @@ static int ehHstCheck(int event_type, void * data)
 
 	/* Set the command start time */
 // 	gettimeofday(hstdata->start_time.tv_sec, NULL);
-   hstdata->start_time.tv_sec = time(0);
+    hstdata->start_time.tv_sec = time(0);
 
 	/* set check time for on-demand checks, so they're not incorrectly detected as being orphaned - Luke Ross 5/16/08 */
 	/* NOTE: 06/23/08 EG not sure if there will be side effects to this or not.... */
@@ -1038,37 +1023,23 @@ static int ehHstCheck(int event_type, void * data)
 
 	/* set the execution flag */
 	hostObj->is_executing=TRUE;
-   
-   int try_count = 1;
-   while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
-   {
-      if(ret == DNX_ERR_NOTFOUND)
-      {
-         // Keep trying to get a worker
-         if(try_count == 3) { 
-            dnxDebug(1, "ehSvcCheck: No worker nodes for (%s) Job [%s].",
-                pNode->hn, processed_command);
+    time_t now = time(0);
+    time_t expires = now + hstdata->timeout;
+    while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
+    {
+        if(ret == DNX_ERR_NOTFOUND && (time(0) > expires))
+        {
+            dnxDebug(1, "ehHstCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
+            
+            //SM 09/08 DnxNodeList
+            gTopNode->jobs_rejected_no_nodes++;
+            //SM 09/08 DnxNodeList
             dnxDeleteNodeReq(pNode); // delete pNode
             xfree(processed_command);
             return OK;     // tell nagios execute locally
-         }
-         dnxDebug(4, "ehHstCheck: Trying to find client for(%s) %i...", 
-            pNode->hn, try_count++);
-         sleep(2);
-      }
-      else
-      {      
-          dnxDebug(1, "ehHstCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
-    
-          //SM 09/08 DnxNodeList
-          gTopNode->jobs_rejected_no_nodes++;
-          //SM 09/08 DnxNodeList
-// should be done by dnxGetNodeRequest          
-          //dnxDeleteNodeReq(pNode); // delete pNode
-          xfree(processed_command);
-          return OK;     // tell nagios execute locally
-      }
-   }
+            // Keep trying to get a worker
+        }
+    }
    
    dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]", 
      pNode->xid.objSerial, pNode->xid.objSlot);
@@ -1938,7 +1909,7 @@ unsigned long long dnxGetAffinity(char * name)
       if (strcmp(temp_aff->name, name) == 0)
       {
          // We have a cached copy so return
-         dnxDebug(2, "dnxGetAffinity: Found [%s] in cache with (%qu) flags.", name, temp_aff->flag);
+         dnxDebug(4, "dnxGetAffinity: Found [%s] in cache with (%qu) flags.", name, temp_aff->flag);
          return(temp_aff->flag);
       }
       temp_aff = temp_aff->next;
