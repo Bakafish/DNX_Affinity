@@ -361,7 +361,7 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,int timeout, char
         ret = sendto(iucp->socket, buf, size, 0,(struct sockaddr *)dst, sizeof(struct sockaddr_in));
         struct sockaddr_in tmp;
         memcpy(&tmp,dst, sizeof(tmp));
-        addrStr = ntop(&tmp);
+        addrStr = ntop((struct sockaddr *)&tmp);
     }else{
         dnxDebug(8,"DnxUdpWrite: Sending to channel");
         ret = write(iucp->socket, buf, size);

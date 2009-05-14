@@ -1823,18 +1823,18 @@ static void * dnxStatsRequestListener(void * vpargs)
                 reply.reply =   (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
 
                 dnxDebug(2,"dnxStatsRequestListener: Listening For Data!\n");
-                if ((ret = dnxGet(channel, buf, &maxsize, timeout, addr)) != DNX_OK)
+                if ((ret = dnxGet(channel, buf, &maxsize, timeout, (struct sockaddr *)addr)) != DNX_OK)
                 {
                     quit = true;
                     dnxLog("dnxStatsRequestListener Error: Error reading from socket, data retrieved if any was %s\n",buf);
                 }else{
-                    pHost = ntop(addr);
+                    pHost = ntop((struct sockaddr *)addr);
                     dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n",pHost,buf);
                     result = buildStatsReply(buf,&reply);
                     if(result)
                     {
                         dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s",pHost);
-                        if(dnxSendMgmtReply(channel, &reply, addr)!=0)
+                        if(dnxSendMgmtReply(channel, &reply, (struct sockaddr *)addr)!=0)
                         {
                             dnxLog("dnxStatsRequestListener Error: Error writing to socket for reply to %s\n",pHost);
                         }else{
