@@ -336,7 +336,6 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
         dnxDebug(4, "dnxGetNodeRequest: Affinity with Client [%s]:(%qu) Host [%s]:(%qu).",
                 node->hn, node->flags, 
                 hostNode->hn, hostNode->flags);
-      
         break;
       } else {  
       
