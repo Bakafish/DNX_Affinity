@@ -174,8 +174,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    return ret;
 }
 
-
-static int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
+void dnxDeleteNodeReq(DnxNodeRequest * pMsg)
 {
 
    assert(pMsg);
