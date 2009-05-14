@@ -859,15 +859,16 @@ static int ehSvcCheck(int event_type, void * data)
     time_t expires = now + svcdata->timeout;
     while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
     {
-      if(ret == DNX_ERR_NOTFOUND && (time(0) > expires))
-      {
+        if(ret == DNX_ERR_NOTFOUND && (time(0) > expires))
+        {
             dnxDebug(1, "ehSvcCheck: No worker nodes for (%s) Job [%s].",
                 pNode->hn, svcdata->command_line);
             dnxDeleteNodeReq(pNode);
             gTopNode->jobs_rejected_no_nodes++;
             return OK;     // tell nagios execute locally
-      }
-   }
+        }
+        sleep 5;
+    }
    
    dnxDebug(2, "ehSvcCheck: Service Check found worker [%lu,%lu]",
         pNode->xid.objSerial, pNode->xid.objSlot);
@@ -1038,6 +1039,7 @@ static int ehHstCheck(int event_type, void * data)
             xfree(processed_command);
             return OK;     // tell nagios execute locally
         }
+        sleep 5;
     }
    
    dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]", 
