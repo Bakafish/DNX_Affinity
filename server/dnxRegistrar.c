@@ -136,14 +136,14 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    pReq = *ppMsg;
    
    // locate existing node: update expiration time, or add to the queue
-   if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
+   if (dnxQueueFind(ireg->rqueue, (void **)(*ppMsg), dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
-      pReq->expires = expires;
+      (*ppMsg)->expires = expires;
             
       dnxDebug(3, 
         "dnxRegisterNode[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
-        tid, pReq->xid.objSerial, pReq->xid.objSlot, 
-        (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
+        tid, (*ppMsg)->xid.objSerial, (*ppMsg)->xid.objSlot, 
+        (unsigned)(now % 1000), (unsigned)((*ppMsg)->expires % 1000));
       dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
       //dnxDeleteNodeReq(*ppMsg);
    }
