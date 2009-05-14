@@ -152,8 +152,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
       // This is new, add the affinity flags  
        dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
        pReq->flags = dnxGetAffinity(pReq->hn);
-      
-//      dnxDeleteNodeReq(*ppMsg);
       *ppMsg = 0;    // Registered new request node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
@@ -167,7 +165,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
             dnxErrorString(ret));
       dnxLog("dnxRegisterNode: Unable to enqueue node request: %s.", 
             dnxErrorString(ret));
-//      dnxDeleteNodeReq(*ppMsg);
+      dnxDeleteNodeReq(*ppMsg);
    }
    
 
