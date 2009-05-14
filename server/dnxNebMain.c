@@ -867,7 +867,7 @@ static int ehSvcCheck(int event_type, void * data)
             gTopNode->jobs_rejected_no_nodes++;
             return OK;     // tell nagios execute locally
         }
-        sleep 5;
+        sleep(5);
     }
    
    dnxDebug(2, "ehSvcCheck: Service Check found worker [%lu,%lu]",
@@ -1039,7 +1039,7 @@ static int ehHstCheck(int event_type, void * data)
             xfree(processed_command);
             return OK;     // tell nagios execute locally
         }
-        sleep 5;
+        sleep(5);
     }
    
    dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]", 
