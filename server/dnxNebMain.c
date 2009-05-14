@@ -1037,7 +1037,6 @@ static int ehHstCheck(int event_type, void * data)
             dnxDeleteNodeReq(pNode); // delete pNode
             xfree(processed_command);
             return OK;     // tell nagios execute locally
-            // Keep trying to get a worker
         }
     }
    
