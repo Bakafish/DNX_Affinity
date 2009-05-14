@@ -94,7 +94,7 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
          && (ret = dnxXmlGet(&xbuf, "Capacity", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
       return ret;
 
-   pReg->addr = ntop(address); //Do this now save time in logging later
+   pReg->addr = ntop((struct sockaddr *)address); //Do this now save time in logging later
    
    // decode the hostname
    if ((ret = dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hn)) != DNX_OK) // LEAK
@@ -170,9 +170,7 @@ int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, 
 
         dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &xid);
 
-        char * tmp = strndup(address, DNX_MAX_ADDRESS);
-        char * addr = ntop(tmp);
-        xfree(tmp);
+        char * addr = ntop((struct sockaddr *)address);
         dnxDebug(3,"Received JobAck for Job XID %s from Node: %s",xid,addr);
         xfree(addr);
 
