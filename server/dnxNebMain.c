@@ -862,7 +862,8 @@ static int ehSvcCheck(int event_type, void * data)
       {
          // Keep trying to get a worker
          if(try_count == 3) { 
-            dnxDebug(1, "ehSvcCheck: Failed to find any worker nodes for job [%lu].", serial);
+            dnxDebug(1, "ehSvcCheck: No worker nodes for (%s) Job [%s].",
+                pNode->hn, svcdata->command_line);
             dnxDeleteNodeReq(pNode); // DELETE pNode!!!!!
             return OK;     // tell nagios execute locally
          }
@@ -1045,7 +1046,8 @@ static int ehHstCheck(int event_type, void * data)
       {
          // Keep trying to get a worker
          if(try_count == 3) { 
-            dnxDebug(1, "ehHstCheck: Failed to find any worker nodes for job [%lu].", serial);
+            dnxDebug(1, "ehSvcCheck: No worker nodes for (%s) Job [%s].",
+                pNode->hn, processed_command);
             dnxDeleteNodeReq(pNode); // delete pNode
             xfree(processed_command);
             return OK;     // tell nagios execute locally
