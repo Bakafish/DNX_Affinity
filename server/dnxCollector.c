@@ -126,7 +126,7 @@ static void * dnxCollector(void * data)
                   dnxErrorString(ret));
 
             xfree(sResult.resData);
-            dnxJobCleanup(&Job);
+//            dnxJobCleanup(&Job);
          }
          else 
          {
