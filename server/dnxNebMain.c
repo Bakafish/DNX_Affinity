@@ -971,10 +971,12 @@ static int ehHstCheck(int event_type, void * data)
 		dnxDebug(1,"Processed check command for host '%s' was NULL - aborting.\n",
 		    hostObj->name);
 		return OK;
-    } else {
+   } else {
 		dnxDebug(4,"ehHstCheck: Processed check command for host '%s' was (%s)",
 		    hostObj->name, processed_command);
-    }
+			// Set the command_line instruction
+	      hostObj->command_line = processed_command;
+   }
 
    // check for local execution pattern on command line
    if (cfg.localCheckPattern && regexec(&regEx, processed_command, 0, 0, 0) == 0)
@@ -987,7 +989,7 @@ static int ehHstCheck(int event_type, void * data)
    
    affinity = dnxGetAffinity(hostObj->name);
 
-   dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", hostObj->name, affinity);
+   dnxDebug(3, "ehHstCheck: [%s] Affinity flags (%li)", hostObj->name, affinity);
 
    if (cfg.bypassHostgroup && (affinity & 1)) // Affinity bypass group is always the LSB
    {
@@ -1036,6 +1038,7 @@ static int ehHstCheck(int event_type, void * data)
 
 	/* set the execution flag */
 	hostObj->is_executing=TRUE;
+	
    if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK) // If OK we dispatch
    {
       // If NOT_FOUND we should try and queue it
