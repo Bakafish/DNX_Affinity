@@ -240,8 +240,8 @@ static void * dnxRegistrar(void * data)
          continue;
       } else {
         // Clean out the old object
-        xfree(pNode->addr);
-        xfree(pNode->hn);
+        xfree(pMsg->addr);
+        xfree(pMsg->hn);
       }
 
 //      pthread_cleanup_push(xfree, pMsg); // the thread cleanup handler
