@@ -324,9 +324,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       // that this thread has affinity
       if (node->expires > now)
       {
-        dnxDebug(4, "dnxGetNodeRequest: Affinity with Client [%s]:(%qu) Host [%s]:(%qu).",
-                node->hn, node->flags, 
-                hostNode->hn, hostNode->flags);
+        dnxDebug(1, "dnxGetNodeRequest: Found Hostnode [%s]:(%qu) with Affinity to dnxClient [%s]:(%qu) .",
+                hostNode->hn, hostNode->flags, node->hn, node->flags);
         break;
       } else {  
       
