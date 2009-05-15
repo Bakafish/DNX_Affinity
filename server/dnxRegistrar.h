@@ -49,10 +49,7 @@ void dnxDeleteNodeReq(DnxNodeRequest * pMsg);
  * 
  * @param[in] reg - the registrar from which a node request should be returned.
  * @param[out] ppNode - the address of storage in which to return the located
- *    request node.
- * @param[in] flag - the bitmask used to get an appropriate thread to service
- *    an affined check
- * 
+ *    request node. 
  * @return Zero on success, or a non-zero error value.
  */
 int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode);

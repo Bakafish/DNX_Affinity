@@ -805,15 +805,13 @@ static int ehSvcCheck(int event_type, void * data)
          hostObj->name, svcdata->command_line);
       return OK;     // tell nagios execute locally
    }
-   
-   // use the affinity bitmask to dispatch the check
-//   unsigned long long host_flags = dnxGetAffinity(hostObj->name);
-   // set the flags in the Check request node
-   
+      
    pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);  //LEAK
    pNode->flags = dnxGetAffinity(hostObj->name);
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
+   pNode->xid.objSerial = NULL;
+   pNode->xid.objSlot = NULL;
    
    dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, pNode->flags);
 
@@ -821,13 +819,12 @@ static int ehSvcCheck(int event_type, void * data)
    {
       dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
          hostObj->name, svcdata->command_line);
-      dnxDeleteNodeReq(pNode); // DELETE pNode!!!!!
+      dnxDeleteNodeReq(pNode);
       return OK;     // tell nagios execute locally
    }
 
    dnxDebug(4, "ehSvcCheck: Received Job [%lu] at Now (%lu), Start Time (%lu).",
-         serial, (unsigned long)time(0), 
-         (unsigned long)svcdata->start_time.tv_sec);
+      serial, (unsigned long)time(0), (unsigned long)svcdata->start_time.tv_sec);
 
    // 1) We get a good thread
         // Reset the thread timeout and post the job
@@ -857,43 +854,42 @@ static int ehSvcCheck(int event_type, void * data)
    
     time_t now = time(0);
     time_t expires = now + svcdata->timeout;
-    while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK) // If OK we dispatch
+    if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK) // If OK we dispatch
     {
-        // If NOT_FOUND we have never seen a client, shorten TTL, wait and try again
-        if (ret == DNX_ERR_NOTFOUND && (time(0) > expires)) 
-        {
-            
-        
-         sleep(1);       
-        } 
-        // If CONTINUE we have seen a client, but it isn't available
-        else if (ret == DNX_QRES_CONTINUE && (time(0) < expires))
-        {
-        
-        
-        
+        // If NOT_FOUND we should try and queue it
+        if (ret == DNX_ERR_NOTFOUND) 
+        {    
+           if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
+           {
+              dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+              dnxDeleteNodeReq(pNode);
+              return OK;     // tell nagios execute locally
+           } else {
+              dnxDebug(2, "ehSvcCheck: Service Check Queued Request");
+           }
         }
-        // We still haven't matched and our time is up
+        // We had some bad error or our time is up
         else
         {
-            dnxDebug(1, "ehSvcCheck: No worker nodes for (%s) Job [%s].",
-                pNode->hn, svcdata->command_line);
-            dnxDeleteNodeReq(pNode);
-            gTopNode->jobs_rejected_no_nodes++;
-            return OK;     // tell nagios execute locally
+         dnxDebug(1, "ehSvcCheck: No worker nodes for (%s) Job [%s].",
+            pNode->hn, svcdata->command_line);
+         dnxDeleteNodeReq(pNode);
+         gTopNode->jobs_rejected_no_nodes++;
+         return OK;     // tell nagios execute locally 
+                  // just in case it can reach the host
         }
-    }
-   
-   dnxDebug(2, "ehSvcCheck: Service Check found worker [%lu,%lu]",
-        pNode->xid.objSerial, pNode->xid.objSlot);
-
-// Set the check type in the job object
-
-   if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
-   {
-      dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
-      dnxDeleteNodeReq(pNode); // DELETE pNode!!!!!
-      return OK;     // tell nagios execute locally
+    } 
+    else 
+    {
+      if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
+      {
+         dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+         dnxDeleteNodeReq(pNode);
+         return OK;     // tell nagios execute locally
+      } else {
+         dnxDebug(2, "ehSvcCheck: Service Check found worker [%lu,%lu]",
+            pNode->xid.objSerial, pNode->xid.objSlot);
+      }
    }
 
    serial++;                           // bump serial number
@@ -936,6 +932,7 @@ static int ehHstCheck(int event_type, void * data)
    host * hostObj = find_host(hstdata->host_name);
    char * raw_command = NULL;
    char * processed_command = NULL;
+   long long unsigned affinity = 0;
    int ret = 0;
 
 
@@ -986,25 +983,25 @@ static int ehHstCheck(int event_type, void * data)
       xfree(processed_command);
       return OK;     // tell nagios execute locally
    }
-
-   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);  //LEAK
-   pNode->flags = dnxGetAffinity(hostObj->name);
-   pNode->hn = xstrdup(hostObj->name);
-   pNode->addr = NULL;
+   
+   affinity = dnxGetAffinity(hostObj->name);
 
    dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", pNode->hn, pNode->flags);
 
-   if (cfg.bypassHostgroup && (pNode->flags & 1)) // Affinity bypass group is always the LSB
+   if (cfg.bypassHostgroup && (affinity & 1)) // Affinity bypass group is always the LSB
    {
       dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
-         pNode->hn, processed_command);
-      
-      dnxDeleteNodeReq(pNode); // delete pNode
+         hostObj->name, processed_command);      
       xfree(processed_command);
-
       return OK;     // tell nagios execute locally
    } 
       
+   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);  //LEAK
+   pNode->flags = affinity;
+   pNode->hn = xstrdup(hostObj->name);
+   pNode->addr = NULL;
+   pNode->xid.objSerial = NULL;
+   pNode->xid.objSlot = NULL;
    
 
 	/* adjust host check attempt */
@@ -1033,13 +1030,52 @@ static int ehHstCheck(int event_type, void * data)
 	/* increment number of host checks that are currently running... */
 	extern int currently_running_host_checks;
 	currently_running_host_checks++;
-    dnxDebug(4,"ehHstCheck: Host checks in process (%i)", 
+   dnxDebug(4,"ehHstCheck: Host checks in progress (%i)", 
         currently_running_host_checks);
 
 	/* set the execution flag */
 	hostObj->is_executing=TRUE;
-    time_t now = time(0);
-    time_t expires = now + hstdata->timeout;
+   if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK) // If OK we dispatch
+   {
+      // If NOT_FOUND we should try and queue it
+      if (ret == DNX_ERR_NOTFOUND) 
+      {    
+         if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
+         {
+            dnxLog("ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+            dnxDebug(2,"ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+            dnxDeleteNodeReq(pNode);
+            return OK;     // tell nagios execute locally
+         } else {
+            dnxDebug(2, "ehHstCheck: Host Check Queued Request");
+         }
+      }
+      // We had some bad error or our time is up
+      else
+      {
+         dnxDebug(1, "ehHstCheck: No worker nodes for (%s) Job [%s].",
+            pNode->hn, svcdata->command_line);
+         dnxDeleteNodeReq(pNode);
+         gTopNode->jobs_rejected_no_nodes++;
+         return OK;     // tell nagios execute locally 
+                  // just in case it can reach the host
+      }
+   } 
+   else 
+   {
+      if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
+      {
+         dnxLog("ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+         dnxDebug(2,"ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+         dnxDeleteNodeReq(pNode);
+         return OK;     // tell nagios execute locally
+      } else {
+         dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]",
+            pNode->xid.objSerial, pNode->xid.objSlot);
+      }
+   }
+
+/*
     while ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
     {
         if(ret == DNX_ERR_NOTFOUND && (time(0) > expires))
@@ -1062,7 +1098,7 @@ static int ehHstCheck(int event_type, void * data)
    // Push the command into our Host Check Data Object
    hstdata->command_line = xstrdup(processed_command);
    xfree(processed_command);
-
+*/
    // allocate and populate a new job payload object
 /*   if ((jdp = (DnxHostJobData *)xmalloc(sizeof *jdp)) == 0)
    {
@@ -1085,16 +1121,15 @@ static int ehHstCheck(int event_type, void * data)
 */
 
 
-// Set the check type in the job object
 
-
+/*
    if ((ret = dnxPostNewHostJob(joblist, serial, HOST_CHECK, hstdata, pNode)) != DNX_OK)
    {
       dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
       dnxDeleteNodeReq(pNode); // delete pNode
       return OK;     // tell nagios execute locally
    }
-
+*/
    serial++;                           // bump serial number
    return NEBERROR_CALLBACKOVERRIDE;   // tell nagios we want it
 }
@@ -1254,7 +1289,9 @@ static int dnxServerInit(void)
       dnxAddAffinity(hostAffinity, temp_host->name, flag);
    }
    
-   unsigned long long clientless = 0; 
+   unsigned long long clientless = 0;
+   // Make a bitmask where the 'holes' represent non-dnxClient hostgroups
+   // by bitwise OR ing all the dnxClients
    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
    {
       flag = dnxGetAffinity(temp_host->name);
@@ -1264,6 +1301,8 @@ static int dnxServerInit(void)
       }
    }
   
+   // Check a hosts bitmask flag against the clientless hostgroups flag
+   // and if it's not covered by a dnxClient, force it into the locals group
    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
    {
       flag = dnxGetAffinity(temp_host->name);
@@ -1273,23 +1312,12 @@ static int dnxServerInit(void)
             temp_host->name);
       }
    }
-return 0;   
+
    // registration for this event starts everything rolling
    neb_register_callback(NEBCALLBACK_SERVICE_CHECK_DATA, myHandle, 0, ehSvcCheck);
    dnxLog("Registered for SERVICE_CHECK_DATA event.");
    neb_register_callback(NEBCALLBACK_HOST_CHECK_DATA, myHandle, 0, ehHstCheck);
    dnxLog("Registered for HOST_CHECK_DATA event.");
-//    neb_register_callback(NEBTYPE_PROCESS_EVENTLOOPEND, myHandle, 0, dnxCleanup);
-//    dnxLog("Registered for NEBTYPE_PROCESS_EVENTLOOPEND event.");
-
-    // sit in a loop for up to 30 seconds waiting for nodes to register
-//     int loop_count = 0;
-//     do { 
-//         wait 5;
-//         dnxLog("Waiting for client to register worker threads.");
-//         if (loop_count++ > 20) { break; }
-//     } while (dnxNodeListCountNodes(gTopNode) < 2);
-
 
    dnxLog("Server initialization completed.");
 

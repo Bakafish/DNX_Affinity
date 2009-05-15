@@ -416,8 +416,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
             discard_count);
    }
 
-// If no affinity matches or there are no dnxClient job requests in the
-// queue we send it back to Nagios
+// If no affinity matches or there are no dnxClient requests in the
+// queue we send it to the jobs list without a node
    if (ret != DNX_QRES_FOUND)
    {
       if(ret == DNX_QRES_CONTINUE) {

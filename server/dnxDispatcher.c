@@ -72,11 +72,16 @@ typedef struct iDnxDispatcher_
  */
 static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeRequest * pNode)
 {
-   struct sockaddr * sin = (struct sockaddr *)pNode->address;
+   struct sockaddr * sin; 
    pthread_t tid = pthread_self();
    DnxJob job;
    int ret;
 
+   // if the pNode is NULL, we should put it in the job queue and let JobListExpire 
+   // deal with finding a dnxClient for it
+
+
+   sin = (struct sockaddr *)pNode->address;
    dnxDebug(2, 
          "dnxDispatcher[%lx]: Dispatching job [%lu,%lu] (%s) to dnxClient [%s]"
          " at node %u.%u.%u.%u. host flags = (%qu)",

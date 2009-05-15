@@ -178,7 +178,8 @@ typedef enum DnxReqType
 /** Defines the state of a DNX job. */
 typedef enum DnxJobState
 {
-   DNX_JOB_NULL = 0, 
+   DNX_JOB_NULL = 0,
+   DNX_JOB_UNBOUND,
    DNX_JOB_PENDING, 
    DNX_JOB_INPROGRESS, 
    DNX_JOB_COMPLETE, 

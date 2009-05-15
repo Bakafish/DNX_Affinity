@@ -76,13 +76,21 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
             ilist->size, pJob->cmd);
       ret = DNX_ERR_CAPACITY;
    }
-   else
+   else 
    {
+
       // add the slot index to the Job's XID - this allows us to index 
       //    the job list using the returned result's XID.objSlot field
       pJob->xid.objSlot = tail;
-      pJob->state = DNX_JOB_PENDING;
-   
+      // We were unable to get an available dnxClient job request so we
+      // put the job into the queue anyway and have the timer thread try 
+      // and find a dnxClient for it later
+      if (pJob->pNode->xid.objSerial == NULL && pJob->pNode->xid.objSlot == NULL)
+      {
+         pJob->state = DNX_JOB_UNBOUND;
+      } else {
+         pJob->state = DNX_JOB_PENDING;
+      }
       // add this job to the job list
       memcpy(&ilist->list[tail], pJob, sizeof *pJob);
    
@@ -145,7 +153,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
    {
       // only examine jobs that are either awaiting dispatch or results
       if ((pJob = &ilist->list[current])->state == DNX_JOB_INPROGRESS 
-            || pJob->state == DNX_JOB_PENDING)
+            || pJob->state == DNX_JOB_PENDING || pJob->state == DNX_JOB_UNBOUND)
       {
          // check the job's expiration stamp
          if (pJob->expires > now)
@@ -232,6 +240,10 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       if( ilist->list[current].state == DNX_JOB_INPROGRESS )
       {
          dnxDebug(8, "dnxJobListDispatch(%i)(%i): In Progress Item", job_cntr, current);
+      }
+      if( ilist->list[current].state == DNX_JOB_UNBOUND )
+      {
+         dnxDebug(8, "dnxJobListDispatch(%i)(%i): Unbound Item", job_cntr, current);
       }
 
       if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, &timeout)) == ETIMEDOUT)
