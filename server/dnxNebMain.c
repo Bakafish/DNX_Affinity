@@ -739,7 +739,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.host_name  = xstrdup(ds->host_name);
-   Job.service_description = xstrdup(ds->command_name);
+   Job.service_description = NULL;
    Job.object_check_type = check_type;
    Job.cmd        = ds->command_line;
    Job.start_time = ds->start_time.tv_sec;
