@@ -85,7 +85,7 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
       // We were unable to get an available dnxClient job request so we
       // put the job into the queue anyway and have the timer thread try 
       // and find a dnxClient for it later
-      if (pJob->pNode->xid.objSerial == NULL && pJob->pNode->xid.objSlot == NULL)
+      if (pJob->pNode->xid.objSerial == -1 && pJob->pNode->xid.objSlot == -1)
       {
          pJob->state = DNX_JOB_UNBOUND;
       } else {

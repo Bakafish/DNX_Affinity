@@ -821,8 +821,8 @@ static int ehSvcCheck(int event_type, void * data)
    pNode->flags = affinity;
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
-   pNode->xid.objSerial = NULL;
-   pNode->xid.objSlot = NULL;
+   pNode->xid.objSerial = -1;
+   pNode->xid.objSlot = -1;
 
    dnxDebug(4, "ehSvcCheck: Received Job [%lu] at Now (%lu), Start Time (%lu).",
       serial, (unsigned long)time(0), (unsigned long)svcdata->start_time.tv_sec);
@@ -1003,8 +1003,8 @@ static int ehHstCheck(int event_type, void * data)
    pNode->flags = affinity;
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
-   pNode->xid.objSerial = NULL;
-   pNode->xid.objSlot = NULL;
+   pNode->xid.objSerial = -1;
+   pNode->xid.objSlot = -1;
    
 
 	/* adjust host check attempt */
