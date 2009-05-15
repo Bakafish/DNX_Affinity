@@ -31,6 +31,7 @@
 #include "dnxDebug.h"
 #include "dnxLogging.h"
 #include "dnxTimer.h"
+#include "dnxNebMain.h"
 
 #include <sys/time.h>
 

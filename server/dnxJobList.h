@@ -33,7 +33,6 @@
 #include "../common/dnxTypes.h"
 #include "../common/dnxProtocol.h"
 #include "dnxRegistrar.h"
-#include "dnxNebMain.h"
 
 typedef struct DnxNewJob
 {
