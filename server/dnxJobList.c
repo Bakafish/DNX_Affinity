@@ -144,6 +144,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
    DnxNewJob * pJob;
    int jobCount;
    time_t now;
+   extern registrar;
 
    assert(pJobList && pExpiredJobs && totalJobs && *totalJobs > 0);
 
