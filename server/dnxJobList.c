@@ -215,7 +215,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 
    // start at current dispatch head
    current = ilist->dhead;
-   dnxDebug(8, "dnxJobListDispatch(%i)(%i): BEFORE: Head=%lu, DHead=%lu, Tail=%lu.", 
+   dnxDebug(2, "dnxJobListDispatch(%i)(%i): BEFORE: Head=%lu, DHead=%lu, Tail=%lu.", 
        job_cntr, current, ilist->head, ilist->dhead, ilist->tail);
 
    // see if we have a pending job

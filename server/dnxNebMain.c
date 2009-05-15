@@ -862,7 +862,8 @@ static int ehSvcCheck(int event_type, void * data)
         {    
            if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
            {
-              dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+              dnxLog("ehSvcCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+              dnxDebug(2,"ehSvcCheck: Unable to post job, no matching dnxClients [%lu]: %s.", serial, dnxErrorString(ret));
               dnxDeleteNodeReq(pNode);
               return OK;     // tell nagios execute locally
            } else {
@@ -884,7 +885,8 @@ static int ehSvcCheck(int event_type, void * data)
     {
       if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
       {
-         dnxLog("Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+         dnxLog("ehSvcCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+         dnxDebug(2, "ehSvcCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
          dnxDeleteNodeReq(pNode);
          return OK;     // tell nagios execute locally
       } else {
