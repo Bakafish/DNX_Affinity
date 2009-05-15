@@ -131,7 +131,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    time_t now = time(0);
    time_t expires = now + (*ppMsg)->ttl;
    int ret = DNX_OK;
-   dnxDebug(6, "dnxRegisterNode: Entering");
    assert(ireg && ppMsg && *ppMsg);
    pReq = *ppMsg;
    
@@ -145,7 +144,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
         tid, (*ppMsg)->xid.objSerial, (*ppMsg)->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)((*ppMsg)->expires % 1000));
       dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
-      //dnxDeleteNodeReq(*ppMsg);
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
@@ -168,9 +166,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
             dnxErrorString(ret));
 //      dnxDeleteNodeReq(*ppMsg);
    }
-   
-
-
    return ret;
 }
 

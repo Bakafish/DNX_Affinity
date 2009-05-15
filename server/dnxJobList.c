@@ -95,16 +95,19 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
       memcpy(&ilist->list[tail], pJob, sizeof *pJob);
    
       // update dispatch head index
-      if (ilist->list[ilist->tail].state != DNX_JOB_PENDING)
+      if (ilist->list[ilist->tail].state != DNX_JOB_PENDING) {
          ilist->dhead = tail;
-   
+      }
+      
       ilist->tail = tail;
    
-      dnxDebug(8, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu.", 
+      dnxDebug(1, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu.", 
             pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, 
             ilist->tail);
-   
-      pthread_cond_signal(&ilist->cond);  // signal that a new job is available
+      
+      if(pJob->state == DNX_JOB_PENDING) {
+         pthread_cond_signal(&ilist->cond);  // signal that a new job is available
+      }         
    }
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
