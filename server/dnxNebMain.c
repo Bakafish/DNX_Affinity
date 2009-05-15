@@ -808,7 +808,7 @@ static int ehSvcCheck(int event_type, void * data)
    
    dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, affinity);
 
-   if (cfg.bypassHostgroup && (pNode->flags & 1)) // Affinity bypass group is always the LSB
+   if (cfg.bypassHostgroup && (affinity & 1)) // Affinity bypass group is always the LSB
    {
       dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
          hostObj->name, svcdata->command_line);
