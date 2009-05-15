@@ -738,7 +738,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
-   Job.host_name  = xstrdup(ds->host_name);
+   Job.host_name  = xstrdup(ds->host_name); // LEAK
    Job.service_description = NULL;
    Job.object_check_type = check_type;
    Job.cmd        = ds->command_line;
@@ -752,7 +752,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
-      dnxLog("dnxPostNewHostJob: Failed to post Host Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
+      dnxLog("dnxPostNewHostJob: Failed to post Host Job [%lu]; \"%s\": %d.", Job.xid.objSerial, Job.cmd, ret);
    } else {
        dnxAuditJob(&Job, "ASSIGN");
    }
@@ -964,7 +964,7 @@ static int ehHstCheck(int event_type, void * data)
     }
 
 	/* process any macros contained in the argument */
-	process_macros(raw_command, &processed_command, 0);
+	process_macros(raw_command, &processed_command, 0); // LEAK
 	xfree(raw_command);
 	
 	if(processed_command==NULL){

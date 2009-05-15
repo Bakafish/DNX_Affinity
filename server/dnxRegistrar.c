@@ -220,7 +220,9 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 static void * dnxRegistrar(void * data)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)data;
-   DnxNodeRequest * pMsg = 0;
+   DnxNodeRequest * pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg);
+   pMsg->addr = NULL;
+   pMsg->hn = NULL;
 
    assert(data);
 
