@@ -975,7 +975,7 @@ static int ehHstCheck(int event_type, void * data)
 		dnxDebug(4,"ehHstCheck: Processed check command for host '%s' was (%s)",
 		    hostObj->name, processed_command);
 			// Set the command_line instruction
-	      hostObj->command_line = processed_command;
+	      hstdata->command_line = processed_command;
    }
 
    // check for local execution pattern on command line
