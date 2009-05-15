@@ -335,7 +335,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
 //        xfree(addr);
         //SM 09/08 DnxNodeList END
 
-         dnxDebug(3, 
+         dnxDebug(1, 
             "dnxGetNodeRequest: Expired req [%lu,%lu] at %u; expired at %u.", 
             node->xid.objSerial, node->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(node->expires % 1000));
