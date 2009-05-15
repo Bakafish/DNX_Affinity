@@ -107,7 +107,7 @@ char *ntop(const struct sockaddr *sa)
         case AF_INET:
             maxlen = INET_ADDRSTRLEN + 1;
             buf = (char *)xcalloc(maxlen,sizeof(char));
-            if(buf != NULL) 
+            if(buf != NULL) {
                 inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr), buf, maxlen);
             }
             break;
@@ -115,8 +115,9 @@ char *ntop(const struct sockaddr *sa)
         case AF_INET6:
             maxlen = INET6_ADDRSTRLEN + 1;
             buf = (char *)xcalloc(maxlen,sizeof(char));
-            if(buf != NULL) 
+            if(buf != NULL) {
                 inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)sa)->sin6_addr), buf, maxlen);
+            }
             break;
 
         default:
