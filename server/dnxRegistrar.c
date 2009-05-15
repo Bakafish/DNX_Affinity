@@ -312,7 +312,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    {
       time_t now = time(0);
 
-      dnxDebug(2, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s) node exp () now ()",
+      dnxDebug(2, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s) node exp (%u) now (%u)",
       hostNode->hn, node->hn, (unsigned)(node->expires % 1000), (unsigned)(now % 1000));
 
       // verify that this request's Time-To-Live (TTL) has not expired and
