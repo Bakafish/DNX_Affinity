@@ -2046,6 +2046,6 @@ int dnxIsDnxClient(unsigned long long x) {
     }
 }
 
-static DnxRegistrar * dnxGetRegistrar() {
+DnxRegistrar * dnxGetRegistrar() {
    return registrar;
 }
