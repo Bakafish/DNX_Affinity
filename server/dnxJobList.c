@@ -168,7 +168,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
             // Check to see if it is a Queued Job
             if (pJob->state == DNX_JOB_UNBOUND) {
                // Try and get a dnxClient for it
-               qJob = pjob->pNode;
+               qJob = pJob->pNode;
                if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) != DNX_OK) // If OK we dispatch
                {
                   dnxDebug(2, "dnxJobListExpire: Unable to dequeue job [%lu:%lu]", 
