@@ -72,7 +72,7 @@ int dnxAuditJob(DnxNewJob * pJob, char * action);
 unsigned long long dnxGetAffinity(char * name);
 int dnxHammingWeight(unsigned long long flag);
 
-static DnxRegistrar * dnxGetRegistrar();
+static DnxRegistrar * dnxGetRegistrar(void);
 
 #endif   /* _DNXNEBMAIN_H_ */
 
