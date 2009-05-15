@@ -810,8 +810,8 @@ static int ehSvcCheck(int event_type, void * data)
    pNode->flags = dnxGetAffinity(hostObj->name);
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
-   pNode->xid.objSerial = NULL;
-   pNode->xid.objSlot = NULL;
+   pNode->xid->objSerial = NULL;
+   pNode->xid->objSlot = NULL;
    
    dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, pNode->flags);
 
@@ -1000,8 +1000,8 @@ static int ehHstCheck(int event_type, void * data)
    pNode->flags = affinity;
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
-   pNode->xid.objSerial = NULL;
-   pNode->xid.objSlot = NULL;
+   pNode->xid->objSerial = NULL;
+   pNode->xid->objSlot = NULL;
    
 
 	/* adjust host check attempt */
@@ -1040,11 +1040,12 @@ static int ehHstCheck(int event_type, void * data)
       // If NOT_FOUND we should try and queue it
       if (ret == DNX_ERR_NOTFOUND) 
       {    
-         if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
+         if ((ret = dnxPostNewHostJob(joblist, serial, HOST_CHECK, hstdata, pNode)) != DNX_OK)
          {
             dnxLog("ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
             dnxDebug(2,"ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
             dnxDeleteNodeReq(pNode);
+            xfree(processed_command);
             return OK;     // tell nagios execute locally
          } else {
             dnxDebug(2, "ehHstCheck: Host Check Queued Request");
@@ -1054,8 +1055,9 @@ static int ehHstCheck(int event_type, void * data)
       else
       {
          dnxDebug(1, "ehHstCheck: No worker nodes for (%s) Job [%s].",
-            pNode->hn, svcdata->command_line);
+            pNode->hn, hstdata->command_line);
          dnxDeleteNodeReq(pNode);
+         xfree(processed_command);
          gTopNode->jobs_rejected_no_nodes++;
          return OK;     // tell nagios execute locally 
                   // just in case it can reach the host
@@ -1063,11 +1065,12 @@ static int ehHstCheck(int event_type, void * data)
    } 
    else 
    {
-      if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK)
+      if ((ret = dnxPostNewHostJob(joblist, serial, HOST_CHECK, hstdata, pNode)) != DNX_OK)
       {
          dnxLog("ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
          dnxDebug(2,"ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
          dnxDeleteNodeReq(pNode);
+         xfree(processed_command);
          return OK;     // tell nagios execute locally
       } else {
          dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]",
