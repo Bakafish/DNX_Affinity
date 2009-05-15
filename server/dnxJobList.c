@@ -169,9 +169,11 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
                // Try and get a dnxClient for it
                if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) != DNX_OK) // If OK we dispatch
                {
-                  dnxDebug(2, "dnxJobListExpire: Unable to dequeue job [%u]", pJob->xid);                  
+                  dnxDebug(2, "dnxJobListExpire: Unable to dequeue job [%lu:%lu]", 
+                     pJob->xid.objSerial, pJob->xid.objSlot);                  
                } else {
-                  dnxDebug(2, "dnxJobListExpire: Dequeueing job [%u]", pJob->xid);                  
+                  dnxDebug(2, "dnxJobListExpire: Dequeueing job [%lu:%lu]", 
+                     pJob->xid.objSerial, pJob->xid.objSlot);                  
                   pJob->state = DNX_JOB_PENDING;
                }
             }

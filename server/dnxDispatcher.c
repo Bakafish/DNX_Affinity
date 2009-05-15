@@ -77,17 +77,12 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
    DnxJob job;
    int ret;
 
-   // if the pNode is NULL, we should put it in the job queue and let JobListExpire 
-   // deal with finding a dnxClient for it
-
-
-   sin = (struct sockaddr *)pNode->address;
+//   sin = (struct sockaddr *)pNode->address;
    dnxDebug(2, 
          "dnxDispatcher[%lx]: Dispatching job [%lu,%lu] (%s) to dnxClient [%s]"
-         " at node %u.%u.%u.%u. host flags = (%qu)",
+         " at node %s host flags = (%qu)",
          tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
-         pNode->hn, sin->sa_data[2], sin->sa_data[3], sin->sa_data[4],
-         sin->sa_data[5], pNode->flags);
+         pNode->hn, pNode->addr, pNode->flags);
 
    memset(&job, 0, sizeof job);
    job.xid      = pSvcReq->xid;
@@ -98,19 +93,17 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
 
    if ((ret = dnxSendJob(idisp->channel, &job, pNode->address)) != DNX_OK)
    {
-            dnxDebug(1,"Unable to send job [%lu,%lu] (%s) to worker node %u.%u.%u.%u: %s.",
+            dnxDebug(1,"Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
-            sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5], 
-            dnxErrorString(ret));
+            pNode->addr, dnxErrorString(ret));
 
-            dnxLog("Unable to send job [%lu,%lu] (%s) to worker node %u.%u.%u.%u: %s.",
+            dnxLog("Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
-            sin->sa_data[2], sin->sa_data[3], sin->sa_data[4], sin->sa_data[5], 
-            dnxErrorString(ret));
+            pNode->addr, dnxErrorString(ret));
    }else{
-        char * addr = ntop((struct sockaddr *)sin);
-        dnxNodeListIncrementNodeMember(addr,JOBS_DISPATCHED);
-        xfree(addr);
+//        char * addr = ntop((struct sockaddr *)sin);
+        dnxNodeListIncrementNodeMember(pNode->addr,JOBS_DISPATCHED);
+//        xfree(addr);
    }
    return ret;
 }
