@@ -528,33 +528,31 @@ static int nagiosGetServiceCount(void)
 
 int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char *plugin_output, time_t check_time)
 {
-    check_result *chk_result;
-    chk_result = (check_result *)malloc(sizeof(check_result));
-    /* Set the default values in the check result structure */
-    init_check_result(chk_result);
+   check_result *chk_result;
+   chk_result = (check_result *)malloc(sizeof(check_result));
+   /* Set the default values in the check result structure */
+   init_check_result(chk_result);
+   
+   /*
+   * Set up the check result structure with information that we were passed
+   * Nagios normally reads the check results from a diskfile specified in
+   * output_file member. But since we can directly access nagios result list,
+   * we bypass the diskfile creation. We set output_file to NULL and
+   * the fd to -1, hoping that nagios will have a NULL check.
+   */
+   chk_result->output_file = NULL;
+   chk_result->output_file_fd = -1;
+   chk_result->host_name = xstrdup(host_name);
 
-    dnxDebug(2, "dnxSubmitCheck: [pre copy] hostname=(%s) description=(%s)",
-        host_name, svc_description);
-
-    /*
-     * Set up the check result structure with information that we were passed
-     * Nagios normally reads the check results from a diskfile specified in
-     * output_file member. But since we can directly access nagios result list,
-     * we bypass the diskfile creation. We set output_file to NULL and
-     * the fd to -1, hoping that nagios will have a NULL check.
-     */
-    chk_result->output_file = NULL;
-    chk_result->output_file_fd = -1;
-    chk_result->host_name = xstrdup(host_name);
-    if(svc_description) {
-        chk_result->service_description = xstrdup(svc_description);
-        chk_result->object_check_type=SERVICE_CHECK;
-        chk_result->check_type = SERVICE_CHECK_ACTIVE;
-    } else {
-        chk_result->service_description=NULL;
-        chk_result->object_check_type=HOST_CHECK;
-        chk_result->check_type = HOST_CHECK_ACTIVE;
-    }
+   if(svc_description) {
+      chk_result->service_description = xstrdup(svc_description);
+      chk_result->object_check_type=SERVICE_CHECK;
+      chk_result->check_type = SERVICE_CHECK_ACTIVE;
+   } else {
+      chk_result->service_description =NULL;
+      chk_result->object_check_type=HOST_CHECK;
+      chk_result->check_type = HOST_CHECK_ACTIVE;
+   }
 
 /*
 	chk_result->check_options=check_options;
@@ -563,24 +561,24 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
 
 
 //    normalize_plugin_output(plugin_output, "B2");
-    chk_result->output = xstrdup(plugin_output);
-
-    chk_result->return_code = return_code; // STATE_OK = 0
-    chk_result->exited_ok = TRUE;
-    chk_result->early_timeout = FALSE;
-	chk_result->scheduled_check = TRUE;
-	chk_result->reschedule_check = TRUE;
-
-    chk_result->start_time.tv_sec = check_time;
-    chk_result->start_time.tv_usec = 0;
-    chk_result->finish_time = chk_result->start_time;
-
-    dnxDebug(2, "dnxSubmitCheck: hostname=(%s) description=(%s)",
-        chk_result->host_name, chk_result->service_description);
-
-    /* Call the nagios function to insert the result into the result linklist */
-    add_check_result_to_list(chk_result);
-    return 0;
+   chk_result->output = xstrdup(plugin_output);
+   
+   chk_result->return_code = return_code; // STATE_OK = 0
+   chk_result->exited_ok = TRUE;
+   chk_result->early_timeout = FALSE;
+   chk_result->scheduled_check = TRUE;
+   chk_result->reschedule_check = TRUE;
+   
+   chk_result->start_time.tv_sec = check_time;
+   chk_result->start_time.tv_usec = 0;
+   chk_result->finish_time = chk_result->start_time;
+   
+   dnxDebug(2, "dnxSubmitCheck: hostname=(%s) description=(%s)",
+      chk_result->host_name, chk_result->service_description);
+   
+   /* Call the nagios function to insert the result into the result linklist */
+   add_check_result_to_list(chk_result);
+   return 0;
 }
 
 
@@ -741,7 +739,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.host_name  = xstrdup(ds->host_name);
-   Job.service_description = NULL;
+   Job.service_description = ds->command_name;
    Job.object_check_type = check_type;
    Job.cmd        = ds->command_line;
    Job.start_time = ds->start_time.tv_sec;

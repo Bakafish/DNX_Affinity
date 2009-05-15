@@ -162,9 +162,20 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
             || pJob->state == DNX_JOB_PENDING || pJob->state == DNX_JOB_UNBOUND)
       {
          // check the job's expiration stamp
-         if (pJob->expires > now)
+         if (pJob->expires > now) {
+            // Check to see if it is a Queued Job
+            if (pJob->state == DNX_JOB_UNBOUND) {
+               // Try and get a dnxClient for it
+               if ((ret = dnxGetNodeRequest(registrar, &(pJob->pNode))) != DNX_OK) // If OK we dispatch
+               {
+                  dnxDebug(2, "dnxJobListExpire: Unable to dequeue job [%u]", pJob->xid);                  
+               } else {
+                  dnxDebug(2, "dnxJobListExpire: Dequeueing job [%u]", pJob->xid);                  
+                  pJob->state = DNX_JOB_PENDING;
+               }
+            }
             break;   // Bail-out: this job hasn't expired yet
-
+         }
          // job has expired - add it to the expired job list
          memcpy(&pExpiredJobs[jobCount], pJob, sizeof(DnxNewJob));
 
