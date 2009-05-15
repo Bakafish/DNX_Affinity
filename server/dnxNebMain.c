@@ -806,22 +806,23 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
       
-   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);  //LEAK
-   pNode->flags = dnxGetAffinity(hostObj->name);
-   pNode->hn = xstrdup(hostObj->name);
-   pNode->addr = NULL;
-   pNode->xid.objSerial = NULL;
-   pNode->xid.objSlot = NULL;
+   long long unsigned affinity = dnxGetAffinity(hostObj->name);
    
-   dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, pNode->flags);
+   dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, affinity);
 
    if (cfg.bypassHostgroup && (pNode->flags & 1)) // Affinity bypass group is always the LSB
    {
       dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
          hostObj->name, svcdata->command_line);
-      dnxDeleteNodeReq(pNode);
       return OK;     // tell nagios execute locally
    }
+
+   pNode = (DnxNodeRequest *)xmalloc(sizeof *pNode);  //LEAK
+   pNode->flags = affinity;
+   pNode->hn = xstrdup(hostObj->name);
+   pNode->addr = NULL;
+   pNode->xid.objSerial = NULL;
+   pNode->xid.objSlot = NULL;
 
    dnxDebug(4, "ehSvcCheck: Received Job [%lu] at Now (%lu), Start Time (%lu).",
       serial, (unsigned long)time(0), (unsigned long)svcdata->start_time.tv_sec);
@@ -986,7 +987,7 @@ static int ehHstCheck(int event_type, void * data)
    
    affinity = dnxGetAffinity(hostObj->name);
 
-   dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", pNode->hn, pNode->flags);
+   dnxDebug(1, "ehHstCheck: [%s] Affinity flags (%li)", hostObj->name, affinity);
 
    if (cfg.bypassHostgroup && (affinity & 1)) // Affinity bypass group is always the LSB
    {
