@@ -74,7 +74,9 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    {
       dnxLog("dnxJobListAdd: Out of job slots (max=%lu): %s.", 
             ilist->size, pJob->cmd);
-      ret = DNX_ERR_CAPACITY;
+      dnxDebug(1, "dnxJobListAdd: Out of job slots (max=%lu): %s.", 
+            ilist->size, pJob->cmd);
+     ret = DNX_ERR_CAPACITY;
    }
    else 
    {
@@ -95,7 +97,8 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
       memcpy(&ilist->list[tail], pJob, sizeof *pJob);
    
       // update dispatch head index
-      if (ilist->list[ilist->tail].state != DNX_JOB_PENDING) {
+      if (ilist->list[ilist->tail].state != DNX_JOB_PENDING && 
+          ilist->list[ilist->tail].state != DNX_JOB_UNBOUND) {
          ilist->dhead = tail;
       }
       
