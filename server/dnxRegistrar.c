@@ -169,7 +169,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    return ret;
 }
 
-void dnxDeleteNodeReq(DnxNodeRequest * pMsg)
+int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
 {
 
    assert(pMsg);
@@ -238,6 +238,10 @@ static void * dnxRegistrar(void * data)
       {
          dnxCancelableSleep(10);    // sleep for a while and try again...
          continue;
+      } else {
+        // Clean out the old object
+        xfree(pNode->addr);
+        xfree(pNode->hn);
       }
 
 //      pthread_cleanup_push(xfree, pMsg); // the thread cleanup handler

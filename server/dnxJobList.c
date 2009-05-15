@@ -183,6 +183,8 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
          memcpy(&pExpiredJobs[jobCount], pJob, sizeof(DnxNewJob));
 
          pJob->state = DNX_JOB_NULL;
+//          free(pJob->host_name);
+//          free(pJob->service_description);
 
          jobCount++;
       }

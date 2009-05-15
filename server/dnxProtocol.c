@@ -93,8 +93,9 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
    if ((ret = dnxXmlGet(&xbuf, "JobCap", DNX_XML_INT, &pReg->jobCap)) != DNX_OK
          && (ret = dnxXmlGet(&xbuf, "Capacity", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
       return ret;
-
-   pReg->addr = ntop((struct sockaddr *)address); //Do this now save time in logging later
+ 
+  if (address != NULL)
+       pReg->addr = ntop((struct sockaddr *)address); //Do this now save time in logging later
    
    // decode the hostname
    if ((ret = dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hn)) != DNX_OK) // LEAK

@@ -43,7 +43,7 @@
 /** An abstraction data type for the DNX registrar object. */
 typedef struct { int unused; } DnxRegistrar;
 
-void dnxDeleteNodeReq(DnxNodeRequest * pMsg);
+int dnxDeleteNodeReq(DnxNodeRequest * pMsg);
 
 /** Return an available node "request for work" object pointer.
  * 

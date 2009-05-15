@@ -1422,7 +1422,6 @@ static int ehProcessData(int event_type, void * data)
 
 void dnxJobCleanup(DnxNewJob * pJob)
 {
-   dnxDebug(8, "dnxJobCleanup: Entering.");
    if (pJob)
    {
       dnxDebug(1, "dnxJobCleanup: Job objects freed for (%s) [%s].", 
@@ -1438,7 +1437,6 @@ void dnxJobCleanup(DnxNewJob * pJob)
    {
       dnxDebug(1, "dnxJobCleanup: Unable to free job.");
    }
-   dnxDebug(8, "dnxJobCleanup: Exiting.");
 }
 
 //----------------------------------------------------------------------------
