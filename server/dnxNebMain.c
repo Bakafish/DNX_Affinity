@@ -810,8 +810,8 @@ static int ehSvcCheck(int event_type, void * data)
    pNode->flags = dnxGetAffinity(hostObj->name);
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
-   pNode->xid->objSerial = NULL;
-   pNode->xid->objSlot = NULL;
+   pNode->xid.objSerial = NULL;
+   pNode->xid.objSlot = NULL;
    
    dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, pNode->flags);
 
@@ -1000,8 +1000,8 @@ static int ehHstCheck(int event_type, void * data)
    pNode->flags = affinity;
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
-   pNode->xid->objSerial = NULL;
-   pNode->xid->objSlot = NULL;
+   pNode->xid.objSerial = NULL;
+   pNode->xid.objSlot = NULL;
    
 
 	/* adjust host check attempt */
