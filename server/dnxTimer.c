@@ -104,7 +104,8 @@ static void * dnxTimer(void * data)
    DnxNewJob ExpiredList[MAX_EXPIRED];
    int i, totalExpired;
    int ret = 0;
-
+   int skew = 0;
+   
    assert(data);
 
    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, 0);
@@ -117,7 +118,16 @@ static void * dnxTimer(void * data)
    {
       pthread_testcancel();
 
-      dnxCancelableSleep(itimer->sleepms);
+      // Create some skew in the timing so that we don't get a repeating 
+      // harmonic where the dnxClient and timer thread are both expiring at the
+      // same time.
+      srand(time(0));
+      skew = (rand() % itimer->sleepms) - (itimer->sleepms / 2);
+   
+      dnxDebug(2, "dnxTimerCreate: Skew is (%d)", itimer->sleepms + skew);
+
+
+      dnxCancelableSleep(itimer->sleepms + skew);
 
       // search for expired jobs in the pending queue
       totalExpired = MAX_EXPIRED;
@@ -205,15 +215,8 @@ int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer)
    // initialize the itimer
    memset(itimer, 0, sizeof *itimer);
    itimer->joblist = joblist;
+   itimer->sleepms = sleeptime;
    
-   // Create some skew in the timing so that we don't get a repeating harmonic
-   // where the dnxClient and timer thread are both expiring at the same time.
-   srand(time(0));
-   int skew = (rand() % sleeptime) - (sleeptime / 2) ;
-   itimer->sleepms = sleeptime + skew;
-
-   dnxDebug(2, "dnxTimerCreate: Skew is (%d)", itimer->sleepms);
-
    // create the timer thread
    if ((ret = pthread_create(&itimer->tid, 0, dnxTimer, itimer)) != 0)
    {
