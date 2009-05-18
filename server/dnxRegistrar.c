@@ -181,6 +181,21 @@ int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
    return DNX_OK;
 }
 
+DnxNodeRequest * dnxCreateNodeReq(void)
+{
+
+   DnxNodeRequest * pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg);
+   if(pMsg == 0) {
+      return NULL;
+   } else {
+      pMsg->addr = NULL;
+      pMsg->hn = NULL;
+      pMsg->ttl = 0;
+   }
+   return pMsg;
+}
+
+
 //----------------------------------------------------------------------------
 
 /** Deregister a node "request for work" request.
@@ -220,9 +235,7 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 static void * dnxRegistrar(void * data)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)data;
-   DnxNodeRequest * pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg);
-   pMsg->addr = NULL;
-   pMsg->hn = NULL;
+   DnxNodeRequest * pMsg = dnxCreateNodeReq;
 
    assert(data);
 
@@ -236,7 +249,7 @@ static void * dnxRegistrar(void * data)
       int ret;
 
       // (re)allocate message block if not consumed in last pass
-      if (pMsg == 0 && (pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg)) == 0)
+      if (pMsg == 0 && (pMsg = dnxCreateNodeReq) == 0)
       {
          dnxCancelableSleep(10);    // sleep for a while and try again...
          continue;
