@@ -122,7 +122,7 @@ static void * dnxTimer(void * data)
       // harmonic where the dnxClient and timer thread are both expiring at the
       // same time.
       srand(time(0));
-      skew = (rand() % itimer->sleepms) - (itimer->sleepms / 2);
+      skew = (rand() % itimer->sleepms) - (int)(itimer->sleepms / 2);
    
       dnxDebug(2, "dnxTimerCreate: Skew is (%d)", itimer->sleepms + skew);
 
