@@ -62,6 +62,9 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
 
    assert(channel && pReg);
 
+   xfree(pReg->addr);
+   xfree(pReg->hn);
+
    memset(pReg, 0, sizeof *pReg);
 
    // await a message from the specified channel

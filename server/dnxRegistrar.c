@@ -181,24 +181,6 @@ int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
    return DNX_OK;
 }
 
-
-int dnxCreateNodeReq(DnxNodeRequest * pMsg)
-{
-   if(pMsg != 0) {
-      return DNX_OK;
-   } else {      
-      pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg);
-      if (pMsg == 0) {
-         return DNX_ERR_MEMORY;
-      } else {
-         pMsg->addr = NULL;
-         pMsg->hn = NULL;
-      }
-      return DNX_OK;
-   }
-}
-
-
 //----------------------------------------------------------------------------
 
 /** Deregister a node "request for work" request.
@@ -254,17 +236,11 @@ static void * dnxRegistrar(void * data)
       int ret;
 
       // (re)allocate message block if not consumed in last pass
-      if (pMsg == 0 && (dnxCreateNodeReq(pMsg) == DNX_ERR_MEMORY))
+      if (pMsg == 0 && (pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg)) == 0)
       {
          dnxCancelableSleep(10);    // sleep for a while and try again...
          continue;
-      } else {
-        // Clean out the old object
-        xfree(pMsg->addr);
-        xfree(pMsg->hn);
-      }
-
-//      pthread_cleanup_push(xfree, pMsg); // the thread cleanup handler
+      } 
 
       pthread_cleanup_push(dnxDeleteNodeReq, pMsg); // the thread cleanup handler
       
