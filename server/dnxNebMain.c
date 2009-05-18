@@ -974,8 +974,6 @@ static int ehHstCheck(int event_type, void * data)
    } else {
 		dnxDebug(4,"ehHstCheck: Processed check command for host '%s' was (%s)",
 		    hostObj->name, processed_command);
-			// Set the command_line instruction
-	      hstdata->command_line = processed_command;
    }
 
    // check for local execution pattern on command line
@@ -986,7 +984,7 @@ static int ehHstCheck(int event_type, void * data)
       xfree(processed_command);
       return OK;     // tell nagios execute locally
    }
-   
+
    affinity = dnxGetAffinity(hostObj->name);
 
    dnxDebug(3, "ehHstCheck: [%s] Affinity flags (%li)", hostObj->name, affinity);
@@ -1006,7 +1004,9 @@ static int ehHstCheck(int event_type, void * data)
    pNode->xid.objSerial = -1;
    pNode->xid.objSlot = -1;
    
-
+   // Set the command_line instruction
+   hstdata->command_line = processed_command;
+  
 	/* adjust host check attempt */
 	adjust_host_check_attempt_3x(hostObj, TRUE);
 
