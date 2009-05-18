@@ -184,15 +184,18 @@ int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
 
 int dnxCreateNodeReq(DnxNodeRequest * pMsg)
 {
-
-   pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg);
-   if (pMsg == 0) {
-      return DNX_ERR_MEMORY;
-   } else {
-      pMsg->addr = NULL;
-      pMsg->hn = NULL;
+   if(pMsg != 0) {
+      return DNX_OK;
+   } else {      
+      pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg);
+      if (pMsg == 0) {
+         return DNX_ERR_MEMORY;
+      } else {
+         pMsg->addr = NULL;
+         pMsg->hn = NULL;
+      }
+      return DNX_OK;
    }
-   return DNX_OK;
 }
 
 
