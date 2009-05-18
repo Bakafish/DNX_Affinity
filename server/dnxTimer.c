@@ -205,7 +205,13 @@ int dnxTimerCreate(DnxJobList * joblist, int sleeptime, DnxTimer ** ptimer)
    // initialize the itimer
    memset(itimer, 0, sizeof *itimer);
    itimer->joblist = joblist;
-   itimer->sleepms = sleeptime;
+   
+   // Create some skew in the timing so that we don't get a repeating harmonic
+   // where the dnxClient and timer thread are both expiring at the same time.
+   int skew = (rand(time(0)) % sleeptime) - (sleeptime / 2) ;
+   itimer->sleepms = sleeptime + skew;
+
+   dnxDebug(2, "dnxTimerCreate: Skew is (%d)", itimer->sleepms);
 
    // create the timer thread
    if ((ret = pthread_create(&itimer->tid, 0, dnxTimer, itimer)) != 0)
