@@ -235,7 +235,7 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 static void * dnxRegistrar(void * data)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)data;
-   DnxNodeRequest * pMsg = dnxCreateNodeReq;
+   DnxNodeRequest * pMsg = dnxCreateNodeReq();
 
    assert(data);
 
@@ -249,7 +249,7 @@ static void * dnxRegistrar(void * data)
       int ret;
 
       // (re)allocate message block if not consumed in last pass
-      if (pMsg == 0 && (pMsg = dnxCreateNodeReq) == 0)
+      if (pMsg == 0 && (pMsg = dnxCreateNodeReq()) == 0)
       {
          dnxCancelableSleep(10);    // sleep for a while and try again...
          continue;

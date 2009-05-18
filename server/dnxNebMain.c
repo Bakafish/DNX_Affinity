@@ -815,7 +815,7 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   pNode = dnxCreateNodeReq;  //LEAK
+   pNode = dnxCreateNodeReq();  //LEAK
    pNode->flags = affinity;
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
@@ -999,7 +999,7 @@ static int ehHstCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    } 
       
-   pNode = dnxCreateNodeReq;  //LEAK
+   pNode = dnxCreateNodeReq();  //LEAK
    pNode->flags = affinity;
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
