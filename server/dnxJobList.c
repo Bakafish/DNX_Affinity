@@ -174,11 +174,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
                   dnxDebug(2, "dnxJobListExpire: Unable to dequeue job [%lu:%lu]", 
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
                } else {
-//                  if(qJob->ttl != 0) {
-                     xfree(qJob->hn);
-                     xfree(qJob->addr);
-                     xfree(qJob);
-//                  }
+                  xfree(qJob);
                   dnxDebug(2, "dnxJobListExpire: Dequeueing job [%lu:%lu]", 
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
                   pJob->state = DNX_JOB_PENDING;
