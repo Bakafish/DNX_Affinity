@@ -44,6 +44,7 @@
 typedef struct { int unused; } DnxRegistrar;
 
 int dnxDeleteNodeReq(DnxNodeRequest * pMsg);
+DnxNodeRequest * dnxCreateNodeReq(void);
 
 /** Return an available node "request for work" object pointer.
  * 
