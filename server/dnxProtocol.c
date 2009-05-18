@@ -62,9 +62,11 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
 
    assert(channel && pReg);
 
-   xfree(pReg->addr);
-   xfree(pReg->hn);
-
+   if(pReg->ttl != 0) {
+      // We are reusing an object and need to free up the old pointers
+      xfree(pReg->addr);
+      xfree(pReg->hn);
+   }
    memset(pReg, 0, sizeof *pReg);
 
    // await a message from the specified channel
