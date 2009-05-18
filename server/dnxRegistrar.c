@@ -192,7 +192,7 @@ DnxNodeRequest * dnxCreateNodeReq(void)
       pMsg->hn = NULL;
       pMsg->ttl = 0;
    }
-   return &pMsg;
+   return pMsg;
 }
 
 
