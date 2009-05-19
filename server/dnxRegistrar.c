@@ -144,6 +144,8 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
         tid, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
+
+      dnxDeleteNodeReq(**ppMsg);
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
@@ -188,6 +190,7 @@ DnxNodeRequest * dnxCreateNodeReq(void)
    if(pMsg == 0) {
       return NULL;
    } else {
+      memset(pMsg, 0, sizeof *pMsg);
       pMsg->addr = NULL;
       pMsg->hn = NULL;
       pMsg->ttl = 0;
@@ -218,6 +221,8 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
          dnxCompareNodeReq) == DNX_QRES_FOUND) {
       dnxDeleteNodeReq(pReq);      // free the dequeued DnxNodeRequest message
    }
+
+   dnxDeleteNodeReq(pMsg); // Get rid of the object that we used to find the item
    
    return DNX_OK;
 }
@@ -246,7 +251,7 @@ static void * dnxRegistrar(void * data)
 
    while (1)
    {
-      int ret;
+      int ret = DNX_ERR_UNSUPPORTED;
 
       // (re)allocate message block if not consumed in last pass
       if (pMsg == 0 && (pMsg = dnxCreateNodeReq()) == 0)
@@ -276,8 +281,6 @@ static void * dnxRegistrar(void * data)
             default:
                ret = DNX_ERR_UNSUPPORTED;
          }
-      } else {
-         dnxDebug(1, "dnxRegistrar: Leaking?");
       }
 
       pthread_cleanup_pop(0); // clean up the thread

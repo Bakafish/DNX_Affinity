@@ -66,15 +66,22 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
       // We are reusing an object and need to free up the old pointers
       xfree(pReg->addr);
       xfree(pReg->hn);
+      pReg->addr = NULL;
+      pReg->hn = NULL;
    }
    
    memset(pReg, 0, sizeof *pReg);
 
    // await a message from the specified channel
    xbuf.size = sizeof xbuf.buf - 1;
-   if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
+   if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK) {
       return ret;
-
+   }
+   
+   if (address != NULL) {
+      pReg->addr = ntop((struct sockaddr *)address); //Do this now save time in logging later
+   }
+   
    // decode the XML message:
    xbuf.buf[xbuf.size] = 0;
    dnxDebug(3, "dnxWaitForNodeRequest: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);
@@ -99,13 +106,7 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
    if ((ret = dnxXmlGet(&xbuf, "JobCap", DNX_XML_INT, &pReg->jobCap)) != DNX_OK
          && (ret = dnxXmlGet(&xbuf, "Capacity", DNX_XML_INT, &pReg->jobCap)) != DNX_OK)
       return ret;
- 
-   if (address != NULL) {
-      pReg->addr = ntop((struct sockaddr *)address); //Do this now save time in logging later
-   } else {
-      pReg->addr = NULL;
-   }
-   
+    
    // decode the hostname
    if ((ret = dnxXmlGet(&xbuf, "Hostname", DNX_XML_STR, &pReg->hn)) != DNX_OK)
       return ret;
