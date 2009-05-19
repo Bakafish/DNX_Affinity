@@ -144,9 +144,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
         tid, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
-      if(pReq != (*ppMsg)) {
-//         free((*ppMsg));
-      }
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
@@ -279,6 +276,8 @@ static void * dnxRegistrar(void * data)
             default:
                ret = DNX_ERR_UNSUPPORTED;
          }
+      } else {
+         dnxDebug(1, "dnxRegistrar: Leaking?");
       }
 
       pthread_cleanup_pop(0); // clean up the thread
