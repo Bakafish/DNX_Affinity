@@ -143,7 +143,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long current;
    DnxNewJob * pJob;
-//   DnxNodeRequest * qJob; // The job that is in the queue that we need to free
+   DnxNodeRequest * qJob; // The job that is in the queue that we need to free
    int jobCount;
    time_t now;
 
@@ -168,13 +168,15 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
             // Check to see if it is a Queued Job
             if (pJob->state == DNX_JOB_UNBOUND) {
                // Try and get a dnxClient for it
-//               qJob = pJob->pNode;
+               qJob = pJob->pNode;
                if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) != DNX_OK) // If OK we dispatch
                {
                   dnxDebug(2, "dnxJobListExpire: Unable to dequeue job [%lu:%lu]", 
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
                } else {
-//                  xfree(qJob);
+                  if(qJob != pJob->pNode) {
+                     xfree(qJob);
+                  }
                   dnxDebug(2, "dnxJobListExpire: Dequeueing job [%lu:%lu]", 
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
                   pJob->state = DNX_JOB_PENDING;
