@@ -442,9 +442,9 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
         dnxDeleteNodeReq(hostNode);
       }
    } else {
-//       if(hostNode != node) {
-//           dnxDeleteNodeReq(hostNode); 
-//       }
+      if(hostNode != node) {
+          dnxDeleteNodeReq(hostNode); 
+      }
       ret = DNX_OK;
    }
 
