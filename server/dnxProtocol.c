@@ -79,7 +79,9 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
    }
    
    if (address != NULL) {
-      pReg->addr = ntop((struct sockaddr *)address); //Do this now save time in logging later
+        int maxlen = INET6_ADDRSTRLEN + 1;
+        inet_ntop(AF_INET, &(((struct sockaddr_in *)address)->sin_addr), pReg->addr, maxlen); 
+//      pReg->addr = ntop((struct sockaddr *)address); //Do this now save time in logging later
    }
    
    // decode the XML message:
