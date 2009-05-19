@@ -39,6 +39,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <assert.h>
+#include <arpa/inet.h>
 
 //----------------------------------------------------------------------------
 
