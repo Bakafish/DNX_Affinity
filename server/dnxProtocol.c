@@ -80,7 +80,8 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
    }
    
    if (address != NULL) {
-        int maxlen = INET6_ADDRSTRLEN + 1;
+        int maxlen = INET_ADDRSTRLEN + 1;
+        pReg->addr = (char *)xcalloc(maxlen,sizeof(char));
         inet_ntop(AF_INET, &(((struct sockaddr_in *)address)->sin_addr), pReg->addr, maxlen); 
 //      pReg->addr = ntop((struct sockaddr *)address); //Do this now save time in logging later
    }
