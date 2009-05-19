@@ -63,13 +63,13 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
 
    assert(channel && pReg);
 
-   if(pReg->ttl != 0) {
-      // We are reusing an object and need to free up the old pointers
-      xfree(pReg->addr);
-      xfree(pReg->hn);
-      pReg->addr = NULL;
-      pReg->hn = NULL;
-   }
+//    if(pReg->ttl != 0) {
+//       // We are reusing an object and need to free up the old pointers
+//       xfree(pReg->addr);
+//       xfree(pReg->hn);
+//       pReg->addr = NULL;
+//       pReg->hn = NULL;
+//    }
    
    memset(pReg, 0, sizeof *pReg);
 
