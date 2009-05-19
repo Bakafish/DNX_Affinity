@@ -144,6 +144,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
         tid, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
+      free((*ppMsg));
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
@@ -332,9 +333,10 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
       // that this thread has affinity
       if (node->expires > now)
       {
-        dnxDebug(1, "dnxGetNodeRequest: Found Hostnode [%s]:(%qu) with Affinity to dnxClient [%s]:(%qu) .",
-                hostNode->hn, hostNode->flags, node->hn, node->flags);
-        break;
+         dnxDebug(1, "dnxGetNodeRequest: Found Hostnode [%s]:(%qu) with Affinity to dnxClient [%s]:(%qu) .",
+            hostNode->hn, hostNode->flags, node->hn, node->flags);
+         dnxDeleteNodeReq(hostNode); 
+         break;
       } else {  
       
         //SM 09/08 DnxNodeList
@@ -442,9 +444,6 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
         dnxDeleteNodeReq(hostNode);
       }
    } else {
-      if(hostNode != node) {
-          dnxDeleteNodeReq(hostNode); 
-      }
       ret = DNX_OK;
    }
 
