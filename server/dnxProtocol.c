@@ -5,6 +5,7 @@
 #include "dnxError.h"
 #include "dnxDebug.h"
 #include "common/dnxTransport.h"
+#include <arpa/inet.h>
 
 //----------------------------------------------------------------------------
 
