@@ -102,9 +102,11 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
             pNode->addr, dnxErrorString(ret));
    }else{
 //        char * addr = ntop((struct sockaddr *)sin);
-        dnxNodeListIncrementNodeMember(pNode->addr,JOBS_DISPATCHED);
+        dnxNodeListIncrementNodeMember(pNode->addr,JOBS_DISPATCHED);        
 //        xfree(addr);
    }
+   // Clean up the pNode
+   dnxDeleteNodeReq(pNode);
    return ret;
 }
 
