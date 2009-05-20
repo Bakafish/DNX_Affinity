@@ -546,7 +546,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    chk_result->output_file_fd = -1;
    chk_result->host_name = xstrdup(Job->host_name);
 
-   if(Job.service_description) {
+   if(Job->service_description) {
       chk_result->service_description = xstrdup(Job->service_description);
       chk_result->object_check_type = SERVICE_CHECK;
       chk_result->check_type = SERVICE_CHECK_ACTIVE;
