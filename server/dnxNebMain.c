@@ -544,10 +544,10 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    */
    chk_result->output_file = NULL;
    chk_result->output_file_fd = -1;
-   chk_result->host_name = xstrdup(Job.host_name);
+   chk_result->host_name = xstrdup(Job->host_name);
 
    if(Job.service_description) {
-      chk_result->service_description = xstrdup(Job.service_description);
+      chk_result->service_description = xstrdup(Job->service_description);
       chk_result->object_check_type = SERVICE_CHECK;
       chk_result->check_type = SERVICE_CHECK_ACTIVE;
    } else {
@@ -563,10 +563,10 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 
 
 //    normalize_plugin_output(plugin_output, "B2");
-   chk_result->output = xstrdup(sResult.resData);
-   xfree(sResult.resData);
+   chk_result->output = xstrdup(sResult->resData);
+   xfree(sResult->resData);
    
-   chk_result->return_code = sResult.resCode; // STATE_OK = 0
+   chk_result->return_code = sResult->resCode; // STATE_OK = 0
    chk_result->exited_ok = TRUE;
    chk_result->early_timeout = FALSE;
    chk_result->scheduled_check = TRUE;
