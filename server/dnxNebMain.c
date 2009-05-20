@@ -692,7 +692,7 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    Job.host_name  = xstrdup(ds->host_name);
    Job.service_description = xstrdup(ds->service_description);
    Job.object_check_type  = check_type;
-   Job.cmd        = xstrdup(ds->command_line);
+   Job.cmd        = ds->command_line;
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
    Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
@@ -966,6 +966,9 @@ static int ehHstCheck(int event_type, void * data)
 	/* process any macros contained in the argument */
 	process_macros(raw_command, &processed_command, 0); // LEAK
 	xfree(raw_command);
+ 
+   /* unset environment variables */
+   set_all_macro_environment_vars(FALSE);
 	
 	if(processed_command==NULL){
 		dnxDebug(1,"Processed check command for host '%s' was NULL - aborting.\n",
