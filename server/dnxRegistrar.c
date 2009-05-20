@@ -240,7 +240,7 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 static void * dnxRegistrar(void * data)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)data;
-   DnxNodeRequest * pMsg = dnxCreateNodeReq();
+   DnxNodeRequest * pMsg = dnxCreateNodeReq();  // LEAKING
 
    assert(data);
 
@@ -252,7 +252,7 @@ static void * dnxRegistrar(void * data)
    while (1)
    {
       int ret = DNX_ERR_UNSUPPORTED;
-
+dnxDebug(1, "dnxRegistrar: Process node request %lx", pMsg);
       // (re)allocate message block if not consumed in last pass
       if (pMsg == 0 && (pMsg = dnxCreateNodeReq()) == 0)
       {
