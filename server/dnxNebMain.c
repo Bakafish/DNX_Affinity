@@ -546,7 +546,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    chk_result->output_file_fd = -1;
    chk_result->host_name = xstrdup(Job->host_name);
 
-   if(Job->service_description) {
+   if(Job->service_description != NULL) {
       chk_result->service_description = xstrdup(Job->service_description);
       chk_result->object_check_type = SERVICE_CHECK;
       chk_result->check_type = SERVICE_CHECK_ACTIVE;
@@ -742,10 +742,10 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
-   Job.host_name  = ds->host_name; // LEAK
+   Job.host_name  = xstrdup(ds->host_name); 
    Job.service_description = NULL;
    Job.object_check_type = check_type;
-   Job.cmd        = ds->command_line;
+   Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
    Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
