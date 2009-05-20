@@ -966,10 +966,7 @@ static int ehHstCheck(int event_type, void * data)
 	/* process any macros contained in the argument */
 	process_macros(raw_command, &processed_command, 0); // LEAK
 	xfree(raw_command);
- 
-   /* unset environment variables */
-   set_all_macro_environment_vars(FALSE);
-	
+ 	
 	if(processed_command==NULL){
 		dnxDebug(1,"Processed check command for host '%s' was NULL - aborting.\n",
 		    hostObj->name);
