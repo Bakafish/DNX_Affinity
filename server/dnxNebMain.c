@@ -964,7 +964,7 @@ static int ehHstCheck(int event_type, void * data)
     }
 
 	/* process any macros contained in the argument */
-	process_macros(raw_command, &processed_command, 0); // LEAK
+	process_macros(raw_command, &processed_command, 0);
 	xfree(raw_command);
  	
 	if(processed_command==NULL){
@@ -975,7 +975,7 @@ static int ehHstCheck(int event_type, void * data)
 		dnxDebug(4,"ehHstCheck: Processed check command for host '%s' was (%s)",
 		    hostObj->name, processed_command);
       // Set the command_line instruction
-      hstdata->command_line = xstrdup(processed_command);
+      hstdata->command_line = xstrdup(processed_command); // Leak
       xfree(processed_command);
    }
 

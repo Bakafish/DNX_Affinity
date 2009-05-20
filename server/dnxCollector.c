@@ -112,10 +112,7 @@ static void * dnxCollector(void * data)
                 tid, Job.host_name, check_time);
             ret = dnxSubmitCheck(Job.host_name, Job.service_description, sResult.resCode, sResult.resData, check_time);
 
-//             DnxNodeRequest * pNode = Job.pNode;
-//             char * addr = ntop(pNode->address);
             dnxNodeListIncrementNodeMember(Job.pNode->addr,JOBS_HANDLED);
-//             xfree(addr);
 
             /** @todo Wrapper release DnxResult structure. */
             dnxAuditJob(&Job, "COLLECT");
@@ -126,7 +123,8 @@ static void * dnxCollector(void * data)
                   dnxErrorString(ret));
 
             xfree(sResult.resData);
-//            dnxJobCleanup(&Job);
+            xfree(Job.host_name);
+            xfree(Job.cmd);
             dnxDeleteNodeReq(Job.pNode);
          }
          else 
