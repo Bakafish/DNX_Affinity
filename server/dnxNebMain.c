@@ -988,6 +988,7 @@ static int ehHstCheck(int event_type, void * data)
    {
       dnxDebug(1, "(localCheckPattern match) Service for %s will execute locally: %s.", 
          hostObj->name, hstdata->command_line);
+      xfree(hstdata->command_line);
       return OK;     // tell nagios execute locally
    }
 
@@ -999,6 +1000,7 @@ static int ehHstCheck(int event_type, void * data)
    {
       dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
          hostObj->name, hstdata->command_line);      
+      xfree(hstdata->command_line);
       return OK;     // tell nagios execute locally
    } 
       
@@ -1052,6 +1054,7 @@ static int ehHstCheck(int event_type, void * data)
             dnxLog("ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
             dnxDebug(2,"ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
             dnxDeleteNodeReq(pNode);
+            xfree(hstdata->command_line);
             return OK;     // tell nagios execute locally
          } else {
             dnxDebug(2, "ehHstCheck: Host Check Queued Request");
@@ -1063,6 +1066,7 @@ static int ehHstCheck(int event_type, void * data)
          dnxDebug(1, "ehHstCheck: No worker nodes for (%s) Job [%s].",
             pNode->hn, hstdata->command_line);
          dnxDeleteNodeReq(pNode);
+         xfree(hstdata->command_line);
          gTopNode->jobs_rejected_no_nodes++;
          return OK;     // tell nagios execute locally 
                   // just in case it can reach the host
@@ -1075,6 +1079,7 @@ static int ehHstCheck(int event_type, void * data)
          dnxLog("ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
          dnxDebug(2,"ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
          dnxDeleteNodeReq(pNode);
+         xfree(hstdata->command_line);
          return OK;     // tell nagios execute locally
       } else {
          dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]",
