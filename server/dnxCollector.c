@@ -118,7 +118,7 @@ static void * dnxCollector(void * data)
             dnxLog("RESPONSE: %s", sResult.resData);
 
 //            ret = dnxSubmitCheck(Job.host_name, Job.service_description, sResult.resCode, sResult.resData, check_time);
-            ret = dnxSubmitCheck(Job, sResult, check_time);
+            ret = dnxSubmitCheck(&Job, &sResult, check_time);
 
             dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s.", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot, 
