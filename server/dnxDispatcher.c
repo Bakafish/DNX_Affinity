@@ -105,8 +105,8 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
         dnxNodeListIncrementNodeMember(pNode->addr,JOBS_DISPATCHED);        
 //        xfree(addr);
    }
-   // Clean up the pNode
-   dnxDeleteNodeReq(pNode);
+   // Clean up the pNode?
+//   dnxDeleteNodeReq(pNode);
    return ret;
 }
 
