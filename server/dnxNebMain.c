@@ -526,7 +526,9 @@ static int nagiosGetServiceCount(void)
 // #endif   // CURRENT_NEB_API_VERSION == 3
 
 
-int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char *plugin_output, time_t check_time)
+
+//int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char *plugin_output, time_t check_time)
+int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 {
    check_result *chk_result;
    chk_result = (check_result *)malloc(sizeof(check_result));
@@ -542,15 +544,15 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
    */
    chk_result->output_file = NULL;
    chk_result->output_file_fd = -1;
-   chk_result->host_name = xstrdup(host_name);
+   chk_result->host_name = xstrdup(Job.host_name);
 
-   if(svc_description) {
-      chk_result->service_description = xstrdup(svc_description);
-      chk_result->object_check_type=SERVICE_CHECK;
+   if(Job.service_description) {
+      chk_result->service_description = xstrdup(Job.service_description);
+      chk_result->object_check_type = SERVICE_CHECK;
       chk_result->check_type = SERVICE_CHECK_ACTIVE;
    } else {
-      chk_result->service_description =NULL;
-      chk_result->object_check_type=HOST_CHECK;
+      chk_result->service_description = NULL;
+      chk_result->object_check_type = HOST_CHECK;
       chk_result->check_type = HOST_CHECK_ACTIVE;
    }
 
@@ -561,9 +563,10 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
 
 
 //    normalize_plugin_output(plugin_output, "B2");
-   chk_result->output = xstrdup(plugin_output);
+   chk_result->output = xstrdup(sResult.resData);
+   xfree(sResult.resData);
    
-   chk_result->return_code = return_code; // STATE_OK = 0
+   chk_result->return_code = sResult.resCode; // STATE_OK = 0
    chk_result->exited_ok = TRUE;
    chk_result->early_timeout = FALSE;
    chk_result->scheduled_check = TRUE;
@@ -578,6 +581,7 @@ int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char
    
    /* Call the nagios function to insert the result into the result linklist */
    add_check_result_to_list(chk_result);
+   dnxJobCleanup(Job);
    return 0;
 }
 
@@ -1427,11 +1431,16 @@ void dnxJobCleanup(DnxNewJob * pJob)
       dnxDebug(1, "dnxJobCleanup: Job objects freed for (%s) [%s].", 
             pJob->host_name, pJob->pNode->addr);
       xfree(pJob->cmd);
+      pJob->cmd = NULL;
       xfree(pJob->host_name);
+      pJob->host_name = NULL;
       xfree(pJob->service_description);
+      pJob->service_description = NULL;
+      pJob->state = DNX_JOB_NULL;
       xfree(pJob->pNode->addr);
       xfree(pJob->pNode->hn);
       xfree(pJob->pNode);
+      pJob->pNode = NULL;
    }
    else
    {

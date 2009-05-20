@@ -110,7 +110,6 @@ static void * dnxCollector(void * data)
             time_t check_time = Job.start_time + sResult.delta;
             dnxDebug(2, "dnxCollector[%lx]: Hostname(%s) Time[%lu]",
                 tid, Job.host_name, check_time);
-            ret = dnxSubmitCheck(Job.host_name, Job.service_description, sResult.resCode, sResult.resData, check_time);
 
             dnxNodeListIncrementNodeMember(Job.pNode->addr,JOBS_HANDLED);
 
@@ -118,14 +117,17 @@ static void * dnxCollector(void * data)
             dnxAuditJob(&Job, "COLLECT");
             dnxLog("RESPONSE: %s", sResult.resData);
 
+//            ret = dnxSubmitCheck(Job.host_name, Job.service_description, sResult.resCode, sResult.resData, check_time);
+            ret = dnxSubmitCheck(Job, sResult, check_time);
+
             dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s.", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot, 
                   dnxErrorString(ret));
 
-            xfree(sResult.resData);
+//            xfree(sResult.resData);
 //            xfree(Job.host_name);
 //            xfree(Job.cmd);
-            dnxDeleteNodeReq(Job.pNode);
+//            dnxDeleteNodeReq(Job.pNode);
          }
          else 
          {
