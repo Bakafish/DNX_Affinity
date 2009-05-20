@@ -738,7 +738,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
-   Job.host_name  = xstrdup(ds->host_name); // LEAK
+   Job.host_name  = ds->host_name; // LEAK
    Job.service_description = NULL;
    Job.object_check_type = check_type;
    Job.cmd        = ds->command_line;
