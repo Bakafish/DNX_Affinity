@@ -124,7 +124,7 @@ static void * dnxCollector(void * data)
 
             xfree(sResult.resData);
             xfree(Job.host_name);
-            xfree(Job.cmd);
+//            xfree(Job.cmd);
             dnxDeleteNodeReq(Job.pNode);
          }
          else 
