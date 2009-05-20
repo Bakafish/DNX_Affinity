@@ -98,7 +98,7 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
       memcpy(&ilist->list[tail], pJob, sizeof *pJob);
       
       // Clean up original job?
-      dnxJobCleanup(pJob);
+//      dnxJobCleanup(pJob);
    
       // update dispatch head index
       if (ilist->list[ilist->tail].state != DNX_JOB_PENDING && 
