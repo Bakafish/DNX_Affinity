@@ -1442,9 +1442,10 @@ void dnxJobCleanup(DnxNewJob * pJob)
       xfree(pJob->service_description);
       pJob->service_description = NULL;
       pJob->state = DNX_JOB_NULL;
-      xfree(pJob->pNode->addr);
-      xfree(pJob->pNode->hn);
-      xfree(pJob->pNode);
+      dnxDeleteNodeReq(pJob->pNode);
+//       xfree(pJob->pNode->addr);
+//       xfree(pJob->pNode->hn);
+//       xfree(pJob->pNode);
       pJob->pNode = NULL;
    }
    else
