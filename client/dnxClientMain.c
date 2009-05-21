@@ -363,7 +363,7 @@ static int getOptions(int argc, char ** argv)
       runpath[rplen - 1] = 0;
 
    if (s_dbgflag)
-      appendString(&s_cmdover, "logFile=STDOUT\ndebugFile=STDOUT\n");
+      appendString(&s_cmdover, "logFile=STDERR\ndebugFile=STDERR\n");
 
    if (logfile)
       appendString(&s_cmdover, "logFile=%s\n", logfile);
