@@ -435,7 +435,6 @@ static void * dnxWorker(void * data)
       msg.reqType = DNX_REQ_REGISTER;
       msg.jobCap = 1;
       msg.ttl = iwlm->cfg.reqTimeout - iwlm->cfg.ttlBackoff;
-      dnxDebug(4, "dnxWorker: Hostname [%s] (%s)", iwlm->myhostname, msg.hn);
       strcpy(msg.hn, iwlm->myhostname);
       // request a job, and then wait for a job to come in...
       if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
