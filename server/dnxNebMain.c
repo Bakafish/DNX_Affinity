@@ -803,7 +803,7 @@ static int ehSvcCheck(int event_type, void * data)
    // check for local execution pattern on command line
    if (cfg.localCheckPattern && regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
    {
-      dnxDebug(1, "(localCheckPattern match) Service for %s will execute locally: %s.", 
+      dnxDebug(1, "ehSvcCheck: (localCheckPattern match) Service for %s will execute locally: %s.", 
          hostObj->name, svcdata->command_line);
       return OK;     // tell nagios execute locally
    }
@@ -814,7 +814,7 @@ static int ehSvcCheck(int event_type, void * data)
 
    if (cfg.bypassHostgroup && (affinity & 1)) // Affinity bypass group is always the LSB
    {
-      dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
+      dnxDebug(1, "ehSvcCheck: (bypassHostgroup match) Service for %s will execute locally: %s.", 
          hostObj->name, svcdata->command_line);
       return OK;     // tell nagios execute locally
    }
@@ -962,7 +962,7 @@ static int ehHstCheck(int event_type, void * data)
 	    &raw_command,   0);
 
 	if(raw_command==NULL){
-		dnxDebug(1,"Raw check command for host '%s' was NULL - aborting.\n",
+		dnxDebug(1,"ehHstCheck: Raw check command for host '%s' was NULL - aborting.\n",
 		    hostObj->name);
 		return OK;
     }
@@ -972,7 +972,7 @@ static int ehHstCheck(int event_type, void * data)
 	xfree(raw_command);
  	
 	if(processed_command==NULL){
-		dnxDebug(1,"Processed check command for host '%s' was NULL - aborting.\n",
+		dnxDebug(1,"ehHstCheck: Processed check command for host '%s' was NULL - aborting.\n",
 		    hostObj->name);
 		return OK;
    } else {
@@ -986,7 +986,7 @@ static int ehHstCheck(int event_type, void * data)
    // check for local execution pattern on command line
    if (cfg.localCheckPattern && regexec(&regEx, hstdata->command_line, 0, 0, 0) == 0)
    {
-      dnxDebug(1, "(localCheckPattern match) Service for %s will execute locally: %s.", 
+      dnxDebug(1, "ehHstCheck: (localCheckPattern match) Service for %s will execute locally: %s.", 
          hostObj->name, hstdata->command_line);
       xfree(hstdata->command_line);
       return OK;     // tell nagios execute locally
@@ -998,7 +998,7 @@ static int ehHstCheck(int event_type, void * data)
 
    if (cfg.bypassHostgroup && (affinity & 1)) // Affinity bypass group is always the LSB
    {
-      dnxDebug(1, "(bypassHostgroup match) Service for %s will execute locally: %s.", 
+      dnxDebug(1, "ehHstCheck: (bypassHostgroup match) Service for %s will execute locally: %s.", 
          hostObj->name, hstdata->command_line);      
       xfree(hstdata->command_line);
       return OK;     // tell nagios execute locally
