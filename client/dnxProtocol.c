@@ -32,7 +32,7 @@ int dnxSendNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * addre
    dnxXmlAdd  (&xbuf, "JobCap",  DNX_XML_UINT, &pReg->jobCap);
    dnxXmlAdd  (&xbuf, "Capacity",DNX_XML_UINT, &pReg->jobCap); // old format - for bc
    dnxXmlAdd  (&xbuf, "TTL",     DNX_XML_UINT, &pReg->ttl);
-   dnxXmlAdd  (&xbuf, "Hostname", DNX_XML_STR, &pReg->hn);   
+   dnxXmlAdd  (&xbuf, "Hostname", DNX_XML_STR, pReg->hn);   
    dnxXmlClose(&xbuf);
 
    dnxDebug(3, "dnxSendNodeRequest: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);
