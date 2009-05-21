@@ -3,6 +3,7 @@
 #include "dnxError.h"
 #include "common/dnxTransport.h"
 #include <assert.h>
+#include <string.h>
 
 //----------------------------------------------------------------------------
 
