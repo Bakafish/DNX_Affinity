@@ -363,7 +363,7 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,int timeout, char
 
         int maxlen = INET_ADDRSTRLEN + 1;
         addrStr = (char *)xcalloc(maxlen,sizeof(char));
-        inet_ntop(AF_INET, &(struct sockaddr_in *)dst, addrStr, maxlen); 
+        inet_ntop(AF_INET, &dst, addrStr, maxlen); 
 //        addrStr = ntop((struct sockaddr *)&tmp);
     } else {
         dnxDebug(8,"DnxUdpWrite: Sending to channel");
