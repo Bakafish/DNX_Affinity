@@ -359,10 +359,13 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,int timeout, char
     {
         dnxDebug(8,"DnxUdpWrite: Overriding Destination");
         ret = sendto(iucp->socket, buf, size, 0,(struct sockaddr *)dst, sizeof(struct sockaddr_in));
-        struct sockaddr_in tmp;
-        memcpy(&tmp,dst, sizeof(tmp));
-        addrStr = ntop((struct sockaddr *)&tmp);
-    }else{
+
+
+        int maxlen = INET_ADDRSTRLEN + 1;
+        addrStr = (char *)xcalloc(maxlen,sizeof(char));
+        inet_ntop(AF_INET, &((struct sockaddr_in *)dst), addrStr, maxlen); 
+//        addrStr = ntop((struct sockaddr *)&tmp);
+    } else {
         dnxDebug(8,"DnxUdpWrite: Sending to channel");
         ret = write(iucp->socket, buf, size);
         addrStr = xstrdup(iucp->host);
