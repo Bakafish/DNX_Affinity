@@ -1989,7 +1989,7 @@ unsigned long long dnxGetAffinity(char * name)
    }
 
    // Check the cache first
-   while (temp_aff != NULL) {
+   while (temp_aff->name != NULL) {
       dnxDebug(6, "dnxGetAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0)
       {
@@ -2002,7 +2002,7 @@ unsigned long long dnxGetAffinity(char * name)
 
    // This is the first time we've seen this host/dnxClient
    temp_aff = hostGrpAffinity;
-   while (temp_aff != NULL) {
+   while (temp_aff->name != NULL) {
       // Recurse through the host group affinity list
       dnxDebug(4, "dnxGetAffinity: Recursing Host Group list - [%s] = (%qu)", 
       temp_aff->name, temp_aff->flag);
