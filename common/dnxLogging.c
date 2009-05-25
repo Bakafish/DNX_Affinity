@@ -113,11 +113,10 @@ static int vlogger(FILE * fp, char * fmt, va_list ap)
          xfree(buff);
          return errno;  
       }
+      xfree(buff);
    }else{
       syslog(LOG_ERR,"DNX Logging Error: Could not obtain file handle while writing log, check permissions, size, or max handles.\nMessage to be logged was %s", fmt);
-      return 0;
    }
-   xfree(buff);
    return 0;
 }
 
