@@ -95,7 +95,7 @@ static int vlogger(FILE * fp, char * fmt, va_list ap)
       {
          time_t tm = time(0);
 //         if (fprintf(fp, "[%.*s] ", 24, ctime(&tm)) < 0) 
-         if (fprintf(fp, "[%.*s] ", 24, ctime_r(&tm, buff)) < 0)
+         if (fprintf(fp, "[%.*s] ", 24, ctime_r(&tm, &buff)) < 0)
          {
             xfree(buff);
             return errno;
