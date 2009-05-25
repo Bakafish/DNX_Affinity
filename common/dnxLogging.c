@@ -89,11 +89,11 @@ static char s_AudFileName[FILENAME_MAX + 1] = "";
 static int vlogger(FILE * fp, char * fmt, va_list ap)
 {
    if (fp)
-   {
+   {         
+      char buff[26];
       if (!isatty(fileno(fp)))
       {
          time_t tm = time(0);
-         char buff[26];
 //         if (fprintf(fp, "[%.*s] ", 24, ctime(&tm)) < 0) 
          if (fprintf(fp, "[%.*s] ", 24, ctime_r(&tm, buff)) < 0)
          {
@@ -114,8 +114,10 @@ static int vlogger(FILE * fp, char * fmt, va_list ap)
          return errno;  
       }
    }else{
-        syslog(LOG_ERR,"DNX Logging Error: Could not obtain file handle while writing log, check permissions, size, or max handles.\nMessage to be logged was %s", fmt);
+      syslog(LOG_ERR,"DNX Logging Error: Could not obtain file handle while writing log, check permissions, size, or max handles.\nMessage to be logged was %s", fmt);
+      return 0;
    }
+   xfree(buff);
    return 0;
 }
 
