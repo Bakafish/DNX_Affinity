@@ -1971,7 +1971,8 @@ unsigned long long dnxGetAffinity(char * name)
       // misconfigured client could steal requests that it can't service.
       flag = (unsigned long long)-2; // Match all affinity but local(LSB)
       dnxAddAffinity(hostAffinity, name, flag);
-      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
+      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags."
+      " This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
       return(flag);
    }
@@ -1990,6 +1991,7 @@ unsigned long long dnxGetAffinity(char * name)
 
    // Check the cache first
    while (temp_aff != NULL) {
+      if(temp_aff->name == NULL) { break; }
       dnxDebug(6, "dnxGetAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0)
       {
@@ -2003,6 +2005,7 @@ unsigned long long dnxGetAffinity(char * name)
    // This is the first time we've seen this host/dnxClient
    temp_aff = hostGrpAffinity;
    while (temp_aff != NULL) {
+      if(temp_aff->name == NULL) { break; }
       // Recurse through the host group affinity list
       dnxDebug(4, "dnxGetAffinity: Recursing Host Group list - [%s] = (%qu)", 
       temp_aff->name, temp_aff->flag);
@@ -2034,7 +2037,8 @@ unsigned long long dnxGetAffinity(char * name)
       // misconfigured client could steal requests that it can't service.
       flag = (unsigned long long)-2; // Match all affinity but local(LSB)
       dnxAddAffinity(hostAffinity, name, flag);
-      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags. This host is not a member of any hostgroup and will service ALL requests!",
+      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags."
+      " This host is not a member of any hostgroup and will service ALL requests!",
          name, flag);
       return(flag);
    }
@@ -2048,7 +2052,7 @@ int dnxHammingWeight(unsigned long long x) {
     unsigned long long count;
     for (count=0; x; count++)
         x &= x-1;
-    return count;
+    return count; // Returns the number of binary 1's in a bitmask
 }
 
 int dnxIsDnxClient(unsigned long long x) {

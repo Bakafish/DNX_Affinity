@@ -128,7 +128,9 @@ void dnxLog(char * fmt, ... )
          fp = stderr;
       }
       else 
+      {
          fp_fopened = fopen(s_LogFileName, "a+");
+      }
    }
 
 

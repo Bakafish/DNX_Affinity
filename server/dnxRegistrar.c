@@ -138,23 +138,25 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    // locate existing node: update expiration time, or add to the queue
    if (dnxQueueFind(ireg->rqueue, &pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
    {
+// MUTEX lock the node
       pReq->expires = expires;
-            
+// MUTEX unlock the node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
         tid, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
-
-//      dnxDeleteNodeReq(&(**ppMsg));
    }
    else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
    {
+// MUTEX lock the node
       // This is new, add the affinity flags  
        dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
        pReq->flags = dnxGetAffinity(pReq->hn);
        pReq->expires = expires;
-      *ppMsg = 0;    // Registered new request node
+// MUTEX unlock the node
+
+      *ppMsg = 0;    // Change the pointer to 0 so that a new node is created
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
         tid, pReq->hn, pReq->xid.objSerial, pReq->xid.objSlot, 
@@ -167,7 +169,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
             dnxErrorString(ret));
       dnxLog("dnxRegisterNode: Unable to enqueue node request: %s.", 
             dnxErrorString(ret));
-//      dnxDeleteNodeReq(*ppMsg);
    }
    return ret;
 }
@@ -176,12 +177,13 @@ int dnxCreateNodeReqCount = 0;
 
 int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
 {
-
+// MUTEX lock the node
    assert(pMsg);
 dnxDebug(4, "dnxDeleteNodeReq: Freeing DnxNodeRequest %lx (%d)", pMsg, --dnxCreateNodeReqCount);   
    xfree(pMsg->addr);
    xfree(pMsg->hn);
    xfree(pMsg);
+// MUTEX unlock the node
    
    return DNX_OK;
 }
@@ -193,10 +195,12 @@ DnxNodeRequest * dnxCreateNodeReq(void)
    if(pMsg == 0) {
       return NULL;
    } else {
+// MUTEX lock the node
       memset(pMsg, 0, sizeof *pMsg);
       pMsg->addr = NULL;
       pMsg->hn = NULL;
       pMsg->ttl = 0;
+// MUTEX unlock the node
    }
 dnxDebug(4, "dnxCreateNodeReq: Creating DnxNodeRequest %lx (%d)", pMsg, ++dnxCreateNodeReqCount);   
    return pMsg;
@@ -244,7 +248,7 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 static void * dnxRegistrar(void * data)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)data;
-   DnxNodeRequest * pMsg = dnxCreateNodeReq();  // LEAKING
+   DnxNodeRequest * pMsg = dnxCreateNodeReq();
 
    assert(data);
 
@@ -270,7 +274,7 @@ static void * dnxRegistrar(void * data)
 
       // wait on the dispatch socket for a request
       if ((ret = dnxWaitForNodeRequest(ireg->dispchan, pMsg, pMsg->address, 
-            DNX_REGISTRAR_REQUEST_TIMEOUT)) == DNX_OK) // LEAKING
+            DNX_REGISTRAR_REQUEST_TIMEOUT)) == DNX_OK) 
       {
          switch (pMsg->reqType)
          {
@@ -317,18 +321,18 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
    
    assert(reg && ppNode);
 
-    if(! client_queue_len)
-    {
-        dnxDebug(1, "dnxGetNodeRequest: There are no DNX client threads regestered.");
-        // We probably just started up and no threads are registered yet.
-        // It's also possable that all our Clients are down or a previous run 
-        // has expired all our threads and we haven't registered any new workers
-        // Just return the original request node and let the mail loop try again
-        return ret;
-    }
+   if(! client_queue_len)
+   {
+      dnxDebug(1, "dnxGetNodeRequest: There are no DNX client threads regestered.");
+      // We probably just started up and no threads are registered yet.
+      // It's also possable that all our Clients are down or a previous run 
+      // has expired all our threads and we haven't registered any new workers
+      // Just return the original request node and let the mail loop try again
+      return ret;
+   }
 
-    dnxDebug(4, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
-        ireg->tid, client_queue_len);
+   dnxDebug(4, "dnxGetNodeRequest: Entering loop (%i) Number of elements [%i]",
+      ireg->tid, client_queue_len);
 
    while ((ret = dnxQueueRemove(ireg->rqueue, (void **)&node, dnxCompareAffinityNodeReq)) == DNX_QRES_FOUND)
    {
@@ -347,11 +351,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
          break;
       } else {  
       
-        //SM 09/08 DnxNodeList
-//        char * addr = (char *)ntop(node->address,addr);
-        dnxNodeListIncrementNodeMember(node->addr,JOBS_REQ_EXP);
-//        xfree(addr);
-        //SM 09/08 DnxNodeList END
+         dnxNodeListIncrementNodeMember(node->addr,JOBS_REQ_EXP);
 
          dnxDebug(1, 
             "dnxGetNodeRequest: Expired req [%lu,%lu] at %u; expired at %u.", 
@@ -367,58 +367,6 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode)
          node = hostNode;
       }
    }
-//   while ((ret = dnxQueueGet(ireg->rqueue, (void **)&node)) == DNX_OK)
-//    {
-//       time_t now = time(0);
-// 
-// dnxDebug(4, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s)",
-//     hostNode->hn, node->hostname);
-// 
-//       // verify that this request's Time-To-Live (TTL) has not expired and
-//       // that this thread has affinity
-//       if (node->expires > now)
-//       {
-//       dnxDebug(4, "dnxGetNodeRequest: Affinity Client [%s]:(%qu) Host [%s]:(%qu).",
-//                 node->hostname, node->flags, 
-//                 hostNode->hn, hostNode->flags);
-//       
-//       
-//          // make sure that this thread has affinity
-//          if (node->flags & hostNode->flags)
-//          {
-//             dnxDebug(4, "dnxGetNodeRequest: dnxClient [%s] has affinity to (%s).",
-//                 *(char **)node->hostname, hostNode->hn);
-//             break;
-//          } else {
-// 
-//             // DnxNodeList increment may need to be here
-// //             char * addr = ntop(node->address,addr);
-// //             dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
-// //             xfree(addr);
-// 
-//             dnxDebug(2, "dnxGetNodeRequest: dnxClient [%s] can not service request for (%s).",
-//                *(char **)node->hostname, hostNode->hn);
-// //             ret = DNX_ERR_NOTFOUND;
-//          }
-//       } else {  
-//       
-//         //SM 09/08 DnxNodeList
-//         char * addr = ntop(node->address,addr);
-//         dnxNodeListIncrementNodeMember(addr,JOBS_REQ_EXP);
-//         xfree(addr);
-//         //SM 09/08 DnxNodeList END
-// 
-//          dnxDebug(3, 
-//             "dnxGetNodeRequest: Expired req [%lu,%lu] at %u; expired at %u.", 
-//             node->xid.objSerial, node->xid.objSlot, 
-//             (unsigned)(now % 1000), (unsigned)(node->expires % 1000));
-// 
-//          discard_count++;
-// 
-//          xfree(node); 
-//          node = 0;
-//       }
-//    }
 
     // If we break out of the loop with affinity then we should have set
     // the node to a correct dnxClient object
