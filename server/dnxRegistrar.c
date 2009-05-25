@@ -105,7 +105,8 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
 
    assert(pLeft && pRight);
 
-   dnxDebug(5, "dnxCompareAffinityNodeReq: dnxClient flags [%lu]", pxl);
+   dnxDebug(1, "dnxCompareAffinityNodeReq: dnxClient flags [%lu], Host [%lu]",
+      pxl, pxr);
 
    return pxl & pxr ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
 }
@@ -177,7 +178,7 @@ int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
 {
 
    assert(pMsg);
-dnxDebug(1, "dnxDeleteNodeReq: Freeing DnxNodeRequest %lx (%d)", pMsg, --dnxCreateNodeReqCount);   
+dnxDebug(4, "dnxDeleteNodeReq: Freeing DnxNodeRequest %lx (%d)", pMsg, --dnxCreateNodeReqCount);   
    xfree(pMsg->addr);
    xfree(pMsg->hn);
    xfree(pMsg);
@@ -197,7 +198,7 @@ DnxNodeRequest * dnxCreateNodeReq(void)
       pMsg->hn = NULL;
       pMsg->ttl = 0;
    }
-dnxDebug(1, "dnxCreateNodeReq: Creating DnxNodeRequest %lx (%d)", pMsg, ++dnxCreateNodeReqCount);   
+dnxDebug(4, "dnxCreateNodeReq: Creating DnxNodeRequest %lx (%d)", pMsg, ++dnxCreateNodeReqCount);   
    return pMsg;
 }
 
