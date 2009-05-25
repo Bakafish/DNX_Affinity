@@ -173,17 +173,12 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
    return ret;
 }
 
-int dnxCreateNodeReqCount = 0;
-
 int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
 {
-// MUTEX lock the node
    assert(pMsg);
-dnxDebug(4, "dnxDeleteNodeReq: Freeing DnxNodeRequest %lx (%d)", pMsg, --dnxCreateNodeReqCount);   
    xfree(pMsg->addr);
    xfree(pMsg->hn);
    xfree(pMsg);
-// MUTEX unlock the node
    
    return DNX_OK;
 }
@@ -195,14 +190,11 @@ DnxNodeRequest * dnxCreateNodeReq(void)
    if(pMsg == 0) {
       return NULL;
    } else {
-// MUTEX lock the node
       memset(pMsg, 0, sizeof *pMsg);
       pMsg->addr = NULL;
       pMsg->hn = NULL;
       pMsg->ttl = 0;
-// MUTEX unlock the node
    }
-dnxDebug(4, "dnxCreateNodeReq: Creating DnxNodeRequest %lx (%d)", pMsg, ++dnxCreateNodeReqCount);   
    return pMsg;
 }
 
