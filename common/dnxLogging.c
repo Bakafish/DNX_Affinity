@@ -90,12 +90,12 @@ static int vlogger(FILE * fp, char * fmt, va_list ap)
 {
    if (fp)
    {         
-      char buff[26];
+      char * buff = xcalloc(26, sizeof(char));
       if (!isatty(fileno(fp)))
       {
          time_t tm = time(0);
 //         if (fprintf(fp, "[%.*s] ", 24, ctime(&tm)) < 0) 
-         if (fprintf(fp, "[%.*s] ", 24, ctime_r(&tm, &buff)) < 0)
+         if (fprintf(fp, "[%.*s] ", 24, ctime_r(&tm, buff)) < 0)
          {
             xfree(buff);
             return errno;
