@@ -1404,9 +1404,6 @@ void dnxJobCleanup(DnxNewJob * pJob)
       pJob->service_description = NULL;
       pJob->state = DNX_JOB_NULL;
       dnxDeleteNodeReq(pJob->pNode);
-//       xfree(pJob->pNode->addr);
-//       xfree(pJob->pNode->hn);
-//       xfree(pJob->pNode);
       pJob->pNode = NULL;
    }
    else

@@ -93,15 +93,26 @@ static int vlogger(FILE * fp, char * fmt, va_list ap)
       if (!isatty(fileno(fp)))
       {
          time_t tm = time(0);
-         if (fprintf(fp, "[%.*s] ", 24, ctime(&tm)) < 0)
+         char buff[26];
+//         if (fprintf(fp, "[%.*s] ", 24, ctime(&tm)) < 0) 
+         if (fprintf(fp, "[%.*s] ", 24, ctime_r(&tm, buff)) < 0)
+         {
+            xfree(buff);
             return errno;
+         }
       }
-      if (vfprintf(fp, fmt, ap) < 0)
+      if (vfprintf(fp, fmt, ap) < 0) {
+         xfree(buff);
          return errno;
-      if (fputc('\n', fp) == EOF)
+      }
+      if (fputc('\n', fp) == EOF) {
+         xfree(buff);            
          return errno;
-      if (fflush(fp) == EOF)
-         return errno;
+      }
+      if (fflush(fp) == EOF) {
+         xfree(buff);
+         return errno;  
+      }
    }else{
         syslog(LOG_ERR,"DNX Logging Error: Could not obtain file handle while writing log, check permissions, size, or max handles.\nMessage to be logged was %s", fmt);
    }
