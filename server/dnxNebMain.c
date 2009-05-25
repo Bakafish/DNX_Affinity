@@ -586,45 +586,6 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 }
 
 
-
-
-//----------------------------------------------------------------------------
-
-// int dnxPostResult(void * data, time_t start_time, unsigned delta,
-//       int early_timeout, int res_code, char * res_data)
-// {
-//   DnxJobData * jdp = (DnxJobData *)data;
-
-//    if (early_timeout)
-//       res_code = STATE_UNKNOWN;
-// 
-   /** @todo Nagios 3.x: Collect a better value for exited_ok. */
-   /** @todo Nagios 3.x: Collect a better value for check_type. */
-
-// #if CURRENT_NEB_API_VERSION == 2
-// 
-//    return nagios2xPostResult(jdp->svc, start_time, early_timeout,
-//          res_code, res_data);
-// 
-// #elif CURRENT_NEB_API_VERSION == 3
-
-//    return nagios3xPostResult(jdp->svc, jdp->type,
-//          jdp->chkopts, jdp->schedule, jdp->reschedule, jdp->latency,
-//          start_time, start_time + delta, early_timeout,
-//          1, res_code, res_data);
-
-//    return nagios3xPostResult(start_time, start_time + delta, early_timeout,
-//          1, res_code, res_data);
-//     nebstruct_host_check_data * hstData;
-//     check_result * resultInfo;
-
-// #else
-// # error Unsupported NEB API version.
-// #endif
-// }
-
-//----------------------------------------------------------------------------
-
 /** Calculate the optimal size of the job list.
  *
  * Assumes the caller will actually use the returned value to allocate the

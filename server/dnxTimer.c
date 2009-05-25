@@ -148,12 +148,13 @@ static void * dnxTimer(void * data)
             if(job->ack)
             {
                 sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to return job response in time allowed)",job->xid.objSerial, job->xid.objSlot, job->pNode->addr);
-
-            }else{
+            }
+            else
+            {
                 sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to acknowledge job reciept)",job->xid.objSerial, job->xid.objSlot, job->pNode->addr);
             }
 
-            dnxDebug(2,msg);
+            dnxDebug(2, "dnxTimer: %s", msg);
 
             int result_code;
 
@@ -168,8 +169,8 @@ static void * dnxTimer(void * data)
             time_t check_time = job->start_time;
             sResult.resData = msg;
             sResult.resCode = result_code;
-//            ret = dnxSubmitCheck(job, &sResult, check_time);
-// BAD!
+            job->state = DNX_JOB_COMPLETE; // Put it into a reportable state
+// BAD!           ret = dnxSubmitCheck(job, &sResult, check_time);
          }
       }
 
