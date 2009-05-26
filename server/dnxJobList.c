@@ -185,6 +185,10 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
             }
             break;   // Bail-out: this job hasn't expired yet
          }
+         
+         dnxDebug(2, "dnxJobListExpire: Job Expire Time: (%lu) Now: (%lu)",
+            pJob->expires, now);
+         
          // job has expired - add it to the expired job list
          memcpy(&pExpiredJobs[jobCount], pJob, sizeof(DnxNewJob));
 
