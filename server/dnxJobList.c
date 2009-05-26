@@ -183,7 +183,12 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
                   pJob->state = DNX_JOB_PENDING;
                }
             }
-            // increment the job list index
+
+            // bail-out if this was the job list tail
+            if (current == ilist->tail)
+               break;
+
+            // otherwise increment the job list index
             current = (current + 1) % ilist->size;
             jobCount++;
             continue;
