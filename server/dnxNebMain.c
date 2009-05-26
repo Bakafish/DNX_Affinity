@@ -670,7 +670,9 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
       dnxLog("Failed to post Service Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
    } else { 
-       dnxAuditJob(&Job, "ASSIGN");
+      dnxDebug(2, "dnxPostNewServiceJob: Job Start Time: (%lu) Expires: (%lu)",
+         Job.start_time, Job.expires);
+      dnxAuditJob(&Job, "ASSIGN");
    }
    
    return ret;
