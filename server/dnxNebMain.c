@@ -132,6 +132,7 @@ static DnxAffinityList * hostAffinity; //!< The affinity list of hosts.
 static time_t start_time;           //!< The module start time.
 static void * myHandle;             //!< Private NEB module handle.
 static regex_t regEx;               //!< Compiled regular expression structure.
+static unsigned long serial = 0;    // the number of service checks processed
 
 //SM 09/08 DnxNodeList
 DnxNode * gTopNode = NULL;;
@@ -742,7 +743,6 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
  */
 static int ehSvcCheck(int event_type, void * data)
 {
-   static unsigned long serial = 0; // the number of service checks processed
 
    nebstruct_service_check_data * svcdata = (nebstruct_service_check_data *)data;
    if ( event_type != NEBCALLBACK_SERVICE_CHECK_DATA )
@@ -880,7 +880,7 @@ static int ehSvcCheck(int event_type, void * data)
  */
 static int ehHstCheck(int event_type, void * data)
 {
-   static unsigned long serial = 0; // the number of service checks processed
+// Global now   static unsigned long serial = 0; // the number of service checks processed
 
    nebstruct_host_check_data * hstdata = (nebstruct_host_check_data *)data;
    if ( event_type != NEBCALLBACK_HOST_CHECK_DATA )
