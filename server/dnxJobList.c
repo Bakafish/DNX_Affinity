@@ -144,7 +144,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long current;
    DnxNewJob * pJob;
-   DnxNodeRequest * qJob; // The job that is in the queue that we need to free
+   DnxNodeRequest * qJob; 
    int jobCount;
    time_t now;
 
@@ -195,8 +195,8 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
             //break;   // Bail-out: this job hasn't expired yet
          }
          
-         dnxDebug(2, "dnxJobListExpire: Job Expire Time: (%lu) Now: (%lu)",
-            pJob->expires, now);
+         dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] Expire Time: (%lu) Now: (%lu)",
+            pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);
          
          // job has expired - add it to the expired job list
          memcpy(&pExpiredJobs[jobCount], pJob, sizeof(DnxNewJob));
