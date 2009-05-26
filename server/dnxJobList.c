@@ -231,7 +231,7 @@ dnxLog("Job (%d) is Expired", current);
       current = (current + 1) % ilist->size;
    }
 
-   if(new_head < 0) {
+   if(new_head >= 0) {
       // There are items still pending, make sure they don't get skipped.
 dnxLog("The head will be changed to (%d) instead of (%d)", new_head, current);
       current = new_head;
