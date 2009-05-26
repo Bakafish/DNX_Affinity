@@ -721,7 +721,9 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
       dnxLog("dnxPostNewHostJob: Failed to post Host Job [%lu]; \"%s\": %d.", Job.xid.objSerial, Job.cmd, ret);
    } else {
-       dnxAuditJob(&Job, "ASSIGN");
+      dnxDebug(2, "dnxPostNewHostJob: Job Start Time: (%lu) Expires: (%lu)",
+         Job.start_time, Job.expires);
+      dnxAuditJob(&Job, "ASSIGN");
    }
    
    return ret;
