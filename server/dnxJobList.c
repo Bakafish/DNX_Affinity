@@ -287,33 +287,40 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       job_cntr++;
       
       dnxDebug(8, "dnxJobListDispatch(%i)(%i): Waiting for Job", job_cntr, current);
-
+dnxLog("dnxJobListDispatch(%i)(%i): Waiting for Job", job_cntr, current);
       if( ilist->list[current].state == DNX_JOB_COMPLETE )
       {
          dnxDebug(8, "dnxJobListDispatch(%i)(%i): Completed Item", job_cntr, current);
+dnxLog("dnxJobListDispatch(%i)(%i): Completed Item", job_cntr, current);
       }
       if( ilist->list[current].state == DNX_JOB_NULL )
       {
          dnxDebug(8, "dnxJobListDispatch(%i)(%i): Null Item", job_cntr, current);
+dnxLog("dnxJobListDispatch(%i)(%i): Null Item", job_cntr, current);
       }
       if( ilist->list[current].state == DNX_JOB_EXPIRED )
       {
          dnxDebug(8, "dnxJobListDispatch(%i)(%i): Expired Item", job_cntr, current);
+dnxLog("dnxJobListDispatch(%i)(%i): Expired Item", job_cntr, current);
       }
       if( ilist->list[current].state == DNX_JOB_INPROGRESS )
       {
          dnxDebug(8, "dnxJobListDispatch(%i)(%i): In Progress Item", job_cntr, current);
+dnxLog("dnxJobListDispatch(%i)(%i): In Progress Item", job_cntr, current);
       }
       if( ilist->list[current].state == DNX_JOB_UNBOUND )
       {
          dnxDebug(8, "dnxJobListDispatch(%i)(%i): Unbound Item", job_cntr, current);
+dnxLog("dnxJobListDispatch(%i)(%i): Unbound Item", job_cntr, current);
       }
 
       if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, &timeout)) == ETIMEDOUT)
       {
          dnxDebug(8, "dnxJobListDispatch(%i)(%i): Thread timer returned.", job_cntr, current);      
+dnxLog("dnxJobListDispatch(%i)(%i): Thread timer returned.", job_cntr, current);
          break;
       }
+dnxLog("dnxJobListDispatch(%i)(%i): Changing current to (%i).", job_cntr, current, ilist->dhead);
       dnxDebug(8, "dnxJobListDispatch(%i)(%i): Changing current to (%i).", 
             job_cntr, current, ilist->dhead);      
 
@@ -323,6 +330,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    if (ret == 0)
    {
    
+dnxLog("dnxJobListDispatch(%i)(%lu): Change state of job (%s) to In Progress.",job_cntr, current, ilist->list[current].host_name);
       dnxDebug(8, "dnxJobListDispatch(%i)(%lu): Change state of job (%s) to In Progress.",
          job_cntr, current, ilist->list[current].host_name);
   
@@ -338,6 +346,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    
    }
 
+dnxLog("dnxJobListDispatch(%i)(%i): AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu.", job_cntr, current, pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
    dnxDebug(8, "dnxJobListDispatch(%i)(%i): AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu.", 
       job_cntr, current, pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
 

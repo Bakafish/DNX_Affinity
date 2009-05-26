@@ -76,8 +76,6 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
    pthread_t tid = pthread_self();
    DnxJob job;
    int ret;
-
-//   sin = (struct sockaddr *)pNode->address;
    dnxDebug(2, 
          "dnxDispatcher[%lx]: Dispatching job [%lu,%lu] (%s) to dnxClient [%s]"
          " at node %s host flags = (%qu)",
@@ -101,12 +99,8 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
             pNode->addr, dnxErrorString(ret));
    }else{
-//        char * addr = ntop((struct sockaddr *)sin);
         dnxNodeListIncrementNodeMember(pNode->addr,JOBS_DISPATCHED);        
-//        xfree(addr);
    }
-   // Clean up the pNode?
-//   dnxDeleteNodeReq(pNode);
    return ret;
 }
 
