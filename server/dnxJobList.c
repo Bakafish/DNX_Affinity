@@ -158,46 +158,57 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
 
    // walk the entire job list - InProgress and Pending jobs (in that order)
    current = ilist->head;
+   
+dnxLog("Starting Expire at (%lu)", current);
+   
    while (jobCount < *totalJobs)
    {
       // only examine jobs that are either awaiting dispatch or results
       if ((pJob = &ilist->list[current])->state == DNX_JOB_INPROGRESS 
             || pJob->state == DNX_JOB_PENDING || pJob->state == DNX_JOB_UNBOUND)
       {
+dnxLog("Job (%lu) is (%d)", current, pJob->state);
          // check the job's expiration stamp
          if (pJob->expires > now) {
+dnxLog("Job (%lu) is not expired", current);
             // Check to see if it is a Queued Job
             if (pJob->state == DNX_JOB_UNBOUND) {
                // Try and get a dnxClient for it, either way the head should 
                // stay where it is, so if we are here at least once set this as
                // the new head
-               
+dnxLog("Job (%lu) is unbound", current);
+              
                if (new_head == -1) {
                   // this is the first time we have entered here so set this as our
                   // low water mark. Any further hits will be larger.
                   new_head = current;
+dnxLog("Job (%lu) is now the head", current);
                }               
                qJob = pJob->pNode;
                if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) != DNX_OK) // If OK we dispatch
                {
                   dnxDebug(2, "dnxJobListExpire: Unable to dequeue job [%lu:%lu]", 
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
+dnxLog("Job (%lu) isn't dequeued", current);
                } else {
                   dnxDebug(2, "dnxJobListExpire: Dequeueing job [%lu:%lu]", 
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
                   pJob->state = DNX_JOB_PENDING;
+dnxLog("Job (%lu) is dequeued", current);
                }
             }
 // start
             // bail-out if this was the job list tail
-            if (current == ilist->tail)
+            if (current == ilist->tail) {
+dnxLog("Job (%lu) is the tail", current);
                break;
-
+            }
             // otherwise increment the job list index
             current = (current + 1) % ilist->size;
             continue;
 // end
          } else {
+dnxLog("Job (%lu) is Expired", current);
             // this job expired, if it is ahead of any unassigned jobs the
             // head should be updated forward to this point if there are no
             // unassigned jobs in the queue
@@ -213,27 +224,29 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
       }
 
       // bail-out if this was the job list tail
-      if (current == ilist->tail)
+      if (current == ilist->tail) {
          break;
-
+      }
       // increment the job list index
       current = (current + 1) % ilist->size;
    }
 
    if(new_head < 0) {
       // There are items still pending, make sure they don't get skipped.
+dnxLog("The head will be changed to (%lu) instead of (%lu)", new_head, current);
       current = new_head;
    }
    
    ilist->head = current;
 
    // if this job is awaiting dispatch, then it is the new dispatch head
-   if (ilist->list[current].state != DNX_JOB_INPROGRESS)
+   if (ilist->list[current].state != DNX_JOB_INPROGRESS) {
+dnxLog("The dhead will be changed to (%lu) instead of (%lu)", current, ilist->dhead);
       ilist->dhead = current;
-
+   }
    // update the total jobs in the expired job list
    *totalJobs = jobCount;
-
+dnxLog("We deleted (%lu) jobs", jobCount);
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
 
    return DNX_OK;
