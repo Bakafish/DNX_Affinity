@@ -183,7 +183,11 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
                   pJob->state = DNX_JOB_PENDING;
                }
             }
-            break;   // Bail-out: this job hasn't expired yet
+            // increment the job list index
+            current = (current + 1) % ilist->size;
+            jobCount++;
+            continue;
+            //break;   // Bail-out: this job hasn't expired yet
          }
          
          dnxDebug(2, "dnxJobListExpire: Job Expire Time: (%lu) Now: (%lu)",
