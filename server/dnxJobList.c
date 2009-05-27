@@ -147,6 +147,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
    DnxNodeRequest * qJob; 
    int jobCount = 0;
    int new_head = -1;
+   int new_dhead = -1;
    time_t now;
 
    assert(pJobList && pExpiredJobs && totalJobs && *totalJobs > 0);
@@ -173,10 +174,12 @@ dnxLog("Job (%d) is (%d)", current, pJob->state);
 dnxLog("Job (%d) is not expired", current);
             // Check to see if it is a Queued Job
             if (new_head == -1) {
-               // this is the first time we have entered here so set this as our
-               // low water mark. Any further hits will be larger.
                new_head = current;
 dnxLog("Dequeued Job (%d) is now the head", current);
+            }               
+            if (new_dhead == -1 && pJob->state == DNX_JOB_PENDING) {
+               new_dhead = current;
+dnxLog("Dequeued Job (%d) is now the dhead", current);
             }               
 
             if (pJob->state == DNX_JOB_UNBOUND) {
@@ -195,6 +198,10 @@ dnxLog("Job (%d) isn't dequeued", current);
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
                   pJob->state = DNX_JOB_PENDING;
 dnxLog("Job (%d) is dequeued", current);
+                  if (new_dhead == -1) {
+                     new_dhead = current;
+dnxLog("Dequeued Job (%d) is now the dhead", current);
+                  }               
                }
             }
 // start
@@ -241,8 +248,12 @@ dnxLog("The head will be changed to (%d) instead of (%d)", new_head, current);
 
    // if this job is awaiting dispatch, then it is the new dispatch head
    if (ilist->list[current].state != DNX_JOB_INPROGRESS) {
+      if (new_dhead >= 0) {
+         ilist->dhead = new_dhead;
+      } else {
 dnxLog("The dhead will be changed to (%d) instead of (%d)", current, ilist->dhead);
-      ilist->dhead = current;
+         ilist->dhead = current;
+      }
    }
    // update the total jobs in the expired job list
    *totalJobs = jobCount;
