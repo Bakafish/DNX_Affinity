@@ -1864,7 +1864,7 @@ static void * dnxStatsRequestListener(void * vpargs)
                     if(result)
                     {
                         dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s", pHost);
-                        if(dnxSendMgmtReply(channel, &reply, &addr) != 0)
+                        if(dnxSendMgmtReply(channel, &reply, pHost) != 0)
                         {
                             dnxLog("dnxStatsRequestListener Error: Error writing to socket for reply to %s\n",pHost);
                         }else{
