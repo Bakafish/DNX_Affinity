@@ -172,6 +172,13 @@ dnxLog("Job (%d) is (%d)", current, pJob->state);
          if (pJob->expires > now) {
 dnxLog("Job (%d) is not expired", current);
             // Check to see if it is a Queued Job
+            if (new_head == -1) {
+               // this is the first time we have entered here so set this as our
+               // low water mark. Any further hits will be larger.
+               new_head = current;
+dnxLog("Dequeued Job (%d) is now the head", current);
+            }               
+
             if (pJob->state == DNX_JOB_UNBOUND) {
                // Try and get a dnxClient for it, either way the head should 
                // stay where it is, so if we are here at least once set this as
@@ -188,22 +195,7 @@ dnxLog("Job (%d) isn't dequeued", current);
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
                   pJob->state = DNX_JOB_PENDING;
 dnxLog("Job (%d) is dequeued", current);
-                  if (new_head == -1) {
-                     // this is the first time we have entered here so set this as our
-                     // low water mark. Any further hits will be larger.
-                     new_head = current;
-dnxLog("Dequeued Job (%d) is now the head", current);
-                  }               
                }
-            }
-            
-            if (pJob->state == DNX_JOB_PENDING) {
-               if (new_head == -1) {
-                  // this is the first time we have entered here so set this as our
-                  // low water mark. Any further hits will be larger.
-                  new_head = current;
-dnxLog("Pending Job (%d) is now the head", current);
-               }               
             }
 // start
             // bail-out if this was the job list tail
