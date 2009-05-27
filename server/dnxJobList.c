@@ -177,13 +177,6 @@ dnxLog("Job (%d) is not expired", current);
                // stay where it is, so if we are here at least once set this as
                // the new head
 dnxLog("Job (%d) is unbound", current);
-              
-               if (new_head == -1) {
-                  // this is the first time we have entered here so set this as our
-                  // low water mark. Any further hits will be larger.
-                  new_head = current;
-dnxLog("Job (%d) is now the head", current);
-               }               
                qJob = pJob->pNode;
                if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) != DNX_OK) // If OK we dispatch
                {
@@ -195,7 +188,22 @@ dnxLog("Job (%d) isn't dequeued", current);
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
                   pJob->state = DNX_JOB_PENDING;
 dnxLog("Job (%d) is dequeued", current);
+                  if (new_head == -1) {
+                     // this is the first time we have entered here so set this as our
+                     // low water mark. Any further hits will be larger.
+                     new_head = current;
+      dnxLog("Dequeued Job (%d) is now the head", current);
+                  }               
                }
+            }
+            
+            if (pJob->state == DNX_JOB_PENDING) {
+               if (new_head == -1) {
+                  // this is the first time we have entered here so set this as our
+                  // low water mark. Any further hits will be larger.
+                  new_head = current;
+dnxLog("Pending Job (%d) is now the head", current);
+               }               
             }
 // start
             // bail-out if this was the job list tail
@@ -318,7 +326,7 @@ dnxLog("dnxJobListDispatch(%i)(%i): Unbound Item", job_cntr, current);
       {
          dnxDebug(8, "dnxJobListDispatch(%i)(%i): Thread timer returned.", job_cntr, current);      
 dnxLog("dnxJobListDispatch(%i)(%i): Thread timer returned.", job_cntr, current);
-         break;
+         break; // We timed out
       }
 dnxLog("dnxJobListDispatch(%i)(%i): Changing current to (%i).", job_cntr, current, ilist->dhead);
       dnxDebug(8, "dnxJobListDispatch(%i)(%i): Changing current to (%i).", 
