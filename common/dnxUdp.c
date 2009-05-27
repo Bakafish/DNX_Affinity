@@ -361,7 +361,7 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size, int timeout, cha
       struct sockaddr_in override;
       override.sin_family = AF_INET;
       inet_pton(AF_INET, dst, &override.sin_addr);
-      ret = sendto(iucp->socket, buf, size, 0, override, sizeof(struct sockaddr_in));
+      ret = sendto(iucp->socket, buf, size, 0, (char *)override, sizeof(struct sockaddr_in));
       
       addrStr = xstrdup(dst);
       
