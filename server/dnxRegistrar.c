@@ -463,11 +463,11 @@ DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long l
       p->name = xstrdup(name);
       p->flag = flag;
       p->next = NULL;
-      dnxDebug(4, "dnxAddAffinity: Added linked list item [%s]", p->name);    
+      dnxDebug(3, "dnxAddAffinity: Added linked list item [%s]", p->name);    
    } else {
       while (temp_list != NULL) {
          if(strcmp(name, temp_list->name) == 0){
-            dnxDebug(4, "dnxAddAffinity: Item [%s] flag was (%d) is now (%d)",
+            dnxDebug(3, "dnxAddAffinity: Item [%s] flag was (%d) is now (%d)",
                p->name, (int)temp_list->flag, (int)(temp_list->flag & flag));    
             temp_list->flag = temp_list->flag & flag;
             return p;
@@ -479,7 +479,7 @@ DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long l
       new_item->flag = flag;
       new_item->next = p->next;
       p->next = new_item;
-      dnxDebug(4, "dnxAddAffinity: Added linked list item [%s] to [%s]", new_item->name, p->name);    
+      dnxDebug(3, "dnxAddAffinity: Added linked list item [%s] to [%s]", new_item->name, p->name);    
    }
    return p;
 }
