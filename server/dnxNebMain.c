@@ -1829,6 +1829,8 @@ static void * dnxStatsRequestListener(void * vpargs)
     char url[1024];
     snprintf(url, sizeof url, "udp://%s:%s", pHost, pPort);
     dnxLog("dnxStatsRequestListener: Adding Channel Map\n");
+    xfree(pHost);
+    xfree(pPort);
     if ((ret = dnxChanMapAdd("StatsServer", url)) != 0)
     {
         dnxLog("dnxStatsRequestListener Error: adding channel (%s): %s.\n", url, dnxErrorString(ret));
@@ -1852,27 +1854,27 @@ static void * dnxStatsRequestListener(void * vpargs)
                     quit = true;
                     dnxLog("dnxStatsRequestListener Error: Error reading from socket, data retrieved if any was %s\n", buf);
                 }else{
-                    xfree(pHost);
                     
                      int maxlen = INET_ADDRSTRLEN + 1;
                      pHost = (char *)xcalloc(maxlen,sizeof(char));
                      inet_ntop(AF_INET, &(((struct sockaddr_in *)addr)->sin_addr), pHost, maxlen); 
 
-                    dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n",pHost,buf);
+                    dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n", pHost, buf);
                     result = buildStatsReply(buf, &reply);
                     if(result)
                     {
-                        dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s",pHost);
-                        if(dnxSendMgmtReply(channel, &reply, pHost)!=0)
+                        dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s", pHost);
+                        if(dnxSendMgmtReply(channel, &reply, addr) != 0)
                         {
                             dnxLog("dnxStatsRequestListener Error: Error writing to socket for reply to %s\n",pHost);
                         }else{
-                            dnxDebug(2,"dnxStatsRequestListener: Sent requested data to source %s, reply was %s\n",pHost,reply.reply);
+                            dnxDebug(2,"dnxStatsRequestListener: Sent requested data to source %s, reply was %s\n", pHost, reply.reply);
                         }
                     }else{
                         dnxLog("dnxStatsRequestListener Error: building stats result failed, stats result was NULL\n");
                     }
                 }
+
                 maxsize = DNX_MAX_MSG; //We have to do this because dnxUdpRead is changing the size of the maxsize variable to whatever was read from last time.
                 xfree(buf);
                 xfree(addr);
