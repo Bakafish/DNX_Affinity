@@ -136,6 +136,7 @@ int dnxSendMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address
    dnxXmlClose(&xbuf);
       
    dnxDebug(3, "dnxSendMgmtReply: XML msg(%d bytes)=%s to %s.", xbuf.size, xbuf.buf, address);
+   
    // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
 }

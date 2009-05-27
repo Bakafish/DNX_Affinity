@@ -399,7 +399,7 @@ int dnxGet(DnxChannel * channel, char * buf, int * size,int timeout, char * src)
  * @param[in] timeout - the maximum number of seconds the caller is willing
  *    to wait for the write operation to complete on @p channel before 
  *    returning a timeout error.
- * @param[in] dst - the address to which data should be sent. This parameter 
+ * @param[in] dst - the sockaddr_in address to which data should be sent. This parameter 
  *    is optional, and may be passed as NULL. If NULL, the channel configured
  *    address will be used.
  * 
@@ -409,6 +409,12 @@ int dnxPut(DnxChannel * channel, char * buf, int size, int timeout, char * dst)
 {
    iDnxChannel * icp = (iDnxChannel *)channel;
    assert(channel && buf && size > 0 && size < DNX_MAX_MSG);
+//    if(dst) {
+//        struct sockaddr_in addr;
+//        addr.sin_family = AF_INET;
+//        addr.sin_port = htons(3490);
+//        inet_pton(AF_INET, address, &addr.sin_addr);
+//    }
    return icp->txWrite(icp, buf, size, timeout, dst);
 }
 
