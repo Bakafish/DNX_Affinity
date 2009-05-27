@@ -293,7 +293,7 @@ static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,int timeout, cha
  * @note If this is a stream oriented channel, or if NULL is passed for 
  * the @p dst parameter, The channel destination address is used.
  */
-static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,int timeout, char * dst)
+static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size, int timeout, char * dst)
 {
    iDnxUdpChannel * iucp = (iDnxUdpChannel *) ((char *)icp - offsetof(iDnxUdpChannel, ichan));
    int ret;
@@ -358,12 +358,14 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size,int timeout, char
    if (dst)
     {
         dnxDebug(8,"DnxUdpWrite: Overriding Destination");
-        ret = sendto(iucp->socket, buf, size, 0,(struct sockaddr *)dst, sizeof(struct sockaddr_in));
+        ret = sendto(iucp->socket, buf, size, 0, dst, sizeof(struct sockaddr_in));
 
 
-        int maxlen = INET_ADDRSTRLEN + 1;
-        addrStr = (char *)xcalloc(maxlen,sizeof(char));
-        inet_ntop(AF_INET, &dst, addrStr, maxlen); 
+//         int maxlen = INET_ADDRSTRLEN + 1;
+//         addrStr = (char *)xcalloc(maxlen,sizeof(char));
+//         inet_ntop(AF_INET, &(((struct sockaddr_in *)dst)->sin_addr), addrStr, maxlen); 
+
+        addrStr = xstrdup(dst);
 //        addrStr = ntop((struct sockaddr *)&tmp);
     } else {
         dnxDebug(8,"DnxUdpWrite: Sending to channel");
