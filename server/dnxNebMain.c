@@ -132,7 +132,8 @@ static DnxAffinityList * hostAffinity; //!< The affinity list of hosts.
 static time_t start_time;           //!< The module start time.
 static void * myHandle;             //!< Private NEB module handle.
 static regex_t regEx;               //!< Compiled regular expression structure.
-static unsigned long serial = 0;    // the number of service checks processed
+static unsigned long serial = 0;    //!< The number of service checks processed
+static pthread_mutex_t submitCheckMutex; //!< Make sure we serialize check submissions
 
 //SM 09/08 DnxNodeList
 DnxNode * gTopNode = NULL;;
@@ -140,7 +141,7 @@ extern DCS * gTopDCS;
 //SM 09/08 DnxNodeList End
 
 extern circular_buffer service_result_buffer;   //!< Nagios result buffer
-extern int             check_result_buffer_slots; //!< Nagios result slot count
+extern int check_result_buffer_slots;           //!< Nagios result slot count
 
 
 /*--------------------------------------------------------------------------
@@ -528,7 +529,6 @@ static int nagiosGetServiceCount(void)
 
 
 
-//int dnxSubmitCheck(char *host_name, char *svc_description, int return_code, char *plugin_output, time_t check_time)
 int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 {
    check_result *chk_result;
@@ -784,7 +784,7 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   pNode = dnxCreateNodeReq();  //LEAK
+   pNode = dnxCreateNodeReq();
    pNode->flags = affinity;
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
@@ -793,32 +793,6 @@ static int ehSvcCheck(int event_type, void * data)
 
    dnxDebug(4, "ehSvcCheck: Received Job [%lu] at Now (%lu), Start Time (%lu).",
       serial, (unsigned long)time(0), (unsigned long)svcdata->start_time.tv_sec);
-
-   // 1) We get a good thread
-        // Reset the thread timeout and post the job
-   // 2) No threads match
-        // give it back to Nagios
-   // 3) No threads available
-        // Wait a second and then try again or just register it and wait for it to be reaped
-
-//     do {
-//         if(pNode->flags & pDnxNode->flags) {
-//             client_match++;
-//         }
-//         //pDnxNode->hostname, pDnxNode->address, pDnxNode->flags
-//     } while (pDnxNode = pDnxNode->next);
-    
-
-//    if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK)
-//    {
-//       dnxDebug(1, "ehSvcCheck: No worker nodes for job [%lu] request available: %s.", serial, dnxErrorString(ret));
-// 
-//       //SM 09/08 DnxNodeList
-//       gTopNode->jobs_rejected_no_nodes++;
-//       //SM 09/08 DnxNodeList
-// 
-//       return OK;     // tell nagios execute locally
-//    }
    
     time_t now = time(0);
     time_t expires = now + svcdata->timeout;
@@ -1181,7 +1155,7 @@ static int dnxServerInit(void)
    hostGrpAffinity->next = hostGrpAffinity;
    DnxAffinityList * temp_aff;
    hostgroup * hostgroupObj;
-
+   DNX_PT_MUTEX_INIT(&submitCheckMutex);
 
    if ((ret = dnxChanMapInit(0)) != 0)
    {
