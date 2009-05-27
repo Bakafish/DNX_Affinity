@@ -467,6 +467,8 @@ DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long l
    } else {
       while (temp_list != NULL) {
          if(strcmp(name, temp_list->name) == 0){
+            dnxDebug(4, "dnxAddAffinity: Item [%s] flag was (%d) is now (%d)",
+               p->name, (int)temp_list->flag, (int)(temp_list->flag & flag));    
             temp_list->flag = temp_list->flag & flag;
             return p;
          }
