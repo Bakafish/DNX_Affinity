@@ -1856,7 +1856,7 @@ static void * dnxStatsRequestListener(void * vpargs)
                     
                      int maxlen = INET_ADDRSTRLEN + 1;
                      pHost = (char *)xcalloc(maxlen,sizeof(char));
-                     inet_ntop(AF_INET, &addr, pHost, maxlen); 
+                     inet_ntop(AF_INET, addr, pHost, maxlen); 
 
                     dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n",pHost,buf);
                     result = buildStatsReply(buf,&reply);
