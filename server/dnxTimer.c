@@ -166,7 +166,7 @@ static void * dnxTimer(void * data)
             
 
             time_t check_time = job->start_time;
-            sResult.resData = msg;
+            sResult.resData = xstrdup(msg);
             sResult.resCode = result_code;
             ret = dnxSubmitCheck(job, &sResult, check_time);
          }
