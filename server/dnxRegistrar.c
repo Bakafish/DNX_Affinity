@@ -457,13 +457,6 @@ void dnxRegistrarDestroy(DnxRegistrar * reg)
 DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long long flag) 
 {
    DnxAffinityList * temp_list = p;
-   while (temp_list != NULL) {
-      if(strcmp(name, temp_list->name) == 0){
-         temp_list->flag = temp_list->flag & flag;
-         return p;
-      }
-      temp_list = temp_list->next;
-   }
    
    if (p->next == p) 
    {
@@ -472,6 +465,13 @@ DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long l
       p->next = NULL;
       dnxDebug(4, "dnxAddAffinity: Added linked list item [%s]", p->name);    
    } else {
+      while (temp_list != NULL) {
+         if(strcmp(name, temp_list->name) == 0){
+            temp_list->flag = temp_list->flag & flag;
+            return p;
+         }
+         temp_list = temp_list->next;
+      }
       DnxAffinityList * new_item = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
       new_item->name = xstrdup(name);
       new_item->flag = flag;
