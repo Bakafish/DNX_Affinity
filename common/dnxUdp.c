@@ -355,23 +355,23 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size, int timeout, cha
    }
 
    // check for a destination address override
-   if (dst)
-    {
-        dnxDebug(8,"DnxUdpWrite: Overriding Destination");
-        ret = sendto(iucp->socket, buf, size, 0, dst, sizeof(struct sockaddr_in));
-
-
-//         int maxlen = INET_ADDRSTRLEN + 1;
-//         addrStr = (char *)xcalloc(maxlen,sizeof(char));
-//         inet_ntop(AF_INET, &(((struct sockaddr_in *)dst)->sin_addr), addrStr, maxlen); 
-
-        addrStr = xstrdup(dst);
-//        addrStr = ntop((struct sockaddr *)&tmp);
-    } else {
+//    if (dst)
+//     {
+//         dnxDebug(8,"DnxUdpWrite: Overriding Destination");
+//         ret = sendto(iucp->socket, buf, size, 0, dst, sizeof(struct sockaddr_in));
+// 
+// 
+// //         int maxlen = INET_ADDRSTRLEN + 1;
+// //         addrStr = (char *)xcalloc(maxlen,sizeof(char));
+// //         inet_ntop(AF_INET, &(((struct sockaddr_in *)dst)->sin_addr), addrStr, maxlen); 
+// 
+//         addrStr = xstrdup(dst);
+// //        addrStr = ntop((struct sockaddr *)&tmp);
+//     } else {
         dnxDebug(8,"DnxUdpWrite: Sending to channel");
         ret = write(iucp->socket, buf, size);
         addrStr = xstrdup(iucp->host);
-    }
+//     }
 
    if(ret == -1)
    {
