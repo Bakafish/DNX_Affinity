@@ -531,6 +531,8 @@ static int nagiosGetServiceCount(void)
 
 int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 {
+   DNX_PT_MUTEX_LOCK(&submitCheckMutex);
+
    check_result *chk_result;
    chk_result = (check_result *)malloc(sizeof(check_result));
    /* Set the default values in the check result structure */
@@ -583,6 +585,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    /* Call the nagios function to insert the result into the result linklist */
    add_check_result_to_list(chk_result);
    dnxJobCleanup(Job);
+   DNX_PT_MUTEX_UNLOCK(&submitCheckMutex);
    return 0;
 }
 

@@ -168,9 +168,7 @@ static void * dnxTimer(void * data)
             time_t check_time = job->start_time;
             sResult.resData = msg;
             sResult.resCode = result_code;
-            DNX_PT_MUTEX_LOCK(&submitCheckMutex);
             ret = dnxSubmitCheck(job, &sResult, check_time);
-            DNX_PT_MUTEX_UNLOCK(&submitCheckMutex);
          }
       }
 
