@@ -358,20 +358,11 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size, int timeout, cha
    if (dst)
    {
       dnxDebug(8,"DnxUdpWrite: Overriding Destination");
-//       struct sockaddr_in override;
-//       override.sin_family = AF_INET;
-//       ip4addr.sin_port = htons(3490);
-//       inet_pton(AF_INET, dst, &override.sin_addr);
       ret = sendto(iucp->socket, buf, size, 0, dst, sizeof(struct sockaddr_in));
       
-      addrStr = xstrdup(dst);
-      
-//         ret = sendto(iucp->socket, buf, size, 0, dst, sizeof(struct sockaddr_in));
-// 
-// 
-// //         int maxlen = INET_ADDRSTRLEN + 1;
-// //         addrStr = (char *)xcalloc(maxlen,sizeof(char));
-// //         inet_ntop(AF_INET, &(((struct sockaddr_in *)dst)->sin_addr), addrStr, maxlen); 
+      int maxlen = INET_ADDRSTRLEN + 1;
+      addrStr = (char *)xcalloc(maxlen,sizeof(char));
+      inet_ntop(AF_INET, &(((struct sockaddr_in *)dst)->sin_addr), addrStr, maxlen); 
 // 
 // //        addrStr = ntop((struct sockaddr *)&tmp);
    } else {
@@ -395,9 +386,6 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size, int timeout, cha
    //SM 09/08 DnxComStat END
    }
    
-    /*
-   xfree(outbuf);
-    */
    xfree(addrStr);
    return DNX_OK;
 }
