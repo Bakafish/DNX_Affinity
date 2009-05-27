@@ -1814,8 +1814,8 @@ static void * dnxStatsRequestListener(void * vpargs)
     bool ret = false;
     int timeout = 0;
     bool quit = false;
-    char *pHost = "127.0.0.1";
-    char *pPort = "12482";
+    char *pHost = xstrdup("127.0.0.1");
+    char *pPort = xstrdup("12482");
     bool result;
     DnxMgmtReply reply;
 
