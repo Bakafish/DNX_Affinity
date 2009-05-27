@@ -1847,19 +1847,19 @@ static void * dnxStatsRequestListener(void * vpargs)
                 reply.reply =   (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
 
                 dnxDebug(2,"dnxStatsRequestListener: Listening For Data!\n");
-                if ((ret = dnxGet(channel, buf, &maxsize, timeout, addr)) != DNX_OK)
+                if ((ret = dnxGet(channel, buf, &maxsize, timeout, (char *)addr)) != DNX_OK)
                 {
                     quit = true;
-                    dnxLog("dnxStatsRequestListener Error: Error reading from socket, data retrieved if any was %s\n",buf);
+                    dnxLog("dnxStatsRequestListener Error: Error reading from socket, data retrieved if any was %s\n", buf);
                 }else{
                     xfree(pHost);
                     
                      int maxlen = INET_ADDRSTRLEN + 1;
                      pHost = (char *)xcalloc(maxlen,sizeof(char));
-                     inet_ntop(AF_INET, addr, pHost, maxlen); 
+                     inet_ntop(AF_INET, &(((struct sockaddr_in *)addr)->sin_addr), pHost, maxlen); 
 
                     dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n",pHost,buf);
-                    result = buildStatsReply(buf,&reply);
+                    result = buildStatsReply(buf, &reply);
                     if(result)
                     {
                         dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s",pHost);
