@@ -74,5 +74,7 @@ int dnxHammingWeight(unsigned long long flag);
 
 DnxRegistrar * dnxGetRegistrar(void);
 
+char * dnxGetHostgroupFromFlags (unsigned long long host, unsigned long long client);
+
 #endif   /* _DNXNEBMAIN_H_ */
 

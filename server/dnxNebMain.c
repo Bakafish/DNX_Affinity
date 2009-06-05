@@ -581,9 +581,9 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    chk_result->finish_time = chk_result->start_time;
    //chk_result->execution_time
       
-   dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostname=(%s) description=(%s)",
-      Job->pNode->hn, Job->pNode->addr, chk_result->host_name, chk_result->service_description);
-   
+   char * hGroup = dnxGetHostgroupFromFlags(dnxGetAffinity(Job->host_name), Job->pNode->flags);
+   dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(%s)",
+      Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name, chk_result->service_description);
    /* Call the nagios function to insert the result into the result linklist */
    add_check_result_to_list(chk_result);
    dnxJobCleanup(Job);
@@ -2016,4 +2016,29 @@ int dnxIsDnxClient(unsigned long long x) {
 
 DnxRegistrar * dnxGetRegistrar() {
    return registrar;
+}
+
+char * dnxGetHostgroupFromFlags (unsigned long long host, unsigned long long client) {
+   if(host == 0x01 && cfg.bypassHostgroup != NULL) {
+      // If the host is only in the bypass group, there is no need to do a lookup
+      dnxDebug(2, "dnxGetHostgroupFromFlags: Host is only in bypass group (%s)",
+         cfg.bypassHostgroup);
+      return cfg.bypassHostgroup;
+   }
+   
+   unsigned long long flagUnion = host & client;
+   DnxAffinityList * temp_aff;
+   temp_aff = hostGrpAffinity;
+   while (temp_aff != NULL) {
+      // Recurse through the hostgroup affinity list
+      dnxDebug(4, "dnxGetHostgroupFromFlags: Recursing hostgroup affinity list - [%s] = (%li)", 
+      temp_aff->name, temp_aff->flag);
+      // Is host in this group?
+      if(flagUnion & temp_aff->flag) {
+         dnxDebug(3, "dnxGetHostgroupFromFlags: Found host in (%s)",  temp_aff->name);
+         return temp_aff->name;
+      }
+      temp_aff = temp_aff->next;
+   }
+   
 }
