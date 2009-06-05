@@ -567,7 +567,25 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 
 
 //    normalize_plugin_output(plugin_output, "B2");
-   chk_result->output = xstrdup(sResult->resData);
+   // Encapsulate the additional data into the extended results
+   char * hGroup = dnxGetHostgroupFromFlags(dnxGetAffinity(Job->host_name), Job->pNode->flags);
+
+   int maxLength = MAX_PLUGIN_OUTPUT_LENGTH - 1;
+   char * tokenString = (char *)xmalloc(maxLength);
+   int maxTokenLength = maxLength - sizeof(sResult->resData);
+   int ret = snprintf(tokenString, maxTokenLength, 
+      "<DNX><CLIENT=\"%s\"/>"
+      "<CLIENT_IP=\"%s\"/>"
+      "<HOSTGROUP=\"%s\"/></DNX>", Job->pNode->hn, Job->pNode->addr, hGroup);
+   if(0 =< ret =< maxTokenLength) {
+      strcat(tokenString, sResult->resData);
+      chk_result->output = tokenString;
+      dnxDebug(3, "dnxSubmitCheck: Token appended to results %s", tokenString);
+   } else {
+      dnxDebug(2, "dnxSubmitCheck: Results string with DNX Token is too long!");
+      xfree(tokenString);
+      chk_result->output = xstrdup(sResult->resData);
+   }
    xfree(sResult->resData);
    
    chk_result->return_code = sResult->resCode; // STATE_OK = 0
@@ -581,9 +599,10 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    chk_result->finish_time = chk_result->start_time;
    //chk_result->execution_time
       
-   char * hGroup = dnxGetHostgroupFromFlags(dnxGetAffinity(Job->host_name), Job->pNode->flags);
    dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(%s)",
       Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name, chk_result->service_description);
+      
+   
    /* Call the nagios function to insert the result into the result linklist */
    add_check_result_to_list(chk_result);
    dnxJobCleanup(Job);
