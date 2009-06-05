@@ -577,7 +577,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
       "<DNX><CLIENT=\"%s\"/>"
       "<CLIENT_IP=\"%s\"/>"
       "<HOSTGROUP=\"%s\"/></DNX>", Job->pNode->hn, Job->pNode->addr, hGroup);
-   if(0 =< ret =< maxTokenLength) {
+   if(0 <= ret <= maxTokenLength) {
       strcat(tokenString, sResult->resData);
       chk_result->output = tokenString;
       dnxDebug(3, "dnxSubmitCheck: Token appended to results %s", tokenString);
