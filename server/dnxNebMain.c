@@ -582,7 +582,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    //chk_result->execution_time
       
    dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostname=(%s) description=(%s)",
-      pJob->pNode->hn, pJob->pNode->addr, chk_result->host_name, chk_result->service_description);
+      Job->pNode->hn, Job->pNode->addr, chk_result->host_name, chk_result->service_description);
    
    /* Call the nagios function to insert the result into the result linklist */
    add_check_result_to_list(chk_result);
