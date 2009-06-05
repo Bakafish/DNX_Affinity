@@ -160,7 +160,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
    // walk the entire job list - InProgress and Pending jobs (in that order)
    current = ilist->head;
    
-dnxLog("Starting Expire at (%d)", current);
+// dnxLog("Starting Expire at (%d)", current);
    
    while (jobCount < *totalJobs)
    {
@@ -168,46 +168,46 @@ dnxLog("Starting Expire at (%d)", current);
       if ((pJob = &ilist->list[current])->state == DNX_JOB_INPROGRESS 
             || pJob->state == DNX_JOB_PENDING || pJob->state == DNX_JOB_UNBOUND)
       {
-dnxLog("Job (%d) is (%d)", current, pJob->state);
+// dnxLog("Job (%d) is (%d)", current, pJob->state);
          // check the job's expiration stamp
          if (pJob->expires > now) {
-dnxLog("Job (%d) is not expired", current);
+// dnxLog("Job (%d) is not expired", current);
             // Check to see if it is a Queued Job
             if (new_head == -1) {
                new_head = current;
-dnxLog("Dequeued Job (%d) is now the head", current);
+// dnxLog("Dequeued Job (%d) is now the head", current);
             }               
             if (new_dhead == -1 && pJob->state == DNX_JOB_PENDING) {
                new_dhead = current;
-dnxLog("Dequeued Job (%d) is now the dhead", current);
+// dnxLog("Dequeued Job (%d) is now the dhead", current);
             }               
 
             if (pJob->state == DNX_JOB_UNBOUND) {
                // Try and get a dnxClient for it, either way the head should 
                // stay where it is, so if we are here at least once set this as
                // the new head
-dnxLog("Job (%d) is unbound", current);
+// dnxLog("Job (%d) is unbound", current);
                qJob = pJob->pNode;
                if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) != DNX_OK) // If OK we dispatch
                {
                   dnxDebug(2, "dnxJobListExpire: Unable to dequeue job [%lu:%lu]", 
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
-dnxLog("Job (%d) isn't dequeued", current);
+// dnxLog("Job (%d) isn't dequeued", current);
                } else {
                   dnxDebug(2, "dnxJobListExpire: Dequeueing job [%lu:%lu]", 
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
                   pJob->state = DNX_JOB_PENDING;
-dnxLog("Job (%d) is dequeued", current);
+// dnxLog("Job (%d) is dequeued", current);
                   if (new_dhead == -1) {
                      new_dhead = current;
-dnxLog("Dequeued Job (%d) is now the dhead", current);
+// dnxLog("Dequeued Job (%d) is now the dhead", current);
                   }               
                }
             }
 // start
             // bail-out if this was the job list tail
             if (current == ilist->tail) {
-dnxLog("Job (%d) is the tail", current);
+// dnxLog("Job (%d) is the tail", current);
                break;
             }
             // otherwise increment the job list index
@@ -215,7 +215,7 @@ dnxLog("Job (%d) is the tail", current);
             continue;
 // end
          } else {
-dnxLog("Job (%d) is Expired", current);
+// dnxLog("Job (%d) is Expired", current);
             // this job expired, if it is ahead of any unassigned jobs the
             // head should be updated forward to this point if there are no
             // unassigned jobs in the queue
@@ -240,7 +240,7 @@ dnxLog("Job (%d) is Expired", current);
 
    if(new_head >= 0) {
       // There are items still pending, make sure they don't get skipped.
-dnxLog("The head will be changed to (%d) instead of (%d)", new_head, current);
+// dnxLog("The head will be changed to (%d) instead of (%d)", new_head, current);
       current = new_head;
    }
    
@@ -251,13 +251,13 @@ dnxLog("The head will be changed to (%d) instead of (%d)", new_head, current);
       if (new_dhead >= 0) {
          ilist->dhead = new_dhead;
       } else {
-dnxLog("The dhead will be changed to (%d) instead of (%d)", current, ilist->dhead);
+// dnxLog("The dhead will be changed to (%d) instead of (%d)", current, ilist->dhead);
          ilist->dhead = current;
       }
    }
    // update the total jobs in the expired job list
    *totalJobs = jobCount;
-dnxLog("We deleted (%d) jobs", jobCount);
+// dnxLog("We deleted (%d) jobs", jobCount);
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
 
    return DNX_OK;

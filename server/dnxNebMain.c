@@ -579,9 +579,10 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    chk_result->start_time.tv_sec = check_time;
    chk_result->start_time.tv_usec = 0;
    chk_result->finish_time = chk_result->start_time;
-   
-   dnxDebug(2, "dnxSubmitCheck: hostname=(%s) description=(%s)",
-      chk_result->host_name, chk_result->service_description);
+   //chk_result->execution_time
+      
+   dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostname=(%s) description=(%s)",
+      pJob->pNode->hn, pJob->pNode->addr, chk_result->host_name, chk_result->service_description);
    
    /* Call the nagios function to insert the result into the result linklist */
    add_check_result_to_list(chk_result);
@@ -1843,50 +1844,51 @@ static void * dnxStatsRequestListener(void * vpargs)
         }else{
             while(!quit)
             {
-                struct sockaddr_in * addr = (struct sockaddr_in*) xcalloc(1,sizeof(struct sockaddr_in));
+               struct sockaddr_in * addr = (struct sockaddr_in*) xcalloc(1,sizeof(struct sockaddr_in));
+               
+               char * buf = (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
+               reply.reply = (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
+               
+               dnxDebug(2,"dnxStatsRequestListener: Listening For Data!\n");
+               if ((ret = dnxGet(channel, buf, &maxsize, timeout, (char *)addr)) != DNX_OK)
+               {
+                  quit = true;
+                  dnxLog("dnxStatsRequestListener Error: Error reading from socket, data retrieved if any was %s\n", buf);
+               }else{
+                 
+                  int maxlen = INET_ADDRSTRLEN + 1;
+                  pHost = (char *)xcalloc(maxlen,sizeof(char));
+                  inet_ntop(AF_INET, &(((struct sockaddr_in *)addr)->sin_addr), pHost, maxlen); 
+               
+                  dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n", pHost, buf);
+                  result = buildStatsReply(buf, &reply);
+                  if(result)
+                  {
+                     dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s", pHost);
+               
+                     if(dnxSendMgmtReply(channel, &reply, addr) != 0)
+                     {
+                        dnxLog("dnxStatsRequestListener Error: Error writing to socket for reply to %s\n",pHost);
+                     }else{
+                        dnxDebug(2,"dnxStatsRequestListener: Sent requested data to source %s, reply was %s\n", pHost, reply.reply);
+                     }
+                  }else{
+                     dnxLog("dnxStatsRequestListener Error: building stats result failed, stats result was NULL\n");
+                  }
+               }
 
-                char *buf =     (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
-                reply.reply =   (char*) xcalloc(DNX_MAX_MSG+1,sizeof(char));
-
-                dnxDebug(2,"dnxStatsRequestListener: Listening For Data!\n");
-                if ((ret = dnxGet(channel, buf, &maxsize, timeout, (char *)addr)) != DNX_OK)
-                {
-                    quit = true;
-                    dnxLog("dnxStatsRequestListener Error: Error reading from socket, data retrieved if any was %s\n", buf);
-                }else{
-                    
-                     int maxlen = INET_ADDRSTRLEN + 1;
-                     pHost = (char *)xcalloc(maxlen,sizeof(char));
-                     inet_ntop(AF_INET, &(((struct sockaddr_in *)addr)->sin_addr), pHost, maxlen); 
-
-                    dnxDebug(2,"dnxStatsRequestListener: Recieved a request from %s, request was %s\n", pHost, buf);
-                    result = buildStatsReply(buf, &reply);
-                    if(result)
-                    {
-                        dnxDebug(2,"dnxStatsRequestListener:  Source of request is %s", pHost);
-
-                        if(dnxSendMgmtReply(channel, &reply, addr) != 0)
-                        {
-                            dnxLog("dnxStatsRequestListener Error: Error writing to socket for reply to %s\n",pHost);
-                        }else{
-                            dnxDebug(2,"dnxStatsRequestListener: Sent requested data to source %s, reply was %s\n", pHost, reply.reply);
-                        }
-                    }else{
-                        dnxLog("dnxStatsRequestListener Error: building stats result failed, stats result was NULL\n");
-                    }
-                }
-
-                maxsize = DNX_MAX_MSG; //We have to do this because dnxUdpRead is changing the size of the maxsize variable to whatever was read from last time.
-                xfree(buf);
-                xfree(addr);
-                xfree(pHost);
-                if(reply.reply)
-                {
-                    xfree(reply.reply);
-                }else{
-                    dnxLog("dnxStatsRequestListener Error: reply had a length less thqan or equal to 0 or reply was NULL\n");
-                    quit = true;
-                }
+               maxsize = DNX_MAX_MSG; //We have to do this because dnxUdpRead is changing the size of the maxsize variable to whatever was read from last time.
+               xfree(buf);
+               xfree(addr);
+               xfree(pHost);
+ 
+               if(reply.reply)
+               {
+                  xfree(reply.reply);
+               }else{
+                  dnxLog("dnxStatsRequestListener Error: reply had a length less thqan or equal to 0 or reply was NULL\n");
+                  quit = true;
+               }
             }
             dnxDisconnect(channel);
         }
@@ -2003,6 +2005,8 @@ int dnxHammingWeight(unsigned long long x) {
 }
 
 int dnxIsDnxClient(unsigned long long x) {
+   // If we are in more than 1 hostgroup and also in the local checks
+   // we are a dnxClient
     if ((dnxHammingWeight(x) > 1) && (x & 1)) {
         return 1;
     } else {
