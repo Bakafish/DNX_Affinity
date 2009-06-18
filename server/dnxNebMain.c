@@ -572,10 +572,22 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 
    int maxLength = MAX_PLUGIN_OUTPUT_LENGTH - 1;
    char * tokenString = (char *)xmalloc(maxLength);
-   int ret = snprintf(tokenString, maxLength, 
-      "<DNX><CLIENT=\"%s\"/>"
-      "<CLIENT_IP=\"%s\"/>"
-      "<HOSTGROUP=\"%s\"/></DNX>%s", Job->pNode->hn, Job->pNode->addr, hGroup, sResult->resData);
+   int ret = 0;
+   char * tail = NULL;
+   
+   if((tail = strchr(sResult->resData,'|')) != NULL) {
+      ret = snprintf(tokenString, maxLength, 
+         "%s <DNX><CLIENT=\"%s\"/>"
+         "<CLIENT_IP=\"%s\"/>"
+         "<HOSTGROUP=\"%s\"/></DNX> %s", strcspn(sResult->resData, '|'), 
+         sResult->resData, Job->pNode->hn, Job->pNode->addr, hGroup, tail);
+   } else {
+      ret = snprintf(tokenString, maxLength, 
+         "%s <DNX><CLIENT=\"%s\"/>"
+         "<CLIENT_IP=\"%s\"/>"
+         "<HOSTGROUP=\"%s\"/></DNX>", sResult->resData, Job->pNode->hn, Job->pNode->addr, hGroup);
+   }
+
    if(0 <= ret <= maxLength) {
       chk_result->output = tokenString;
       dnxDebug(3, "dnxSubmitCheck: Token appended to results %s", tokenString);

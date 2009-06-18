@@ -21,6 +21,182 @@
 			<key>AliasData</key>
 			<data>
 			AAAAAAGOAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
+			8dwcSCsAAAALapMMZG54TmViTWFpbi5jAAAAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEEr
+			f8YLg29URVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
+			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMYLBN8AAAABABQAC2qTAAtq
+			JAALZ/UACqTMAAB62wACADtNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
+			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueE5lYk1haW4uYwAA
+			DgAaAAwAZABuAHgATgBlAGIATQBhAGkAbgAuAGMADwAaAAwATQBh
+			AGMAaQBuAHQAbwBzAGgAIABIAEQAEgAuVXNlcnMvamFzb24vQ29k
+			ZS9kbnhfbG9jYWwvc2VydmVyL2RueE5lYk1haW4uYwATAAEvAAAV
+			AAIADP//AAA=
+			</data>
+			<key>FileURL</key>
+			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxNebMain.c</string>
+			<key>TypeID</key>
+			<string>_CFileLocator</string>
+			<key>Version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>AliasData</key>
+			<data>
+			AAAAAAGSAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
+			8dwcSCsAAAALapMNZG54UHJvdG9jb2wuYwAAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD21
+			bcXv2nJURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
+			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMXvW+IAAAABABQAC2qTAAtq
+			JAALZ/UACqTMAAB62wACADxNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
+			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueFByb3RvY29sLmMA
+			DgAcAA0AZABuAHgAUAByAG8AdABvAGMAbwBsAC4AYwAPABoADABN
+			AGEAYwBpAG4AdABvAHMAaAAgAEgARAASAC9Vc2Vycy9qYXNvbi9D
+			b2RlL2RueF9sb2NhbC9zZXJ2ZXIvZG54UHJvdG9jb2wuYwAAEwAB
+			LwAAFQACAAz//wAA
+			</data>
+			<key>FileURL</key>
+			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxProtocol.c</string>
+			<key>TypeID</key>
+			<string>_CFileLocator</string>
+			<key>Version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>AliasData</key>
+			<data>
+			AAAAAAGSAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
+			8dwcSCsAAAALaj4NZG54UHJvdG9jb2wuaAAAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
+			S8Q+CttURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABmNv
+			bW1vbgAQAAgAAMPxXYwAAAARAAgAAMQ9jEsAAAABABQAC2o+AAtq
+			JAALZ/UACqTMAAB62wACADxNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
+			b246Q29kZTpkbnhfbG9jYWw6Y29tbW9uOmRueFByb3RvY29sLmgA
+			DgAcAA0AZABuAHgAUAByAG8AdABvAGMAbwBsAC4AaAAPABoADABN
+			AGEAYwBpAG4AdABvAHMAaAAgAEgARAASAC9Vc2Vycy9qYXNvbi9D
+			b2RlL2RueF9sb2NhbC9jb21tb24vZG54UHJvdG9jb2wuaAAAEwAB
+			LwAAFQACAAz//wAA
+			</data>
+			<key>FileURL</key>
+			<string>file://localhost/Users/jason/Code/dnx_local/common/dnxProtocol.h</string>
+			<key>TypeID</key>
+			<string>_CFileLocator</string>
+			<key>Version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>AliasData</key>
+			<data>
+			AAAAAAGSAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
+			8dwcSCsAAAALapMNZG54UHJvdG9jb2wuaAAAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD21
+			bsXv2nIAAAAAAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
+			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMXvW+IAAAABABQAC2qTAAtq
+			JAALZ/UACqTMAAB62wACADxNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
+			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueFByb3RvY29sLmgA
+			DgAcAA0AZABuAHgAUAByAG8AdABvAGMAbwBsAC4AaAAPABoADABN
+			AGEAYwBpAG4AdABvAHMAaAAgAEgARAASAC9Vc2Vycy9qYXNvbi9D
+			b2RlL2RueF9sb2NhbC9zZXJ2ZXIvZG54UHJvdG9jb2wuaAAAEwAB
+			LwAAFQACAAz//wAA
+			</data>
+			<key>FileURL</key>
+			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxProtocol.h</string>
+			<key>TypeID</key>
+			<string>_CFileLocator</string>
+			<key>Version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>AliasData</key>
+			<data>
+			AAAAAAGWAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
+			8dwcSCsAAAALaj4OZG54VHJhbnNwb3J0LmMAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
+			UMQpMKVURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABmNv
+			bW1vbgAQAAgAAMPxXYwAAAARAAgAAMQoshUAAAABABQAC2o+AAtq
+			JAALZ/UACqTMAAB62wACAD1NYWNpbnRvc2ggSEQ6VXNlcnM6amFz
+			b246Q29kZTpkbnhfbG9jYWw6Y29tbW9uOmRueFRyYW5zcG9ydC5j
+			AAAOAB4ADgBkAG4AeABUAHIAYQBuAHMAcABvAHIAdAAuAGMADwAa
+			AAwATQBhAGMAaQBuAHQAbwBzAGgAIABIAEQAEgAwVXNlcnMvamFz
+			b24vQ29kZS9kbnhfbG9jYWwvY29tbW9uL2RueFRyYW5zcG9ydC5j
+			ABMAAS8AABUAAgAM//8AAA==
+			</data>
+			<key>FileURL</key>
+			<string>file://localhost/Users/jason/Code/dnx_local/common/dnxTransport.c</string>
+			<key>TypeID</key>
+			<string>_CFileLocator</string>
+			<key>Version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>AliasData</key>
+			<data>
+			AAAAAAGOAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
+			8dwcSCsAAAALaj4MZG54TG9nZ2luZy5jAAAAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
+			RsQpMKRURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABmNv
+			bW1vbgAQAAgAAMPxXYwAAAARAAgAAMQoshQAAAABABQAC2o+AAtq
+			JAALZ/UACqTMAAB62wACADtNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
+			b246Q29kZTpkbnhfbG9jYWw6Y29tbW9uOmRueExvZ2dpbmcuYwAA
+			DgAaAAwAZABuAHgATABvAGcAZwBpAG4AZwAuAGMADwAaAAwATQBh
+			AGMAaQBuAHQAbwBzAGgAIABIAEQAEgAuVXNlcnMvamFzb24vQ29k
+			ZS9kbnhfbG9jYWwvY29tbW9uL2RueExvZ2dpbmcuYwATAAEvAAAV
+			AAIADP//AAA=
+			</data>
+			<key>FileURL</key>
+			<string>file://localhost/Users/jason/Code/dnx_local/common/dnxLogging.c</string>
+			<key>TypeID</key>
+			<string>_CFileLocator</string>
+			<key>Version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>AliasData</key>
+			<data>
+			AAAAAAGWAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
+			8dwcSCsAAAALapMOZG54Q29sbGVjdG9yLmMAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
+			lMQpMKZURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
+			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMQoshYAAAABABQAC2qTAAtq
+			JAALZ/UACqTMAAB62wACAD1NYWNpbnRvc2ggSEQ6VXNlcnM6amFz
+			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueENvbGxlY3Rvci5j
+			AAAOAB4ADgBkAG4AeABDAG8AbABsAGUAYwB0AG8AcgAuAGMADwAa
+			AAwATQBhAGMAaQBuAHQAbwBzAGgAIABIAEQAEgAwVXNlcnMvamFz
+			b24vQ29kZS9kbnhfbG9jYWwvc2VydmVyL2RueENvbGxlY3Rvci5j
+			ABMAAS8AABUAAgAM//8AAA==
+			</data>
+			<key>FileURL</key>
+			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxCollector.c</string>
+			<key>TypeID</key>
+			<string>_CFileLocator</string>
+			<key>Version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>AliasData</key>
+			<data>
+			AAAAAAGWAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
+			8dwcSCsAAAALaj4OZG54Q2ZnUGFyc2VyLmMAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
+			P8QpMKVURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABmNv
+			bW1vbgAQAAgAAMPxXYwAAAARAAgAAMQoshUAAAABABQAC2o+AAtq
+			JAALZ/UACqTMAAB62wACAD1NYWNpbnRvc2ggSEQ6VXNlcnM6amFz
+			b246Q29kZTpkbnhfbG9jYWw6Y29tbW9uOmRueENmZ1BhcnNlci5j
+			AAAOAB4ADgBkAG4AeABDAGYAZwBQAGEAcgBzAGUAcgAuAGMADwAa
+			AAwATQBhAGMAaQBuAHQAbwBzAGgAIABIAEQAEgAwVXNlcnMvamFz
+			b24vQ29kZS9kbnhfbG9jYWwvY29tbW9uL2RueENmZ1BhcnNlci5j
+			ABMAAS8AABUAAgAM//8AAA==
+			</data>
+			<key>FileURL</key>
+			<string>file://localhost/Users/jason/Code/dnx_local/common/dnxCfgParser.c</string>
+			<key>TypeID</key>
+			<string>_CFileLocator</string>
+			<key>Version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>AliasData</key>
+			<data>
+			AAAAAAGOAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
 			8dwcSCsAAAALapMMZG54Sm9iTGlzdC5jAAAAAAAAAAAAAAAAAAAA
 			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
 			mMQpMKZURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
@@ -64,28 +240,6 @@
 		<dict>
 			<key>AliasData</key>
 			<data>
-			AAAAAAGWAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
-			8dwcSCsAAAALapMOZG54UmVnaXN0cmFyLmMAAAAAAAAAAAAAAAAA
-			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
-			nsRPNkJURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
-			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMROt7IAAAABABQAC2qTAAtq
-			JAALZ/UACqTMAAB62wACAD1NYWNpbnRvc2ggSEQ6VXNlcnM6amFz
-			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueFJlZ2lzdHJhci5j
-			AAAOAB4ADgBkAG4AeABSAGUAZwBpAHMAdAByAGEAcgAuAGMADwAa
-			AAwATQBhAGMAaQBuAHQAbwBzAGgAIABIAEQAEgAwVXNlcnMvamFz
-			b24vQ29kZS9kbnhfbG9jYWwvc2VydmVyL2RueFJlZ2lzdHJhci5j
-			ABMAAS8AABUAAgAM//8AAA==
-			</data>
-			<key>FileURL</key>
-			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxRegistrar.c</string>
-			<key>TypeID</key>
-			<string>_CFileLocator</string>
-			<key>Version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>AliasData</key>
-			<data>
 			AAAAAAGGAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
 			8dwcSCsAAAALapMKZG54VGltZXIuYwAAAAAAAAAAAAAAAAAAAAAA
 			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
@@ -99,28 +253,6 @@
 			</data>
 			<key>FileURL</key>
 			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxTimer.c</string>
-			<key>TypeID</key>
-			<string>_CFileLocator</string>
-			<key>Version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>AliasData</key>
-			<data>
-			AAAAAAGWAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
-			8dwcSCsAAAALapMOZG54Q29sbGVjdG9yLmMAAAAAAAAAAAAAAAAA
-			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
-			lMQpMKZURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
-			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMQoshYAAAABABQAC2qTAAtq
-			JAALZ/UACqTMAAB62wACAD1NYWNpbnRvc2ggSEQ6VXNlcnM6amFz
-			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueENvbGxlY3Rvci5j
-			AAAOAB4ADgBkAG4AeABDAG8AbABsAGUAYwB0AG8AcgAuAGMADwAa
-			AAwATQBhAGMAaQBuAHQAbwBzAGgAIABIAEQAEgAwVXNlcnMvamFz
-			b24vQ29kZS9kbnhfbG9jYWwvc2VydmVyL2RueENvbGxlY3Rvci5j
-			ABMAAS8AABUAAgAM//8AAA==
-			</data>
-			<key>FileURL</key>
-			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxCollector.c</string>
 			<key>TypeID</key>
 			<string>_CFileLocator</string>
 			<key>Version</key>
@@ -192,28 +324,6 @@
 		<dict>
 			<key>AliasData</key>
 			<data>
-			AAAAAAGWAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
-			8dwcSCsAAAALaj4OZG54VHJhbnNwb3J0LmMAAAAAAAAAAAAAAAAA
-			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
-			UMQpMKVURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABmNv
-			bW1vbgAQAAgAAMPxXYwAAAARAAgAAMQoshUAAAABABQAC2o+AAtq
-			JAALZ/UACqTMAAB62wACAD1NYWNpbnRvc2ggSEQ6VXNlcnM6amFz
-			b246Q29kZTpkbnhfbG9jYWw6Y29tbW9uOmRueFRyYW5zcG9ydC5j
-			AAAOAB4ADgBkAG4AeABUAHIAYQBuAHMAcABvAHIAdAAuAGMADwAa
-			AAwATQBhAGMAaQBuAHQAbwBzAGgAIABIAEQAEgAwVXNlcnMvamFz
-			b24vQ29kZS9kbnhfbG9jYWwvY29tbW9uL2RueFRyYW5zcG9ydC5j
-			ABMAAS8AABUAAgAM//8AAA==
-			</data>
-			<key>FileURL</key>
-			<string>file://localhost/Users/jason/Code/dnx_local/common/dnxTransport.c</string>
-			<key>TypeID</key>
-			<string>_CFileLocator</string>
-			<key>Version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>AliasData</key>
-			<data>
 			AAAAAAGSAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
 			8dwcSCsAAAALaj4NZG54Q29tU3RhdHMuYwAAAAAAAAAAAAAAAAAA
 			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD21
@@ -259,28 +369,6 @@
 			<key>AliasData</key>
 			<data>
 			AAAAAAGOAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
-			8dwcSCsAAAALapMMZG54TmViTWFpbi5oAAAAAAAAAAAAAAAAAAAA
-			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
-			m8Q2IyZURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
-			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMQ1pJYAAAABABQAC2qTAAtq
-			JAALZ/UACqTMAAB62wACADtNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
-			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueE5lYk1haW4uaAAA
-			DgAaAAwAZABuAHgATgBlAGIATQBhAGkAbgAuAGgADwAaAAwATQBh
-			AGMAaQBuAHQAbwBzAGgAIABIAEQAEgAuVXNlcnMvamFzb24vQ29k
-			ZS9kbnhfbG9jYWwvc2VydmVyL2RueE5lYk1haW4uaAATAAEvAAAV
-			AAIADP//AAA=
-			</data>
-			<key>FileURL</key>
-			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxNebMain.h</string>
-			<key>TypeID</key>
-			<string>_CFileLocator</string>
-			<key>Version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>AliasData</key>
-			<data>
-			AAAAAAGOAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
 			8dwcSCsAAAALapMMZG54Sm9iTGlzdC5oAAAAAAAAAAAAAAAAAAAA
 			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
 			mcQpMKZURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
@@ -302,28 +390,6 @@
 		<dict>
 			<key>AliasData</key>
 			<data>
-			AAAAAAGSAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
-			8dwcSCsAAAALaj4NZG54UHJvdG9jb2wuaAAAAAAAAAAAAAAAAAAA
-			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
-			S8Q+CttURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABmNv
-			bW1vbgAQAAgAAMPxXYwAAAARAAgAAMQ9jEsAAAABABQAC2o+AAtq
-			JAALZ/UACqTMAAB62wACADxNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
-			b246Q29kZTpkbnhfbG9jYWw6Y29tbW9uOmRueFByb3RvY29sLmgA
-			DgAcAA0AZABuAHgAUAByAG8AdABvAGMAbwBsAC4AaAAPABoADABN
-			AGEAYwBpAG4AdABvAHMAaAAgAEgARAASAC9Vc2Vycy9qYXNvbi9D
-			b2RlL2RueF9sb2NhbC9jb21tb24vZG54UHJvdG9jb2wuaAAAEwAB
-			LwAAFQACAAz//wAA
-			</data>
-			<key>FileURL</key>
-			<string>file://localhost/Users/jason/Code/dnx_local/common/dnxProtocol.h</string>
-			<key>TypeID</key>
-			<string>_CFileLocator</string>
-			<key>Version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>AliasData</key>
-			<data>
 			AAAAAAGGAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
 			8dwcSCsAAAALapMKZG54VGltZXIuaAAAAAAAAAAAAAAAAAAAAAAA
 			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
@@ -337,28 +403,6 @@
 			</data>
 			<key>FileURL</key>
 			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxTimer.h</string>
-			<key>TypeID</key>
-			<string>_CFileLocator</string>
-			<key>Version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>AliasData</key>
-			<data>
-			AAAAAAGOAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
-			8dwcSCsAAAALaj4MZG54TG9nZ2luZy5jAAAAAAAAAAAAAAAAAAAA
-			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
-			RsQpMKRURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABmNv
-			bW1vbgAQAAgAAMPxXYwAAAARAAgAAMQoshQAAAABABQAC2o+AAtq
-			JAALZ/UACqTMAAB62wACADtNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
-			b246Q29kZTpkbnhfbG9jYWw6Y29tbW9uOmRueExvZ2dpbmcuYwAA
-			DgAaAAwAZABuAHgATABvAGcAZwBpAG4AZwAuAGMADwAaAAwATQBh
-			AGMAaQBuAHQAbwBzAGgAIABIAEQAEgAuVXNlcnMvamFzb24vQ29k
-			ZS9kbnhfbG9jYWwvY29tbW9uL2RueExvZ2dpbmcuYwATAAEvAAAV
-			AAIADP//AAA=
-			</data>
-			<key>FileURL</key>
-			<string>file://localhost/Users/jason/Code/dnx_local/common/dnxLogging.c</string>
 			<key>TypeID</key>
 			<string>_CFileLocator</string>
 			<key>Version</key>
@@ -518,28 +562,6 @@
 		<dict>
 			<key>AliasData</key>
 			<data>
-			AAAAAAGSAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
-			8dwcSCsAAAALapMNZG54UHJvdG9jb2wuYwAAAAAAAAAAAAAAAAAA
-			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD21
-			bcXv2nJURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
-			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMXvW+IAAAABABQAC2qTAAtq
-			JAALZ/UACqTMAAB62wACADxNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
-			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueFByb3RvY29sLmMA
-			DgAcAA0AZABuAHgAUAByAG8AdABvAGMAbwBsAC4AYwAPABoADABN
-			AGEAYwBpAG4AdABvAHMAaAAgAEgARAASAC9Vc2Vycy9qYXNvbi9D
-			b2RlL2RueF9sb2NhbC9zZXJ2ZXIvZG54UHJvdG9jb2wuYwAAEwAB
-			LwAAFQACAAz//wAA
-			</data>
-			<key>FileURL</key>
-			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxProtocol.c</string>
-			<key>TypeID</key>
-			<string>_CFileLocator</string>
-			<key>Version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>AliasData</key>
-			<data>
 			AAAAAAGKAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
 			8dwcSCsAAAALaigLZG54UGx1Z2luLmMAAAAAAAAAAAAAAAAAAAAA
 			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
@@ -576,28 +598,6 @@
 			</data>
 			<key>FileURL</key>
 			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxRegistrar.h</string>
-			<key>TypeID</key>
-			<string>_CFileLocator</string>
-			<key>Version</key>
-			<integer>1</integer>
-		</dict>
-		<dict>
-			<key>AliasData</key>
-			<data>
-			AAAAAAGSAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
-			8dwcSCsAAAALapMNZG54UHJvdG9jb2wuaAAAAAAAAAAAAAAAAAAA
-			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD21
-			bsXv2nIAAAAAAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
-			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMXvW+IAAAABABQAC2qTAAtq
-			JAALZ/UACqTMAAB62wACADxNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
-			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueFByb3RvY29sLmgA
-			DgAcAA0AZABuAHgAUAByAG8AdABvAGMAbwBsAC4AaAAPABoADABN
-			AGEAYwBpAG4AdABvAHMAaAAgAEgARAASAC9Vc2Vycy9qYXNvbi9D
-			b2RlL2RueF9sb2NhbC9zZXJ2ZXIvZG54UHJvdG9jb2wuaAAAEwAB
-			LwAAFQACAAz//wAA
-			</data>
-			<key>FileURL</key>
-			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxProtocol.h</string>
 			<key>TypeID</key>
 			<string>_CFileLocator</string>
 			<key>Version</key>
@@ -887,7 +887,7 @@
 			AAAAAAGGAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
 			8dwcSCsAAAALaj4KZG54RXJyb3IuaAAAAAAAAAAAAAAAAAAAAAAA
 			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
-			Q8QpMKUAAAAAAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABmNv
+			Q8QpMKVURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABmNv
 			bW1vbgAQAAgAAMPxXYwAAAARAAgAAMQoshUAAAABABQAC2o+AAtq
 			JAALZ/UACqTMAAB62wACADlNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
 			b246Q29kZTpkbnhfbG9jYWw6Y29tbW9uOmRueEVycm9yLmgAAA4A
@@ -1051,6 +1051,50 @@
 			<key>Version</key>
 			<integer>1</integer>
 		</dict>
+		<dict>
+			<key>AliasData</key>
+			<data>
+			AAAAAAGOAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
+			8dwcSCsAAAALapMMZG54TmViTWFpbi5oAAAAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
+			m8Q2IyZURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
+			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMQ1pJYAAAABABQAC2qTAAtq
+			JAALZ/UACqTMAAB62wACADtNYWNpbnRvc2ggSEQ6VXNlcnM6amFz
+			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueE5lYk1haW4uaAAA
+			DgAaAAwAZABuAHgATgBlAGIATQBhAGkAbgAuAGgADwAaAAwATQBh
+			AGMAaQBuAHQAbwBzAGgAIABIAEQAEgAuVXNlcnMvamFzb24vQ29k
+			ZS9kbnhfbG9jYWwvc2VydmVyL2RueE5lYk1haW4uaAATAAEvAAAV
+			AAIADP//AAA=
+			</data>
+			<key>FileURL</key>
+			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxNebMain.h</string>
+			<key>TypeID</key>
+			<string>_CFileLocator</string>
+			<key>Version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>AliasData</key>
+			<data>
+			AAAAAAGWAAIAAAxNYWNpbnRvc2ggSEQAAAAAAAAAAAAAAAAAAADD
+			8dwcSCsAAAALapMOZG54UmVnaXN0cmFyLmMAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAtq
+			nsRPNkJURVhUAAAAAP////8AAAkgAAAAAAAAAAAAAAAAAAAABnNl
+			cnZlcgAQAAgAAMPxXYwAAAARAAgAAMROt7IAAAABABQAC2qTAAtq
+			JAALZ/UACqTMAAB62wACAD1NYWNpbnRvc2ggSEQ6VXNlcnM6amFz
+			b246Q29kZTpkbnhfbG9jYWw6c2VydmVyOmRueFJlZ2lzdHJhci5j
+			AAAOAB4ADgBkAG4AeABSAGUAZwBpAHMAdAByAGEAcgAuAGMADwAa
+			AAwATQBhAGMAaQBuAHQAbwBzAGgAIABIAEQAEgAwVXNlcnMvamFz
+			b24vQ29kZS9kbnhfbG9jYWwvc2VydmVyL2RueFJlZ2lzdHJhci5j
+			ABMAAS8AABUAAgAM//8AAA==
+			</data>
+			<key>FileURL</key>
+			<string>file://localhost/Users/jason/Code/dnx_local/server/dnxRegistrar.c</string>
+			<key>TypeID</key>
+			<string>_CFileLocator</string>
+			<key>Version</key>
+			<integer>1</integer>
+		</dict>
 	</array>
 	<key>ShowInvisibles:jason</key>
 	<false/>
@@ -1061,6 +1105,6 @@
 	<key>ViewSplitterPosition:jason</key>
 	<real>0.17228177189826965</real>
 	<key>WindowFrame:jason:displays([(0, 0), (1680, 1050)])</key>
-	<string>rect(44,7,993,1313)</string>
+	<string>rect(98,24,1047,1330)</string>
 </dict>
 </plist>
