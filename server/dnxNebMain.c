@@ -576,12 +576,13 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    char * tail = NULL;
    
    if((tail = strchr(sResult->resData,'|')) != NULL) {
-      char * head = NULL;
+      char * head = (char *)xmalloc(strcspn(sResult->resData, "|")+1);
       strncpy(head, sResult->resData, strcspn(sResult->resData, "|"));
       ret = snprintf(tokenString, maxLength, 
          "%s <DNX><CLIENT=\"%s\"/>"
          "<CLIENT_IP=\"%s\"/>"
          "<HOSTGROUP=\"%s\"/></DNX> %s", head, Job->pNode->hn, Job->pNode->addr, hGroup, tail);
+      xfree(head);
    } else {
       ret = snprintf(tokenString, maxLength, 
          "%s <DNX><CLIENT=\"%s\"/>"
