@@ -576,8 +576,10 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    char * tail = NULL;
    
    if((tail = strchr(sResult->resData,'|')) != NULL) {
-      char * head = (char *)xmalloc(strcspn(sResult->resData, "|")+1);
-      strncpy(head, sResult->resData, strcspn(sResult->resData, "|"));
+      size_t len = strcspn(sResult->resData, "|");
+      char * head = (char *)xmalloc(len+1);
+      strncpy(head, sResult->resData, len);
+      head[len]='\0';
       ret = snprintf(tokenString, maxLength, 
          "%s <DNX><CLIENT=\"%s\"/>"
          "<CLIENT_IP=\"%s\"/>"
