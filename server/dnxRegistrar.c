@@ -134,7 +134,7 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
  * message block can be reused by the caller for the next request.
  *
  * @param[in] ireg - the registrar on which to register a new client request.
- * @param[in] ppMsg - the address of the dnx client request node pointer.
+ * @param[in] ppDnxClientReq - the address of the dnx client request node pointer.
  *
  * @return Zero on success, or a non-zero error value.
  */
@@ -145,7 +145,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
    time_t now = time(0);
    int ret = DNX_OK;
 
-   assert(ireg && ppMsg && *ppDnxClientReq);
+   assert(ireg && ppDnxClientReq && *ppDnxClientReq);
 
    // assign the actual object to a new pointer
    pReq = *ppDnxClientReq;
