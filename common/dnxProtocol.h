@@ -261,6 +261,5 @@ int dnxWaitForMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * addr
 
 int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, unsigned long xSlot);
 int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb);
-
 #endif   /* _DNXPROTOCOL_H_ */
 

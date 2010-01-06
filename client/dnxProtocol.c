@@ -62,7 +62,6 @@ int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeo
    int ret;
 
    assert(channel && pJob);
-
    memset(pJob, 0, sizeof *pJob);
 
    // await a message from the specified channel

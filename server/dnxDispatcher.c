@@ -76,6 +76,7 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
    pthread_t tid = pthread_self();
    DnxJob job;
    int ret;
+
    dnxDebug(2, 
          "dnxDispatcher[%lx]: Dispatching job [%lu,%lu] (%s) to dnxClient [%s]"
          " at node %s host flags = (%qu)",

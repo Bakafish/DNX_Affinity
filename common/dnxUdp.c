@@ -358,13 +358,18 @@ static int dnxUdpWrite(iDnxChannel * icp, char * buf, int size, int timeout, cha
    if (dst)
    {
       dnxDebug(8,"DnxUdpWrite: Overriding Destination");
-      ret = sendto(iucp->socket, buf, size, 0, dst, sizeof(struct sockaddr_in));
-      
-      int maxlen = INET_ADDRSTRLEN + 1;
-      addrStr = (char *)xcalloc(maxlen,sizeof(char));
-      inet_ntop(AF_INET, &(((struct sockaddr_in *)dst)->sin_addr), addrStr, maxlen); 
-// 
-// //        addrStr = ntop((struct sockaddr *)&tmp);
+//       ret = sendto(iucp->socket, buf, size, 0, dst, sizeof(struct sockaddr_in));
+//       
+//       int maxlen = INET_ADDRSTRLEN + 1;
+//       addrStr = (char *)xcalloc(maxlen,sizeof(char));
+//       inet_ntop(AF_INET, &(((struct sockaddr_in *)dst)->sin_addr), addrStr, maxlen); 
+// // 
+// // //        addrStr = ntop((struct sockaddr *)&tmp);
+        ret = sendto(iucp->socket, buf, size, 0,(struct sockaddr *)dst, sizeof(struct sockaddr_in));
+        struct sockaddr_in tmp;
+        memcpy(&tmp,dst, sizeof(tmp));
+        addrStr = ntop((char *)&tmp);
+
    } else {
       dnxDebug(8,"DnxUdpWrite: Sending to channel");
       ret = write(iucp->socket, buf, size);
@@ -445,10 +450,15 @@ static int dnxUdpNew(char * url, iDnxChannel ** icpp)
    // allocate a new iDnxUdpChannel object
    if ((iucp = (iDnxUdpChannel *)xmalloc(sizeof *iucp)) == 0)
     {
-        xfree(iucp);
+      xfree(iucp); // maybe freeing something that was never allocated is a bad idea...
       return DNX_ERR_MEMORY;
     }
    memset(iucp, 0, sizeof *iucp);
+
+//     if ((iucp = (iDnxUdpChannel *)xcalloc(1,sizeof *iucp)) == 0)
+//     {
+//         return DNX_ERR_MEMORY;
+//     }
 
    // save host name and port
    if ((iucp->host = (char *)xmalloc(ep - cp + 1)) == 0)

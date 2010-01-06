@@ -81,7 +81,6 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    }
    else 
    {
-
       // add the slot index to the Job's XID - this allows us to index 
       //    the job list using the returned result's XID.objSlot field
       pJob->xid.objSlot = tail;

@@ -92,39 +92,83 @@ static DnxChanMap gChannelMap[DNX_MAX_CHAN_MAP]; //!< The global channel map.
 /*--------------------------------------------------------------------------
                               IMPLEMENTATION
   --------------------------------------------------------------------------*/
-char *ntop(const struct sockaddr *sa)
-{
-    size_t maxlen;
-    char * buf;
-    
-    assert(sa);
-    
-    if(!sa) {
-        return NULL;
-    }
+// char *ntop(const struct sockaddr *sa)
+// {
+//     size_t maxlen;
+//     char * buf;
+//     
+//     assert(sa);
+//     
+//     if(!sa) {
+//         return NULL;
+//     }
+// 
+//     switch(sa->sa_family) {
+//         case AF_INET:
+//             maxlen = INET_ADDRSTRLEN + 1;
+//             buf = (char *)xcalloc(maxlen,sizeof(char));
+//             if(buf != NULL) {
+//                 inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr), buf, maxlen);
+//             }
+//             break;
+// 
+//         case AF_INET6:
+//             maxlen = INET6_ADDRSTRLEN + 1;
+//             buf = (char *)xcalloc(maxlen,sizeof(char));
+//             if(buf != NULL) {
+//                 inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)sa)->sin6_addr), buf, maxlen);
+//             }
+//             break;
+// 
+//         default:
+//             return NULL;
+//     }
+// 
+//     return buf;
+// }
 
-    switch(sa->sa_family) {
+char *ntop(const char * sastr)
+{
+    const struct sockaddr * sa = (const struct sockaddr *)sastr;
+
+    assert(sa);
+    if(!sa)
+    {
+        return xstrdup("DNX Error:  Address Uknown or Corrupt! ");
+    }
+    char * buf = NULL;
+
+    switch(sa->sa_family)
+    {
         case AF_INET:
-            maxlen = INET_ADDRSTRLEN + 1;
-            buf = (char *)xcalloc(maxlen,sizeof(char));
-            if(buf != NULL) {
-                inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr), buf, maxlen);
+            buf = (char *)xcalloc(INET_ADDRSTRLEN +1,sizeof(char));
+            if(buf)
+            {
+                inet_ntop(AF_INET, &(((struct sockaddr_in *)sa)->sin_addr),buf, INET_ADDRSTRLEN);
             }
-            break;
+        break;
 
         case AF_INET6:
-            maxlen = INET6_ADDRSTRLEN + 1;
-            buf = (char *)xcalloc(maxlen,sizeof(char));
-            if(buf != NULL) {
-                inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)sa)->sin6_addr), buf, maxlen);
+            buf = (char *)xcalloc(INET6_ADDRSTRLEN +1,sizeof(char));
+            if(buf)
+            {
+                inet_ntop(AF_INET6, &(((struct sockaddr_in6 *)sa)->sin6_addr),buf, INET6_ADDRSTRLEN);
             }
-            break;
+        break;
 
         default:
-            return NULL;
+            buf = xstrdup("127.0.0.1");
+        break;
     }
 
-    return buf;
+    if(!buf)
+    {
+        dnxLog("ntop: out of memory, sleeping for 1 second before  trying again");
+        sleep(1);
+        return(ntop((char *)sa));
+    }else{
+        return buf;
+    }
 }
 
 /** Set a channel map's transport object allocator in a based on URL scheme.

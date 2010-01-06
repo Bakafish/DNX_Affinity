@@ -201,9 +201,12 @@ int dnxQueuePut(DnxQueue * queue, void * pPayload)
    
    assert(queue);
    
-   // create structure with new request
+   // create structure to store the new request
    if ((item = (iDnxQueueEntry *)xmalloc(sizeof *item)) == 0)
       return DNX_ERR_MEMORY;
+
+   // We only put a pointer here, because this is a generic queue
+   // so we need to allocate a unique object before calling the queue
 
    item->pPayload = pPayload;
    item->next = 0;
@@ -225,6 +228,8 @@ int dnxQueuePut(DnxQueue * queue, void * pPayload)
    if (iqueue->maxsz > 0 && iqueue->size > iqueue->maxsz)
    {
       // remove the oldest entry at the queue head
+         // we had better make sure it's a useless queue object though, otherwise
+         // we are throwing away data!!!
       item = iqueue->head;
       iqueue->head = item->next;
       if (iqueue->current == item)
@@ -343,6 +348,8 @@ DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload,
 }
 
 //----------------------------------------------------------------------------
+// we look in a certain queue for a match to the object we pass via a pointer to
+// a pointer based on the comparison function we give it
 
 DnxQueueResult dnxQueueFind(DnxQueue * queue, void ** ppPayload, 
       DnxQueueResult (*Compare)(void * pLeft, void * pRight))

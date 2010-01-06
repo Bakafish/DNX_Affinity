@@ -234,17 +234,14 @@ unsigned dnxNodeListIncrementNodeMember(char* address,int member)
 *   @param address  - The IP address of the node you want
 *   @param  hostname  - the value you want to set member to
 */
-unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
+unsigned long long dnxNodeListSetNodeAffinity(char* address, char* hostname)
 {
     //If the IP address is NULL or corrupted it can cause nastiness later on, lets catch it here.
     assert(address && isalnum(*address));
 
     DnxNode* pDnxNode = dnxNodeListFindNode(address);
-    
-    int retval = 0;
 
-    if(pDnxNode)
-    {
+    if(pDnxNode) {
         if(pDnxNode->flags == 0) {
             DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
             pDnxNode->hostname = xstrdup(hostname);
@@ -264,5 +261,5 @@ unsigned dnxNodeListSetNodeAffinity(char* address, char* hostname)
         dnxDebug(2, "dnxNodeListSetNodeAffinity: Created Address: [%s], Hostname: [%s], Flags: [%qu]",
             pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
     }
-    return(retval);
+    return(pDnxNode->flags);
 }

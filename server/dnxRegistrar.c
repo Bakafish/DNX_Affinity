@@ -116,39 +116,138 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
 /** Register a new client node "request for work" request.
  * 
  * The message is either stored or used to find an existing node request
- * that should be updated. If stored, @p ppMsg is returned as zero so that
+ * that should be updated. If stored, @p pDnxClientReq is returned as zero so that
  * it will be reallocated by the caller. In all other cases, the same 
  * message block can be reused by the caller for the next request.
  * 
  * @param[in] ireg - the registrar on which to register a new client request.
- * @param[in] ppMsg - the address of the dnx client request node pointer.
+ * @param[in] ppDnxClientReq - the address of the dnx client request node pointer.
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
+
+/** Register a new client node "request for work" request.
+ *
+ * The message is either stored or used to find an existing node request
+ * that should be updated. If stored, @p ppMsg is returned as zero so that
+ * it will be reallocated by the caller. In all other cases, the same
+ * message block can be reused by the caller for the next request.
+ *
+ * @param[in] ireg - the registrar on which to register a new client request.
+ * @param[in] ppMsg - the address of the dnx client request node pointer.
+ *
+ * @return Zero on success, or a non-zero error value.
+ */
+static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientReq)
 {
    pthread_t tid = pthread_self();
    DnxNodeRequest * pReq;
    time_t now = time(0);
-   time_t expires = now + (*ppMsg)->ttl;
    int ret = DNX_OK;
-   assert(ireg && ppMsg && *ppMsg);
-   pReq = *ppMsg;
+
+   assert(ireg && ppMsg && *ppDnxClientReq);
+
+   // assign the actual object to a new pointer
+   pReq = *ppDnxClientReq;
+
+   // compute expiration time of this request
+   pReq->expires = now + pReq->ttl;
+   dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
+
+
+   /* Locate existing dnxClient work request. The DNX client will send a request 
+      and we look it up to see if it's in the queue. If it is already registered
+      the dnxQueueFind will set the pointer to that object, that's a problem since
+      we are passing a real object and we might leak. 
+      If we find one, we update the expiration time, if it's already expired or 
+      we've never seen that client before we need to create a new node and add 
+      it to the queue 
+   */
+   if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND) {
+      // We just assigned the pReq to the pointer in our queue. The old object is
+      // still found at *ppDnxClientReq, and since we updated the expiration
+      // on that object, we use it to update the pReq object we got from the queue
+      pReq->expires = (*ppDnxClientReq)->expires;
+      dnxDebug(2,
+            "dnxRegistrar[%lx]: Updated req [%lu,%lu] at %u; expires at %u.",
+            tid, pReq->xid.objSerial, pReq->xid.objSlot,
+            (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
+      
+      // Unless we correctly reuse the ppDnxClientReq object or reap it, it will
+      // leak badly
+   } else {
+      // There was no prior object found, so we will try to store it in the queue
+      // Make sure this host is registered to the global node list and set
+      // the correct flags in the queued object prior to queueing, so we don't race
+      pReq->flags = dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
+      
+      if ((ret = dnxQueuePut(ireg->rqueue, *ppDnxClientReq)) == DNX_OK) {
+         // the pointer to the object pointer is set to null to indicate that we 
+         // need to allocate a new messaging object, pReq should still be pointing
+         // at the object in the queue
+
+
+         // we're keeping this message object, so we set the pointer to the pointer
+         // to null in order to indicate to the caller function that it needs to 
+         // create a new object
+         *ppDnxClientReq = 0;    
+         dnxDebug(2, 
+            "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
+            tid, pReq->hn, pReq->xid.objSerial, pReq->xid.objSlot, 
+            (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
+      } else {
+         dnxDebug(1, "dnxRegisterNode: Unable to enqueue node request: %s.", 
+               dnxErrorString(ret));
+         dnxLog("dnxRegisterNode: Unable to enqueue node request: %s.", 
+            dnxErrorString(ret));
+      }
+   }
+   return ret;
+}
+
+
+
+/*
+
+static int olddnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientReq)
+{
+   pthread_t tid = pthread_self();
+   time_t now = time(0);
+   time_t expires = now + (*pDnxClientReq)->ttl;
+   int ret = DNX_OK;
+   assert(ireg && *ppDnxClientReq);
+
+
    
-   // locate existing node: update expiration time, or add to the queue
-   if (dnxQueueFind(ireg->rqueue, &pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
-   {
+
+//   if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
+   if (dnxQueueFind(ireg->rqueue, ppDnxClientReq, dnxCompareNodeReq) == DNX_QRES_FOUND) {
+      // We have a matching work request in the queue, so just update the expiration
+      // time and move on
+      
+      // It's concievable that the expiration script is reaping the object 
+      // at the same moment we are updating it's expiration. It would make sense
+      // to lock it while we are fiddling with it
+
 // MUTEX lock the node
       pReq->expires = expires;
+      dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
 // MUTEX unlock the node
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
         tid, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
-      dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
-   }
-   else if ((ret = dnxQueuePut(ireg->rqueue, *ppMsg)) == DNX_OK)
-   {
+   } else {
+      // We didn't have a valid dnxClient request in our pool to update, so we 
+      // registered a new one by cloning the original and pushing it into the 
+      // queue
+      DnxNodeRequest * pReq;
+      pReq = pDnxClientReq; 
+      
+   
+      if ((ret = dnxQueuePut(ireg->rqueue, pDnxClientReq)) == DNX_OK) {
+
+
 // MUTEX lock the node
       // This is new, add the affinity flags  
        dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
@@ -156,30 +255,31 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppMsg)
        pReq->expires = expires;
 // MUTEX unlock the node
 
-      *ppMsg = 0;    // Change the pointer to 0 so that a new node is created
+      dnxClientRegMsg = 0;    // Change the pointer to 0 so that a new node is created
       dnxDebug(2, 
         "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
         tid, pReq->hn, pReq->xid.objSerial, pReq->xid.objSlot, 
         (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
-   }
-   else
-   {
-      dnxDebug(1, "dnxRegisterNode: Unable to enqueue node request: %s.", 
+      } else {
+         dnxDebug(1, "dnxRegisterNode: Unable to enqueue node request: %s.", 
+               dnxErrorString(ret));
+         dnxLog("dnxRegisterNode: Unable to enqueue node request: %s.", 
             dnxErrorString(ret));
-      dnxLog("dnxRegisterNode: Unable to enqueue node request: %s.", 
-            dnxErrorString(ret));
+      }
    }
    return ret;
 }
+*/
 
 int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
 {
-   assert(pMsg);
-   xfree(pMsg->addr);
-   xfree(pMsg->hn);
-   xfree(pMsg);
-   
+//    assert(pMsg);
+   if(pMsg != 0) {
+      xfree(pMsg->addr);
+      xfree(pMsg->hn);
+      xfree(pMsg);
+   }
    return DNX_OK;
 }
 
@@ -217,12 +317,13 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 
    assert(ireg && pMsg);
 
-   if (dnxQueueRemove(ireg->rqueue, (void **)&pReq, 
-         dnxCompareNodeReq) == DNX_QRES_FOUND) {
+   if (dnxQueueRemove(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND) {
       dnxDeleteNodeReq(pReq);      // free the dequeued DnxNodeRequest message
    }
 
-   dnxDeleteNodeReq(pMsg); // Get rid of the object that we used to find the item
+   // We probably shouldn't delete the request object by default since the thread
+   // destructor seems to handle that
+   //dnxDeleteNodeReq(pMsg); 
    
    return DNX_OK;
 }
@@ -240,7 +341,7 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
 static void * dnxRegistrar(void * data)
 {
    iDnxRegistrar * ireg = (iDnxRegistrar *)data;
-   DnxNodeRequest * pMsg = dnxCreateNodeReq();
+   DnxNodeRequest * pMsg = 0;//dnxCreateNodeReq();
 
    assert(data);
 
@@ -266,8 +367,7 @@ static void * dnxRegistrar(void * data)
 
       // wait on the dispatch socket for a request
       if ((ret = dnxWaitForNodeRequest(ireg->dispchan, pMsg, pMsg->address, 
-            DNX_REGISTRAR_REQUEST_TIMEOUT)) == DNX_OK) 
-      {
+            DNX_REGISTRAR_REQUEST_TIMEOUT)) == DNX_OK) {
          switch (pMsg->reqType)
          {
             case DNX_REQ_REGISTER:
@@ -293,7 +393,7 @@ static void * dnxRegistrar(void * data)
                dnxErrorString(ret));
       }
    }
-   return 0;
+   return NULL;
 }
 
 /*--------------------------------------------------------------------------
@@ -416,6 +516,7 @@ int dnxRegistrarCreate(unsigned queuesz, DnxChannel * dispchan,
    memset(ireg, 0, sizeof *ireg);
    ireg->dispchan = dispchan;
 
+   // xfree needs to be replaced with a better destructor
    if ((ret = dnxQueueCreate(queuesz, xfree, &ireg->rqueue)) != 0)
    {
       dnxDebug(1, "dnxRegistrar: Queue creation failed: %s.", dnxErrorString(ret));

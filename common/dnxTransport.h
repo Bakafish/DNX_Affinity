@@ -74,5 +74,7 @@ int dnxPut(DnxChannel * channel, char * buf, int size, int timeout, char * dst);
 int dnxChanMapInit(char * fileName);
 void dnxChanMapRelease(void);
 
+char *ntop(const char * sastr);
+
 #endif   /* _DNXTRANSPORT_H_ */
 

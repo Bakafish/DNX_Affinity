@@ -480,7 +480,7 @@ static void * dnxWorker(void * data)
          // maximum and this is the last thread out, then increase the pool
          if (!iwlm->terminate 
                && iwlm->threads < iwlm->cfg.poolMax
-               && iwlm->active == iwlm->threads)
+               && iwlm->active == iwlm->threads) // Maybe more aggressive here
             growThreadPool(iwlm);
       }
       DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);

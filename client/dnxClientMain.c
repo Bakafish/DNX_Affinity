@@ -271,8 +271,7 @@ static int appendString(char ** spp, char * fmt, ... )
 
    // reallocate buffer; initialize if necessary
    strsz = strlen(buf) + 1;
-   if ((newstr = xrealloc(*spp, (*spp? strlen(*spp): 0) + strsz)) == 0)
-      return DNX_ERR_MEMORY;
+   if ((newstr = xrealloc(*spp, (*spp? strlen(*spp): 0) + strsz)) == 0) return DNX_ERR_MEMORY;
    if (*spp == 0) 
       *newstr = 0;
 
@@ -860,7 +859,7 @@ static char * buildMgmtStatsReply(char * req)
    {
         dnxWlmGetStats(s_wlm, &ws);
    }else{
-        return ('0');//Gotta return something, but we got nuthin
+        return ""; //Gotta return something, but we got nuthin
    }
 
 

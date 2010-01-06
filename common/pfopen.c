@@ -70,17 +70,23 @@ PFILE * pfopen(const char * cmdstring, const char * type)
    /* only allow "r" or "w" */
    assert((type[0] == 'r' || type[0] == 'w') &&  type[1] == 0);
    
-   if(pfile)
-        xfree(pfile); //placed due to valgrind memory leak complaint
+//    if(pfile)
+//         xfree(pfile); //placed due to valgrind memory leak complaint
+//   if ((pfile = (PFILE *)xmalloc(sizeof(PFILE))) == NULL)
+//    {
+//       if(pfile)
+//         xfree(pfile); //placed due to valgrind memory leak complaint
+//       errno = ENOMEM;
+//       return NULL;
+//    }
+
    /* Allocate a PFILE structure */
-   if ((pfile = (PFILE *)xmalloc(sizeof(PFILE))) == NULL)
+   if ((pfile = (PFILE *)xcalloc(1,sizeof(PFILE))) == NULL)
    {
-      if(pfile)
-        xfree(pfile); //placed due to valgrind memory leak complaint
       errno = ENOMEM;
       return NULL;
    }
-   memset(pfile, 0, sizeof(PFILE));
+//    memset(pfile, 0, sizeof(PFILE));
    
    /*
     * Strategy: Use up to two pipes for communication:
@@ -99,12 +105,15 @@ PFILE * pfopen(const char * cmdstring, const char * type)
    {
       close(pfd1[0]);
       close(pfd1[1]);
+      xfree(pfile);
       return NULL;      /* errno set by pipe() */
    }
    
    if ((pid = fork()) < 0) 
+   {
+      xfree(pfile);
       return NULL;      /* errno set by fork() */
-   else if (pid == 0)   /* child */
+   }else if (pid == 0)   /* child */
    {
       setpgid(0, 0);    /* make child its own process group */
       if (*type == 'r') 
@@ -144,11 +153,16 @@ PFILE * pfopen(const char * cmdstring, const char * type)
 
       /* this corresponds to child process' STDOUT */
       if ((pfile->fp[1] = fdopen(pfd1[0], type)) == NULL)
-         return NULL;
-
+      {
+	    xfree(pfile);
+        return NULL;
+      }
       /* this corresponds to child process' STDERR */
       if ((pfile->fp[2] = fdopen(pfd2[0], type)) == NULL)
+      {
+         xfree(pfile);
          return NULL;
+      }
    }
    else 
    {
@@ -156,7 +170,10 @@ PFILE * pfopen(const char * cmdstring, const char * type)
 
       /* this corresponds to child process' STDIN */
       if ((pfile->fp[0] = fdopen(pfd1[1], type)) == NULL)
+      {
+         xfree(pfile);
          return NULL;
+      }
    }
 
    pfile->pid = pid; /* remember child pid for this fd */
@@ -198,13 +215,15 @@ int pfclose(PFILE * pfile)
    if (pfile->fp[2] != NULL)
       fclose(pfile->fp[2]);
    
+   xfree(pfile);
+
    while (waitpid(pfile->pid, &stat, 0) < 0)
       if (errno != EINTR)
          return -1;  /* error other than EINTR from waitpid() */
    
-   if(pfile)
-    xfree(pfile);
-
+//    if(pfile)
+//     xfree(pfile);
+// 
    return stat;      /* return child's termination status */
 }
 
