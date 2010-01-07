@@ -434,8 +434,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
          // job request at pNode to prevent leaks
          dnxDeleteNodeReq(pNode); 
    } else {
-      dnxDebug(1, "dnxGetNodeRequest: didn't find a match. Returning (%i)", ret);
       ret = DNX_ERR_NOTFOUND;
+      dnxDebug(1, "dnxGetNodeRequest: didn't find a match. Returning (%i)", ret);
    }
 
    return ret;
