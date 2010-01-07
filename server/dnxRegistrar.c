@@ -106,7 +106,7 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
    assert(pLeft && pRight);
 
    dnxDebug(1, "dnxCompareAffinityNodeReq: dnxClient flags [%lu], Host [%lu]",
-      pxl, pxr);
+      pxr, pxl);
 
    return pxl & pxr ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
 }
