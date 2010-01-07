@@ -252,13 +252,14 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
 
-
-
    // start at current dispatch head
    current = ilist->dhead;
 
    dnxDebug(2, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu, Queue=%lu.", 
        ilist->head, ilist->dhead, ilist->tail, ilist->size);
+
+   // loop until we time out?
+
 
    while (1) { //current <= ilist->tail) {
 
@@ -311,23 +312,27 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             // release the mutex
             DNX_PT_MUTEX_UNLOCK(&ilist->mut);
 
+            // leave the call without waiting
+            dnxDebug(2, "dnxJobListDispatch: Found a pending job.");      
             return ret;
       }
 
       if (current == ilist->tail) {
          // if we are at the end of the queue, wait and then return
-         gettimeofday(&now, 0);
-         timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
-         timeout.tv_nsec = now.tv_usec * 1000;
-         if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, &timeout)) == ETIMEDOUT) {
-            dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Thread timer returned.");      
-         } else {
-            ret = DNX_ERR_TIMEOUT;
-            dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Error with thread timer.");      
-            dnxLog("dnxJobListDispatch: Reached end of dispatch queue. Error with thread timer.");      
-         }
+         dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Waiting for (%i) seconds.", DNX_JOBLIST_TIMEOUT);
+         dnxCancelableSleep(DNX_JOBLIST_TIMEOUT * 1000);
+//          gettimeofday(&now, 0);
+//          timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
+//          timeout.tv_nsec = now.tv_usec * 1000;
+//          if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, &timeout)) == ETIMEDOUT) {
+//             dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Thread timer returned.");      
+//          } else {
+//             dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Thread timer returned (%i).", ret);      
+//             dnxLog("dnxJobListDispatch: Reached end of dispatch queue. Thread timer returned (%i).", ret);      
+// //            ret = DNX_ERR_TIMEOUT;
+//          }
          DNX_PT_MUTEX_UNLOCK(&ilist->mut);
-         return ret;
+         return DNX_ERR_TIMEOUT;
       }
       // move to next item in queue
       current = ((current + 1) % ilist->size);
