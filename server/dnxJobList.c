@@ -302,7 +302,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             if (current == ilist->dhead            // we are at the dhead
                && (current < ilist->tail           // and dhead is less than tail  
                   || ilist->tail < current )) {    // or tail is wrapped around the ring    
-               ilist->dhead = (current + 1) % ilist->size;
+               ilist->dhead = ((current + 1) % ilist->size);
             }
             
             dnxDebug(8, "dnxJobListDispatch: Change state of slot:(%lu) slot:(%lu) dhead:(%lu) tail:(%lu) for (%s) to DNX_JOB_INPROGRESS.",
@@ -314,7 +314,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             return ret;
       }
       // move to next item in queue
-      current = (current + 1) % ilist->size;
+      current = ((current + 1) % ilist->size);
       if (current == ilist->tail) {
          // if we are at the end of the queue, wait and then return
          gettimeofday(&now, 0);
