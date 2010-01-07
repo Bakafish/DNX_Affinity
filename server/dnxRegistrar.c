@@ -433,6 +433,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
          // ppNode now points at the dnxClient node , so we need to delete the 
          // job request at pNode to prevent leaks
          dnxDeleteNodeReq(pNode); 
+   } else {
+      dnxDebug(1, "dnxGetNodeRequest: didn't find a match. Returning (%i)", ret);
    }
 
    return ret;
