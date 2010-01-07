@@ -266,32 +266,32 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
          current, ilist->dhead, ilist->tail);      
 
       switch (ilist->list[current].state) {
-         case: DNX_JOB_COMPLETE
+         case DNX_JOB_COMPLETE:
             dnxDebug(8, "dnxJobListDispatch: Completed Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
                current, ilist->dhead, ilist->tail);
             break;
          
-         case: DNX_JOB_NULL
+         case DNX_JOB_NULL:
             dnxDebug(8, "dnxJobListDispatch: Null Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
                current, ilist->dhead, ilist->tail);
             break;
             
-         case: DNX_JOB_EXPIRED
+         case DNX_JOB_EXPIRED:
             dnxDebug(8, "dnxJobListDispatch: Expired Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
                current, ilist->dhead, ilist->tail);
             break;
             
-         case: DNX_JOB_INPROGRESS
+         case DNX_JOB_INPROGRESS:
             dnxDebug(8, "dnxJobListDispatch: In Progress Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
                current, ilist->dhead, ilist->tail);
             break;
 
-         case: DNX_JOB_UNBOUND
+         case DNX_JOB_UNBOUND:
             dnxDebug(8, "dnxJobListDispatch: Unbound Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
                current, ilist->dhead, ilist->tail);
             break;
          
-         case: DNX_JOB_PENDING
+         case DNX_JOB_PENDING:
             // increment the job counter
             ilist->job_cntr++;
 
