@@ -435,6 +435,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
          dnxDeleteNodeReq(pNode); 
    } else {
       dnxDebug(1, "dnxGetNodeRequest: didn't find a match. Returning (%i)", ret);
+      ret = DNX_ERR_NOTFOUND;
    }
 
    return ret;
