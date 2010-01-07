@@ -150,7 +150,68 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
 
    // walk the entire job list - InProgress and Pending jobs (in that order)
    current = ilist->head;
-      
+   
+   while(jobCount < *totalJobs) {
+      // only examine jobs that are either awaiting dispatch or results
+      if ((pJob = &ilist->list[current])->state == DNX_JOB_INPROGRESS 
+            || pJob->state == DNX_JOB_PENDING || pJob->state == DNX_JOB_UNBOUND) {
+         // check the job's expiration stamp
+         if (pJob->expires <= now) {
+            // This is an expired job
+            dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] Expire Time: (%lu) Now: (%lu)",
+               pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);
+            
+            // job has expired - add it to the expired job list
+            memcpy(&pExpiredJobs[jobCount++], pJob, sizeof(DnxNewJob));
+            // Put the old job in a reusable state   
+            pJob->state = DNX_JOB_NULL;
+ 
+            if(current == ilist->head && current != ilist->tail) {
+               // we are expiring an item at the head of the list, so we need to
+               // increment the head. It should never be larger than the tail.
+               ilist->head = ((current + 1) % ilist->size);
+               if(current == ilist->dhead) {
+                  // The item is the dhead of the list as well.
+                  // Just use the head value
+                  ilist->dhead = ilist->head;
+               }
+            }
+         } else {
+            // This job has not expired, but we may need to bind it to a client
+            if (pJob->state == DNX_JOB_UNBOUND) {
+               // Try and get a dnxClient for it
+               qJob = pJob->pNode;
+               if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) == DNX_OK) { 
+                  // If OK we have successfully dispatched it
+                  dnxDebug(2, "dnxJobListExpire: Dequeueing DNX_JOB_UNBOUND job [%lu:%lu]", 
+                     pJob->xid.objSerial, pJob->xid.objSlot);                  
+                  pJob->state = DNX_JOB_PENDING;
+                  // Make sure it's not located behind the current dhead?
+                  pthread_cond_signal(&ilist->cond);  // signal that a new job is available
+               } else {
+                  dnxDebug(2, "dnxJobListExpire: Unable to dequeue DNX_JOB_UNBOUND job [%lu:%lu]", 
+                     pJob->xid.objSerial, pJob->xid.objSlot);                  
+               }
+            }
+         }
+      }
+
+      // bail-out if this was the job list tail
+      if (current == ilist->tail) {
+         break;
+      }
+      // increment the job list index
+      current = ((current + 1) % ilist->size);
+   }
+   
+   // update the total jobs in the expired job list
+   *totalJobs = jobCount;
+   DNX_PT_MUTEX_UNLOCK(&ilist->mut);
+
+   return DNX_OK;
+}
+   
+{   
    while (jobCount < *totalJobs) {
       // only examine jobs that are either awaiting dispatch or results
       if ((pJob = &ilist->list[current])->state == DNX_JOB_INPROGRESS 
@@ -190,19 +251,19 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
             // otherwise increment the job list index
             current = (current + 1) % ilist->size; // This is what makes the circle
             continue;
-         } else {
-            // this job expired, if it is ahead of any unassigned jobs the
-            // head should be updated forward to this point if there are no
-            // unassigned jobs in the queue
-            dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] Expire Time: (%lu) Now: (%lu)",
-               pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);
-            
-            // job has expired - add it to the expired job list
-            memcpy(&pExpiredJobs[jobCount], pJob, sizeof(DnxNewJob));
-            // Put the old job in a reusable state   
-            pJob->state = DNX_JOB_NULL;
-            jobCount++;
-         }
+//          } else {
+//             // this job expired, if it is ahead of any unassigned jobs the
+//             // head should be updated forward to this point if there are no
+//             // unassigned jobs in the queue
+//             dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] Expire Time: (%lu) Now: (%lu)",
+//                pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);
+//             
+//             // job has expired - add it to the expired job list
+//             memcpy(&pExpiredJobs[jobCount], pJob, sizeof(DnxNewJob));
+//             // Put the old job in a reusable state   
+//             pJob->state = DNX_JOB_NULL;
+//             jobCount++;
+//          }
       }
 
       // bail-out if this was the job list tail
@@ -325,17 +386,20 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
          timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
          timeout.tv_nsec = now.tv_usec * 1000;
          if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, &timeout)) == ETIMEDOUT) {
+            // We waited for the time out period and no new jobs arrived. So give control back to caller.
             dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Thread timer returned.");      
+            DNX_PT_MUTEX_UNLOCK(&ilist->mut);
+            return ret;
          } else {
-            dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Thread timer returned (%i).", ret);      
-            dnxLog("dnxJobListDispatch: Reached end of dispatch queue. Thread timer returned (%i).", ret);      
-//            ret = DNX_ERR_TIMEOUT;
+            // We were signaled that there is a new job, so lets move back to the dhead and get it!
+            current = ilist->dhead;
+            dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. A new job arrived.");      
+            dnxLog("dnxJobListDispatch: Reached end of dispatch queue. A new job arrived.");      
          }
-         DNX_PT_MUTEX_UNLOCK(&ilist->mut);
-         return DNX_ERR_TIMEOUT;
+      } else {
+         // move to next item in queue
+         current = ((current + 1) % ilist->size);
       }
-      // move to next item in queue
-      current = ((current + 1) % ilist->size);
    }
 }
 

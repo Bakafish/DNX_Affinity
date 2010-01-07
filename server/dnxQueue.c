@@ -341,9 +341,9 @@ DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload,
 
    DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
 
-   if (bFound == DNX_QRES_FOUND)
+   if (bFound == DNX_QRES_FOUND) {
       xfree(item);       // free the queue entry wrapper object
-
+   }
    return bFound;
 }
 
