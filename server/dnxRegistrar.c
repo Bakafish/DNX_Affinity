@@ -278,8 +278,7 @@ static int olddnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClien
 }
 */
 
-int dnxDeleteNodeReq(DnxNodeRequest * pMsg)
-{
+int dnxDeleteNodeReq(DnxNodeRequest * pMsg) {
 //    assert(pMsg);
    if(pMsg != 0) {
       xfree(pMsg->addr);
@@ -529,7 +528,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
 //    *ppNode = node;   // return a node or NULL
 // 
 //    return ret;
-}
+// }
 
 //----------------------------------------------------------------------------
 
