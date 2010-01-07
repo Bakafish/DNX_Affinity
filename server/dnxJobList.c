@@ -292,9 +292,6 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             break;
          
          case DNX_JOB_PENDING:
-            // increment the job counter
-            ilist->job_cntr++;
-
             // transition this job's state to InProgress
             ilist->list[current].state = DNX_JOB_INPROGRESS;
          
@@ -455,7 +452,6 @@ int dnxJobListCreate(unsigned size, DnxJobList ** ppJobList)
    ilist->head = 0;
    ilist->tail = 0;
    ilist->dhead = 0;
-   ilist->job_cntr = 0;
 
    DNX_PT_MUTEX_INIT(&ilist->mut);
    pthread_cond_init(&ilist->cond, 0);
