@@ -1227,8 +1227,9 @@ static int dnxServerInit(void)
       return ret;
 
     //SM 09/08 DnxNodeList
-    gTopNode = dnxNodeListCreateNode("127.0.0.1");
-    pthread_t tid;
+   gTopNode = dnxNodeListCreateNode("127.0.0.1");
+   dnxNodeListSetNodeAffinity("127.0.0.1", "localhost");
+   pthread_t tid;
    if ((ret = pthread_create(&tid, NULL, (void *(*)(void *))dnxStatsRequestListener, NULL)) != 0)
    //if ((ret = pthread_create(&tid, 0, dnxStatsRequestListener, NULL)) != 0)
    {
@@ -1297,6 +1298,7 @@ static int dnxServerInit(void)
   
    // Check a hosts bitmask flag against the clientless hostgroups flag
    // and if it's not covered by a dnxClient, force it into the locals group
+   // FIXME?
    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
    {
       flag = dnxGetAffinity(temp_host->name);
@@ -1734,7 +1736,7 @@ bool buildStatsReply(char * request, DnxMgmtReply * pReply)
 
     assert(request);
 
-    DnxNode * pDnxNode = gTopNode;
+    DnxNode * pDnxNode = gTopNode->next; // skip the first node.
     DnxAffinityList * temp_aff;
     temp_aff = hostAffinity;   // Temp hostlist
 
@@ -1762,7 +1764,8 @@ bool buildStatsReply(char * request, DnxMgmtReply * pReply)
     DNX_PT_MUTEX_LOCK(&mutex);
         if(strcmp("AFFINITY",action) == 0){
             do {
-                appendString(&pReply->reply,"dnxClient (%s) IP: [%s]  Hostgroup flag [%qu]\n", pDnxNode->hostname, pDnxNode->address, pDnxNode->flags);
+                appendString(&pReply->reply,"dnxClient (%s) IP: [%s]  Hostgroup flag [%qu]\n", 
+                  pDnxNode->hostname, pDnxNode->address, pDnxNode->flags);
             } while (pDnxNode = pDnxNode->next);
             
             do {

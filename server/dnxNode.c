@@ -36,7 +36,8 @@ DnxNode* dnxNodeListCreateNode(char* address)
         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
 
     }
-    //We don't have to initialize the remaining values since we used calloc they are already set to 0
+    // We don't have to initialize the remaining values since 
+    // we used calloc they are already set to 0
 
     return pDnxNode;
 }

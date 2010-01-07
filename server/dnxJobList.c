@@ -53,13 +53,11 @@ typedef struct iDnxJobList_
    DnxTimer * timer;       /*!< The job list expiration timer. */
 } iDnxJobList;
 
-int job_cntr = 0;
 /*--------------------------------------------------------------------------
                                  INTERFACE
   --------------------------------------------------------------------------*/
 
-int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
-{
+int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob) {
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long tail;
    int ret = DNX_OK;
@@ -71,24 +69,20 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob)
    tail = ilist->tail;
 
    // verify space in the job list
-   if (ilist->list[tail].state && (tail = (tail + 1) % ilist->size) == ilist->head)
-   {
+   if (ilist->list[tail].state && (tail = (tail + 1) % ilist->size) == ilist->head) {
       dnxLog("dnxJobListAdd: Out of job slots (max=%lu): %s.", 
             ilist->size, pJob->cmd);
       dnxDebug(1, "dnxJobListAdd: Out of job slots (max=%lu): %s.", 
             ilist->size, pJob->cmd);
      ret = DNX_ERR_CAPACITY;
-   }
-   else 
-   {
+   } else {
       // add the slot index to the Job's XID - this allows us to index 
       //    the job list using the returned result's XID.objSlot field
       pJob->xid.objSlot = tail;
       // We were unable to get an available dnxClient job request so we
       // put the job into the queue anyway and have the timer thread try 
       // and find a dnxClient for it later
-      if (pJob->pNode->xid.objSerial == -1 && pJob->pNode->xid.objSlot == -1)
-      {
+      if (pJob->pNode->xid.objSerial == -1 && pJob->pNode->xid.objSlot == -1) {
          pJob->state = DNX_JOB_UNBOUND;
       } else {
          pJob->state = DNX_JOB_PENDING;
@@ -137,9 +131,7 @@ int dnxJobListMarkAck(DnxXID * pXid)
 }
 //----------------------------------------------------------------------------
 
-int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, 
-      int * totalJobs)
-{
+int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs) {
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long current;
    DnxNewJob * pJob;
@@ -158,63 +150,47 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs,
 
    // walk the entire job list - InProgress and Pending jobs (in that order)
    current = ilist->head;
-   
-// dnxLog("Starting Expire at (%d)", current);
-   
-   while (jobCount < *totalJobs)
-   {
+      
+   while (jobCount < *totalJobs) {
       // only examine jobs that are either awaiting dispatch or results
       if ((pJob = &ilist->list[current])->state == DNX_JOB_INPROGRESS 
-            || pJob->state == DNX_JOB_PENDING || pJob->state == DNX_JOB_UNBOUND)
-      {
-// dnxLog("Job (%d) is (%d)", current, pJob->state);
+            || pJob->state == DNX_JOB_PENDING || pJob->state == DNX_JOB_UNBOUND) {
          // check the job's expiration stamp
          if (pJob->expires > now) {
-// dnxLog("Job (%d) is not expired", current);
             // Check to see if it is a Queued Job
             if (new_head == -1) {
                new_head = current;
-// dnxLog("Dequeued Job (%d) is now the head", current);
             }               
             if (new_dhead == -1 && pJob->state == DNX_JOB_PENDING) {
                new_dhead = current;
-// dnxLog("Dequeued Job (%d) is now the dhead", current);
             }               
 
             if (pJob->state == DNX_JOB_UNBOUND) {
                // Try and get a dnxClient for it, either way the head should 
                // stay where it is, so if we are here at least once set this as
                // the new head
-// dnxLog("Job (%d) is unbound", current);
                qJob = pJob->pNode;
                if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) != DNX_OK) // If OK we dispatch
                {
                   dnxDebug(2, "dnxJobListExpire: Unable to dequeue job [%lu:%lu]", 
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
-// dnxLog("Job (%d) isn't dequeued", current);
                } else {
                   dnxDebug(2, "dnxJobListExpire: Dequeueing job [%lu:%lu]", 
                      pJob->xid.objSerial, pJob->xid.objSlot);                  
                   pJob->state = DNX_JOB_PENDING;
-// dnxLog("Job (%d) is dequeued", current);
                   if (new_dhead == -1) {
                      new_dhead = current;
-// dnxLog("Dequeued Job (%d) is now the dhead", current);
                   }               
                }
             }
-// start
             // bail-out if this was the job list tail
             if (current == ilist->tail) {
-// dnxLog("Job (%d) is the tail", current);
                break;
             }
             // otherwise increment the job list index
-            current = (current + 1) % ilist->size;
+            current = (current + 1) % ilist->size; // This is what makes the circle
             continue;
-// end
          } else {
-// dnxLog("Job (%d) is Expired", current);
             // this job expired, if it is ahead of any unassigned jobs the
             // head should be updated forward to this point if there are no
             // unassigned jobs in the queue
@@ -268,102 +244,135 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 {
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long current;
-   int ret = 0;
+   int ret = DNX_OK; //DNX_ERR_TIMEOUT;
+   struct timeval now;
+   struct timespec timeout;
 
    assert(pJobList && pJob);
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
 
-   // wait on the condition variable if there are no pending jobs
 
-   /** @todo Need to track total number of Pending jobs in the JobList structure?
-    * OR simply check to see if the dhead index points to a valid Pending job?
-    */
 
    // start at current dispatch head
    current = ilist->dhead;
-   dnxDebug(2, "dnxJobListDispatch(%i)(%i): BEFORE: Head=%lu, DHead=%lu, Tail=%lu.", 
-       job_cntr, current, ilist->head, ilist->dhead, ilist->tail);
 
-   // see if we have a pending job
-   while (ilist->list[current].state != DNX_JOB_PENDING)
-   {
-      struct timeval now;
-      struct timespec timeout;
-      
-      gettimeofday(&now, 0);
-      timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
-      timeout.tv_nsec = now.tv_usec * 1000;
-      job_cntr++;
-      
-      dnxDebug(8, "dnxJobListDispatch(%i)(%i): Waiting for Job", job_cntr, current);
-//dnxLog("dnxJobListDispatch(%i)(%i): Waiting for Job", job_cntr, current);
-      if( ilist->list[current].state == DNX_JOB_COMPLETE )
-      {
-         dnxDebug(8, "dnxJobListDispatch(%i)(%i): Completed Item", job_cntr, current);
-//dnxLog("dnxJobListDispatch(%i)(%i): Completed Item", job_cntr, current);
-      }
-      if( ilist->list[current].state == DNX_JOB_NULL )
-      {
-         dnxDebug(8, "dnxJobListDispatch(%i)(%i): Null Item", job_cntr, current);
-//dnxLog("dnxJobListDispatch(%i)(%i): Null Item", job_cntr, current);
-      }
-      if( ilist->list[current].state == DNX_JOB_EXPIRED )
-      {
-         dnxDebug(8, "dnxJobListDispatch(%i)(%i): Expired Item", job_cntr, current);
-//dnxLog("dnxJobListDispatch(%i)(%i): Expired Item", job_cntr, current);
-      }
-      if( ilist->list[current].state == DNX_JOB_INPROGRESS )
-      {
-         dnxDebug(8, "dnxJobListDispatch(%i)(%i): In Progress Item", job_cntr, current);
-//dnxLog("dnxJobListDispatch(%i)(%i): In Progress Item", job_cntr, current);
-      }
-      if( ilist->list[current].state == DNX_JOB_UNBOUND )
-      {
-         dnxDebug(8, "dnxJobListDispatch(%i)(%i): Unbound Item", job_cntr, current);
-//dnxLog("dnxJobListDispatch(%i)(%i): Unbound Item", job_cntr, current);
-      }
+   dnxDebug(2, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu.", 
+       ilist->head, ilist->dhead, ilist->tail);
 
-      if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, &timeout)) == ETIMEDOUT)
-      {
-         dnxDebug(8, "dnxJobListDispatch(%i)(%i): Thread timer returned.", job_cntr, current);      
-//dnxLog("dnxJobListDispatch(%i)(%i): Thread timer returned.", job_cntr, current);
-         break; // We timed out
-      }
-//dnxLog("dnxJobListDispatch(%i)(%i): Changing current to (%i).", job_cntr, current, ilist->dhead);
-      dnxDebug(8, "dnxJobListDispatch(%i)(%i): Changing current to (%i).", 
-            job_cntr, current, ilist->dhead);      
+   while (1) { //current <= ilist->tail) {
 
-      current = ilist->dhead;
+      dnxDebug(2, "dnxJobListDispatch: Checking slot:(%lu) dhead:(%lu) tail:(%lu).", 
+         current, ilist->dhead, ilist->tail);      
+
+      switch (ilist->list[current].state) {
+         case: DNX_JOB_COMPLETE
+            dnxDebug(8, "dnxJobListDispatch: Completed Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
+               current, ilist->dhead, ilist->tail);
+            break;
+         
+         case: DNX_JOB_NULL
+            dnxDebug(8, "dnxJobListDispatch: Null Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
+               current, ilist->dhead, ilist->tail);
+            break;
+            
+         case: DNX_JOB_EXPIRED
+            dnxDebug(8, "dnxJobListDispatch: Expired Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
+               current, ilist->dhead, ilist->tail);
+            break;
+            
+         case: DNX_JOB_INPROGRESS
+            dnxDebug(8, "dnxJobListDispatch: In Progress Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
+               current, ilist->dhead, ilist->tail);
+            break;
+
+         case: DNX_JOB_UNBOUND
+            dnxDebug(8, "dnxJobListDispatch: Unbound Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
+               current, ilist->dhead, ilist->tail);
+            break;
+         
+         case: DNX_JOB_PENDING
+            // increment the job counter
+            ilist->job_cntr++;
+
+            // transition this job's state to InProgress
+            ilist->list[current].state = DNX_JOB_INPROGRESS;
+         
+            // make a copy for the Dispatcher
+            memcpy(pJob, &ilist->list[current], sizeof *pJob);
+
+            // update the dispatch head (only dispatch or expire should do this)
+            if (current == ilist->dhead            // we are at the dhead
+               && (current < ilist->tail           // and dhead is less than tail  
+                  || ilist->tail < current )) {    // or tail is wrapped around the ring    
+               ilist->dhead = (current + 1) % ilist->size;
+            }
+            
+            dnxDebug(8, "dnxJobListDispatch: Change state of slot:(%lu) slot:(%lu) dhead:(%lu) tail:(%lu) for (%s) to DNX_JOB_INPROGRESS.",
+               current, ilist->dhead, ilist->tail, ilist->list[current].host_name);
+            
+            // release the mutex
+            DNX_PT_MUTEX_UNLOCK(&ilist->mut);
+
+            return ret;
+      }
+      // move to next item in queue
+      current = (current + 1) % ilist->size;
+      if (current == ilist->tail) {
+         // if we are at the end of the queue, wait and then return
+         gettimeofday(&now, 0);
+         timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
+         timeout.tv_nsec = now.tv_usec * 1000;
+         if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, &timeout)) == ETIMEDOUT) {
+            dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Thread timer returned.");      
+         } else {
+            ret = DNX_ERR_TIMEOUT;
+            dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Error with thread timer.");      
+            dnxLog("dnxJobListDispatch: Reached end of dispatch queue. Error with thread timer.");      
+         }
+         DNX_PT_MUTEX_UNLOCK(&ilist->mut);
+         return ret;
+      }
    }
+}
 
-   if (ret == 0)
-   {
-   
+//    if (ilist->list[current].state == DNX_JOB_PENDING) { 
+//       job_cntr++; // We should only increment the job counter when we actually dispatch a job!
+// 
 //dnxLog("dnxJobListDispatch(%i)(%lu): Change state of job (%s) to In Progress.",job_cntr, current, ilist->list[current].host_name);
-      dnxDebug(8, "dnxJobListDispatch(%i)(%lu): Change state of job (%s) to In Progress.",
-         job_cntr, current, ilist->list[current].host_name);
+//       dnxDebug(8, "dnxJobListDispatch(%i)(%lu): Change state of job for (%s) to In Progress.",
+//          ilist->job_cntr, current, ilist->list[current].host_name);
   
-      // transition this job's state to InProgress
-      ilist->list[current].state = DNX_JOB_INPROGRESS;
-   
-      // make a copy for the Dispatcher
-      memcpy(pJob, &ilist->list[current], sizeof *pJob);
+// transition this job's state to InProgress
+//       ilist->list[current].state = DNX_JOB_INPROGRESS;
+//    
+// make a copy for the Dispatcher
+//       memcpy(pJob, &ilist->list[current], sizeof *pJob);
    
       // update the dispatch head
-      if (ilist->dhead != ilist->tail)
-         ilist->dhead = (current + 1) % ilist->size;
-   
-   }
+//       if (ilist->dhead != ilist->tail)
+//          ilist->dhead = (current + 1) % ilist->size;
+//    
+//    } else {
+//       gettimeofday(&now, 0);
+//       timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
+//       timeout.tv_nsec = now.tv_usec * 1000;
+//             // wait on the condition variable if there are no pending jobs
+//             if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, &timeout)) == ETIMEDOUT)
+//             {
+//                dnxDebug(2, "dnxJobListDispatch(%i)(%i): Thread timer returned.", job_cntr, current);      
+//                break; // We timed out
+//             }
+//       dnxDebug(2, "dnxJobListDispatch(%i)(%lu): No jobs found in queue.", job_cntr, current);
+//    }
 
 //dnxLog("dnxJobListDispatch(%i)(%i): AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu.", job_cntr, current, pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
-   dnxDebug(8, "dnxJobListDispatch(%i)(%i): AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu.", 
-      job_cntr, current, pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
-
-   DNX_PT_MUTEX_UNLOCK(&ilist->mut);
-
-   return ret;
-}
+//    dnxDebug(8, "dnxJobListDispatch(%i)(%i): AFTER: Job [%lu,%lu]; Head=%lu, DHead=%lu, Tail=%lu.", 
+//       job_cntr, current, pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
+// 
+//    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
+// 
+//    return ret;
 
 //----------------------------------------------------------------------------
 
@@ -395,13 +404,10 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
 
    // verify that the XID of this result matches the XID of the service check
    if (ilist->list[current].state == DNX_JOB_NULL 
-         || !dnxEqualXIDs(pxid, &ilist->list[current].xid)) 
-   {
+         || !dnxEqualXIDs(pxid, &ilist->list[current].xid)) {
       dnxDebug(4, "dnxJobListCollect: Job expired before retrieval");      
       ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
-   }
-   else
-   {
+   } else {
       // make a copy for the Collector
       memcpy(pJob, &ilist->list[current], sizeof *pJob);
       pJob->state = DNX_JOB_COMPLETE;
@@ -409,7 +415,7 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
 
       // dequeue this job; make slot available for another job
       ilist->list[current].state = DNX_JOB_NULL;      
-      dnxDebug(4, "dnxJobListCollect: Job freed. Copy (%s)", pJob->cmd);      
+      dnxDebug(4, "dnxJobListCollect: Job slot freed. Copy of result for (%s) assigned to collector.", pJob->cmd);      
    
       // update the job list head
       if (current == ilist->head && current != ilist->tail)
@@ -449,13 +455,13 @@ int dnxJobListCreate(unsigned size, DnxJobList ** ppJobList)
    ilist->head = 0;
    ilist->tail = 0;
    ilist->dhead = 0;
+   ilist->job_cntr = 0;
 
    DNX_PT_MUTEX_INIT(&ilist->mut);
    pthread_cond_init(&ilist->cond, 0);
 
    if ((ret = dnxTimerCreate((DnxJobList *)ilist, DNX_TIMER_SLEEP, 
-         &ilist->timer)) != 0)
-   {
+         &ilist->timer)) != 0) {
       DNX_PT_COND_DESTROY(&ilist->cond);
       DNX_PT_MUTEX_DESTROY(&ilist->mut);
       xfree(ilist->list);

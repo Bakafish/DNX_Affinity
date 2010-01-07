@@ -147,20 +147,19 @@ static void * dnxDispatcher(void * data)
 
    dnxLog("Dispatcher awaiting jobs...");
 
-   while (1)
-   {
+   while (1) {
       DnxNewJob svcReq;
       int ret;
 
       pthread_testcancel();
 
       // wait for a new entry to be added to the job queue
-      if ((ret = dnxJobListDispatch(idisp->joblist, &svcReq)) == DNX_OK)
-      {
-         if ((ret = dnxDispatchJob(idisp, &svcReq)) == DNX_OK)
+      if ((ret = dnxJobListDispatch(idisp->joblist, &svcReq)) == DNX_OK) {
+         if ((ret = dnxDispatchJob(idisp, &svcReq)) == DNX_OK) {
             dnxAuditJob(&svcReq, "DISPATCH");
-         else
+         } else {
             dnxAuditJob(&svcReq, "DISPATCH-FAIL");
+         }
       }
 
    }
