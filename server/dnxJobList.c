@@ -257,8 +257,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    // start at current dispatch head
    current = ilist->dhead;
 
-   dnxDebug(2, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu.", 
-       ilist->head, ilist->dhead, ilist->tail);
+   dnxDebug(2, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu, Queue=%lu.", 
+       ilist->head, ilist->dhead, ilist->tail, ilist->size);
 
    while (1) { //current <= ilist->tail) {
 
@@ -313,8 +313,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 
             return ret;
       }
-      // move to next item in queue
-      current = ((current + 1) % ilist->size);
+
       if (current == ilist->tail) {
          // if we are at the end of the queue, wait and then return
          gettimeofday(&now, 0);
@@ -330,6 +329,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
          DNX_PT_MUTEX_UNLOCK(&ilist->mut);
          return ret;
       }
+      // move to next item in queue
+      current = ((current + 1) % ilist->size);
    }
 }
 
