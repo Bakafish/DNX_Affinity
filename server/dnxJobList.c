@@ -137,8 +137,6 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
    DnxNewJob * pJob;
    DnxNodeRequest * qJob; 
    int jobCount = 0;
-   int new_head = -1;
-   int new_dhead = -1;
    time_t now;
 
    assert(pJobList && pExpiredJobs && totalJobs && *totalJobs > 0);
@@ -197,9 +195,10 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                }
             }
             break;
-         case DNX_JOB_NULL:
          case DNX_JOB_COMPLETE:
          case DNX_JOB_EXPIRED:
+            pJob->state = DNX_JOB_NULL;
+         case DNX_JOB_NULL:
             if(current == ilist->head && current != ilist->tail) {
                // we have an old item at the head of the list, so we need to
                // increment the head. It should never be larger than the tail.
@@ -491,7 +490,7 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
       dnxDebug(4, "dnxJobListCollect: Job expired before retrieval");      
       ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
    } else {
-      // make a copy for the Collector
+      // make a copy to return to the Collector
       memcpy(pJob, &ilist->list[current], sizeof *pJob);
       pJob->state = DNX_JOB_COMPLETE;
       dnxDebug(4, "dnxJobListCollect: Job complete");      
@@ -500,12 +499,11 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
       ilist->list[current].state = DNX_JOB_NULL;      
       dnxDebug(4, "dnxJobListCollect: Job slot freed. Copy of result for (%s) assigned to collector.", pJob->cmd);      
    
-      // update the job list head
-      if (current == ilist->head && current != ilist->tail)
-      {
-         ilist->head = (current + 1) % ilist->size;
-         dnxDebug(4, "dnxJobListCollect: Set head to (%i)", ilist->head);
-      }
+      // update the job list head? or just let expire handle it?
+//       if (current == ilist->head && current != ilist->tail) {
+//          ilist->head = (current + 1) % ilist->size;
+//          dnxDebug(4, "dnxJobListCollect: Set head to (%i)", ilist->head);
+//       }
    }
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);

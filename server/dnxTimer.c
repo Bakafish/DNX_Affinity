@@ -61,7 +61,7 @@
 #include <assert.h>
 
 #define DNX_DEF_TIMER_SLEEP   5000  /*!< Default timer sleep interval. */
-#define MAX_EXPIRED           10    /*!< Maximum expired jobs during interval. */
+#define MAX_EXPIRED           50    /*!< Maximum expired jobs during interval. */
 
 /** DNX job expiration timer implementation structure. */
 typedef struct iDnxTimer_
