@@ -89,19 +89,25 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
    job.priority = 1;
    job.timeout  = pSvcReq->timeout;
    job.cmd      = pSvcReq->cmd;
+   
+   // Make a copy because it sometimes gets released before we even get to
+   // increment it's stats
+   char *address = xstrdup(pNode->addr);
 
    if ((ret = dnxSendJob(idisp->channel, &job, pNode->address)) != DNX_OK)
    {
             dnxDebug(1,"Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
-            pNode->addr, dnxErrorString(ret));
+            address, dnxErrorString(ret));
 
             dnxLog("Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
-            pNode->addr, dnxErrorString(ret));
-   }else{
-        dnxNodeListIncrementNodeMember(pNode->addr,JOBS_DISPATCHED);        
+            address, dnxErrorString(ret));
+   } else {
+        dnxNodeListIncrementNodeMember(address,JOBS_DISPATCHED);        
    }
+   
+   xfree(address); // Now we can deallocate it
    return ret;
 }
 

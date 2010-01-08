@@ -105,7 +105,7 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
    assert(pLeft && pRight);
 
    // verify that this request's Time-To-Live (TTL) has not expired
-   if(((DnxNodeRequest *)pLeft)->expires > now) {
+   if((((DnxNodeRequest *)pLeft)->expires - 1) > now) {
       return DNX_QRES_CONTINUE;
    }
 
