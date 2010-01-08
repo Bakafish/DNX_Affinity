@@ -220,6 +220,38 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
       current = ((current + 1) % ilist->size);
    }
    
+   int pnd = 0;
+   int prg = 0;
+   int unb = 0;
+   int cmp = 0;
+   int exp = 0;
+   int nul = 0;
+   while (current != ilist->tail) {
+      // let's find out how many nodes we are neglecting due to bad MAX_NODES settings
+      switch ((pJob = &ilist->list[current])->state) {
+         case DNX_JOB_PENDING:
+            pnd++;
+            break;
+         case DNX_JOB_INPROGRESS:
+            prg++;
+            break;
+         case DNX_JOB_UNBOUND:
+            unb++;
+            break;
+         case DNX_JOB_COMPLETE:
+            cmp++;
+            break;
+         case DNX_JOB_EXPIRED:
+            exp++;
+            break;
+         case DNX_JOB_NULL:
+            nul++;
+            break;
+      }
+   }
+   dnxDebug(2, "dnxJobListExpire: (%i) nodes left pnd:%i, prg:%i, unb:%i, cmp:%i, exp:%i, nul:%i",
+      (pnd+prg+unb+cmp+exp+nul), pnd,  prg,  unb,  cmp,  exp,  nul);  
+   
    // update the total jobs in the expired job list
    *totalJobs = jobCount;
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
