@@ -112,7 +112,7 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
    unsigned long long pxl = ((DnxNodeRequest *)pLeft)->flags;
    unsigned long long pxr = ((DnxNodeRequest *)pRight)->flags;
 
-   dnxDebug(1, "dnxCompareAffinityNodeReq: dnxClient flags [%lu], Host [%lu]",
+   dnxDebug(6, "dnxCompareAffinityNodeReq: dnxClient flags [%lu], Host [%lu]",
       pxr, pxl);
 
    return pxl & pxr ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;

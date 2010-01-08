@@ -265,7 +265,7 @@ int dnxQueueGet(DnxQueue * queue, void ** ppPayload)
    
    assert(queue && ppPayload);
    
-dnxDebug(8, "dnxQueueGet: iQueue size(%i)", iqueue->size);
+   dnxDebug(8, "dnxQueueGet: iQueue size(%i)", iqueue->size);
 
    DNX_PT_MUTEX_LOCK(&iqueue->mutex);
    
@@ -300,23 +300,21 @@ dnxDebug(8, "dnxQueueGet: iQueue size(%i)", iqueue->size);
 //----------------------------------------------------------------------------
 
 DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload, 
-      DnxQueueResult (*Compare)(void * pLeft, void * pRight))
-{
+      DnxQueueResult (*Compare)(void * pLeft, void * pRight)) {
    DnxQueueResult bFound = DNX_QRES_CONTINUE;
    iDnxQueue * iqueue = (iDnxQueue *)queue;
    iDnxQueueEntry * item, * prev;
+   int counter = 0;
 
    assert(queue && ppPayload && Compare);
 
    DNX_PT_MUTEX_LOCK(&iqueue->mutex);
 
    prev = 0;
-   for (item = iqueue->head; item; item = item->next)
-   {
-      if ((bFound = Compare(*ppPayload, item->pPayload)) != DNX_QRES_CONTINUE)
-      {
-         if (bFound == DNX_QRES_FOUND)
-         {
+   for (item = iqueue->head; item; item = item->next) {
+      counter++;
+      if ((bFound = Compare(*ppPayload, item->pPayload)) != DNX_QRES_CONTINUE) {
+         if (bFound == DNX_QRES_FOUND) {
             *ppPayload = item->pPayload;
 
             // cross-link previous to next and free current
@@ -338,6 +336,9 @@ DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload,
       }
       prev = item;
    }
+
+   dnxDebug(4, "dnxQueueRemove: (%i) elements searched in (%i) sized queue", 
+      counter, iqueue->size);
 
    DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);
 
