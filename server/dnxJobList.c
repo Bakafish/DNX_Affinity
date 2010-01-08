@@ -248,6 +248,8 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
             nul++;
             break;
       }
+      // increment the job list index
+      current = ((current + 1) % ilist->size);
    }
    
    if(pnd+prg+unb+cmp+exp+nul) {
