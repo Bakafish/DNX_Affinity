@@ -142,11 +142,12 @@ static void * dnxTimer(void * data)
 
             dnxDebug(1, "dnxTimer[%lx]: Expiring Job [%lu,%lu]: %s.",pthread_self(), job->xid.objSerial, job->xid.objSlot, job->cmd);
 
-            dnxAuditJob(job, "EXPIRE");
             if(job->pNode->addr == NULL) {
                sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - No dnxClients were available to service this request)",job->xid.objSerial, job->xid.objSlot);
+               dnxAuditJob(job, "DECLINE");
             } else {
                sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to return job response in time allowed)",job->xid.objSerial, job->xid.objSlot, job->pNode->addr);
+               dnxAuditJob(job, "EXPIRE");
             }
             
             
