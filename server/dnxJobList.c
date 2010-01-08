@@ -411,7 +411,6 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             // We were signaled that there is a new job, so lets move back to the dhead and get it!
             current = ilist->dhead;
             dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. A new job arrived.");      
-            dnxLog("dnxJobListDispatch: Reached end of dispatch queue. A new job arrived.");      
          }
       } else {
          // move to next item in queue
