@@ -163,7 +163,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                dnxDebug(2, "dnxJobListExpire: Type (%i) Job [%lu:%lu] Exp: (%lu) Now: (%lu)",
                   pJob->state, pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);
                
-               if(pJob->state == DNX_JOB_INPROGRESS) {
+               if(pJob->state == DNX_JOB_INPROGRESS && pJob->ack != TRUE) {
                   // We probably lost UDP, reset state
                   pJob->state = DNX_JOB_UNBOUND;
                   pJob->expires = now + pJob->timeout + 5; // Make a global for this!
@@ -195,15 +195,17 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                      dnxDebug(2, "dnxJobListExpire: Dequeueing DNX_JOB_UNBOUND job [%lu:%lu] Expires in (%i) seconds. Exp: (%lu) Now: (%lu)", 
                         pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now);
                      pJob->state = DNX_JOB_PENDING;
-                     // Make sure it's not located behind the current dhead?
-                     // It might be since we don't seem to be getting dispatched....                  
+                     pJob->ack = TRUE; // set this flag to indicate we are giving it a second chance
+                     
                      dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] is at ilist->[%i], head:%i, dhead:%i, tail:%i", 
                         pJob->xid.objSerial, pJob->xid.objSlot, current, ilist->head, ilist->dhead, ilist->tail);
+
+                     // Make sure it's not located behind the current dhead
                      if (((current + zero_factor) % ilist->size) < ((ilist->dhead + zero_factor) % ilist->size)) {
                         dnxDebug(2, "dnxJobListExpire: Head(%i)[%i], current(%i), DHead(%i)[%i], Tail(%i)[%i]",
-                           (ilist->head + zero_factor), ilist->head, current,  
-                           (ilist->dhead + zero_factor), ilist->dhead,
-                           (ilist->tail + zero_factor), ilist->tail);
+                           ((ilist->head + zero_factor) % ilist->size), ilist->head, current,  
+                           ((ilist->dhead + zero_factor) % ilist->size), ilist->dhead,
+                           ((ilist->tail + zero_factor) % ilist->size), ilist->tail);
                            ilist->dhead = current;
                      }
                      

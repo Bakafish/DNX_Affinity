@@ -178,12 +178,12 @@ typedef enum DnxReqType
 /** Defines the state of a DNX job. */
 typedef enum DnxJobState
 {
-   DNX_JOB_NULL = 0,
-   DNX_JOB_UNBOUND,
-   DNX_JOB_PENDING, 
-   DNX_JOB_INPROGRESS, 
-   DNX_JOB_COMPLETE, 
-   DNX_JOB_EXPIRED 
+   DNX_JOB_NULL = 0,    // Job is empty
+   DNX_JOB_UNBOUND,     // We have Job, but no Client is assigned
+   DNX_JOB_PENDING,     // We are waiting to be dispatched
+   DNX_JOB_INPROGRESS,  // We are waiting to get the result
+   DNX_JOB_COMPLETE,    // Result is received
+   DNX_JOB_EXPIRED      // Job is expired
 } DnxJobState;
 
 /** The maximum number of bytes in a DNX message address buffer. */
