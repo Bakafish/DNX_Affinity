@@ -432,9 +432,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       }
 
       if (current == ilist->tail) {
-         // if we are at the end of the queue, wait and then return
-//          dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Waiting for (%i) seconds.", DNX_JOBLIST_TIMEOUT);
-//          dnxCancelableSleep(DNX_JOBLIST_TIMEOUT * 1000);
+         // if we are at the end of the queue
          gettimeofday(&now, 0);
          timeout.tv_sec = now.tv_sec + DNX_JOBLIST_TIMEOUT;
          timeout.tv_nsec = now.tv_usec * 1000;
