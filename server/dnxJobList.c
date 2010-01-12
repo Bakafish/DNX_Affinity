@@ -163,7 +163,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                dnxDebug(2, "dnxJobListExpire: Type (%i) Job [%lu:%lu] Exp: (%lu) Now: (%lu)",
                   pJob->state, pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);
                
-               if(pJob->state == DNX_JOB_INPROGRESS && pJob->ack != TRUE) {
+               if(pJob->state == DNX_JOB_INPROGRESS && ! pJob->ack) {
                   // We probably lost UDP, reset state
                   pJob->state = DNX_JOB_UNBOUND;
                   pJob->expires = now + pJob->timeout + 5; // Make a global for this!
