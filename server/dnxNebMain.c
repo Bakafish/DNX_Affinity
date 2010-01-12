@@ -699,7 +699,7 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
-   Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
+   Job.expires    = Job.start_time + Job.timeout + DNX_DISPATCH_TIMEOUT; /* temporary till we have a config variable for it ... */
    Job.pNode      = pNode;
    Job.ack        = false;
 
@@ -750,7 +750,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    Job.cmd        = ds->command_line;
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
-   Job.expires    = Job.start_time + Job.timeout + 5; /* temporary till we have a config variable for it ... */
+   Job.expires    = Job.start_time + Job.timeout + DNX_DISPATCH_TIMEOUT; /* temporary till we have a config variable for it ... */
    Job.pNode      = pNode;
    Job.ack        = false;
 
@@ -833,7 +833,7 @@ static int ehSvcCheck(int event_type, void * data)
       serial, (unsigned long)time(0), (unsigned long)svcdata->start_time.tv_sec);
    
     time_t now = time(0);
-    time_t expires = now + svcdata->timeout;
+    time_t expires = now + svcdata->timeout + DNX_DISPATCH_TIMEOUT;
     if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK) // If OK we dispatch
     {
         // If NOT_FOUND we should try and queue it

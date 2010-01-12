@@ -76,12 +76,17 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
    pthread_t tid = pthread_self();
    DnxJob job;
    int ret;
+   time_t now = time(0);
 
    dnxDebug(2, 
-         "dnxDispatcher[%lx]: Dispatching job [%lu,%lu] (%s) to dnxClient [%s]"
+         "dnxSendJobMsg[%lx]: Dispatching job [%lu,%lu] (%s) to dnxClient [%s]"
          " at node %s host flags = (%qu)",
          tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
          pNode->hn, pNode->addr, pNode->flags);
+
+   // We may need to correctly change the flag of the slot in the queue here to 
+   // indicate it's been dispatched and we are waiting for it...
+   
 
    memset(&job, 0, sizeof job);
    job.xid      = pSvcReq->xid;
@@ -90,17 +95,25 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
    job.timeout  = pSvcReq->timeout;
    job.cmd      = pSvcReq->cmd;
    
+   // pSvcReq->state = DNX_JOB_PENDING;
+   // add some time to the expiration.
+   // pSvcReq->expires += 60;
+   
+   dnxDebug(1,"dnxSendJobMsg[%lx]: Job [%lu,%lu] is in state(%i) and expires in (%i) seconds.",
+            tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->state, pSvcReq->expires - now);
+   
+   
    // Make a copy because it sometimes gets released before we even get to
    // increment it's stats
    char *address = xstrdup(pNode->addr);
 
    if ((ret = dnxSendJob(idisp->channel, &job, pNode->address)) != DNX_OK)
    {
-            dnxDebug(1,"Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
+            dnxDebug(1, "dnxSendJobMsg[%lx]: Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
             address, dnxErrorString(ret));
 
-            dnxLog("Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
+            dnxLog("dnxSendJobMsg[%lx]: Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
             address, dnxErrorString(ret));
    } else {
