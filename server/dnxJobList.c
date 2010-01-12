@@ -92,11 +92,14 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob) {
       // add this job to the job list
       memcpy(&ilist->list[tail], pJob, sizeof *pJob);
          
+      
+      // Only the dispatch and expire threads should set this
+      
       // update dispatch head index
-      if (ilist->list[ilist->tail].state != DNX_JOB_PENDING && 
-          ilist->list[ilist->tail].state != DNX_JOB_UNBOUND) {
-         ilist->dhead = tail;
-      }
+//       if (ilist->list[ilist->tail].state != DNX_JOB_PENDING && 
+//           ilist->list[ilist->tail].state != DNX_JOB_UNBOUND) {
+//          ilist->dhead = tail;
+//       }
       
       ilist->tail = tail;
    
