@@ -429,14 +429,14 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
    if((ret = dnxQueueRemove(ireg->rqueue, (void **)ppNode, dnxCompareAffinityNodeReq)) == DNX_QRES_FOUND) {
       // make sure we return that we found a match...
       ret = DNX_OK;
-      dnxDebug(1, "dnxGetNodeRequest: Found Hostnode [%s]:(%qu) with Affinity to dnxClient [%s]:(%qu) Returning(%i).",
-         pNode->hn, pNode->flags, (*(DnxNodeRequest **)ppNode)->hn, (*(DnxNodeRequest **)ppNode)->flags, ret);   
+      dnxDebug(1, "dnxGetNodeRequest: Found job [%lu,%lu] from Hostnode [%s]:(%qu) with Affinity to dnxClient [%s]:(%qu) Returning(%i).",
+         pNode->xid.objSerial, pNode->xid.objSlot, pNode->hn, pNode->flags, (*(DnxNodeRequest **)ppNode)->hn, (*(DnxNodeRequest **)ppNode)->flags, ret);   
       // ppNode now points at the dnxClient node , so we need to delete the 
       // job request at pNode to prevent leaks
       dnxDeleteNodeReq(pNode);
    } else {
       ret = DNX_ERR_NOTFOUND;
-      dnxDebug(1, "dnxGetNodeRequest: didn't find a match. Returning (%i)", ret);
+      dnxDebug(8, "dnxGetNodeRequest: didn't find a match. Returning (%i)", ret);
    }
 
    return ret;

@@ -158,8 +158,8 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
             // check the job's expiration stamp
             if (pJob->expires <= now) {
                // This is an expired job
-               dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] Expire Time: (%lu) Now: (%lu)",
-                  pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);
+               dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] Expires in (%i) seconds. Exp: (%lu) Now: (%lu)",
+                  pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now);
                
                // job has expired - add it to the expired job list
                memcpy(&pExpiredJobs[jobCount++], pJob, sizeof(DnxNewJob));
@@ -183,14 +183,18 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                   qJob = pJob->pNode;
                   if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) == DNX_OK) { 
                      // If OK we have successfully dispatched it
-                     dnxDebug(2, "dnxJobListExpire: Dequeueing DNX_JOB_UNBOUND job [%lu:%lu] Expire Time: (%lu) Now: (%lu)", 
-                        pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);                  
+                     dnxDebug(2, "dnxJobListExpire: Dequeueing DNX_JOB_UNBOUND job [%lu:%lu] Expires in (%i) seconds. Exp: (%lu) Now: (%lu)", 
+                        pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now);
                      pJob->state = DNX_JOB_PENDING;
                      // Make sure it's not located behind the current dhead?
+                     // It might be since we don't seem to be getting dispatched....
+                     dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] is at ilist->[%i], head:%i, dhead:%i, tail:%i", 
+                        pJob->xid.objSerial, pJob->xid.objSlot, current, ilist->head, ilist->dhead, ilist->tail);
+                     
                      pthread_cond_signal(&ilist->cond);  // signal that a new job is available
                   } else {
-                     dnxDebug(2, "dnxJobListExpire: Unable to dequeue DNX_JOB_UNBOUND job [%lu:%lu] Expire Time: (%lu) Now: (%lu)", 
-                        pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);                  
+                     dnxDebug(2, "dnxJobListExpire: Unable to dequeue DNX_JOB_UNBOUND job [%lu:%lu] Expires in (%i) seconds. Exp: (%lu) Now: (%lu)", 
+                        pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now);
                   }
                }
             }
