@@ -68,7 +68,8 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob) {
 
    tail = ilist->tail;
 
-   // verify space in the job list
+   // verify space in the job list, this keeps a single empty buffer element to 
+   // protect us from not knowing a full ring from an empty one
    if (ilist->list[tail].state && (tail = (tail + 1) % ilist->size) == ilist->head) {
       dnxLog("dnxJobListAdd: Out of job slots (max=%lu): %s.", 
             ilist->size, pJob->cmd);
@@ -129,13 +130,13 @@ int dnxJobListMarkAck(DnxXID * pXid)
     DNX_PT_MUTEX_UNLOCK(&ilist->mut);
     return DNX_OK;
 }
+
 //----------------------------------------------------------------------------
 
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs) {
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
    unsigned long current;
    DnxNewJob * pJob;
-   DnxNodeRequest * qJob; 
    int jobCount = 0;
    time_t now;
 
@@ -148,6 +149,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
 
    // walk the entire job list - InProgress and Pending jobs (in that order)
    current = ilist->head;
+   int zero_factor = ilist->size - current; // add this value to normalize the index
    
    while(jobCount < *totalJobs) {
       // only examine jobs that are either awaiting dispatch or results
@@ -158,10 +160,17 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
             // check the job's expiration stamp
             if (pJob->expires <= now) {
                // This is an expired job
-               dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] Expires in (%i) seconds. Exp: (%lu) Now: (%lu)",
-                  pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now);
+               dnxDebug(2, "dnxJobListExpire: Type (%i) Job [%lu:%lu] Exp: (%lu) Now: (%lu)",
+                  pJob->state, pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);
                
-               // job has expired - add it to the expired job list
+               if(pJob->state == DNX_JOB_INPROGRESS) {
+                  // We probably lost UDP, reset state
+                  pJob->state = DNX_JOB_UNBOUND;
+                  pJob->expires = now + pJob->timeout + 5; // Make a global for this!
+                  break;
+               }
+               
+               // Job has expired - add it to the expired job list
                memcpy(&pExpiredJobs[jobCount++], pJob, sizeof(DnxNewJob));
                // Put the old job in a reusable state   
                pJob->state = DNX_JOB_NULL;
@@ -180,16 +189,23 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                // This job has not expired, but we may need to bind it to a client
                if (pJob->state == DNX_JOB_UNBOUND) {
                   // Try and get a dnxClient for it
-                  qJob = pJob->pNode;
                   if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) == DNX_OK) { 
-                     // If OK we have successfully dispatched it
+                     // If OK we have successfully dispatched it so update it's expiration
+                     pJob->expires = now + pJob->timeout + 5; // We should use the global here
                      dnxDebug(2, "dnxJobListExpire: Dequeueing DNX_JOB_UNBOUND job [%lu:%lu] Expires in (%i) seconds. Exp: (%lu) Now: (%lu)", 
                         pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now);
                      pJob->state = DNX_JOB_PENDING;
                      // Make sure it's not located behind the current dhead?
-                     // It might be since we don't seem to be getting dispatched....
+                     // It might be since we don't seem to be getting dispatched....                  
                      dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] is at ilist->[%i], head:%i, dhead:%i, tail:%i", 
                         pJob->xid.objSerial, pJob->xid.objSlot, current, ilist->head, ilist->dhead, ilist->tail);
+                     if (((current + zero_factor) % ilist->size) < ((ilist->dhead + zero_factor) % ilist->size)) {
+                        dnxDebug(2, "dnxJobListExpire: Head(%i)[%i], current(%i), DHead(%i)[%i], Tail(%i)[%i]",
+                           (ilist->head + zero_factor), ilist->head, current,  
+                           (ilist->dhead + zero_factor), ilist->dhead,
+                           (ilist->tail + zero_factor), ilist->tail);
+                           ilist->dhead = current;
+                     }
                      
                      pthread_cond_signal(&ilist->cond);  // signal that a new job is available
                   } else {

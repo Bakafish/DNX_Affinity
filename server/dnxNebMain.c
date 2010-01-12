@@ -688,9 +688,6 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    assert(ds);
    assert(ds->command_line);
 
-   dnxDebug(2, "dnxPostNewServiceJob: Posting Service Job [%lu]: Host (%s)", 
-    serial, ds->host_name);
-
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.host_name  = xstrdup(ds->host_name);
@@ -703,14 +700,12 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    Job.pNode      = pNode;
    Job.ack        = false;
 
-   dnxDebug(2, "dnxPostNewServiceJob: Posting Service Job [%lu]: %s.", serial, Job.cmd);
-
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
       dnxLog("Failed to post Service Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
    } else { 
-      dnxDebug(2, "dnxPostNewServiceJob: Job Start Time: (%lu) Expires: (%lu)",
-         Job.start_time, Job.expires);
+      dnxDebug(2, "dnxPostNewServiceJob: Posting Service Job [%lu]: (%s) %s. expires in (%i) seconds.",
+         serial, ds->host_name, Job.cmd, Job.expires - Job.start_time);
       dnxAuditJob(&Job, "ASSIGN");
    }
    
