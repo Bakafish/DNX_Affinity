@@ -195,7 +195,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                      dnxDebug(2, "dnxJobListExpire: Dequeueing DNX_JOB_UNBOUND job [%lu:%lu] Expires in (%i) seconds. Exp: (%lu) Now: (%lu)", 
                         pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now);
                      pJob->state = DNX_JOB_PENDING;
-                     pJob->ack = TRUE; // set this flag to indicate we are giving it a second chance
+                     pJob->ack = 1; // set this flag to indicate we are giving it a second chance
                      
                      dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] is at ilist->[%i], head:%i, dhead:%i, tail:%i", 
                         pJob->xid.objSerial, pJob->xid.objSlot, current, ilist->head, ilist->dhead, ilist->tail);
