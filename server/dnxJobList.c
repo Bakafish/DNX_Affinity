@@ -352,18 +352,18 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
          case DNX_JOB_PENDING:
             gettimeofday(&now, 0);
             // Make sure the dnxClient is still fresh
-            if(ilist->list[current].pNode->expires <= now) {
+            if((ilist->list[current].pNode)->expires <= now) {
                ilist->list[current].state = DNX_JOB_UNBOUND;
                break;
             }
 
             // Check to see if we have recently dispatched this
-            if(ilist->list[current].pNode->retry > now) {
+            if((ilist->list[current].pNode)->retry > now) {
                break;
             }
             
             // set our retry interval
-            ilist->list[current].pNode->retry = now + 1;
+            (ilist->list[current].pNode)->retry = now + 1;
             // make sure we don't expire our job prematurely as we may have been waiting to dispatch
             ilist->list[current]->expires = now + ilist->list[current]->timeout + 5;
 
