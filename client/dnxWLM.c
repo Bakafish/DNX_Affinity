@@ -497,7 +497,7 @@ static void * dnxWorker(void * data)
          dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
                
-         ack = (DnxNodeRequest *)xmalloc(sizeof *ack);
+         ack = (DnxAck *)xmalloc(sizeof *ack);
          memset(ack, 0, sizeof *ack);
          ack.xid = job.xid;
          ack.timestamp = job.timestamp;
