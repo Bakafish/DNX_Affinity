@@ -428,7 +428,7 @@ static void * dnxWorker(void * data)
    {
       DnxNodeRequest msg;
       DnxJob job;
-      DnxAck * ack;
+      DnxAck * ack = (DnxAck *)xmalloc(sizeof *ack);
       int ret;
       
       // setup job request message - use thread id and node address in XID
@@ -497,8 +497,7 @@ static void * dnxWorker(void * data)
          dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
                
-         ack = (DnxAck *)xmalloc(sizeof *ack);
-         memset(ack, 0, sizeof *ack);
+//          memset(ack, 0, sizeof *ack);
          ack.xid = job.xid;
          ack.timestamp = job.timestamp;
          ack.address = job.address;
