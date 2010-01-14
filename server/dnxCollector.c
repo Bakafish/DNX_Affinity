@@ -99,35 +99,45 @@ static void * dnxCollector(void * data)
       if ((ret = dnxWaitForResult(icoll->channel, 
             &sResult, sResult.address, DNX_COLLECTOR_TIMEOUT)) == DNX_OK)
       {
-         dnxDebug(2, "dnxCollector[%lx]: Received result for job [%lu,%lu]: %s.", 
-               tid, sResult.xid.objSerial, sResult.xid.objSlot, sResult.resData);
-
-         // dequeue the matching service request from the pending job queue
-         if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
-         {
-            dnxDebug(2, "dnxCollector: Collecting Job");
-
-            time_t check_time = Job.start_time + sResult.delta;
-            dnxDebug(2, "dnxCollector[%lx]: Hostname(%s) Time[%lu]",
-                tid, Job.host_name, check_time);
-
-            dnxNodeListIncrementNodeMember(Job.pNode->addr,JOBS_HANDLED);
-
-            /** @todo Wrapper release DnxResult structure. */
-            dnxAuditJob(&Job, "COLLECT");
-            dnxLog("RESPONSE: %s", sResult.resData);
-            ret = dnxSubmitCheck(&Job, &sResult, check_time);
-
-            dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s.", 
-                  tid, sResult.xid.objSerial, sResult.xid.objSlot, 
-                  dnxErrorString(ret));
-         }
-         else 
-         {
-            dnxDebug(1, "dnxCollector[%lx]: Dequeue job failed: %s.",
-                  tid, dnxErrorString(ret));
-            dnxLog("dnxCollector[%lx]: Dequeue job failed: %s.",
-                  tid, dnxErrorString(ret));
+         if(sResult.resCode == -1) {
+            if((ret = dnxJobListMarkAck(icoll->joblist, &sResult.xid)) == DNX_OK) {
+               dnxDebug(2, "dnxCollector[%lx]: Received ack for job [%lu,%lu]", 
+                  tid, sResult.xid.objSerial, sResult.xid.objSlot);
+            } else {
+               dnxDebug(2, "dnxCollector[%lx]: Had error with ack for job [%lu,%lu]", 
+                  tid, sResult.xid.objSerial, sResult.xid.objSlot);
+            }
+         } else {
+            dnxDebug(2, "dnxCollector[%lx]: Received result for job [%lu,%lu]: %s.", 
+                  tid, sResult.xid.objSerial, sResult.xid.objSlot, sResult.resData);
+   
+            // dequeue the matching service request from the pending job queue
+            if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
+            {
+               dnxDebug(2, "dnxCollector: Collecting Job");
+   
+               time_t check_time = Job.start_time + sResult.delta;
+               dnxDebug(2, "dnxCollector[%lx]: Hostname(%s) Time[%lu]",
+                   tid, Job.host_name, check_time);
+   
+               dnxNodeListIncrementNodeMember(Job.pNode->addr,JOBS_HANDLED);
+   
+               /** @todo Wrapper release DnxResult structure. */
+               dnxAuditJob(&Job, "COLLECT");
+               dnxLog("RESPONSE: %s", sResult.resData);
+               ret = dnxSubmitCheck(&Job, &sResult, check_time);
+   
+               dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s.", 
+                     tid, sResult.xid.objSerial, sResult.xid.objSlot, 
+                     dnxErrorString(ret));
+            }
+            else 
+            {
+               dnxDebug(1, "dnxCollector[%lx]: Dequeue job failed: %s.",
+                     tid, dnxErrorString(ret));
+               dnxLog("dnxCollector[%lx]: Dequeue job failed: %s.",
+                     tid, dnxErrorString(ret));
+            }
          }
       }
       else if (ret != DNX_ERR_TIMEOUT)

@@ -28,10 +28,11 @@ int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address)
    // create the XML message
    dnxXmlOpen (&xbuf, "Job");
    dnxXmlAdd  (&xbuf, "XID",      DNX_XML_XID,  &pJob->xid);
-   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pJob->xid); // old format - for bc
+//   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pJob->xid); // old format - for bc
    dnxXmlAdd  (&xbuf, "State",    DNX_XML_INT,  &pJob->state);
    dnxXmlAdd  (&xbuf, "Priority", DNX_XML_INT,  &pJob->priority);
    dnxXmlAdd  (&xbuf, "Timeout",  DNX_XML_INT,  &pJob->timeout);
+   dnxXmlAdd  (&xbuf, "Timestamp",DNX_XML_UINT, &pJob->timestamp);
    dnxXmlAdd  (&xbuf, "Command",  DNX_XML_STR,   pJob->cmd);
    dnxXmlClose(&xbuf);
 
@@ -176,27 +177,16 @@ int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, 
        return dnxXmlGet(&xbuf, "ResultData", DNX_XML_STR, &pResult->resData);
    }
 
-   //<SM 10/08 JobAck Mod>
    //Record the job ack
-   if((ret = dnxXmlCmpStr(&xbuf, "Request", "JobAck")) == DNX_OK)
-   {
-        DnxXID xid;
-        int current = 0;
-
-        dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &xid);
-
-        char * addr = ntop((struct sockaddr *)address);
-        dnxDebug(3,"Received JobAck for Job XID %s from Node: %s",xid,addr);
-        xfree(addr);
-
-        dnxJobListMarkAck(&xid);
-
-        //Call this function again and this time wait on the result (resotring original functionality)
-        ret = dnxWaitForResult(channel, pResult, address, timeout);
-
-        return ret;
+   else if((ret = dnxXmlCmpStr(&xbuf, "Request", "JobAck")) == DNX_OK) {
+   
+      // We will use resCode set to -1 to flag it as an ack
+      pResult->resCode = -1;
+      
+      if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pResult->xid)) != DNX_OK)
+          return ret;
+      return dnxXmlGet(&xbuf, "Timestamp", DNX_XML_UINT, &pResult->delta);
    }
-   //<SM 10/08 JobAck Mod End>
 }
 
 

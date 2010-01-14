@@ -206,18 +206,20 @@ typedef struct DnxNodeRequest
    DnxXID xid;                      //!< Worker node transaction ID.
    DnxReqType reqType;              //!< Request type.
    unsigned int jobCap;             //!< Job capacity.
-   unsigned long long flags;        //!< Affinity groups bitmask.
    unsigned int ttl;                //!< Request Time-To-Live (in seconds).
-   time_t expires;                  //!< Job expiration time (not transmitted).
    char address[DNX_MAX_ADDRESS];   //!< Source address. (should be initialized as at least the same size as  a struct sockaddr_storage)
-   char * addr;                     //!< Source address as char * for easier logging later
-   char * hn;
+   unsigned long long flags;        //!< Affinity groups bitmask (not transmitted).
+   time_t expires;                  //!< Job expiration time (not transmitted).
+   time_t retry;                    //!< Time to attempt to resubmit if no Ack recieved
+   char * addr;                     //!< Source address as char * for easier logging later (not transmitted)
+   char * hn;                       //!< Source Hostname (not transmitted)
 } DnxNodeRequest;
 
 /** Send job wire structure. */
 typedef struct DnxJob
 {
    DnxXID xid;                      //!< Job transaction id.
+   time_t timestamp;                //!< Packet trasmit timestamp
    DnxJobState state;               //!< Job state.
    int priority;                    //!< Execution Priority.
    int timeout;                     //!< Max job execution time.
@@ -229,12 +231,20 @@ typedef struct DnxJob
 typedef struct DnxResult
 {
    DnxXID xid;                      //!< Job transaction id.
+   time_t timestamp;                //!< Packet trasmit timestamp
    DnxJobState state;               //!< Job state.
    unsigned int delta;              //!< Job execution time delta.
    int resCode;                     //!< Job result code.
    char * resData;                  //!< Job result data.
    char address[DNX_MAX_ADDRESS];   //!< Source address.
 } DnxResult;
+
+/** Send job results wire structure. */
+typedef struct DnxAck
+{
+   DnxXID xid;                      //!< Job transaction id.
+   unsigned int timestamp;          //!< Packet trasmit timestamp
+} DnxAck;
 
 /** DNX management request wire structure. */
 typedef struct DnxMgmtRequest

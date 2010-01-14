@@ -158,6 +158,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
 
    // compute expiration time of this request
    pReq->expires = now + pReq->ttl;
+   pReq->retry = now; 
    dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
 
 
@@ -210,73 +211,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
    }
    return ret;
 }
-
-
-
-/*
-
-static int olddnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientReq)
-{
-   pthread_t tid = pthread_self();
-   time_t now = time(0);
-   time_t expires = now + (*pDnxClientReq)->ttl;
-   int ret = DNX_OK;
-   assert(ireg && *ppDnxClientReq);
-
-
-   
-
-//   if (dnxQueueFind(ireg->rqueue, (void **)&pReq, dnxCompareNodeReq) == DNX_QRES_FOUND)
-   if (dnxQueueFind(ireg->rqueue, ppDnxClientReq, dnxCompareNodeReq) == DNX_QRES_FOUND) {
-      // We have a matching work request in the queue, so just update the expiration
-      // time and move on
-      
-      // It's concievable that the expiration script is reaping the object 
-      // at the same moment we are updating it's expiration. It would make sense
-      // to lock it while we are fiddling with it
-
-// MUTEX lock the node
-      pReq->expires = expires;
-      dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
-// MUTEX unlock the node
-      dnxDebug(2, 
-        "dnxRegisterNode[%lx]: Updated req [%lu,%lu] at %u; expires at %u.", 
-        tid, pReq->xid.objSerial, pReq->xid.objSlot, 
-        (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
-   } else {
-      // We didn't have a valid dnxClient request in our pool to update, so we 
-      // registered a new one by cloning the original and pushing it into the 
-      // queue
-      DnxNodeRequest * pReq;
-      pReq = pDnxClientReq; 
-      
-   
-      if ((ret = dnxQueuePut(ireg->rqueue, pDnxClientReq)) == DNX_OK) {
-
-
-// MUTEX lock the node
-      // This is new, add the affinity flags  
-       dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
-       pReq->flags = dnxGetAffinity(pReq->hn);
-       pReq->expires = expires;
-// MUTEX unlock the node
-
-      dnxClientRegMsg = 0;    // Change the pointer to 0 so that a new node is created
-      dnxDebug(2, 
-        "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
-        tid, pReq->hn, pReq->xid.objSerial, pReq->xid.objSlot, 
-        (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
-      dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
-      } else {
-         dnxDebug(1, "dnxRegisterNode: Unable to enqueue node request: %s.", 
-               dnxErrorString(ret));
-         dnxLog("dnxRegisterNode: Unable to enqueue node request: %s.", 
-            dnxErrorString(ret));
-      }
-   }
-   return ret;
-}
-*/
 
 int dnxDeleteNodeReq(DnxNodeRequest * pMsg) {
 //    assert(pMsg);
@@ -405,7 +339,7 @@ static void * dnxRegistrar(void * data) {
                                  
    We look in the registrar for a dnxClient that has affinity to the ppNode
    that we pass in. If a dnxClient is found, we update the ppNode to include
-   the data required to dispatch the job
+   the data required to dispatch the job and delete the node it previously had
   --------------------------------------------------------------------------*/
 
 int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
@@ -441,98 +375,6 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
 
    return ret;
 }
-
-
-//    if (ret != DNX_QRES_FOUND) {
-//       if(ret == DNX_QRES_CONTINUE) {
-//          // The only way we should be hitting this is if we expired 
-//          // all valid workers.
-//          ret = DNX_ERR_NOTFOUND;
-//          // set the pointer back to the original object we passed
-//          node = pNode;
-//       } else {
-//         // A real error, we shouldn't return any object
-//         pClientNode = 0;
-//         // Get rid of the struct we used to pass the host data
-//         dnxDeleteNodeReq(pNode);
-//       }
-//    } else {
-//       ret = DNX_OK;
-//    }
-// 
-//    *ppNode = pClientNode;   // return a node or NULL
-// 
-// }
-// 
-// {
-   // We go through the matches until we find one that isn't expired
-//    while ((ret = dnxQueueRemove(ireg->rqueue, (void **)&node, dnxCompareAffinityNodeReq)) == DNX_QRES_FOUND) {
-//       time_t now = time(0);
-
-//       dnxDebug(2, "dnxGetNodeRequest: For Host[%s] :: DNX Client (%s) node exp (%u) now (%u)",
-//       pNode->hn, node->hn, (unsigned)(node->expires % 1000), (unsigned)(now % 1000));
-
-      // verify that this request's Time-To-Live (TTL) has not expired and
-      // that this thread has affinity
-//       if (node->expires > now) {
-//          dnxDebug(1, "dnxGetNodeRequest: Found Hostnode [%s]:(%qu) with Affinity to dnxClient [%s]:(%qu) .",
-//             pNode->hn, pNode->flags, node->hn, node->flags);
-//          // pNode now points at the job request node we made so we need to delete it
-//          dnxDeleteNodeReq(pNode); 
-//          break;
-//       } else {
-//          dnxNodeListIncrementNodeMember(node->addr,JOBS_REQ_EXP);
-// 
-//          dnxDebug(1, 
-//             "dnxGetNodeRequest: Expired req [%lu,%lu] at %u; expired at %u.", 
-//             node->xid.objSerial, node->xid.objSlot, 
-//             (unsigned)(now % 1000), (unsigned)(node->expires % 1000));
-// 
-//          discard_count++;
-//          
-//          // Delete the expired node
-//          dnxDeleteNodeReq(node); 
-// 
-//          // Re-initialize with host node so we can try and match affinity again
-//          node = pNode;
-//       }
-//    }
-
-    // If we break out of the loop with affinity then we should have set
-    // the node to a correct dnxClient object
-//     int after_client_queue_len = dnxQueueSize(ireg->rqueue);
-//     dnxDebug(6, "dnxGetNodeRequest: Exiting loop (%i) Number of elements [%i]",
-//         ireg->tid, after_client_queue_len);
-
-    
-//    if (discard_count > 0) {
-//       dnxDebug(4, "dnxGetNodeRequest: Discarded %d expired node requests.", 
-//             discard_count);
-//    }
-
-// If no affinity matches or there are no dnxClient requests in the
-// queue we send it to the jobs list without a node
-//    if (ret != DNX_QRES_FOUND) {
-//       if(ret == DNX_QRES_CONTINUE) {
-//          // The only way we should be hitting this is if we expired 
-//          // all valid workers.
-//          ret = DNX_ERR_NOTFOUND;
-//          // set the pointer back to the original object we passed
-//          node = pNode;
-//       } else {
-//         // A real error, we shouldn't return any object
-//         node = 0;
-//         // Get rid of the struct we used to pass the host data
-//         dnxDeleteNodeReq(pNode);
-//       }
-//    } else {
-//       ret = DNX_OK;
-//    }
-// 
-//    *ppNode = node;   // return a node or NULL
-// 
-//    return ret;
-// }
 
 //----------------------------------------------------------------------------
 

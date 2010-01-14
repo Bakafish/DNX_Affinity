@@ -89,19 +89,15 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
    
 
    memset(&job, 0, sizeof job);
-   job.xid      = pSvcReq->xid;
-   job.state    = DNX_JOB_PENDING;
-   job.priority = 1;
-   job.timeout  = pSvcReq->timeout;
-   job.cmd      = pSvcReq->cmd;
-   
-   // pSvcReq->state = DNX_JOB_PENDING;
-   // add some time to the expiration.
-   // pSvcReq->expires += 60;
-   
+   job.xid        = pSvcReq->xid;
+   job.state      = DNX_JOB_PENDING;
+   job.priority   = 1;
+   job.timeout    = pSvcReq->timeout;
+   job.cmd        = pSvcReq->cmd;
+   job.timestamp  = now;
+      
    dnxDebug(1,"dnxSendJobMsg[%lx]: Job [%lu,%lu] is in state(%i) and expires in (%i) seconds.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->state, pSvcReq->expires - now);
-   
    
    // Make a copy because it sometimes gets released before we even get to
    // increment it's stats
@@ -137,7 +133,7 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
 {
    DnxNodeRequest * pNode = pSvcReq->pNode;
    int ret;
-
+   
    ret = dnxSendJobMsg(idisp, pSvcReq, pNode);
 
    /** @todo Implement the fork-error re-scheduling logic as 

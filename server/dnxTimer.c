@@ -166,7 +166,7 @@ static void * dnxTimer(void * data)
             sResult.resData = xstrdup(msg);
             // We need to give the correct service or host result code
             sResult.resCode = job->object_check_type ? 2 : 3;
-            ret = dnxSubmitCheck(job, &sResult, check_time);
+            ret = dnxSubmitCheck(job, &sResult, check_time); // This will delete the job and node objects
          }
       }
 

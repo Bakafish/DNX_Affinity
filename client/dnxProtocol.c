@@ -94,6 +94,10 @@ int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeo
    if ((ret = dnxXmlGet(&xbuf, "Timeout", DNX_XML_INT, &pJob->timeout)) != DNX_OK)
       return ret;
 
+   // decode the job's timestamp
+   if ((ret = dnxXmlGet(&xbuf, "Timeout", DNX_XML_UINT, &pJob->timestamp)) != DNX_OK)
+      return ret;
+
    // decode the job's command
    return dnxXmlGet(&xbuf, "Command", DNX_XML_STR, &pJob->cmd);
 }
@@ -101,12 +105,13 @@ int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeo
 //------------------------------------------------------------------------------
 //<SM 10/08 Job Ack Mod>
 //This function handles acknowledgement of a job recieved from the server to the client.
-int dnxSendJobAck(DnxChannel* channel, DnxJob *pJob,char * address)
+int dnxSendJobAck(DnxChannel* channel, DnxJob *pJob, char * address)
 {
     DnxXmlBuf xbuf;
 
     dnxXmlOpen (&xbuf, "JobAck");
-    dnxXmlAdd  (&xbuf, "XID",      DNX_XML_XID,  &pJob->xid);
+    dnxXmlAdd  (&xbuf, "XID", DNX_XML_XID,  &pJob->xid);
+    dnxXmlAdd  (&xbuf, "Timestamp", DNX_XML_UINT,  &pJob->timestamp);
     dnxXmlClose(&xbuf);
 
     dnxDebug(3, "dnxSendJobAck: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);

@@ -144,7 +144,7 @@ static int dnxUdpOpen(iDnxChannel * icp, int active)
       lopt.l_onoff = 0;
       lopt.l_linger = 0;
 
-      // reuse addr and clear linker to avoid tcp time_wait state issues
+      // reuse addr and clear linger to avoid tcp time_wait state issues
       setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof reuse);
       setsockopt(sd, SOL_SOCKET, SO_LINGER, &lopt, sizeof lopt);
       
@@ -203,7 +203,7 @@ static int dnxUdpClose(iDnxChannel * icp)
  * 
  * @return Zero on success, or a non-zero error value.
  */
-static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size,int timeout, char * src)
+static int dnxUdpRead(iDnxChannel * icp, char * buf, int * size, int timeout, char * src)
 {
    iDnxUdpChannel * iucp = (iDnxUdpChannel *) ((char *)icp - offsetof(iDnxUdpChannel, ichan));
 
