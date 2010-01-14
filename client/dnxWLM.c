@@ -437,21 +437,21 @@ static void * dnxWorker(void * data)
       msg.ttl = iwlm->cfg.reqTimeout - iwlm->cfg.ttlBackoff;
       msg.hn = iwlm->myhostname;
       // request a job, and then wait for a job to come in...
-      if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK)
+      if ((ret = dnxSendNodeRequest(ws->dispatch, &msg, 0)) != DNX_OK) {
          dnxLog("Worker[%lx]: Error sending node request: %s.", 
                tid, dnxErrorString(ret));
-      else
-      {
+      } else {
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);
          iwlm->reqsent++;
          DNX_PT_MUTEX_UNLOCK(&iwlm->mutex);
       }
 
       // wait for job, even if request was never sent
-      if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address,iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT)
+      if ((ret = dnxWaitForJob(ws->dispatch, &job, job.address,iwlm->cfg.reqTimeout)) != DNX_OK && ret != DNX_ERR_TIMEOUT) {
          dnxLog("Worker[%lx]: Error receiving job: %s.",
                tid, dnxErrorString(ret));
-
+      }
+      
       pthread_testcancel();
 
       DNX_PT_MUTEX_LOCK(&iwlm->mutex);
@@ -471,9 +471,9 @@ static void * dnxWorker(void * data)
       {
          iwlm->jobsrcvd++;
          iwlm->active++;
-         dnxSendJobAck(ws->collect, &job, &job.address);
-         dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] (T/O %d): %s.", 
-               tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
+//          dnxSendJobAck(ws->collect, &job, &job.address);
+//          dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] (T/O %d): %s.", 
+//                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
          
          // check pool size before we get too busy -
          // if we're not shutting down and we haven't reached the configured
@@ -491,6 +491,10 @@ static void * dnxWorker(void * data)
          char resData[MAX_RESULT_DATA + 1];
          DnxResult result;
          time_t jobstart;
+
+         dnxSendJobAck(ws->collect, &job, &job.address);
+         dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/O %d): %s.", 
+               tid, job.xid.objSerial, job.xid.objSlot, ws->collect, job.timeout, job.cmd);
 
          dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);

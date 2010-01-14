@@ -95,7 +95,7 @@ int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeo
       return ret;
 
    // decode the job's timestamp
-   if ((ret = dnxXmlGet(&xbuf, "Timeout", DNX_XML_UINT, &pJob->timestamp)) != DNX_OK)
+   if ((ret = dnxXmlGet(&xbuf, "Timestamp", DNX_XML_UINT, &pJob->timestamp)) != DNX_OK)
       return ret;
 
    // decode the job's command
