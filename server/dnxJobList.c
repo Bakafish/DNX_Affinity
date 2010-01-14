@@ -365,7 +365,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             // set our retry interval
             (ilist->list[current].pNode)->retry = now + 1;
             // make sure we don't expire our job prematurely as we may have been waiting to dispatch
-            ilist->list[current].expires = now + ilist->list[current].timeout + 5;
+            ilist->list[current].expires = now.tv_sec + ilist->list[current].timeout + 5;
 
             // transition this job's state to InProgress
 //             ilist->list[current].state = DNX_JOB_INPROGRESS;
