@@ -97,7 +97,7 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob);
  */
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs);
 
-int dnxJobListMarkAck(DnxXID * pXid);
+int dnxJobListMarkAck(DnxJobList * pJobList, DnxXID * pxid);
 
 /** Select a dispatchable job from a job list.
  * 
