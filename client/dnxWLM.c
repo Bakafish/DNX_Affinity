@@ -493,13 +493,13 @@ static void * dnxWorker(void * data)
          time_t jobstart;
 
 
-         dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s.", 
-               tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
+         dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] from (%lx) (T/O %d): %s.", 
+               tid, job.xid.objSerial, job.xid.objSlot, ws->collect, job.timeout, job.cmd);
                
 
 //         dnxSendJobAck(ws->collect, &ack, 0);
-         dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/S %lu).", 
-               tid, ack.xid.objSerial, ack.xid.objSlot, ws->collect, ack.timestamp);
+//          dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/S %lu).", 
+//                tid, ack.xid.objSerial, ack.xid.objSlot, ws->collect, ack.timestamp);
          
          // prepare result structure
          result.xid = job.xid;               // result xid must match job xid
