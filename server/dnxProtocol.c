@@ -181,7 +181,7 @@ int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, 
    else if((ret = dnxXmlCmpStr(&xbuf, "Request", "JobAck")) == DNX_OK) {
    
       // We will use resCode set to -1 to flag it as an ack
-      &pResult->resCode = -1;
+      pResult->resCode = -1;
       
       if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pResult->xid)) != DNX_OK)
           return ret;

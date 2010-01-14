@@ -239,7 +239,7 @@ typedef struct DnxResult
    char address[DNX_MAX_ADDRESS];   //!< Source address.
 } DnxResult;
 
-/** Send job results wire structure. */
+/** Send Ack wire structure. */
 typedef struct DnxAck
 {
    DnxXID xid;                      //!< Job transaction id.
