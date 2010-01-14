@@ -538,7 +538,7 @@ static void * dnxWorker(void * data)
                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
 
          xfree(result.resData);
-         xfree(ack);
+         xfree(&ack);
  
          // update all statistics
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);
