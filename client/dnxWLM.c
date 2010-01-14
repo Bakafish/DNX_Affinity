@@ -428,6 +428,7 @@ static void * dnxWorker(void * data)
    {
       DnxNodeRequest msg;
       DnxJob job;
+      DnxAck ack;
       int ret;
       
       // setup job request message - use thread id and node address in XID
@@ -492,13 +493,20 @@ static void * dnxWorker(void * data)
          DnxResult result;
          time_t jobstart;
 
-         dnxSendJobAck(ws->collect, &job, &job.address);
-         dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/O %d): %s.", 
-               tid, job.xid.objSerial, job.xid.objSlot, ws->collect, job.timeout, job.cmd);
 
          dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
+               
 
+         memset(ack, 0, sizeof *ack);
+         ack.xid = job.xid;
+         ack.timestamp = job.timestamp;
+         ack.address = job.address;
+
+         dnxSendJobAck(ws->collect, &ack, 0);
+         dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/S %lu).", 
+               tid, ack.xid.objSerial, ack.xid.objSlot, ws->collect, ack.timestamp);
+         
          // prepare result structure
          result.xid = job.xid;               // result xid must match job xid
          result.state = DNX_JOB_COMPLETE;    // complete or expired
@@ -532,6 +540,7 @@ static void * dnxWorker(void * data)
                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
 
          xfree(result.resData);
+         xfree(ack);
  
          // update all statistics
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);

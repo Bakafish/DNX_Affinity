@@ -103,22 +103,20 @@ int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeo
 }
 
 //------------------------------------------------------------------------------
-//<SM 10/08 Job Ack Mod>
 //This function handles acknowledgement of a job recieved from the server to the client.
-int dnxSendJobAck(DnxChannel* channel, DnxJob *pJob, char * address)
+int dnxSendJobAck(DnxChannel* channel, DnxAck *pAck, char * address)
 {
     DnxXmlBuf xbuf;
 
     dnxXmlOpen (&xbuf, "JobAck");
-    dnxXmlAdd  (&xbuf, "XID", DNX_XML_XID,  &pJob->xid);
-    dnxXmlAdd  (&xbuf, "Timestamp", DNX_XML_UINT,  &pJob->timestamp);
+    dnxXmlAdd  (&xbuf, "XID", DNX_XML_XID, &pAck->xid);
+    dnxXmlAdd  (&xbuf, "Timestamp", DNX_XML_UINT, &pAck->timestamp);
     dnxXmlClose(&xbuf);
 
-    dnxDebug(3, "dnxSendJobAck: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);
+    dnxDebug(3, "dnxSendJobAck: Channel(%lx) XML msg(%d bytes)=%s.", channel, xbuf.size, xbuf.buf);
        // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
 }
-//<SM 10/08 Job Ack Mod End>
 
 //---------------------------------------------------------------------
 
@@ -205,7 +203,7 @@ int dnxSendResult(DnxChannel * channel, DnxResult * pResult, char * address)
    dnxXmlAdd  (&xbuf, "ResultData", DNX_XML_STR,   resData);
    dnxXmlClose(&xbuf);
 
-   dnxDebug(3, "dnxSendResult: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);
+   dnxDebug(3, "dnxSendResult: Channel(%lx) XML msg(%d bytes)=%s.", channel, xbuf.size, xbuf.buf);
 
    // send it on the specified channel
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
