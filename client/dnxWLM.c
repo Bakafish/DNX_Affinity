@@ -428,7 +428,6 @@ static void * dnxWorker(void * data)
    {
       DnxNodeRequest msg;
       DnxJob job;
-      DnxAck ack; //= (DnxAck *)xmalloc(sizeof *ack);
       int ret;
       
       // setup job request message - use thread id and node address in XID
@@ -497,9 +496,6 @@ static void * dnxWorker(void * data)
          dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] (T/O %d): %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
                
-//          memset(ack, 0, sizeof *ack);
-         ack.xid = job.xid;
-         ack.timestamp = job.timestamp;
 
 //         dnxSendJobAck(ws->collect, &ack, 0);
          dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/S %lu).", 
@@ -538,7 +534,6 @@ static void * dnxWorker(void * data)
                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
 
          xfree(result.resData);
-         xfree(&ack);
  
          // update all statistics
          DNX_PT_MUTEX_LOCK(&iwlm->mutex);
