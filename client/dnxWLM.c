@@ -501,7 +501,7 @@ static void * dnxWorker(void * data)
          ack.xid = job.xid;
          ack.timestamp = job.timestamp;
 
-         dnxSendJobAck(ws->collect, &ack, 0);
+//         dnxSendJobAck(ws->collect, &ack, 0);
          dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/S %lu).", 
                tid, ack.xid.objSerial, ack.xid.objSlot, ws->collect, ack.timestamp);
          
