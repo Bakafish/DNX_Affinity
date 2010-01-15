@@ -215,8 +215,6 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                } else if (pJob->state == DNX_JOB_PENDING) {
                   // this hasn't been acknowledged yet, see if it's not fresh
                   if((ilist->list[current].pNode)->retry < now) {
-                     dnxDebug(4, "dnxJobListExpire: Pending job [%lu:%lu] waiting for Ack, alerting dispatch.",
-                        ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
                      // Make sure it's not located behind the current dhead
                      if (((current + zero_factor) % ilist->size) < ((ilist->dhead + zero_factor) % ilist->size)) {
                         dnxDebug(2, "dnxJobListExpire: Found a stale job waiting for Ack behind dhead. Head(%i)[%i], current(%i), DHead(%i)[%i], Tail(%i)[%i]",
@@ -224,7 +222,10 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                            ((ilist->dhead + zero_factor) % ilist->size), ilist->dhead,
                            ((ilist->tail + zero_factor) % ilist->size), ilist->tail);
                            ilist->dhead = current;
-                           pthread_cond_signal(&ilist->cond);  // tell dispatch to take a look
+                        pthread_cond_signal(&ilist->cond);  // tell dispatch to take a look
+                     } else {
+                        dnxDebug(4, "dnxJobListExpire: Pending job [%lu:%lu] waiting for Ack.",
+                           ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
                      }
                   }
                }
