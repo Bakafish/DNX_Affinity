@@ -219,7 +219,7 @@ typedef struct DnxNodeRequest
 typedef struct DnxJob
 {
    DnxXID xid;                      //!< Job transaction id.
-   time_t timestamp;                //!< Packet trasmit timestamp
+   unsigned int timestamp;          //!< Packet trasmit timestamp
    DnxJobState state;               //!< Job state.
    int priority;                    //!< Execution Priority.
    int timeout;                     //!< Max job execution time.
@@ -231,7 +231,7 @@ typedef struct DnxJob
 typedef struct DnxResult
 {
    DnxXID xid;                      //!< Job transaction id.
-   time_t timestamp;                //!< Packet trasmit timestamp
+   unsigned int timestamp;          //!< Packet trasmit timestamp
    DnxJobState state;               //!< Job state.
    unsigned int delta;              //!< Job execution time delta.
    int resCode;                     //!< Job result code.

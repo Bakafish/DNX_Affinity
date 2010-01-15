@@ -97,8 +97,7 @@ static void * dnxCollector(void * data)
       pthread_testcancel();
 
       if ((ret = dnxWaitForResult(icoll->channel, 
-            &sResult, sResult.address, DNX_COLLECTOR_TIMEOUT)) == DNX_OK)
-      {
+            &sResult, sResult.address, DNX_COLLECTOR_TIMEOUT)) == DNX_OK) {
          if(sResult.resCode == -1) {
             if((ret = dnxJobListMarkAck(icoll->joblist, &sResult.xid)) == DNX_OK) {
                dnxDebug(2, "dnxCollector[%lx]: Received ack for job [%lu,%lu]", 
@@ -112,8 +111,7 @@ static void * dnxCollector(void * data)
                   tid, sResult.xid.objSerial, sResult.xid.objSlot, sResult.resData);
    
             // dequeue the matching service request from the pending job queue
-            if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK)
-            {
+            if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK) {
                dnxDebug(2, "dnxCollector: Collecting Job");
    
                time_t check_time = Job.start_time + sResult.delta;
@@ -130,18 +128,12 @@ static void * dnxCollector(void * data)
                dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s.", 
                      tid, sResult.xid.objSerial, sResult.xid.objSlot, 
                      dnxErrorString(ret));
-            }
-            else 
-            {
-               dnxDebug(1, "dnxCollector[%lx]: Dequeue job failed: %s.",
-                     tid, dnxErrorString(ret));
-               dnxLog("dnxCollector[%lx]: Dequeue job failed: %s.",
+            } else {
+               dnxDebug(3, "dnxCollector[%lx]: Dequeue job failed: %s.",
                      tid, dnxErrorString(ret));
             }
          }
-      }
-      else if (ret != DNX_ERR_TIMEOUT)
-      {
+      } else if (ret != DNX_ERR_TIMEOUT) {
          dnxDebug(1, "dnxCollector[%lx]: Receive failed: %s.", 
                tid, dnxErrorString(ret));
          dnxLog("dnxCollector[%lx]: Receive failed: %s.", 
