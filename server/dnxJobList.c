@@ -293,11 +293,11 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
       dnxDebug(2, "dnxJobListDispatch: Checking slot:(%lu) head:(%lu) tail:(%lu).", 
          current, ilist->head, ilist->tail);      
 
-      // update the dispatch head (only dispatch or expire should do this)
-      if (current == ilist->head         // we are at the head
-         && current != ilist->tail) {     // and we are not at the tail
-         ilist->head = ((current + 1) % ilist->size);
-      }
+// update the dispatch head (only dispatch or expire should do this)
+//       if (current == ilist->head         // we are at the head
+//          && current != ilist->tail) {     // and we are not at the tail
+//          ilist->head = ((current + 1) % ilist->size);
+//       }
  
       switch (ilist->list[current].state) {
          case DNX_JOB_COMPLETE:
