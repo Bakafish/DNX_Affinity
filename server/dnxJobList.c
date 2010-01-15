@@ -322,24 +322,26 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             break;
          case DNX_JOB_PENDING:
             gettimeofday(&now, 0);
-            // Make sure the dnxClient is still fresh
-            if((ilist->list[current].pNode)->expires < now.tv_sec) {
-               dnxDebug(4, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, client node expired. Resubmitting.",
-               ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
-               ilist->list[current].state = DNX_JOB_UNBOUND;
-               break;
-            }
 
             // Check to see if we have recently dispatched this
             if((ilist->list[current].pNode)->retry > now.tv_sec) {
-               dnxDebug(4, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, resend in (%i) sec.",
+               dnxDebug(5, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, resend in (%i) sec.",
                   ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot, ((ilist->list[current].pNode)->retry - now.tv_sec));
                break;
             } else {
                if((ilist->list[current].pNode)->retry) {
+                  // Make sure the dnxClient service offer is still fresh
+                  if((ilist->list[current].pNode)->expires < now.tv_sec) {
+                     dnxDebug(4, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, client node expired. Resubmitting.",
+                     ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
+                     ilist->list[current].state = DNX_JOB_UNBOUND;
+                     break;
+                  }
+                  // The dnxClient service offer can be reused
                   dnxDebug(4, "dnxJobListDispatch: Redispatching job [%lu:%lu] due to Ack timeout",
                      ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);               
                } else {
+                  // This is a new job, so dispatch it
                   dnxDebug(4, "dnxJobListDispatch: Dispatching new job [%lu:%lu] waiting for Ack",
                      ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
                }
@@ -348,7 +350,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             // set our retry interval
             (ilist->list[current].pNode)->retry = now.tv_sec + 1; // This should be the latency value
 
-            // make sure we don't expire our job prematurely as we may have been waiting to dispatch
+            // make sure we don't expire our job prematurely as we may have been waiting a while to dispatch
             ilist->list[current].expires = now.tv_sec + ilist->list[current].timeout + 5;
          
             // make a copy for the Dispatcher
