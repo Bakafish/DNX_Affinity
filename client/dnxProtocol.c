@@ -27,10 +27,8 @@ int dnxSendNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * addre
    // create the XML message
    dnxXmlOpen (&xbuf, "NodeRequest");
    dnxXmlAdd  (&xbuf, "XID",     DNX_XML_XID,  &pReg->xid);
-   dnxXmlAdd  (&xbuf, "GUID",    DNX_XML_XID,  &pReg->xid);    // old format - for bc
    dnxXmlAdd  (&xbuf, "ReqType", DNX_XML_INT,  &pReg->reqType);
    dnxXmlAdd  (&xbuf, "JobCap",  DNX_XML_UINT, &pReg->jobCap);
-   dnxXmlAdd  (&xbuf, "Capacity",DNX_XML_UINT, &pReg->jobCap); // old format - for bc
    dnxXmlAdd  (&xbuf, "TTL",     DNX_XML_UINT, &pReg->ttl);
    dnxXmlAdd  (&xbuf, "Hostname", DNX_XML_STR, pReg->hn);   
    dnxXmlClose(&xbuf);
@@ -77,9 +75,8 @@ int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeo
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "Job")) != DNX_OK)
       return ret;
 
-   // decode the job's XID (support older GUID format as well)
-   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pJob->xid)) != DNX_OK
-         && (ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pJob->xid)) != DNX_OK)
+   // decode the job's XID
+   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pJob->xid)) != DNX_OK)
       return ret;
 
    // decode the job's state
@@ -156,9 +153,8 @@ int dnxWaitForMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest,char *
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "MgmtRequest")) != DNX_OK)
       return ret;
 
-   // decode the Manager's XID (support older GUID format as well).
-   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pRequest->xid)) != DNX_OK
-         && (ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pRequest->xid)) != DNX_OK)
+   // decode the Manager's XID 
+   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pRequest->xid)) != DNX_OK)
       return ret;
 
    // decode the management request
@@ -196,7 +192,6 @@ int dnxSendResult(DnxChannel * channel, DnxResult * pResult, char * address)
    // create the XML message
    dnxXmlOpen (&xbuf, "Result");
    dnxXmlAdd  (&xbuf, "XID",        DNX_XML_XID,  &pResult->xid);
-   dnxXmlAdd  (&xbuf, "GUID",       DNX_XML_XID,  &pResult->xid); // old format - for bc
    dnxXmlAdd  (&xbuf, "State",      DNX_XML_INT,  &pResult->state);
    dnxXmlAdd  (&xbuf, "Delta",      DNX_XML_UINT, &pResult->delta);
    dnxXmlAdd  (&xbuf, "ResultCode", DNX_XML_INT,  &pResult->resCode);

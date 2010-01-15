@@ -28,7 +28,6 @@ int dnxSendJob(DnxChannel * channel, DnxJob * pJob, char * address)
    // create the XML message
    dnxXmlOpen (&xbuf, "Job");
    dnxXmlAdd  (&xbuf, "XID",      DNX_XML_XID,  &pJob->xid);
-//   dnxXmlAdd  (&xbuf, "GUID",     DNX_XML_XID,  &pJob->xid); // old format - for bc
    dnxXmlAdd  (&xbuf, "State",    DNX_XML_INT,  &pJob->state);
    dnxXmlAdd  (&xbuf, "Priority", DNX_XML_INT,  &pJob->priority);
    dnxXmlAdd  (&xbuf, "Timeout",  DNX_XML_INT,  &pJob->timeout);
@@ -98,11 +97,10 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
       dnxDebug(4, "dnxWaitForNodeRequest: Request (%i) != NodeRequest", test);
       return ret;
    }
-   // decode the worker node's XID (support older GUID format as well)
-   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pReg->xid)) != DNX_OK
-         && (ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pReg->xid)) != DNX_OK)
+   // decode the worker node's XID 
+   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pReg->xid)) != DNX_OK)
       return ret;
-
+   
    // decode request type
    if ((ret = dnxXmlGet(&xbuf, "ReqType", DNX_XML_INT, &pReg->reqType)) != DNX_OK)
       return ret;
@@ -156,9 +154,8 @@ int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, 
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "Result")) == DNX_OK)
    {
 
-       // decode the result's XID (support older GUID format as well)
-       if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pResult->xid)) != DNX_OK
-             && (ret = dnxXmlGet(&xbuf, "GUID", DNX_XML_XID, &pResult->xid)) != DNX_OK)
+       // decode the result's XID 
+       if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pResult->xid)) != DNX_OK)
           return ret;
 
        // decode the result's state
