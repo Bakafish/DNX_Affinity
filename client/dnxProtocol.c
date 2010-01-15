@@ -206,5 +206,6 @@ int dnxSendResult(DnxChannel * channel, DnxResult * pResult, char * address)
    dnxDebug(3, "dnxSendResult: Channel(%lx) XML msg(%d bytes)=%s.", channel, xbuf.size, xbuf.buf);
 
    // send it on the specified channel
+   dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
    return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
 }
