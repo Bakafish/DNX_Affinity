@@ -158,7 +158,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
 
    // compute expiration time of this request
    pReq->expires = now + pReq->ttl;
-   pReq->retry = now; 
+   pReq->retry = 0; 
    dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
 
 

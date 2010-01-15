@@ -366,6 +366,15 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
                dnxDebug(4, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, resend in (%i) sec.",
                   ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot, ((ilist->list[current].pNode)->retry - now.tv_sec));
                break;
+            } else {
+               if((ilist->list[current].pNode)->retry) {
+                  dnxDebug(4, "dnxJobListDispatch: Dispatching new job [%lu:%lu] waiting for Ack",
+                     ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
+               
+               } else {
+                  dnxDebug(4, "dnxJobListDispatch: Redispatching job [%lu:%lu] due to Ack timeout",
+                     ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
+               }
             }
             
             // set our retry interval
