@@ -99,7 +99,7 @@ static void * dnxCollector(void * data)
       if ((ret = dnxWaitForResult(icoll->channel, 
             &sResult, sResult.address, DNX_COLLECTOR_TIMEOUT)) == DNX_OK) {
          if(sResult.resCode == -1) {
-            if((ret = dnxJobListMarkAck(icoll->joblist, &sResult.xid)) == DNX_OK) {
+            if((ret = dnxJobListMarkAck(icoll->joblist, &sResult)) == DNX_OK) {
                dnxDebug(2, "dnxCollector[%lx]: Received ack for job [%lu,%lu]", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot);
             } else {

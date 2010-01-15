@@ -117,17 +117,17 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob) {
    return ret;
 }
 
-int dnxJobListMarkAck(DnxJobList * pJobList, DnxXID * pxid) {
+int dnxJobListMarkAck(DnxJobList * pJobList, DnxResult * pRes) {
    iDnxJobList * ilist = (iDnxJobList *)pJobList;
-   assert(pJobList && pxid);   // parameter validation
+   assert(pJobList && pRes);   // parameter validation
    time_t now = time(0);
    int ret = DNX_ERR_NOTFOUND;
    dnxDebug(4, "dnxJobListMarkAck: Job slot (%lu) serial (%lu) latency (%lu) ms.", 
-        pxid->objSlot, pxid->objSerial, now - pxid->timestamp);
-   unsigned long current = pxid->objSlot;
+        pRes->xid.objSlot, pRes->xid.objSerial, now - pRes->timestamp);
+   unsigned long current = pRes->xid.objSlot;
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
-   if (dnxEqualXIDs(pxid, &ilist->list[current].xid)) {
+   if (dnxEqualXIDs(pRes->xid, &ilist->list[current].xid)) {
       ilist->list[current].state = DNX_JOB_INPROGRESS;
       dnxAuditJob(&(ilist->list[current]), "ACK");
       ret = DNX_OK;
