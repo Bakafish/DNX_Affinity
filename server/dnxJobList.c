@@ -47,7 +47,6 @@ typedef struct iDnxJobList_
    unsigned long size;     /*!< Number of elements. */
    unsigned long head;     /*!< List head. */
    unsigned long tail;     /*!< List tail. */
-   unsigned long dhead;    /*!< Head of waiting jobs. */
    pthread_mutex_t mut;    /*!< The job list mutex. */
    pthread_cond_t cond;    /*!< The job list condition variable. */
    DnxTimer * timer;       /*!< The job list expiration timer. */
@@ -94,9 +93,8 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob) {
       
       ilist->tail = tail;
    
-      dnxDebug(1, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, DHead=%lu, Tail=%lu.", 
-            pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->dhead, 
-            ilist->tail);
+      dnxDebug(1, "dnxJobListAdd: Job [%lu,%lu]: Head=%lu, Tail=%lu.", 
+            pJob->xid.objSerial, pJob->xid.objSlot, ilist->head, ilist->tail);
       
       if(pJob->state == DNX_JOB_PENDING) {
          pthread_cond_signal(&ilist->cond);  // signal that a new job is available
@@ -178,11 +176,6 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                   // we are expiring an item at the head of the list, so we need to
                   // increment the head. It should never be larger than the tail.
                   ilist->head = ((current + 1) % ilist->size);
-                  if(current == ilist->dhead) {
-                     // The item is the dhead of the list as well.
-                     // Just use the head value
-                     ilist->dhead = ilist->head;
-                  }
                }
             } else {
                // This job has not expired, but we may need to bind it to a client
@@ -195,40 +188,15 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                         pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now);
                      pJob->state = DNX_JOB_PENDING;
                      
-                     dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] is at ilist->[%i], head:%i, dhead:%i, tail:%i", 
-                        pJob->xid.objSerial, pJob->xid.objSlot, current, ilist->head, ilist->dhead, ilist->tail);
-
-                     // Make sure it's not located behind the current dhead
-                     if (((current + zero_factor) % ilist->size) < ((ilist->dhead + zero_factor) % ilist->size)) {
-                        dnxDebug(2, "dnxJobListExpire: Found an Unbound job behind dhead. Head(%i)[%i], current(%i), DHead(%i)[%i], Tail(%i)[%i]",
-                           ((ilist->head + zero_factor) % ilist->size), ilist->head, current,  
-                           ((ilist->dhead + zero_factor) % ilist->size), ilist->dhead,
-                           ((ilist->tail + zero_factor) % ilist->size), ilist->tail);
-                           ilist->dhead = current;
-                     }
+                     dnxDebug(2, "dnxJobListExpire: Job [%lu:%lu] is at ilist->[%i], head:%i, tail:%i", 
+                        pJob->xid.objSerial, pJob->xid.objSlot, current, ilist->head, ilist->tail);
                      
                      pthread_cond_signal(&ilist->cond);  // signal that a new job is available
                   } else {
                      dnxDebug(2, "dnxJobListExpire: Unable to dequeue DNX_JOB_UNBOUND job [%lu:%lu] Expires in (%i) seconds. Exp: (%lu) Now: (%lu)", 
                         pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now);
                   }
-               } else if (pJob->state == DNX_JOB_PENDING) {
-                  // this hasn't been acknowledged yet, see if it's not fresh
-                  if((ilist->list[current].pNode)->retry < now) {
-                     // Make sure it's not located behind the current dhead
-                     if (((current + zero_factor) % ilist->size) < ((ilist->dhead + zero_factor) % ilist->size)) {
-                        dnxDebug(2, "dnxJobListExpire: Found a stale job waiting for Ack behind dhead. Head(%i)[%i], current(%i), DHead(%i)[%i], Tail(%i)[%i]",
-                           ((ilist->head + zero_factor) % ilist->size), ilist->head, current,  
-                           ((ilist->dhead + zero_factor) % ilist->size), ilist->dhead,
-                           ((ilist->tail + zero_factor) % ilist->size), ilist->tail);
-                           ilist->dhead = current;
-                        pthread_cond_signal(&ilist->cond);  // tell dispatch to take a look
-                     } else {
-                        dnxDebug(4, "dnxJobListExpire: Pending job [%lu:%lu] waiting for Ack.",
-                           ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
-                     }
-                  }
-               }
+               } 
             }
             break;
          case DNX_JOB_COMPLETE:
@@ -239,11 +207,6 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                // we have an old item at the head of the list, so we need to
                // increment the head. It should never be larger than the tail.
                ilist->head = ((current + 1) % ilist->size);
-               if(current == ilist->dhead) {
-                  // The item is the dhead of the list as well.
-                  // Just use the head value
-                  ilist->dhead = ilist->head;
-               }
             }
             break;
       }
@@ -316,46 +279,46 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    DNX_PT_MUTEX_LOCK(&ilist->mut);
 
 
-   // start at current dispatch head
-   current = ilist->dhead;
+   // start at current head
+   current = ilist->head;
 
-   dnxDebug(2, "dnxJobListDispatch: BEFORE: Head=%lu, DHead=%lu, Tail=%lu, Queue=%lu.", 
-       ilist->head, ilist->dhead, ilist->tail, ilist->size);
+   dnxDebug(2, "dnxJobListDispatch: BEFORE: Head=%lu, Tail=%lu, Queue=%lu.", 
+       ilist->head, ilist->tail, ilist->size);
 
    // loop until we time out?
 
 
    while (1) { //current <= ilist->tail) {
 
-      dnxDebug(2, "dnxJobListDispatch: Checking slot:(%lu) dhead:(%lu) tail:(%lu).", 
-         current, ilist->dhead, ilist->tail);      
+      dnxDebug(2, "dnxJobListDispatch: Checking slot:(%lu) head:(%lu) tail:(%lu).", 
+         current, ilist->head, ilist->tail);      
 
       // update the dispatch head (only dispatch or expire should do this)
-      if (current == ilist->dhead         // we are at the dhead
+      if (current == ilist->head         // we are at the head
          && current != ilist->tail) {     // and we are not at the tail
-         ilist->dhead = ((current + 1) % ilist->size);
+         ilist->head = ((current + 1) % ilist->size);
       }
  
       switch (ilist->list[current].state) {
          case DNX_JOB_COMPLETE:
-            dnxDebug(8, "dnxJobListDispatch: Completed Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
-               current, ilist->dhead, ilist->tail);
+            dnxDebug(8, "dnxJobListDispatch: Completed Item in slot:(%lu) head:(%lu) tail:(%lu).", 
+               current, ilist->head, ilist->tail);
             break;
          case DNX_JOB_NULL:
-            dnxDebug(8, "dnxJobListDispatch: Null Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
-               current, ilist->dhead, ilist->tail);
+            dnxDebug(8, "dnxJobListDispatch: Null Item in slot:(%lu) head:(%lu) tail:(%lu).", 
+               current, ilist->head, ilist->tail);
             break;
          case DNX_JOB_EXPIRED:
-            dnxDebug(8, "dnxJobListDispatch: Expired Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
-               current, ilist->dhead, ilist->tail);
+            dnxDebug(8, "dnxJobListDispatch: Expired Item in slot:(%lu) head:(%lu) tail:(%lu).", 
+               current, ilist->head, ilist->tail);
             break;
          case DNX_JOB_UNBOUND:
-            dnxDebug(8, "dnxJobListDispatch: Unbound Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
-               current, ilist->dhead, ilist->tail);
+            dnxDebug(8, "dnxJobListDispatch: Unbound Item in slot:(%lu) head:(%lu) tail:(%lu).", 
+               current, ilist->head, ilist->tail);
             break;
          case DNX_JOB_INPROGRESS:
-            dnxDebug(8, "dnxJobListDispatch: In Progress Item in slot:(%lu) dhead:(%lu) tail:(%lu).", 
-               current, ilist->dhead, ilist->tail);
+            dnxDebug(8, "dnxJobListDispatch: In Progress Item in slot:(%lu) head:(%lu) tail:(%lu).", 
+               current, ilist->head, ilist->tail);
             break;
          case DNX_JOB_PENDING:
             gettimeofday(&now, 0);
@@ -410,8 +373,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             DNX_PT_MUTEX_UNLOCK(&ilist->mut);
             return ret;
          } else {
-            // We were signaled that there is a new job, so lets move back to the dhead and get it!
-            current = ilist->dhead;
+            // We were signaled that there is a new job, so lets move back to the head and get it!
+            current = ilist->head;
             dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. A new job arrived.");      
          }
       } else {
@@ -440,13 +403,6 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
 
-//    dnxDebug(4, 
-//          "dnxJobListCollect: Compare job (%s:%s) [%lu,%lu] to job [%lu,%lu]: "
-//          "Head=%lu, DHead=%lu, Tail=%lu.", 
-//          ilist->list[current].host_name, ilist->list[current].service_description,
-//          pxid->objSerial, pxid->objSlot, ilist->list[current].xid.objSerial, 
-//          ilist->list[current].xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
-
    // verify that the XID of this result matches the XID of the service check
    if (ilist->list[current].state == DNX_JOB_NULL 
          || !dnxEqualXIDs(pxid, &ilist->list[current].xid)) {
@@ -468,9 +424,6 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
       ilist->list[current].state = DNX_JOB_COMPLETE;      
       dnxDebug(4, "dnxJobListCollect: Job slot [%lu] freed. Copy of result for (%s) assigned to collector.", pxid->objSlot, pJob->cmd);      
    }
-   
-   // send an Ack back to the dnxClient
-   
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
 
@@ -501,7 +454,6 @@ int dnxJobListCreate(unsigned size, DnxJobList ** ppJobList)
    // I'm pretty sure we should initialize these...
    ilist->head = 0;
    ilist->tail = 0;
-   ilist->dhead = 0;
 
    DNX_PT_MUTEX_INIT(&ilist->mut);
    pthread_cond_init(&ilist->cond, 0);
