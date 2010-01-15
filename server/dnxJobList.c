@@ -323,7 +323,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
          case DNX_JOB_PENDING:
             gettimeofday(&now, 0);
             // Make sure the dnxClient is still fresh
-            if((ilist->list[current].pNode)->expires <= now.tv_sec) {
+            if((ilist->list[current].pNode)->expires < now.tv_sec) {
                dnxDebug(4, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, client node expired. Resubmitting.",
                ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
                ilist->list[current].state = DNX_JOB_UNBOUND;
