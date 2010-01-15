@@ -475,6 +475,16 @@ static void * dnxWorker(void * data)
 //          dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] (T/O %d): %s.", 
 //                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
          
+         DnxAck ack;
+         ack.xid = job.xid;
+         ack.timestamp = job.timestamp;
+         
+         dnxSendJobAck(ws->collect, &ack, 0);
+         dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/S %lu).", 
+               tid, ack.xid.objSerial, ack.xid.objSlot, ws->collect, ack.timestamp);
+
+
+
          // check pool size before we get too busy -
          // if we're not shutting down and we haven't reached the configured
          // maximum and this is the last thread out, then increase the pool
@@ -490,19 +500,19 @@ static void * dnxWorker(void * data)
       {
          char resData[MAX_RESULT_DATA + 1];
          DnxResult result;
-         DnxAck ack;
+//          DnxAck ack;
          time_t jobstart;
 
 
          dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] from (%lx) (T/O %d): %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, ws->collect, job.timeout, job.cmd);
                
-         ack.xid = job.xid;
-         ack.timestamp = job.timestamp;
-         
-         dnxSendJobAck(ws->collect, &ack, 0);
-         dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/S %lu).", 
-               tid, ack.xid.objSerial, ack.xid.objSlot, ws->collect, ack.timestamp);
+//          ack.xid = job.xid;
+//          ack.timestamp = job.timestamp;
+//          
+//          dnxSendJobAck(ws->collect, &ack, 0);
+//          dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/S %lu).", 
+//                tid, ack.xid.objSerial, ack.xid.objSlot, ws->collect, ack.timestamp);
                
          
          // prepare result structure
