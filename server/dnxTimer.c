@@ -122,10 +122,10 @@ static void * dnxTimer(void * data)
       // Create some skew in the timing so that we don't get a repeating 
       // harmonic where the dnxClient and timer thread are both expiring at the
       // same time.
-      srand(time(0));
-      skew = (rand() % itimer->sleepms) - (int)(itimer->sleepms / 2);
-   
-      dnxDebug(2, "dnxTimerCreate: Skew is (%d)", itimer->sleepms + skew);
+//       srand(time(0));
+//       skew = (rand() % itimer->sleepms) - (int)(itimer->sleepms / 2);
+//    
+//       dnxDebug(2, "dnxTimerCreate: Skew is (%d)", itimer->sleepms + skew);
 
 
       dnxCancelableSleep(itimer->sleepms + skew);

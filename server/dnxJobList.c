@@ -36,7 +36,7 @@
 #include <sys/time.h>
 
 #define DNX_JOBLIST_TIMEOUT   5     /*!< Wake up to see if we're shutting down. */
-#define DNX_TIMER_SLEEP       5000  /*!< Timer sleep interval, in milliseconds */
+#define DNX_TIMER_SLEEP       2500  /*!< Timer sleep interval, in milliseconds */
 
 DnxJobList * joblist; // Fwd declaration
 
