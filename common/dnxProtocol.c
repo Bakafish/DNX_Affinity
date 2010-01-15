@@ -100,7 +100,6 @@ int dnxSendMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, char * a
    // create the XML message
    dnxXmlOpen (&xbuf, "MgmtRequest");
    dnxXmlAdd  (&xbuf, "XID",    DNX_XML_XID, &pRequest->xid);
-   dnxXmlAdd  (&xbuf, "GUID",   DNX_XML_XID, &pRequest->xid);  // old format - for bc
    dnxXmlAdd  (&xbuf, "Action", DNX_XML_STR,  pRequest->action);
    dnxXmlClose(&xbuf);
 
