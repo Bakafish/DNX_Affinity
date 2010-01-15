@@ -128,6 +128,7 @@ int dnxJobListMarkAck(DnxJobList * pJobList, DnxXID * pxid) {
    DNX_PT_MUTEX_LOCK(&ilist->mut);
    if (dnxEqualXIDs(pxid, &ilist->list[current].xid)) {
       ilist->list[current].state = DNX_JOB_INPROGRESS;
+      dnxAuditJob(ilist->list[current], "ACK");
       ret = DNX_OK;
    }
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
@@ -438,10 +439,10 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
       ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
    } else if(ilist->list[current].state == DNX_JOB_COMPLETE) {
       dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] already retrieved.", pxid->objSerial, pxid->objSlot);      
-      ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
+      ret = DNX_ERR_ALREADY;           // job expired; removed by the timer
    } else if(ilist->list[current].state == DNX_JOB_EXPIRED) {
       dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] expired before retrieval.", pxid->objSerial, pxid->objSlot);      
-      ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
+      ret = DNX_ERR_EXPIRED;          // job expired; removed by the timer
    } else {
       // make a copy to return to the Collector
       memcpy(pJob, &ilist->list[current], sizeof *pJob);

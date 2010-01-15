@@ -52,6 +52,7 @@
 #define DNX_ERR_TIMEOUT       (DNX_ERR_BASE + 16)  //!< Timeout
 #define DNX_ERR_BUSY          (DNX_ERR_BASE + 17)  //!< Resource is busy
 #define DNX_ERR_ACCESS        (DNX_ERR_BASE + 18)  //!< Access denied
+#define DNX_ERR_EXPIRED       (DNX_ERR_BASE + 19)  //!< Resource is expired
 
 /** A type abstraction for a DNX error value. */
 typedef int dnxError;

@@ -75,6 +75,7 @@ char * dnxErrorString(dnxError eno)
       "Timeout error",
       "Resource is busy",
       "Access denied",
+      "Resource has expired",
    };
 
    // check for system error first - return system error string
