@@ -370,11 +370,10 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
                break;
             } else {
                if((ilist->list[current].pNode)->retry) {
-                  dnxDebug(4, "dnxJobListDispatch: Dispatching new job [%lu:%lu] waiting for Ack",
-                     ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
-               
-               } else {
                   dnxDebug(4, "dnxJobListDispatch: Redispatching job [%lu:%lu] due to Ack timeout",
+                     ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);               
+               } else {
+                  dnxDebug(4, "dnxJobListDispatch: Dispatching new job [%lu:%lu] waiting for Ack",
                      ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
                }
             }
@@ -464,13 +463,10 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
       // dequeue this job; make slot available for another job
       ilist->list[current].state = DNX_JOB_COMPLETE;      
       dnxDebug(4, "dnxJobListCollect: Job slot [%lu] freed. Copy of result for (%s) assigned to collector.", pxid->objSlot, pJob->cmd);      
-   
-      // update the job list head? or just let expire handle it?
-//       if (current == ilist->head && current != ilist->tail) {
-//          ilist->head = (current + 1) % ilist->size;
-//          dnxDebug(4, "dnxJobListCollect: Set head to (%i)", ilist->head);
-//       }
    }
+   
+   // send an Ack back to the dnxClient
+   
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);
 
