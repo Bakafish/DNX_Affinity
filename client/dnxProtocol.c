@@ -99,21 +99,36 @@ int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeo
    return dnxXmlGet(&xbuf, "Command", DNX_XML_STR, &pJob->cmd);
 }
 
-//------------------------------------------------------------------------------
-//This function handles acknowledgement of a job recieved from the server to the client.
-int dnxSendJobAck(DnxChannel* channel, DnxAck *pAck, char * address)
+
+int dnxWaitForAck(DnxChannel * channel, DnxAck * pAck, char * address, int timeout)
 {
-    DnxXmlBuf xbuf;
+   DnxXmlBuf xbuf;
+   int ret;
 
-    dnxXmlOpen (&xbuf, "JobAck");
-    dnxXmlAdd  (&xbuf, "XID", DNX_XML_XID, &pAck->xid);
-    dnxXmlAdd  (&xbuf, "Timestamp", DNX_XML_UINT, &pAck->timestamp);
-    dnxXmlClose(&xbuf);
+   assert(channel && pAck);
+   memset(pAck, 0, sizeof *pAck);
 
-    dnxDebug(3, "dnxSendJobAck: Channel(%lx) XML msg(%d bytes)=%s.", channel, xbuf.size, xbuf.buf);
-       // send it on the specified channel
-   return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
+   // await a message from the specified channel
+   xbuf.size = sizeof xbuf.buf - 1;
+   if ((ret = dnxGet(channel, xbuf.buf, &xbuf.size, timeout, address)) != DNX_OK)
+      return ret;
+
+   // decode the XML message
+   xbuf.buf[xbuf.size] = 0;
+   dnxDebug(3, "dnxWaitForAck: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);
+
+   // verify this is a "Ack" message
+   if ((ret = dnxXmlCmpStr(&xbuf, "Request", "JobAck")) != DNX_OK)
+      return ret;
+
+   // decode the job's XID
+   if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pAck->xid)) != DNX_OK)
+      return ret;
+
+   // decode the job's timestamp
+   return dnxXmlGet(&xbuf, "Timestamp", DNX_XML_UINT, &pAck->timestamp);
 }
+
 
 //---------------------------------------------------------------------
 

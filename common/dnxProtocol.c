@@ -187,6 +187,22 @@ int dnxWaitForMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * addr
    return dnxXmlGet(&xbuf, "Result", DNX_XML_STR, &pReply->reply);
 }
 
+//------------------------------------------------------------------------------
+//This function handles acknowledgement of a job recieved from the server to the client,
+// or a responce from the client to the server
+int dnxSendJobAck(DnxChannel* channel, DnxAck *pAck, char * address)
+{
+    DnxXmlBuf xbuf;
+
+    dnxXmlOpen (&xbuf, "JobAck");
+    dnxXmlAdd  (&xbuf, "XID", DNX_XML_XID, &pAck->xid);
+    dnxXmlAdd  (&xbuf, "Timestamp", DNX_XML_UINT, &pAck->timestamp);
+    dnxXmlClose(&xbuf);
+
+    dnxDebug(3, "dnxSendJobAck: Channel(%lx) XML msg(%d bytes)=%s.", channel, xbuf.size, xbuf.buf);
+       // send it on the specified channel
+   return dnxPut(channel, xbuf.buf, xbuf.size, 0, address);
+}
 
 // 
 // //----------------------------------------------------------------------------
