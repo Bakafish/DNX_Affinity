@@ -185,7 +185,7 @@ int dnxWaitForResult(DnxChannel * channel, DnxResult * pResult, char * address, 
       
       if ((ret = dnxXmlGet(&xbuf, "XID", DNX_XML_XID, &pResult->xid)) != DNX_OK)
           return ret;
-      return dnxXmlGet(&xbuf, "Timestamp", DNX_XML_UINT, &pResult->delta);
+      return dnxXmlGet(&xbuf, "Timestamp", DNX_XML_UINT, &pResult->timestamp);
    }
 }
 
