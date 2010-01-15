@@ -501,7 +501,6 @@ static void * dnxWorker(void * data)
       {
          char resData[MAX_RESULT_DATA + 1];
          DnxResult result;
-         DnxAck ack;
          time_t jobstart;
 
 
@@ -539,12 +538,13 @@ static void * dnxWorker(void * data)
                tid, job.xid.objSerial, job.xid.objSlot, result.delta, 
                result.resCode, result.resData);
 
-         if ((ret = dnxWaitForAck(ws->dispatch, &ack, job.address, 1000)) != DNX_OK && ret != DNX_ERR_TIMEOUT) {
-            dnxLog("Worker[%lx]: Error receiving Ack for job [%lu,%lu]: %s.",
+         if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK) {
+            dnxDebug(3, "Worker[%lx]: Post job [%lu,%lu] results failed: %s.",
                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
          }
 
          // Wait while we wait for an Ack to our Results
+//          DnxAck ack;
 //          int trys = 0;
 //          while(trys < 3) {
 //             if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK) {
