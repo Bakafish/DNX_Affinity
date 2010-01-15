@@ -177,7 +177,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                // Job has expired - add it to the expired job list
                memcpy(&pExpiredJobs[jobCount++], pJob, sizeof(DnxNewJob));
                // Put the old job in a reusable state   
-               pJob->state = DNX_JOB_NULL;
+               pJob->state = DNX_JOB_EXPIRED;
     
                if(current == ilist->head && current != ilist->tail) {
                   // we are expiring an item at the head of the list, so we need to
@@ -353,35 +353,27 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             gettimeofday(&now, 0);
             // Make sure the dnxClient is still fresh
             if((ilist->list[current].pNode)->expires <= now.tv_sec) {
+               dnxDebug(4, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, client node expired. Resubmitting.",
+               ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
                ilist->list[current].state = DNX_JOB_UNBOUND;
                break;
             }
 
             // Check to see if we have recently dispatched this
             if((ilist->list[current].pNode)->retry > now.tv_sec) {
+               dnxDebug(4, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, resend in (%i) sec.",
+                  ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot, ((ilist->list[current].pNode)->retry - now.tv_sec));
                break;
             }
             
             // set our retry interval
-            (ilist->list[current].pNode)->retry = now.tv_sec + 1;
+            (ilist->list[current].pNode)->retry = now.tv_sec + 1; // This should be the latency value
+
             // make sure we don't expire our job prematurely as we may have been waiting to dispatch
             ilist->list[current].expires = now.tv_sec + ilist->list[current].timeout + 5;
-
-            // transition this job's state to InProgress
-//             ilist->list[current].state = DNX_JOB_INPROGRESS;
          
             // make a copy for the Dispatcher
             memcpy(pJob, &ilist->list[current], sizeof *pJob);
-
-            // update the dispatch head (only expire should do this)
-//             if (current == ilist->dhead            // we are at the dhead
-//                && (current < ilist->tail           // and dhead is less than tail  
-//                   || ilist->tail < current )) {    // or tail is wrapped around the ring    
-//                ilist->dhead = ((current + 1) % ilist->size);
-//             }
-            
-//             dnxDebug(8, "dnxJobListDispatch: Change state of slot:(%lu) dhead:(%lu) tail:(%lu) for (%s) to DNX_JOB_INPROGRESS.",
-//                current, ilist->dhead, ilist->tail, ilist->list[current].host_name);
             
             // release the mutex
             DNX_PT_MUTEX_UNLOCK(&ilist->mut);
@@ -421,39 +413,44 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
    unsigned long current;
    int ret = DNX_OK;
    assert(pJobList && pxid && pJob);   // parameter validation
-   dnxDebug(4, "dnxJobListCollect: Job slot (%lu) serial (%lu)", 
-        pxid->objSlot, pxid->objSerial);
 
    current = pxid->objSlot;
-   dnxDebug(4, "dnxJobListCollect: Job slot (%i) list head(%i)", 
-        current, ilist->head);
+
+   dnxDebug(4, "dnxJobListCollect: Job serial (%lu) slot (%lu) list head(%i)", 
+        pxid->objSerial, pxid->objSlot, ilist->head);
 
    if (current >= ilist->size)         // runtime validation requires check
       return DNX_ERR_INVALID;          // corrupt client network message
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
 
-   dnxDebug(4, 
-         "dnxJobListCollect: Compare job (%s:%s) [%lu,%lu] to job [%lu,%lu]: "
-         "Head=%lu, DHead=%lu, Tail=%lu.", 
-         ilist->list[current].host_name, ilist->list[current].service_description,
-         pxid->objSerial, pxid->objSlot, ilist->list[current].xid.objSerial, 
-         ilist->list[current].xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
+//    dnxDebug(4, 
+//          "dnxJobListCollect: Compare job (%s:%s) [%lu,%lu] to job [%lu,%lu]: "
+//          "Head=%lu, DHead=%lu, Tail=%lu.", 
+//          ilist->list[current].host_name, ilist->list[current].service_description,
+//          pxid->objSerial, pxid->objSlot, ilist->list[current].xid.objSerial, 
+//          ilist->list[current].xid.objSlot, ilist->head, ilist->dhead, ilist->tail);
 
    // verify that the XID of this result matches the XID of the service check
    if (ilist->list[current].state == DNX_JOB_NULL 
          || !dnxEqualXIDs(pxid, &ilist->list[current].xid)) {
-      dnxDebug(4, "dnxJobListCollect: Job expired before retrieval");      
+      dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] not found.", pxid->objSerial, pxid->objSlot);      
+      ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
+   } else if(ilist->list[current].state == DNX_JOB_COMPLETE) {
+      dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] already retrieved.", pxid->objSerial, pxid->objSlot);      
+      ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
+   } else if(ilist->list[current].state == DNX_JOB_EXPIRED) {
+      dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] expired before retrieval.", pxid->objSerial, pxid->objSlot);      
       ret = DNX_ERR_NOTFOUND;          // job expired; removed by the timer
    } else {
       // make a copy to return to the Collector
       memcpy(pJob, &ilist->list[current], sizeof *pJob);
       pJob->state = DNX_JOB_COMPLETE;
-      dnxDebug(4, "dnxJobListCollect: Job complete");      
+      dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] complete", pxid->objSerial, pxid->objSlot);      
 
       // dequeue this job; make slot available for another job
-      ilist->list[current].state = DNX_JOB_NULL;      
-      dnxDebug(4, "dnxJobListCollect: Job slot freed. Copy of result for (%s) assigned to collector.", pJob->cmd);      
+      ilist->list[current].state = DNX_JOB_COMPLETE;      
+      dnxDebug(4, "dnxJobListCollect: Job slot [%lu] freed. Copy of result for (%s) assigned to collector.", pxid->objSlot, pJob->cmd);      
    
       // update the job list head? or just let expire handle it?
 //       if (current == ilist->head && current != ilist->tail) {
