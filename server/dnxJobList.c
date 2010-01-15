@@ -117,7 +117,7 @@ int dnxJobListMarkAck(DnxJobList * pJobList, DnxResult * pRes) {
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
    if (dnxEqualXIDs(&(pRes->xid), &ilist->list[current].xid)) {
-      if(ilist->list[current].state == DNX_JOB_PENDING) {
+      if(ilist->list[current].state == DNX_JOB_PENDING || ilist->list[current].state == DNX_JOB_UNBOUND) {
          ilist->list[current].state = DNX_JOB_INPROGRESS;
          dnxAuditJob(&(ilist->list[current]), "ACK");
          ret = DNX_OK;

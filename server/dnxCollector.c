@@ -103,8 +103,8 @@ static void * dnxCollector(void * data)
                dnxDebug(2, "dnxCollector[%lx]: Received ack for job [%lu,%lu]", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot);
             } else {
-               dnxDebug(2, "dnxCollector[%lx]: Had error with ack for job [%lu,%lu]", 
-                  tid, sResult.xid.objSerial, sResult.xid.objSlot);
+               dnxDebug(2, "dnxCollector[%lx]: Had error (%s) with ack for job [%lu,%lu]", 
+                  tid, dnxErrorString(ret), sResult.xid.objSerial, sResult.xid.objSlot);
             }
          } else {
             dnxDebug(2, "dnxCollector[%lx]: Received result for job [%lu,%lu]: %s.", 
