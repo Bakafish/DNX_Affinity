@@ -120,11 +120,10 @@ static void * dnxCollector(void * data)
    
             // dequeue the matching service request from the pending job queue
             if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK) {
-               dnxDebug(2, "dnxCollector: Collecting Job");
    
                time_t check_time = Job.start_time + sResult.delta;
-               dnxDebug(2, "dnxCollector[%lx]: Hostname(%s) Time[%lu]",
-                   tid, Job.host_name, check_time);
+               dnxDebug(2, "dnxCollector[%lx]: Collecting Job [%lu,%lu] Hostname(%s) Time[%lu] Delta[%lu]",
+                  tid, sResult.xid.objSerial, sResult.xid.objSlot, Job.host_name, check_time, sResult.delta);
    
                dnxNodeListIncrementNodeMember(Job.pNode->addr,JOBS_HANDLED);
    

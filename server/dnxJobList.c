@@ -199,10 +199,10 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                } 
             }
             break;
-         case DNX_JOB_COMPLETE:
          case DNX_JOB_EXPIRED:
-            pJob->state = DNX_JOB_NULL;
+            pJob->state = DNX_JOB_NULL; // We got an Ack, but never got the job back
          case DNX_JOB_NULL:
+         case DNX_JOB_COMPLETE:
             if(current == ilist->head && current != ilist->tail) {
                // we have an old item at the head of the list, so we need to
                // increment the head. It should never be larger than the tail.
@@ -219,42 +219,42 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
       current = ((current + 1) % ilist->size);
    }
    
-   int pnd = 0;
-   int prg = 0;
-   int unb = 0;
-   int cmp = 0;
-   int exp = 0;
-   int nul = 0;
-   while (current != ilist->tail) {
-      // let's find out how many nodes we are neglecting due to bad MAX_NODES settings
-      switch ((&ilist->list[current])->state) {
-         case DNX_JOB_PENDING:
-            pnd++;
-            break;
-         case DNX_JOB_INPROGRESS:
-            prg++;
-            break;
-         case DNX_JOB_UNBOUND:
-            unb++;
-            break;
-         case DNX_JOB_COMPLETE:
-            cmp++;
-            break;
-         case DNX_JOB_EXPIRED:
-            exp++;
-            break;
-         case DNX_JOB_NULL:
-            nul++;
-            break;
-      }
-      // increment the job list index
-      current = ((current + 1) % ilist->size);
-   }
-   
-   if(pnd+prg+unb+cmp+exp+nul) {
-      dnxDebug(2, "dnxJobListExpire: (%i) nodes left pnd:%i, prg:%i, unb:%i, cmp:%i, exp:%i, nul:%i",
-         (pnd+prg+unb+cmp+exp+nul), pnd,  prg,  unb,  cmp,  exp,  nul);  
-   }
+//    int pnd = 0;
+//    int prg = 0;
+//    int unb = 0;
+//    int cmp = 0;
+//    int exp = 0;
+//    int nul = 0;
+//    while (current != ilist->tail) {
+//       // let's find out how many nodes we are neglecting due to bad MAX_NODES settings
+//       switch ((&ilist->list[current])->state) {
+//          case DNX_JOB_PENDING:
+//             pnd++;
+//             break;
+//          case DNX_JOB_INPROGRESS:
+//             prg++;
+//             break;
+//          case DNX_JOB_UNBOUND:
+//             unb++;
+//             break;
+//          case DNX_JOB_COMPLETE:
+//             cmp++;
+//             break;
+//          case DNX_JOB_EXPIRED:
+//             exp++;
+//             break;
+//          case DNX_JOB_NULL:
+//             nul++;
+//             break;
+//       }
+//       // increment the job list index
+//       current = ((current + 1) % ilist->size);
+//    }
+//    
+//    if(pnd+prg+unb+cmp+exp+nul) {
+//       dnxDebug(2, "dnxJobListExpire: (%i) nodes left pnd:%i, prg:%i, unb:%i, cmp:%i, exp:%i, nul:%i",
+//          (pnd+prg+unb+cmp+exp+nul), pnd,  prg,  unb,  cmp,  exp,  nul);  
+//    }
    
    // update the total jobs in the expired job list
    *totalJobs = jobCount;
@@ -329,17 +329,21 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
                   ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot, ((ilist->list[current].pNode)->retry - now.tv_sec));
                break;
             } else {
-               if((ilist->list[current].pNode)->retry) {
+                if((ilist->list[current].pNode)->retry) {
                   // Make sure the dnxClient service offer is still fresh
                   if((ilist->list[current].pNode)->expires < now.tv_sec) {
                      dnxDebug(4, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, client node expired. Resubmitting.",
                      ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
                      ilist->list[current].state = DNX_JOB_UNBOUND;
-                     break;
                   }
-                  // The dnxClient service offer can be reused
-                  dnxDebug(4, "dnxJobListDispatch: Redispatching job [%lu:%lu] due to Ack timeout",
-                     ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);               
+                  // The dnxClient service offer can't be reused since it might race
+                  // if the ack comes back late and we attempt to dispatch after
+                  // the dnxClient node is deleted
+
+                  // Let's just wait for the thread to expire and avoid the race condition where the results 
+                  // or ack arrive after we have decided to redispatch
+                  break;
+                  
                } else {
                   // This is a new job, so dispatch it
                   dnxDebug(4, "dnxJobListDispatch: Dispatching new job [%lu:%lu] waiting for Ack",
@@ -417,14 +421,12 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
       dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] expired before retrieval.", pxid->objSerial, pxid->objSlot);      
       ret = DNX_ERR_EXPIRED;          // job expired; removed by the timer
    } else {
-      // make a copy to return to the Collector
-      memcpy(pJob, &ilist->list[current], sizeof *pJob);
-      pJob->state = DNX_JOB_COMPLETE;
-      dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] complete", pxid->objSerial, pxid->objSlot);      
-
       // dequeue this job; make slot available for another job
       ilist->list[current].state = DNX_JOB_COMPLETE;      
-      dnxDebug(4, "dnxJobListCollect: Job slot [%lu] freed. Copy of result for (%s) assigned to collector.", pxid->objSlot, pJob->cmd);      
+      // make a copy to return to the Collector
+      memcpy(pJob, &ilist->list[current], sizeof *pJob);
+      dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] freed. Copy of result for (%s) assigned to collector.",
+          pxid->objSerial, pxid->objSlot, pJob->cmd);      
    }
 
    DNX_PT_MUTEX_UNLOCK(&ilist->mut);

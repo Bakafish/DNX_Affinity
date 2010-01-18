@@ -143,6 +143,53 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
    return ret;
 }
 
+static int dnxSendJobAck(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeRequest * pNode)
+{
+   struct sockaddr * sin; 
+   pthread_t tid = pthread_self();
+   DnxAck ack;
+   int ret;
+
+   dnxDebug(2, 
+         "dnxSendJobAck[%lx]: Acknowledging response for job [%lu,%lu] to dnxClient [%s]",
+         tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pNode->hn);
+
+   memset(&job, 0, sizeof ack);
+   ack.xid        = pSvcReq->xid;
+   job.state      = DNX_JOB_PENDING;
+   job.priority   = 1;
+   job.timeout    = pSvcReq->timeout;
+   job.cmd        = pSvcReq->cmd;
+   job.timestamp  = now;
+      
+   dnxDebug(1,"dnxSendJobMsg[%lx]: Job [%lu,%lu] is in state(%i) and expires in (%i) seconds.",
+            tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->state, pSvcReq->expires - now);
+   
+   // Make a copy because it sometimes gets released before we even get to
+   // increment it's stats
+   char *address = xstrdup(pNode->addr);
+
+   if ((ret = dnxSendJob(idisp->channel, &job, pNode->address)) != DNX_OK)
+   {
+            dnxDebug(1, "dnxSendJobMsg[%lx]: Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
+            tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
+            address, dnxErrorString(ret));
+
+            dnxLog("dnxSendJobMsg[%lx]: Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
+            tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
+            address, dnxErrorString(ret));
+   } else {
+        dnxNodeListIncrementNodeMember(address,JOBS_DISPATCHED);        
+   }
+   
+   xfree(address); // Now we can deallocate it
+   return ret;
+}
+
+
+
+
+
 //----------------------------------------------------------------------------
 
 /** The dispatcher thread entry point.
