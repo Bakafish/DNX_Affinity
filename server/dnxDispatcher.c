@@ -144,12 +144,9 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
    
    // look at job type. If it's an Ack, send ack
    if (pSvcReq->state == DNX_JOB_COMPLETE) {
-        ret = dnxSendAckMsg(idisp->channel, pSvcReq, pNode);
-   
+      ret = dnxSendJobAck(idisp->channel, pSvcReq, pNode);
    } else {
-   
       ret = dnxSendJobMsg(idisp, pSvcReq, pNode);
-
    }
    /** @todo Implement the fork-error re-scheduling logic as 
     * found in run_service_check() in checks.c. 
