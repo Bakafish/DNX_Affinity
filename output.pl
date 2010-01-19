@@ -23,17 +23,18 @@ while(<FILE>) {
     $_ =~ m|$match|;
     my ($event, $job) = ($1, $2);
     ${$counter[$job]}[0] = $job;
+    print "$job $event\n";
     ${$counter[$job]}[$types->{$event}]++;
 }
 
 foreach my $job (@counter) {
-    print "Job: ", shift @{$job};
-    print Dumper $job;
+#     print "Job: ", shift @{$job};
+#     print Dumper $job;
 #     for(my $i=1; $i<8; $i++) {
 #         if(defined $job->[$i]) {
 #             print " $types->{$i} : $job->[$i]";
 #         }
 #     }
-    print "\n";
+#     print "\n";
 }
 
