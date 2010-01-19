@@ -14,7 +14,8 @@ my $types = {
     'DECLINE' => 6,
     'EXPIRE' => 7
     };
-$types = $types, reverse $types;
+%{$types} = (%{$types}, reverse %{$types});
+
 
 my $match = qr(.*\ (ASSIGN|DISPATCH|ACK|COLLECT|RESPONSE|DECLINE|EXPIRE):\ Job\ (\d+):.*);
 
