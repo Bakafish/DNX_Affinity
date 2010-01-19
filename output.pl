@@ -22,7 +22,6 @@ while(<FILE>) {
     my ($event, $job) = ($_ =~ m|$match|);
     if(defined $event) {
         ${$counter[$job]}[0] = $job;
-        print "$job $event\n";
         ${$counter[$job]}[$types->{$event}]++;
     }
 }
