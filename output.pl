@@ -35,3 +35,4 @@ foreach my $job (@counter) {
     print "\n";
 }
 
+print Dumper $types;
