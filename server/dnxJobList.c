@@ -290,8 +290,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
 
    while (1) { //current <= ilist->tail) {
 
-      dnxDebug(2, "dnxJobListDispatch: Checking slot:(%lu) head:(%lu) tail:(%lu).", 
-         current, ilist->head, ilist->tail);      
+//       dnxDebug(2, "dnxJobListDispatch: Checking slot:(%lu) head:(%lu) tail:(%lu).", 
+//          current, ilist->head, ilist->tail);      
 
 // update the dispatch head (only dispatch or expire should do this)
 //       if (current == ilist->head         // we are at the head
