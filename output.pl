@@ -2,7 +2,7 @@
 
 use Data::Dumper;
 
-open (FILE, "</usr/local/dnx/var/log/dnxsrv.log")
+open (FILE, "</usr/local/dnx/var/log/dnxsrv.log");
 
 my %counter;
 my $types = {
