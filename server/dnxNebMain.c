@@ -619,7 +619,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    
    /* Call the nagios function to insert the result into the result linklist */
    add_check_result_to_list(chk_result);
-   dnxJobCleanup(Job);
+//    dnxJobCleanup(Job);
    DNX_PT_MUTEX_UNLOCK(&submitCheckMutex);
    return 0;
 }
