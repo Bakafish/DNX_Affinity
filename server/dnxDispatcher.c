@@ -143,8 +143,8 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
    int ret;
    
    // look at job type. If it's an Ack, send ack
-   if (pSvcReq.state == DNX_JOB_COMPLETE) {
-      ret = dnxSendAckMsg(idisp->channel, pSvcReq, pNode);
+   if (pSvcReq->state == DNX_JOB_COMPLETE) {
+        ret = dnxSendAckMsg(idisp->channel, pSvcReq, pNode);
    
    } else {
    
