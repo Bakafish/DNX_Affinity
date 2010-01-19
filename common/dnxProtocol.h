@@ -239,14 +239,6 @@ typedef struct DnxResult
    char address[DNX_MAX_ADDRESS];   //!< Source address.
 } DnxResult;
 
-/** Send Ack wire structure. */
-typedef struct DnxAck
-{
-   DnxXID xid;                      //!< Job transaction id.
-   unsigned int timestamp;          //!< Packet trasmit timestamp
-   char address[DNX_MAX_ADDRESS];   //!< Source address.
-} DnxAck;
-
 /** DNX management request wire structure. */
 typedef struct DnxMgmtRequest
 {

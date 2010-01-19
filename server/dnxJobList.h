@@ -35,9 +35,9 @@
 #include "dnxRegistrar.h"
 
 typedef struct DnxNewJob
-{
-   DnxJobState state;      // Job state
+{ 
    DnxXID xid;             // Service request transaction id.
+   DnxJobState state;      // Job state
    char * cmd;             // Processed check command
    time_t start_time;      // Service check start time
    int timeout;            // Service check timeout in seconds
