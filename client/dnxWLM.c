@@ -552,15 +552,15 @@ static void * dnxWorker(void * data)
                break;
             }
             // Now wait for our Ack
-            if ((ret = dnxWaitForAck(ws->dispatch, &job, job.address, 1000)) != DNX_OK && ret != DNX_ERR_TIMEOUT) {
-               dnxLog("Worker[%lx]: Error receiving Ack for job [%lu,%lu]: %s. Retry (%i).",
+            if ((ret = dnxWaitForAck(ws->dispatch, &job, job.address, 1)) != DNX_OK && ret != DNX_ERR_TIMEOUT) {
+               dnxDebug(3, "Worker[%lx]: Error receiving Ack for job [%lu,%lu]: %s. Retry (%i).",
                      tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret), trys);
             } else if (ret == DNX_ERR_TIMEOUT) {
                // we didn't get our Ack
                trys++;
             } else {
                // We got our Ack
-               dnxLog("Worker[%lx]: Ack Received for job [%lu,%lu]: %s. After (%i) try(s).",
+               dnxDebug(3, "Worker[%lx]: Ack Received for job [%lu,%lu]: %s. After (%i) try(s).",
                      tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret), trys);
             }
          }
