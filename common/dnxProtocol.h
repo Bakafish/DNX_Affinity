@@ -269,7 +269,7 @@ typedef struct DnxMgmtReply
 int dnxSendMgmtRequest(DnxChannel * channel, DnxMgmtRequest * pRequest, char * address);
 int dnxSendMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address);
 int dnxWaitForMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * address, int timeout);
-int dnxSendJobAck(DnxChannel* channel, DnxAck *pAck, char * address);
+int dnxSendJobAck(DnxChannel* channel, DnxNewJob *pAck, char * address);
 
 int dnxMakeXID(DnxXID * pxid, DnxObjType xType, unsigned long xSerial, unsigned long xSlot);
 int dnxEqualXIDs(DnxXID * pxa, DnxXID * pxb);
