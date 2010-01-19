@@ -136,7 +136,7 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
    DnxJob ack;
    
    ack.xid = pSvcReq->xid;
-   ack.address = pNode->address;
+   ack.timestamp = 0;
    
    // look at job type. If it's an Ack, send ack
    if (pSvcReq->state == DNX_JOB_COMPLETE) {
