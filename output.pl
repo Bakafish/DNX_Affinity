@@ -10,14 +10,13 @@ my $types = {
     'DISPATCH' => 2,
     'ACK' => 3,
     'COLLECT' => 4,
-    'RESPONSE' => 5,
-    'DECLINE' => 6,
-    'EXPIRE' => 7
+    'DECLINE' => 5,
+    'EXPIRE' => 6
     };
 %{$types} = (%{$types}, reverse %{$types});
 
 
-my $match = qr(.*\ (ASSIGN|DISPATCH|ACK|COLLECT|RESPONSE|DECLINE|EXPIRE):\ Job\ (\d+):.*);
+my $match = qr(.*\ (ASSIGN|DISPATCH|ACK|COLLECT|DECLINE|EXPIRE):\ Job\ (\d+):.*);
 
 while(<FILE>) {
     print $_;
