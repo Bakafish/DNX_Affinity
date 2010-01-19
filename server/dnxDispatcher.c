@@ -145,8 +145,10 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
    // look at job type. If it's an Ack, send ack
    if (pSvcReq->state == DNX_JOB_COMPLETE) {
       ret = dnxSendJobAck(idisp->channel, pSvcReq, pNode);
+      dnxAuditJob(pSvcReq, "CONFIRM");
    } else {
       ret = dnxSendJobMsg(idisp, pSvcReq, pNode);
+      dnxAuditJob(pSvcReq, "DISPATCH");
    }
    /** @todo Implement the fork-error re-scheduling logic as 
     * found in run_service_check() in checks.c. 
@@ -182,9 +184,7 @@ static void * dnxDispatcher(void * data)
 
       // wait for a new entry to be added to the job queue
       if ((ret = dnxJobListDispatch(idisp->joblist, &svcReq)) == DNX_OK) {
-         if ((ret = dnxDispatchJob(idisp, &svcReq)) == DNX_OK) {
-            dnxAuditJob(&svcReq, "DISPATCH");
-         } else {
+         if ((ret = dnxDispatchJob(idisp, &svcReq)) != DNX_OK) {
             dnxAuditJob(&svcReq, "DISPATCH-FAIL");
          }
       }
