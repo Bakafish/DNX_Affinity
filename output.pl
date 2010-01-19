@@ -28,6 +28,9 @@ while(<FILE>) {
 }
 
 foreach my $job (@counter) {
+    if (($job->[1] == 1 && $job->[2] == 1 && $job->[3] == 1 && $job->[4] == 1) || ($job->[1] == 1 && $job->[5] == 1)) {
+        next;
+    }
     print "Job: $job->[0]";
     for(my $i=1; $i<7; $i++) {
         if(defined $job->[$i]) {
