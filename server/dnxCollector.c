@@ -129,7 +129,7 @@ static void * dnxCollector(void * data)
    
                /** @todo Wrapper release DnxResult structure. */
                dnxAuditJob(&Job, "COLLECT");
-               dnxLog("RESPONSE: %s", sResult.resData);
+               dnxLog("RESPONSE: Job %lu: %s", sResult.xid.objSerial, sResult.resData);
                ret = dnxSubmitCheck(&Job, &sResult, check_time);
    
                dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s.", 
