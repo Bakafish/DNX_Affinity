@@ -120,14 +120,6 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
    return ret;
 }
 
-static int dnxServerSendAckMsg(iDnxDispatcher * idisp, DnxAck * pAck)
-{
-   struct sockaddr * sin; 
-   pthread_t tid = pthread_self();
-   int ret;
-   time_t now = time(0);
-
-}
 //----------------------------------------------------------------------------
 
 /** Send a service request to the appropriate worker node.
