@@ -190,7 +190,7 @@ int dnxWaitForMgmtReply(DnxChannel * channel, DnxMgmtReply * pReply, char * addr
 //------------------------------------------------------------------------------
 //This function handles acknowledgement of a job recieved from the server to the client,
 // or a responce from the client to the server
-int dnxSendJobAck(DnxChannel* channel, DnxAck *pAck, char * address)
+int dnxSendJobAck(DnxChannel* channel, DnxNewJob *pAck, char * address)
 {
     DnxXmlBuf xbuf;
 

@@ -109,14 +109,6 @@ static void * dnxCollector(void * data)
          } else {
             dnxDebug(2, "dnxCollector[%lx]: Received result for job [%lu,%lu]: %s.", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot, sResult.resData);
-                  
-            // Ack all results, even if they are dupes so the client won't keep sending
-//             DnxAck ack;
-//             ack.xid = sResult.xid;
-//             ack.timestamp = sResult.timestamp;
-//          
-//             dnxSendJobAck(ws->collect, &ack, 0);
-
    
             // dequeue the matching service request from the pending job queue
             if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK) {
