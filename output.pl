@@ -10,8 +10,10 @@ my $types = {
     'DISPATCH' => 2,
     'ACK' => 3,
     'COLLECT' => 4,
-    'DECLINE' => 5,
-    'EXPIRE' => 6
+    'RESPONCE' => 5,
+    'CONFIRM' => 6,
+    'DECLINE' => 7,
+    'EXPIRE' => 8
     };
 %{$types} = (%{$types}, reverse %{$types});
 
@@ -31,7 +33,7 @@ foreach my $job (@counter) {
         next;
     }
     print "Job: $job->[0]";
-    for(my $i=1; $i<7; $i++) {
+    for(my $i=1; $i<9; $i++) {
         if(defined $job->[$i]) {
             print ", $types->{$i} : $job->[$i]";
         }
