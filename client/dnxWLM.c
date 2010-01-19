@@ -538,33 +538,32 @@ static void * dnxWorker(void * data)
                tid, job.xid.objSerial, job.xid.objSlot, result.delta, 
                result.resCode, result.resData);
 
-         if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK) {
-            dnxDebug(3, "Worker[%lx]: Post job [%lu,%lu] results failed: %s.",
-                  tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
-         }
+//          if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK) {
+//             dnxDebug(3, "Worker[%lx]: Post job [%lu,%lu] results failed: %s.",
+//                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
+//          }
 
          // Wait while we wait for an Ack to our Results
-//          DnxAck ack;
-//          int trys = 0;
-//          while(trys < 3) {
-//             if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK) {
-//                dnxDebug(3, "Worker[%lx]: Post job [%lu,%lu] results failed: %s.",
-//                      tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
-//                break;
-//             }
-//             // Now wait for our Ack
-//             if ((ret = dnxWaitForAck(ws->dispatch, &ack, job.address, 1000)) != DNX_OK && ret != DNX_ERR_TIMEOUT) {
-//                dnxLog("Worker[%lx]: Error receiving Ack for job [%lu,%lu]: %s. Retrying.",
-//                      tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
-//             } else if (ret == DNX_ERR_TIMEOUT) {
-//                // we didn't get our Ack
-//                trys++;
-//             } else {
-//                // We got our Ack
-//                dnxLog("Worker[%lx]: Ack Received for job [%lu,%lu]: %s.",
-//                      tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
-//             }
-//          }
+         int trys = 1;
+         while(trys < 4) {
+            if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK) {
+               dnxDebug(3, "Worker[%lx]: Post job [%lu,%lu] results failed: %s.",
+                     tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
+               break;
+            }
+            // Now wait for our Ack
+            if ((ret = dnxWaitForAck(ws->dispatch, &ack, job.address, 1000)) != DNX_OK && ret != DNX_ERR_TIMEOUT) {
+               dnxLog("Worker[%lx]: Error receiving Ack for job [%lu,%lu]: %s. Retry (%i).",
+                     tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret), trys);
+            } else if (ret == DNX_ERR_TIMEOUT) {
+               // we didn't get our Ack
+               trys++;
+            } else {
+               // We got our Ack
+               dnxLog("Worker[%lx]: Ack Received for job [%lu,%lu]: %s. After (%i) try(s).",
+                     tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret), trys);
+            }
+         }
 
 
          xfree(result.resData);
