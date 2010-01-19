@@ -20,6 +20,7 @@ my $types = {
 my $match = qr(.*\ (ASSIGN|DISPATCH|ACK|COLLECT|RESPONSE|DECLINE|EXPIRE):\ Job\ (\d+):.*);
 
 while(<FILE>) {
+    print $_;
     $_ =~ m|$match|;
     my ($event, $job) = ($1, $2);
     ${$counter[$job]}[0] = $job;
