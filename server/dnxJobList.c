@@ -197,7 +197,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                // we have an old item at the head of the list, so we need to
                // increment the head. It should never be larger than the tail.
                ilist->head = ((current + 1) % ilist->size);
-               dnxJobCleanup(&pJob);
+               dnxJobCleanup(pJob);
             }
             break;
          case DNX_JOB_COMPLETE:
