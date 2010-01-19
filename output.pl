@@ -20,11 +20,12 @@ my $match = qr(.*\ (ASSIGN|DISPATCH|ACK|COLLECT|DECLINE|EXPIRE):\ Job\ (\d+):.*)
 
 while(<FILE>) {
     print $_;
-    $_ =~ m|$match|;
-    my ($event, $job) = ($1, $2);
-    ${$counter[$job]}[0] = $job;
-    print "$job $event\n";
-    ${$counter[$job]}[$types->{$event}]++;
+    my ($event, $job) = ($_ =~ m|$match|);
+    if(defined $event) {
+        ${$counter[$job]}[0] = $job;
+        print "$job $event\n";
+        ${$counter[$job]}[$types->{$event}]++;
+    }
 }
 
 foreach my $job (@counter) {
