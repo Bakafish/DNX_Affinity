@@ -25,4 +25,4 @@ while(<FILE>) {
 
 
 
-print Dumper \%counter;
+print Dumper \@counter;
