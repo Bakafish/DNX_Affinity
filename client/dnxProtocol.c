@@ -100,7 +100,7 @@ int dnxWaitForJob(DnxChannel * channel, DnxJob * pJob, char * address, int timeo
 }
 
 
-int dnxWaitForAck(DnxChannel * channel, DnxAck * pAck, char * address, int timeout)
+int dnxWaitForAck(DnxChannel * channel, DnxJob * pAck, char * address, int timeout)
 {
    DnxXmlBuf xbuf;
    int ret;
