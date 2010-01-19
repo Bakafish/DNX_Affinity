@@ -28,10 +28,10 @@ while(<FILE>) {
 }
 
 foreach my $job (@counter) {
-    print "Job: ", shift @{$job};
-    for(my $i=1; $i<8; $i++) {
+    print "Job: $job->[0]";
+    for(my $i=1; $i<7; $i++) {
         if(defined $job->[$i]) {
-            print " $types->{$i} : $job->[$i]";
+            print ", $types->{$i} : $job->[$i]";
         }
     }
     print "\n";
