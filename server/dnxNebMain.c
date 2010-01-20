@@ -793,6 +793,8 @@ static int ehSvcCheck(int event_type, void * data)
    if (svcdata->type != NEBTYPE_SERVICECHECK_INITIATE)
       return OK;  // ignore non-initiate service checks
 
+   host * hostObj = find_host(svcdata->host_name);
+
    // check for local execution pattern on command line
    if (cfg.localCheckPattern && regexec(&regEx, svcdata->command_line, 0, 0, 0) == 0)
    {
@@ -804,7 +806,6 @@ static int ehSvcCheck(int event_type, void * data)
 //   DnxNode * pDnxNode = gTopNode;
    extern check_result check_result_info;
 
-   host * hostObj = find_host(svcdata->host_name);
    long long unsigned affinity = dnxGetAffinity(hostObj->name);
    
    dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, affinity);
