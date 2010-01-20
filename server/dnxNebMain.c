@@ -565,42 +565,49 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 	chk_result->latency=latency;
 */
 
-
+   if (Job->pNode.xid.objSlot == -1) {
+      // this was never dispatched
+      dnxDebug(2, "dnxSubmitCheck: dnxClient=(unavailable) hostname=(%s) description=(%s)",
+          chk_result->host_name, chk_result->service_description);      
+   } else {
 //    normalize_plugin_output(plugin_output, "B2");
    // Encapsulate the additional data into the extended results
-   char * hGroup = dnxGetHostgroupFromFlags(dnxGetAffinity(Job->host_name), Job->pNode->flags);
-
-   int maxLength = MAX_PLUGIN_OUTPUT_LENGTH - 1;
-   char * tokenString = (char *)xmalloc(maxLength);
-   int ret = 0;
-   char * tail = NULL;
+      char * hGroup = dnxGetHostgroupFromFlags(dnxGetAffinity(Job->host_name), Job->pNode->flags);
    
-   if((tail = strchr(sResult->resData,'|')) != NULL) {
-      size_t len = strcspn(sResult->resData, "|");
-      char * head = (char *)xmalloc(len+1);
-      strncpy(head, sResult->resData, len);
-      head[len]='\0';
-      ret = snprintf(tokenString, maxLength, 
-         "%s <DNX><CLIENT=\"%s\"/>"
-         "<CLIENT_IP=\"%s\"/>"
-         "<HOSTGROUP=\"%s\"/></DNX> %s", head, Job->pNode->hn, Job->pNode->addr, hGroup, tail);
-      xfree(head);
-   } else {
-      ret = snprintf(tokenString, maxLength, 
-         "%s <DNX><CLIENT=\"%s\"/>"
-         "<CLIENT_IP=\"%s\"/>"
-         "<HOSTGROUP=\"%s\"/></DNX>", sResult->resData, Job->pNode->hn, Job->pNode->addr, hGroup);
+      int maxLength = MAX_PLUGIN_OUTPUT_LENGTH - 1;
+      char * tokenString = (char *)xmalloc(maxLength);
+      int ret = 0;
+      char * tail = NULL;
+      
+      if((tail = strchr(sResult->resData,'|')) != NULL) {
+         size_t len = strcspn(sResult->resData, "|");
+         char * head = (char *)xmalloc(len+1);
+         strncpy(head, sResult->resData, len);
+         head[len]='\0';
+         ret = snprintf(tokenString, maxLength, 
+            "%s <DNX><CLIENT=\"%s\"/>"
+            "<CLIENT_IP=\"%s\"/>"
+            "<HOSTGROUP=\"%s\"/></DNX> %s", head, Job->pNode->hn, Job->pNode->addr, hGroup, tail);
+         xfree(head);
+      } else {
+         ret = snprintf(tokenString, maxLength, 
+            "%s <DNX><CLIENT=\"%s\"/>"
+            "<CLIENT_IP=\"%s\"/>"
+            "<HOSTGROUP=\"%s\"/></DNX>", sResult->resData, Job->pNode->hn, Job->pNode->addr, hGroup);
+      }
+   
+      if(0 <= ret <= maxLength) {
+         chk_result->output = tokenString;
+         dnxDebug(3, "dnxSubmitCheck: Token appended to results %s", tokenString);
+      } else {
+         dnxDebug(2, "dnxSubmitCheck: Results string with DNX Token is too long!");
+         xfree(tokenString);
+         chk_result->output = xstrdup(sResult->resData);
+      }
+      xfree(sResult->resData);
+      dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(%s)",
+         Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name, chk_result->service_description);
    }
-
-   if(0 <= ret <= maxLength) {
-      chk_result->output = tokenString;
-      dnxDebug(3, "dnxSubmitCheck: Token appended to results %s", tokenString);
-   } else {
-      dnxDebug(2, "dnxSubmitCheck: Results string with DNX Token is too long!");
-      xfree(tokenString);
-      chk_result->output = xstrdup(sResult->resData);
-   }
-   xfree(sResult->resData);
    
    chk_result->return_code = sResult->resCode; // STATE_OK = 0
    chk_result->exited_ok = TRUE;
@@ -613,14 +620,12 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    chk_result->finish_time = chk_result->start_time;
    //chk_result->execution_time
       
-   dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(%s)",
-      Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name, chk_result->service_description);
       
    
    /* Call the nagios function to insert the result into the result linklist */
    add_check_result_to_list(chk_result);
 //    dnxJobCleanup(Job);
-   xfree(&Job); // Just delete the copy we made, the inner pointers will be 
+   xfree(Job); // Just delete the copy we made, the inner pointers will be 
                 // purged by the expire thread when it refreshes the original
    DNX_PT_MUTEX_UNLOCK(&submitCheckMutex);
    return 0;
