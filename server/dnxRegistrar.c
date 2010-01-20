@@ -215,11 +215,27 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
 int dnxDeleteNodeReq(DnxNodeRequest * pMsg) {
 //    assert(pMsg);
    if(pMsg != 0) {
+      dnxDebug(4, "dnxDeleteNodeReq: Deleting node request [%lu,%lu].", 
+         pMsg->xid.objSerial, pMsg->xid.objSlot);
       xfree(pMsg->addr);
       xfree(pMsg->hn);
       xfree(pMsg);
    }
    return DNX_OK;
+}
+
+DnxNodeRequest * dnxNodeCleanup(DnxNodeRequest * pNode) {
+//    assert(pMsg);
+   if(pNode != 0) {
+      xfree(pNode->addr);
+      xfree(pNode->hn);
+   }
+   pNode->flags = 0;
+   pNode->hn = NULL;
+   pNode->addr = NULL;
+   pNode->xid.objSerial = -1;
+   pNode->xid.objSlot = -1;
+   return pNode;
 }
 
 DnxNodeRequest * dnxCreateNodeReq(void)

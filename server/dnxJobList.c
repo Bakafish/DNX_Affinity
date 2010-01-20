@@ -158,11 +158,10 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                // This is an expired job
                dnxDebug(2, "dnxJobListExpire: Type (%i) Job [%lu:%lu] Exp: (%lu) Now: (%lu)",
                   pJob->state, pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires, now);               
-               // Job has expired - add it to the expired job list
-               memcpy(&pExpiredJobs[jobCount++], pJob, sizeof(DnxNewJob));
-               // Put the old job in a reusable state   
+               // Put the old job in a purgable state   
                pJob->state = DNX_JOB_EXPIRED;
-    
+               // Add a copy to the expired job list
+               memcpy(&pExpiredJobs[jobCount++], pJob, sizeof(DnxNewJob));
                if(current == ilist->head && current != ilist->tail) {
                   // we are expiring an item at the head of the list, so we need to
                   // increment the head. It should never be larger than the tail.
@@ -293,6 +292,10 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
                   if((ilist->list[current].pNode)->expires < now.tv_sec) {
                      dnxDebug(4, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, client node expired. Resubmitting.",
                      ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
+                     
+                     // Deallocate the strings in our node and refresh it
+                     dnxNodeCleanup(ilist->list[current].pNode);
+
                      ilist->list[current].state = DNX_JOB_UNBOUND;
                   }
                   // The dnxClient service offer can't be reused since it might race
