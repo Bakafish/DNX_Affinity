@@ -565,7 +565,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 	chk_result->latency=latency;
 */
 
-   if (Job->pNode.xid.objSlot == -1) {
+   if (Job->pNode->xid.objSlot == -1) {
       // this was never dispatched
       dnxDebug(2, "dnxSubmitCheck: dnxClient=(unavailable) hostname=(%s) description=(%s)",
           chk_result->host_name, chk_result->service_description);      
