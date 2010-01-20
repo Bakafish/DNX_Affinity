@@ -620,7 +620,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    /* Call the nagios function to insert the result into the result linklist */
    add_check_result_to_list(chk_result);
 //    dnxJobCleanup(Job);
-   xfree(Job); // Just delete the copy we made, the inner pointers will be 
+   xfree(&Job); // Just delete the copy we made, the inner pointers will be 
                 // purged by the expire thread when it refreshes the original
    DNX_PT_MUTEX_UNLOCK(&submitCheckMutex);
    return 0;
@@ -821,7 +821,7 @@ static int ehSvcCheck(int event_type, void * data)
    pNode->flags = affinity;
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
-   pNode->xid.objSerial = -1;
+   pNode->xid.objSerial = serial;
    pNode->xid.objSlot = -1;
 
    dnxDebug(4, "ehSvcCheck: Received Job [%lu] at Now (%lu), Start Time (%lu).",
@@ -1010,7 +1010,7 @@ static int ehHstCheck(int event_type, void * data)
    pNode->flags = affinity;
    pNode->hn = xstrdup(hostObj->name);
    pNode->addr = NULL;
-   pNode->xid.objSerial = -1;
+   pNode->xid.objSerial = serial;
    pNode->xid.objSlot = -1;
    
 

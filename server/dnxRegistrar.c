@@ -215,8 +215,13 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
 int dnxDeleteNodeReq(DnxNodeRequest * pMsg) {
 //    assert(pMsg);
    if(pMsg != 0) {
-      dnxDebug(4, "dnxDeleteNodeReq: Deleting node request [%lu,%lu].", 
-         pMsg->xid.objSerial, pMsg->xid.objSlot);
+      if(pMsg->xid.objSlot == -1) {
+         dnxDebug(4, "dnxDeleteNodeReq: Deleting node message for job [%lu].", 
+            pMsg->xid.objSerial);
+      } else {
+         dnxDebug(4, "dnxDeleteNodeReq: Deleting node request [%lu,%lu].", 
+            pMsg->xid.objSerial, pMsg->xid.objSlot);
+      }
       xfree(pMsg->addr);
       xfree(pMsg->hn);
       xfree(pMsg);
@@ -379,8 +384,8 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
    if((ret = dnxQueueRemove(ireg->rqueue, (void **)ppNode, dnxCompareAffinityNodeReq)) == DNX_QRES_FOUND) {
       // make sure we return that we found a match...
       ret = DNX_OK;
-      dnxDebug(1, "dnxGetNodeRequest: Found job [%lu,%lu] from Hostnode [%s]:(%qu) with Affinity to dnxClient [%s]:(%qu) Returning(%i).",
-         pNode->xid.objSerial, pNode->xid.objSlot, pNode->hn, pNode->flags, (*(DnxNodeRequest **)ppNode)->hn, (*(DnxNodeRequest **)ppNode)->flags, ret);   
+      dnxDebug(1, "dnxGetNodeRequest: Found job [%lu] from Hostnode [%s]:(%qu) with Affinity to dnxClient [%s]:(%qu) Returning(%i).",
+         pNode->xid.objSerial, pNode->hn, pNode->flags, (*(DnxNodeRequest **)ppNode)->hn, (*(DnxNodeRequest **)ppNode)->flags, ret);   
       // ppNode now points at the dnxClient node , so we need to delete the 
       // job request at pNode to prevent leaks
       dnxDeleteNodeReq(pNode);
