@@ -189,6 +189,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                } 
             }
             break;
+         case DNX_JOB_ACKNOWLEDGED:
          case DNX_JOB_EXPIRED:
              pJob->state = DNX_JOB_NULL; // We got an Ack, but never got the job back
              dnxJobCleanup(pJob);
@@ -255,7 +256,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             memcpy(pJob, &ilist->list[current], sizeof *pJob);
             
             // Change it's state to indicate it's been acked and is completed
-            ilist->list[current].state = DNX_JOB_NULL;
+            ilist->list[current].state = DNX_JOB_ACKNOWLEDGED;
             dnxDebug(4, "dnxJobListDispatch: Completed job [%lu:%lu] sending Ack. Releasing slot.",
                ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
             

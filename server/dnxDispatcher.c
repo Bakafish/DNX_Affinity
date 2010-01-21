@@ -140,9 +140,11 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
    
    // look at job type. If it's an Ack, send ack
    if (pSvcReq->state == DNX_JOB_COMPLETE) {
-      ret = dnxSendJobAck(idisp->channel, &ack, pNode->address);
-      dnxAuditJob(pSvcReq, "CONFIRM");
-      dnxJobCleanup(pSvcReq);
+      if((ret = dnxSendJobAck(idisp->channel, &ack, pNode->address)) == DNX_OK) {
+         dnxJobListMarkAckSent(&(ack.xid));
+      }
+//       dnxAuditJob(pSvcReq, "CONFIRM");
+//      dnxJobCleanup(pSvcReq);
    } else {
       ret = dnxSendJobMsg(idisp, pSvcReq, pNode);
       dnxAuditJob(pSvcReq, "DISPATCH");
