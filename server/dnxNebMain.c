@@ -1077,8 +1077,8 @@ static int ehHstCheck(int event_type, void * data)
          dnxDebug(2,"ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
          xfree(hstdata->command_line);
       } else {
-         dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]",
-            pNode->xid.objSerial, pNode->xid.objSlot);
+//          dnxDebug(2, "ehHstCheck: Host Check found worker [%lu,%lu]",
+//             pNode->xid.objSerial, pNode->xid.objSlot);
          nagios_ret = NEBERROR_CALLBACKOVERRIDE;
       }
    }
