@@ -188,7 +188,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
       // the correct flags in the queued object prior to queueing, so we don't race
       pReq->flags = dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
       
-      if ((ret = dnxQueuePut(ireg->rqueue, *ppDnxClientReq)) == DNX_OK) {
+      if ((ret = dnxQueuePut(ireg->rqueue, pReq)) == DNX_OK) {
          // the pointer to the object pointer is set to null to indicate that we 
          // need to allocate a new messaging object, pReq should still be pointing
          // at the object in the queue
@@ -298,7 +298,7 @@ static int dnxDeregisterNode(iDnxRegistrar * ireg, DnxNodeRequest * pMsg)
  */
 static void * dnxRegistrar(void * data) {
    iDnxRegistrar * ireg = (iDnxRegistrar *)data;
-   DnxNodeRequest * pMsg = 0;//dnxCreateNodeReq();
+   DnxNodeRequest * pMsg = 0;
 
    assert(data);
 
@@ -339,7 +339,7 @@ static void * dnxRegistrar(void * data) {
          }
       }
 
-      pthread_cleanup_pop(1); // clean up the thread
+      pthread_cleanup_pop(0); // Remove the cleanup handler
 
       if (ret != DNX_OK && ret != DNX_ERR_TIMEOUT)
       {

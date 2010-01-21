@@ -67,8 +67,6 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
       // We are reusing an object and need to free up the old pointers
       xfree(pReg->addr);
       xfree(pReg->hn);
-      pReg->addr = NULL;
-      pReg->hn = NULL;
    }
    
    memset(pReg, 0, sizeof *pReg);
