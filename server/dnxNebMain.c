@@ -563,6 +563,8 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    } else {
 //    normalize_plugin_output(plugin_output, "B2");
    // Encapsulate the additional data into the extended results
+
+      char * hGroup = dnxGetHostgroupFromFlags(dnxGetAffinity(Job->host_name), Job->pNode->flags);
       if(Job->service_description != NULL) {
          chk_result->service_description = xstrdup(Job->service_description);
          chk_result->object_check_type = SERVICE_CHECK;
@@ -576,8 +578,6 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
          dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(host_check)",
             Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name);
       }
-
-      char * hGroup = dnxGetHostgroupFromFlags(dnxGetAffinity(Job->host_name), Job->pNode->flags);
    
       int maxLength = MAX_PLUGIN_OUTPUT_LENGTH - 1;
       char * tokenString = (char *)xmalloc(maxLength);
