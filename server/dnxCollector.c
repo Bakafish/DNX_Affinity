@@ -129,7 +129,7 @@ static void * dnxCollector(void * data)
                      dnxErrorString(ret));
                
                // We should finally be done with the job
-               Job->state = DNX_JOB_COMPLETE;
+               Job.state = DNX_JOB_COMPLETE;
                
             } else {
                dnxDebug(3, "dnxCollector[%lx]: Dequeue job failed: %s.",
