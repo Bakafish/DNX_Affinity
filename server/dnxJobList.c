@@ -133,7 +133,7 @@ int dnxJobListMarkAckSent(DnxJobList * pJobList, DnxXID * pXid) {
    int ret = DNX_ERR_NOTFOUND;
    dnxDebug(4, "dnxJobListMarkAckSent: Job [%lu,%lu]", 
         pXid->objSerial, pXid->objSlot);
-   unsigned long current = pRes->xid.objSlot;
+   unsigned long current = pXid->objSlot;
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
    if (dnxEqualXIDs(&(pXid), &ilist->list[current].xid)) {
