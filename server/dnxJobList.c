@@ -137,9 +137,11 @@ int dnxJobListMarkAckSent(DnxJobList * pJobList, DnxXID * pXid) {
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
    if (dnxEqualXIDs(pXid, &ilist->list[current].xid)) {
-      if(ilist->list[current].state == DNX_JOB_INPROGRESS) {
-         ilist->list[current].state = DNX_JOB_ACKNOWLEDGED;
+      if(ilist->list[current].state == DNX_JOB_ACKNOWLEDGED) {
+         ilist->list[current].state = DNX_JOB_NULL;
          dnxAuditJob(&(ilist->list[current]), "CONFIRMED");
+         // Now free up the job
+         dnxJobCleanup(&(ilist->list[current]));
          ret = DNX_OK;
       }
    }
@@ -210,7 +212,6 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                } 
             }
             break;
-         case DNX_JOB_ACKNOWLEDGED:
          case DNX_JOB_EXPIRED:
              pJob->state = DNX_JOB_NULL; // We got an Ack, but never got the job back
              dnxJobCleanup(pJob);
@@ -222,6 +223,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
             }
             break;
          case DNX_JOB_COMPLETE:
+         case DNX_JOB_ACKNOWLEDGED:
             // The dispatch thread will set this to NULL once it has sent an Ack, but we
             // don't want to advance the head until that happens
             break;
