@@ -87,7 +87,9 @@ int dnxJobListAdd(DnxJobList * pJobList, DnxNewJob * pJob) {
       } else {
          pJob->state = DNX_JOB_PENDING;
       }
-
+      
+      dnxAuditJob(pJob, "ASSIGN");
+      
       // add this job to the job list
       memcpy(&ilist->list[tail], pJob, sizeof *pJob);
       
