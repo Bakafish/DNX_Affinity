@@ -212,7 +212,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
    return ret;
 }
 
-static void dnxDeleteNodeReq(void * pMsg) {
+void dnxDeleteNodeReq(void * pMsg) {
 //    assert(pMsg);
    if((DnxNodeRequest *)pMsg != 0) {
       if((DnxNodeRequest *)pMsg->xid.objSlot == -1) {
