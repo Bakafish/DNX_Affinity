@@ -139,11 +139,9 @@ int dnxJobListMarkAckSent(DnxJobList * pJobList, DnxXID * pXid) {
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
    if (dnxEqualXIDs(pXid, &ilist->list[current].xid)) {
-      if(ilist->list[current].state == DNX_JOB_ACKNOWLEDGED) {
-         ilist->list[current].state = DNX_JOB_NULL;
+      if(ilist->list[current].state == DNX_JOB_INPROGRESS) {
+         ilist->list[current].state = DNX_JOB_ACKNOWLEDGED;
          dnxAuditJob(&(ilist->list[current]), "CONFIRMED");
-         // Now free up the job
-         dnxJobCleanup(&(ilist->list[current]));
          ret = DNX_OK;
       }
    }
@@ -214,6 +212,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                } 
             }
             break;
+         case DNX_JOB_COMPLETE:
          case DNX_JOB_EXPIRED:
              pJob->state = DNX_JOB_NULL; // We got an Ack, but never got the job back
              dnxJobCleanup(pJob);
@@ -224,7 +223,6 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                ilist->head = ((current + 1) % ilist->size);
             }
             break;
-         case DNX_JOB_COMPLETE:
          case DNX_JOB_ACKNOWLEDGED:
             // The dispatch thread will set this to NULL once it has sent an Ack, but we
             // don't want to advance the head until that happens
@@ -405,6 +403,7 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
       dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] expired before retrieval.", pxid->objSerial, pxid->objSlot);      
       ret = DNX_ERR_EXPIRED;          // job expired; removed by the timer
    } else {
+      // DNX_JOB_INPROGRESS or DNX_JOB_ACKNOWLEDGED
       // dequeue this job; make slot available for another job
       ilist->list[current].state = DNX_JOB_COMPLETE;      
       // make a copy to return to the Collector
