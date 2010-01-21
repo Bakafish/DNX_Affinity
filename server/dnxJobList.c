@@ -191,12 +191,12 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
             break;
          case DNX_JOB_EXPIRED:
              pJob->state = DNX_JOB_NULL; // We got an Ack, but never got the job back
+             dnxJobCleanup(pJob);
          case DNX_JOB_NULL:
             if(current == ilist->head && current != ilist->tail) {
                // we have an old item at the head of the list, so we need to
                // increment the head. It should never be larger than the tail.
                ilist->head = ((current + 1) % ilist->size);
-               dnxJobCleanup(pJob);
             }
             break;
          case DNX_JOB_COMPLETE:
