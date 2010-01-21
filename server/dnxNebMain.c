@@ -137,7 +137,8 @@ static unsigned long serial = 0;    //!< The number of service checks processed
 static pthread_mutex_t submitCheckMutex; //!< Make sure we serialize check submissions
 
 //SM 09/08 DnxNodeList
-DnxNode * gTopNode = NULL;;
+DnxNode * gTopNode = NULL;
+DnxNode * pDnxNode = NULL;
 extern DCS * gTopDCS;
 //SM 09/08 DnxNodeList End
 
@@ -1200,6 +1201,7 @@ static int dnxServerInit(void)
     //SM 09/08 DnxNodeList
    gTopNode = dnxNodeListCreateNode("127.0.0.1");
    dnxNodeListSetNodeAffinity("127.0.0.1", "localhost");
+   pDnxNode = gTopNode;
    pthread_t tid;
    if ((ret = pthread_create(&tid, NULL, (void *(*)(void *))dnxStatsRequestListener, NULL)) != 0)
    //if ((ret = pthread_create(&tid, 0, dnxStatsRequestListener, NULL)) != 0)
