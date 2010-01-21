@@ -319,10 +319,6 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             dnxDebug(8, "dnxJobListDispatch: Unbound Item in slot:(%lu) head:(%lu) tail:(%lu).", 
                current, ilist->head, ilist->tail);
             break;
-         case DNX_JOB_COMPLETE:
-            dnxDebug(8, "dnxJobListDispatch: Completed Item in slot:(%lu) head:(%lu) tail:(%lu).", 
-               current, ilist->head, ilist->tail);
-            break;
          case DNX_JOB_PENDING:
             gettimeofday(&now, 0);
 
@@ -366,9 +362,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             // release the mutex
             DNX_PT_MUTEX_UNLOCK(&ilist->mut);
             return ret;
+         case DNX_JOB_COMPLETE:
          case DNX_JOB_RECEIVED:
-            dnxDebug(8, "dnxJobListDispatch: Recieved Item in slot:(%lu) head:(%lu) tail:(%lu).", 
-               current, ilist->head, ilist->tail);
             // This is a job that we have received the response and we need to send an ack to
             // the client to let it know we got it
             if(ilist->list[current].ack) {
