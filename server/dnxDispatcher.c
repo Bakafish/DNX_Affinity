@@ -139,7 +139,7 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
    ack.timestamp = 0;
    
    // look at job type. If it's a job still in progress, send ack
-   if (pSvcReq->state == DNX_JOB_RECEIVED) {
+   if (pSvcReq->state == DNX_JOB_RECEIVED || pSvcReq->state == DNX_JOB_COMPLETE) {
       if((ret = dnxSendJobAck(idisp->channel, &ack, pNode->address)) == DNX_OK) {
          dnxJobListMarkAckSent(idisp->joblist, &(ack.xid));
       }
