@@ -169,13 +169,15 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
    // walk the entire job list - InProgress and Pending jobs (in that order)
    current = ilist->head;
    int zero_factor = ilist->size - current; // add this value to normalize the index
-   
+   dnxDebug(2, "dnxJobListExpire: searching for (%i) expired objects. Head(%ul)", *totalJobs, current);
    while(jobCount < *totalJobs) {
+      
       // only examine jobs that are either awaiting dispatch or results
       switch ((pJob = &ilist->list[current])->state) {
          case DNX_JOB_PENDING:
          case DNX_JOB_INPROGRESS:
          case DNX_JOB_UNBOUND:
+            dnxDebug(2, "dnxJobListExpire: count(%i) type(%i)", count, pJob->state);
             // check the job's expiration stamp
             if (pJob->expires <= now) {
                // This is an expired job
@@ -215,6 +217,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
          case DNX_JOB_COMPLETE:
             // If the Ack hasn't been sent out yet, give it time to complete
             if(! pJob->ack) {
+               dnxDebug(2, "dnxJobListExpire: count(%i) type(%i) ack pending", count, pJob->state);
                break;
             }
          case DNX_JOB_EXPIRED:
@@ -222,12 +225,17 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
             dnxJobCleanup(pJob);
          case DNX_JOB_NULL:
             if(current == ilist->head && current != ilist->tail) {
+               dnxDebug(2, "dnxJobListExpire: count(%i) type(%i) Moving head", count, pJob->state);
                // we have an old item at the head of the list, so we need to
                // increment the head. It should never be larger than the tail.
                ilist->head = ((current + 1) % ilist->size);
+            } else {
+               dnxDebug(2, "dnxJobListExpire: count(%i) type(%i) Head(%i) Tail(%i)", 
+                  count, pJob->state, ilist->head, ilist->tail);
             }
             break;
          case DNX_JOB_RECEIVED:
+               dnxDebug(2, "dnxJobListExpire: count(%i) type(%i) Ack not issued yet", count, pJob->state);
             // The Collector thread will set this to DNX_JOB_COMPLETE once it has 
             // replied to Nagios, but we don't advance the head until that happens
             break;
