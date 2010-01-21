@@ -130,6 +130,7 @@ static void * dnxCollector(void * data)
             } else {
                dnxDebug(3, "dnxCollector[%lx]: Dequeue job failed: %s.",
                      tid, dnxErrorString(ret));
+               xfree(sResult->resData);
             }
          }
       } else if (ret != DNX_ERR_TIMEOUT) {

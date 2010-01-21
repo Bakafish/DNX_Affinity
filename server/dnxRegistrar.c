@@ -212,8 +212,9 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
    return ret;
 }
 
-int dnxDeleteNodeReq(DnxNodeRequest * pMsg) {
+static void dnxDeleteNodeReq(void * pMsg) {
 //    assert(pMsg);
+   pMsg = (DnxNodeRequest *)pMsg; 
    if(pMsg != 0) {
       if(pMsg->xid.objSlot == -1) {
          dnxDebug(4, "dnxDeleteNodeReq: Deleting node message for job [%lu].", 
@@ -226,7 +227,6 @@ int dnxDeleteNodeReq(DnxNodeRequest * pMsg) {
       xfree(pMsg->hn);
       xfree(pMsg);
    }
-   return DNX_OK;
 }
 
 DnxNodeRequest * dnxNodeCleanup(DnxNodeRequest * pNode) {
@@ -248,12 +248,10 @@ DnxNodeRequest * dnxCreateNodeReq(void)
 
    DnxNodeRequest * pMsg = (DnxNodeRequest *)xmalloc(sizeof *pMsg);
    if(pMsg == 0) {
+      dnxDebug(1, "dnxCreateNodeReq: Memory Allocation Failure.");      
       return NULL;
    } else {
       memset(pMsg, 0, sizeof *pMsg);
-      pMsg->addr = NULL;
-      pMsg->hn = NULL;
-      pMsg->ttl = 0;
    }
    return pMsg;
 }
@@ -312,8 +310,7 @@ static void * dnxRegistrar(void * data) {
    while (1)
    {
       int ret = DNX_ERR_UNSUPPORTED;
-// dnxDebug(1, "dnxRegistrar: Process node request %lx", pMsg);
-      // (re)allocate message block if not consumed in last pass
+      // (re)allocate message block if consumed in last pass
       if (pMsg == 0 && (pMsg = dnxCreateNodeReq()) == 0)
       {
          dnxCancelableSleep(10);    // sleep for a while and try again...
@@ -342,7 +339,7 @@ static void * dnxRegistrar(void * data) {
          }
       }
 
-      pthread_cleanup_pop(0); // clean up the thread
+      pthread_cleanup_pop(1); // clean up the thread
 
       if (ret != DNX_OK && ret != DNX_ERR_TIMEOUT)
       {
