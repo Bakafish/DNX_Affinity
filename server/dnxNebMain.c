@@ -559,7 +559,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    if (Job->pNode->xid.objSlot == -1) {
       // this was never dispatched
       dnxDebug(2, "dnxSubmitCheck: job[%lu] dnxClient=(unavailable) hostname=(%s)",
-          Job->pNode->xid.serial, chk_result->host_name);      
+          Job->pNode->xid.objSerial, chk_result->host_name);      
    } else {
 //    normalize_plugin_output(plugin_output, "B2");
    // Encapsulate the additional data into the extended results
