@@ -17,7 +17,7 @@ DnxNode* dnxNodeListCreateNode(char* address)
     if(!pDnxNode)
     {
 
-        dnxLog("Creating a node for %s\n",address);
+        dnxLog("dnxNodeListCreateNode: Creating a node for %s\n",address);
         pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
         pDnxNode->address = xstrdup(address);
         DnxNode* end = dnxNodeListEnd();

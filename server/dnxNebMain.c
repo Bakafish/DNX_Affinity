@@ -1172,6 +1172,10 @@ static int dnxServerInit(void)
       dnxLog("Failed to initialize channel map: %s.", dnxErrorString(ret));
       return ret;
    }
+   
+   // These need to be initialized before threads start trying to record stats....
+   gTopNode = dnxNodeListCreateNode("127.0.0.1");
+   dnxNodeListSetNodeAffinity("127.0.0.1", "localhost");
 
    joblistsz = dnxCalculateJobListSize();
 
@@ -1198,10 +1202,6 @@ static int dnxServerInit(void)
          dnxDispatcherGetChannel(dispatcher), &registrar)) != 0)
       return ret;
 
-    //SM 09/08 DnxNodeList
-   gTopNode = dnxNodeListCreateNode("127.0.0.1");
-   dnxNodeListSetNodeAffinity("127.0.0.1", "localhost");
-   pDnxNode = gTopNode;
    pthread_t tid;
    if ((ret = pthread_create(&tid, NULL, (void *(*)(void *))dnxStatsRequestListener, NULL)) != 0)
    //if ((ret = pthread_create(&tid, 0, dnxStatsRequestListener, NULL)) != 0)
@@ -1209,7 +1209,6 @@ static int dnxServerInit(void)
       dnxLog("dnx dnxServerInit: thread creation failed for stats listener: %s.",dnxErrorString(ret));
       ret = DNX_ERR_THREAD;
    }
-   //SM 09/08 DnxNodeList End
 
    // Create the list of affinity groups (Nagios Hostgroups)
    // Get the list of host groups
