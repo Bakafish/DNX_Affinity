@@ -140,7 +140,7 @@ int dnxJobListMarkAckSent(DnxJobList * pJobList, DnxXID * pXid) {
    DNX_PT_MUTEX_LOCK(&ilist->mut);
    if (dnxEqualXIDs(pXid, &ilist->list[current].xid)) {
       if(ilist->list[current].state == DNX_JOB_INPROGRESS) {
-         ilist->list[current].state = DNX_JOB_ACKNOWLEDGED;
+         ilist->list[current].ack = true;
          dnxAuditJob(&(ilist->list[current]), "CONFIRMED");
          ret = DNX_OK;
       }
@@ -213,9 +213,13 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
             }
             break;
          case DNX_JOB_COMPLETE:
+            // If the Ack hasn't been sent out yet, give it time to complete
+            if(! pJob->ack) {
+               break;
+            }
          case DNX_JOB_EXPIRED:
-             pJob->state = DNX_JOB_NULL; // We got an Ack, but never got the job back
-             dnxJobCleanup(pJob);
+            pJob->state = DNX_JOB_NULL; // We got an Ack, but never got the job back
+            dnxJobCleanup(pJob);
          case DNX_JOB_NULL:
             if(current == ilist->head && current != ilist->tail) {
                // we have an old item at the head of the list, so we need to
@@ -223,9 +227,9 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                ilist->head = ((current + 1) % ilist->size);
             }
             break;
-         case DNX_JOB_ACKNOWLEDGED:
-            // The dispatch thread will set this to NULL once it has sent an Ack, but we
-            // don't want to advance the head until that happens
+         case DNX_JOB_RECEIVED:
+            // The Collector thread will set this to DNX_JOB_COMPLETE once it has 
+            // replied to Nagios, but we don't advance the head until that happens
             break;
       }
 
@@ -269,8 +273,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
    while (1) {
  
       switch (ilist->list[current].state) {
-         case DNX_JOB_COMPLETE:
-            dnxDebug(8, "dnxJobListDispatch: Completed Item in slot:(%lu) head:(%lu) tail:(%lu).", 
+         case DNX_JOB_RECEIVED:
+            dnxDebug(8, "dnxJobListDispatch: Acknowledged Item in slot:(%lu) head:(%lu) tail:(%lu).", 
                current, ilist->head, ilist->tail);
             // This is a job that we have received the response and we need to send an ack to
             // the client to let it know we got it
@@ -278,14 +282,16 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             // make a copy for the Dispatcher
             memcpy(pJob, &ilist->list[current], sizeof *pJob);
             
-            // Change it's state to indicate it's been acked and is completed
-            ilist->list[current].state = DNX_JOB_ACKNOWLEDGED;
-            dnxDebug(4, "dnxJobListDispatch: Completed job [%lu:%lu] sending Ack. Releasing slot.",
+            dnxDebug(4, "dnxJobListDispatch: Acknowledged job [%lu:%lu] sending Ack.",
                ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
             
             // release the mutex
             DNX_PT_MUTEX_UNLOCK(&ilist->mut);
             return ret;
+         case DNX_JOB_INPROGRESS:
+            dnxDebug(8, "dnxJobListDispatch: In Progress Item in slot:(%lu) head:(%lu) tail:(%lu).", 
+               current, ilist->head, ilist->tail);
+            break;
          case DNX_JOB_NULL:
             dnxDebug(8, "dnxJobListDispatch: Null Item in slot:(%lu) head:(%lu) tail:(%lu).", 
                current, ilist->head, ilist->tail);
@@ -298,8 +304,8 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             dnxDebug(8, "dnxJobListDispatch: Unbound Item in slot:(%lu) head:(%lu) tail:(%lu).", 
                current, ilist->head, ilist->tail);
             break;
-         case DNX_JOB_INPROGRESS:
-            dnxDebug(8, "dnxJobListDispatch: In Progress Item in slot:(%lu) head:(%lu) tail:(%lu).", 
+         case DNX_JOB_COMPLETE:
+            dnxDebug(8, "dnxJobListDispatch: Completed Item in slot:(%lu) head:(%lu) tail:(%lu).", 
                current, ilist->head, ilist->tail);
             break;
          case DNX_JOB_PENDING:
@@ -403,9 +409,9 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
       dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] expired before retrieval.", pxid->objSerial, pxid->objSlot);      
       ret = DNX_ERR_EXPIRED;          // job expired; removed by the timer
    } else {
-      // DNX_JOB_INPROGRESS or DNX_JOB_ACKNOWLEDGED
-      // dequeue this job; make slot available for another job
-//       ilist->list[current].state = DNX_JOB_COMPLETE;      
+      // DNX_JOB_INPROGRESS
+
+      ilist->list[current].state = DNX_JOB_RECEIVED;      
       // make a copy to return to the Collector
       memcpy(pJob, &ilist->list[current], sizeof *pJob);
       dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] completed. Copy of result for (%s) assigned to collector.",

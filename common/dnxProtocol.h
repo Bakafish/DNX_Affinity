@@ -182,9 +182,9 @@ typedef enum DnxJobState
    DNX_JOB_UNBOUND,     // We have Job, but no Client is assigned
    DNX_JOB_PENDING,     // We are waiting to be dispatched
    DNX_JOB_INPROGRESS,  // We are waiting to get the result
+   DNX_JOB_RECEIVED,    // Job has been recieved and should be Acked
    DNX_JOB_COMPLETE,    // Result is received
    DNX_JOB_EXPIRED,     // Job is expired
-   DNX_JOB_ACKNOWLEDGED // Job has been acked and is ready for purging
 } DnxJobState;
 
 /** The maximum number of bytes in a DNX message address buffer. */

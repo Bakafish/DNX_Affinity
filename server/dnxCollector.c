@@ -110,7 +110,8 @@ static void * dnxCollector(void * data)
             dnxDebug(2, "dnxCollector[%lx]: Received result for job [%lu,%lu]: %s.", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot, sResult.resData);
    
-            // dequeue the matching service request from the pending job queue
+            // dequeue the matching service request from the in progress job queue
+            // as a side effect an Ack is dispatched
             if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK) {
    
                time_t check_time = Job.start_time + sResult.delta;
