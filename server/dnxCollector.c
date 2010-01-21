@@ -130,8 +130,9 @@ static void * dnxCollector(void * data)
                      dnxErrorString(ret));
                
                // We should finally be done with the job
-               Job.state = DNX_JOB_COMPLETE;
-               
+               dnxDebug(2, "dnxCollector[%lx]: Job [%lu,%lu]: type(%i).", 
+                     tid, Job.xid.objSerial, Job.xid.objSlot, Job.state);
+               dnxJobListMarkComplete(icoll->joblist, Job.xid);
             } else {
                dnxDebug(3, "dnxCollector[%lx]: Dequeue job failed: %s.",
                      tid, dnxErrorString(ret));

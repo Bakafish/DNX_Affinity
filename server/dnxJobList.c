@@ -149,6 +149,24 @@ int dnxJobListMarkAckSent(DnxJobList * pJobList, DnxXID * pXid) {
    return ret;
 }
 
+int dnxJobListMarkComplete(DnxJobList * pJobList, DnxXID * pXid) {
+   iDnxJobList * ilist = (iDnxJobList *)pJobList;
+   assert(pJobList && pXid);   // parameter validation
+   int ret = DNX_ERR_NOTFOUND;
+   dnxDebug(4, "dnxJobListMarkComplete: Job [%lu,%lu]", 
+        pXid->objSerial, pXid->objSlot);
+   unsigned long current = pXid->objSlot;
+
+   DNX_PT_MUTEX_LOCK(&ilist->mut);
+   if (dnxEqualXIDs(pXid, &ilist->list[current].xid)) {
+      if(ilist->list[current].state == DNX_JOB_RECEIVED) {
+         ilist->list[current].state = DNX_JOB_COMPLETE;
+         ret = DNX_OK;
+      }
+   }
+   DNX_PT_MUTEX_UNLOCK(&ilist->mut);
+   return ret;
+}
 
 //----------------------------------------------------------------------------
 
@@ -412,7 +430,7 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
    
-   // verify that the XID of this result matches the XID of the service check
+   // verify that the XID of this result matches the XID of the service check 
    if (ilist->list[current].state == DNX_JOB_NULL 
          || !dnxEqualXIDs(pxid, &ilist->list[current].xid)) {
       dnxDebug(4, "dnxJobListCollect: Job [%lu,%lu] not found.", pxid->objSerial, pxid->objSlot);      

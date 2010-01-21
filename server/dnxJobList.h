@@ -99,6 +99,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
 
 int dnxJobListMarkAck(DnxJobList * pJobList, DnxResult * pRes);
 int dnxJobListMarkAckSent(DnxJobList * pJobList, DnxXID * pXid);
+int dnxJobListMarkComplete(DnxJobList * pJobList, DnxXID * pXid);
 
 /** Select a dispatchable job from a job list.
  * 
