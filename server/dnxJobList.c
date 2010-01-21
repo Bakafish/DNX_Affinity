@@ -274,7 +274,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
  
       switch (ilist->list[current].state) {
          case DNX_JOB_RECEIVED:
-            dnxDebug(8, "dnxJobListDispatch: Acknowledged Item in slot:(%lu) head:(%lu) tail:(%lu).", 
+            dnxDebug(8, "dnxJobListDispatch: Recieved Item in slot:(%lu) head:(%lu) tail:(%lu).", 
                current, ilist->head, ilist->tail);
             // This is a job that we have received the response and we need to send an ack to
             // the client to let it know we got it
@@ -282,7 +282,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             // make a copy for the Dispatcher
             memcpy(pJob, &ilist->list[current], sizeof *pJob);
             
-            dnxDebug(4, "dnxJobListDispatch: Acknowledged job [%lu:%lu] sending Ack.",
+            dnxDebug(4, "dnxJobListDispatch: Recieved job [%lu:%lu] sending Ack.",
                ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
             
             // release the mutex
