@@ -550,15 +550,6 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    chk_result->output_file_fd = -1;
    chk_result->host_name = xstrdup(Job->host_name);
 
-   if(Job->service_description != NULL) {
-      chk_result->service_description = xstrdup(Job->service_description);
-      chk_result->object_check_type = SERVICE_CHECK;
-      chk_result->check_type = SERVICE_CHECK_ACTIVE;
-   } else {
-      chk_result->service_description = NULL;
-      chk_result->object_check_type = HOST_CHECK;
-      chk_result->check_type = HOST_CHECK_ACTIVE;
-   }
 
 /*
 	chk_result->check_options=check_options;
@@ -567,11 +558,25 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 
    if (Job->pNode->xid.objSlot == -1) {
       // this was never dispatched
-      dnxDebug(2, "dnxSubmitCheck: dnxClient=(unavailable) hostname=(%s) description=(%s)",
-          chk_result->host_name, chk_result->service_description);      
+      dnxDebug(2, "dnxSubmitCheck: job[%lu] dnxClient=(unavailable) hostname=(%s)",
+          Job->pNode->xid.serial, chk_result->host_name);      
    } else {
 //    normalize_plugin_output(plugin_output, "B2");
    // Encapsulate the additional data into the extended results
+      if(Job->service_description != NULL) {
+         chk_result->service_description = xstrdup(Job->service_description);
+         chk_result->object_check_type = SERVICE_CHECK;
+         chk_result->check_type = SERVICE_CHECK_ACTIVE;
+         dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(%s)",
+            Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name, chk_result->service_description);
+      } else {
+         chk_result->service_description = NULL;
+         chk_result->object_check_type = HOST_CHECK;
+         chk_result->check_type = HOST_CHECK_ACTIVE;
+         dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(host_check)",
+            Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name);
+      }
+
       char * hGroup = dnxGetHostgroupFromFlags(dnxGetAffinity(Job->host_name), Job->pNode->flags);
    
       int maxLength = MAX_PLUGIN_OUTPUT_LENGTH - 1;
@@ -605,8 +610,6 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
          chk_result->output = xstrdup(sResult->resData);
       }
       xfree(sResult->resData);
-      dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(%s)",
-         Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name, chk_result->service_description);
    }
    
    chk_result->return_code = sResult->resCode; // STATE_OK = 0
@@ -624,9 +627,6 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    
    /* Call the nagios function to insert the result into the result linklist */
    add_check_result_to_list(chk_result);
-//    dnxJobCleanup(Job);
-   xfree(Job); // Just delete the copy we made, the inner pointers will be 
-                // purged by the expire thread when it refreshes the original
    DNX_PT_MUTEX_UNLOCK(&submitCheckMutex);
    return 0;
 }
