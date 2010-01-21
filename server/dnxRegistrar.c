@@ -226,7 +226,6 @@ static void dnxDeleteNodeReq(DnxNodeRequest * pMsg) {
       xfree(pMsg->hn);
       xfree(pMsg);
    }
-   return DNX_OK;
 }
 
 DnxNodeRequest * dnxNodeCleanup(DnxNodeRequest * pNode) {
