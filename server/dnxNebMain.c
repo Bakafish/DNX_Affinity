@@ -1177,39 +1177,6 @@ static int dnxServerInit(void)
    gTopNode = dnxNodeListCreateNode("127.0.0.1");
    dnxNodeListSetNodeAffinity("127.0.0.1", "localhost");
 
-   joblistsz = dnxCalculateJobListSize();
-
-   dnxLog("Allocating %d service request slots in the DNX job list.", joblistsz);
-
-   if ((ret = dnxJobListCreate(joblistsz, &joblist)) != 0)
-   {
-      dnxLog("Failed to initialize DNX job list with %d slots.", joblistsz);
-      return ret;
-   }
-
-   // create and configure collector
-   if ((ret = dnxCollectorCreate("Collect", cfg.collectorUrl,
-         joblist, &collector)) != 0)
-      return ret;
-
-   // create and configure dispatcher
-   if ((ret = dnxDispatcherCreate("Dispatch", cfg.dispatcherUrl,
-         joblist, &dispatcher)) != 0)
-      return ret;
-
-   // create worker node registrar
-   if ((ret = dnxRegistrarCreate(joblistsz * 2,
-         dnxDispatcherGetChannel(dispatcher), &registrar)) != 0)
-      return ret;
-
-   pthread_t tid;
-   if ((ret = pthread_create(&tid, NULL, (void *(*)(void *))dnxStatsRequestListener, NULL)) != 0)
-   //if ((ret = pthread_create(&tid, 0, dnxStatsRequestListener, NULL)) != 0)
-   {
-      dnxLog("dnx dnxServerInit: thread creation failed for stats listener: %s.",dnxErrorString(ret));
-      ret = DNX_ERR_THREAD;
-   }
-
    // Create the list of affinity groups (Nagios Hostgroups)
    // Get the list of host groups
    extern hostgroup *hostgroup_list;
@@ -1279,6 +1246,39 @@ static int dnxServerInit(void)
          dnxDebug(2, "dnxServerInit: [%s] is in a hostgroup with no dnxClient",
             temp_host->name);
       }
+   }
+ 
+   joblistsz = dnxCalculateJobListSize();
+
+   dnxLog("Allocating %d service request slots in the DNX job list.", joblistsz);
+
+   if ((ret = dnxJobListCreate(joblistsz, &joblist)) != 0)
+   {
+      dnxLog("Failed to initialize DNX job list with %d slots.", joblistsz);
+      return ret;
+   }
+
+   // create and configure collector
+   if ((ret = dnxCollectorCreate("Collect", cfg.collectorUrl,
+         joblist, &collector)) != 0)
+      return ret;
+
+   // create and configure dispatcher
+   if ((ret = dnxDispatcherCreate("Dispatch", cfg.dispatcherUrl,
+         joblist, &dispatcher)) != 0)
+      return ret;
+
+   // create worker node registrar
+   if ((ret = dnxRegistrarCreate(joblistsz * 2,
+         dnxDispatcherGetChannel(dispatcher), &registrar)) != 0)
+      return ret;
+
+   pthread_t tid;
+   if ((ret = pthread_create(&tid, NULL, (void *(*)(void *))dnxStatsRequestListener, NULL)) != 0)
+   //if ((ret = pthread_create(&tid, 0, dnxStatsRequestListener, NULL)) != 0)
+   {
+      dnxLog("dnx dnxServerInit: thread creation failed for stats listener: %s.",dnxErrorString(ret));
+      ret = DNX_ERR_THREAD;
    }
 
    // registration for this event starts everything rolling
