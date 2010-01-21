@@ -235,7 +235,11 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
             }
             break;
          case DNX_JOB_RECEIVED:
-               dnxDebug(2, "dnxJobListExpire: count(%i) type(%i) Ack not issued yet", current, pJob->state);
+            if(! pJob->ack) {
+               dnxDebug(2, "dnxJobListExpire: count(%i) type(DNX_JOB_RECEIVED) ack pending", current, pJob->state);
+            } else {
+               dnxDebug(2, "dnxJobListExpire: count(%i) type(DNX_JOB_RECEIVED) Ack sent", current, pJob->state);
+            }
             // The Collector thread will set this to DNX_JOB_COMPLETE once it has 
             // replied to Nagios, but we don't advance the head until that happens
             break;
