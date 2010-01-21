@@ -127,6 +127,27 @@ int dnxJobListMarkAck(DnxJobList * pJobList, DnxResult * pRes) {
    return ret;
 }
 
+int dnxJobListMarkAckSent(DnxJobList * pJobList, DnxXID * pXid) {
+   iDnxJobList * ilist = (iDnxJobList *)pJobList;
+   assert(pJobList && pXid);   // parameter validation
+   int ret = DNX_ERR_NOTFOUND;
+   dnxDebug(4, "dnxJobListMarkAckSent: Job [%lu,%lu]", 
+        pXid->objSerial, pXid->objSlot);
+   unsigned long current = pRes->xid.objSlot;
+
+   DNX_PT_MUTEX_LOCK(&ilist->mut);
+   if (dnxEqualXIDs(&(pXid), &ilist->list[current].xid)) {
+      if(ilist->list[current].state == DNX_JOB_INPROGRESS) {
+         ilist->list[current].state = DNX_JOB_ACKNOWLEDGED;
+         dnxAuditJob(&(ilist->list[current]), "CONFIRMED");
+         ret = DNX_OK;
+      }
+   }
+   DNX_PT_MUTEX_UNLOCK(&ilist->mut);
+   return ret;
+}
+
+
 //----------------------------------------------------------------------------
 
 int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * totalJobs) {
