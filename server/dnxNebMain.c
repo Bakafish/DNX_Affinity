@@ -1385,8 +1385,8 @@ void dnxJobCleanup(DnxNewJob * pJob)
 {
    if (pJob)
    {
-      dnxDebug(1, "dnxJobCleanup: Job objects freed for (%s) [%s].", 
-            pJob->host_name, pJob->pNode->addr);
+      dnxDebug(1, "dnxJobCleanup: Job [%lu:%lu] object freed for (%s) [%s].", 
+            pJob->xid.objSerial, pJob->xid.objSlot, pJob->host_name, pJob->pNode->addr);
       xfree(pJob->cmd);
       pJob->cmd = NULL;
       xfree(pJob->host_name);
