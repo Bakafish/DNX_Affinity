@@ -278,7 +278,10 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
                current, ilist->head, ilist->tail);
             // This is a job that we have received the response and we need to send an ack to
             // the client to let it know we got it
-
+            if(ilist->list[current].ack) {
+               // Only send a single Ack
+               break;
+            }
             // make a copy for the Dispatcher
             memcpy(pJob, &ilist->list[current], sizeof *pJob);
             
