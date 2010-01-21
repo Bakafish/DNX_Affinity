@@ -143,8 +143,6 @@ static int dnxDispatchJob(iDnxDispatcher * idisp, DnxNewJob * pSvcReq)
       if((ret = dnxSendJobAck(idisp->channel, &ack, pNode->address)) == DNX_OK) {
          dnxJobListMarkAckSent(idisp->joblist, &(ack.xid));
       }
-//       dnxAuditJob(pSvcReq, "CONFIRM");
-//      dnxJobCleanup(pSvcReq);
    } else {
       ret = dnxSendJobMsg(idisp, pSvcReq, pNode);
       dnxAuditJob(pSvcReq, "DISPATCH");

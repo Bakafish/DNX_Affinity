@@ -139,7 +139,7 @@ int dnxJobListMarkAckSent(DnxJobList * pJobList, DnxXID * pXid) {
 
    DNX_PT_MUTEX_LOCK(&ilist->mut);
    if (dnxEqualXIDs(pXid, &ilist->list[current].xid)) {
-      if(ilist->list[current].state == DNX_JOB_RECEIVED || ilist->list[current].state == DNX_JOB_INPROGRESS) {
+      if(ilist->list[current].state == DNX_JOB_RECEIVED || ilist->list[current].state == DNX_JOB_COMPLETE) {
          ilist->list[current].ack = 1;
          dnxAuditJob(&(ilist->list[current]), "CONFIRMED");
          ret = DNX_OK;
@@ -373,7 +373,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             // make a copy for the Dispatcher to send an Ack to the client
             memcpy(pJob, &ilist->list[current], sizeof *pJob);
             
-            dnxDebug(4, "dnxJobListDispatch: Recieved job [%lu:%lu] sending Ack.",
+            dnxDebug(4, "dnxJobListDispatch: Received job [%lu:%lu] sending Ack.",
                ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
             
             // release the mutex
