@@ -292,10 +292,6 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
                   if((ilist->list[current].pNode)->expires < now.tv_sec) {
                      dnxDebug(4, "dnxJobListDispatch: Pending job [%lu:%lu] waiting for Ack, client node expired. Resubmitting.",
                      ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
-                     
-                     // Deallocate the strings in our node and refresh it
-                     dnxNodeCleanup(ilist->list[current].pNode);
-
                      ilist->list[current].state = DNX_JOB_UNBOUND;
                   }
                   // The dnxClient service offer can't be reused since it might race
