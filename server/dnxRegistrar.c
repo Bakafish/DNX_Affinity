@@ -212,9 +212,8 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
    return ret;
 }
 
-static void dnxDeleteNodeReq(void * pMsg) {
+static void dnxDeleteNodeReq(DnxNodeRequest * pMsg) {
 //    assert(pMsg);
-   pMsg = (DnxNodeRequest *)pMsg; 
    if(pMsg != 0) {
       if(pMsg->xid.objSlot == -1) {
          dnxDebug(4, "dnxDeleteNodeReq: Deleting node message for job [%lu].", 
@@ -227,6 +226,7 @@ static void dnxDeleteNodeReq(void * pMsg) {
       xfree(pMsg->hn);
       xfree(pMsg);
    }
+   return DNX_OK;
 }
 
 DnxNodeRequest * dnxNodeCleanup(DnxNodeRequest * pNode) {
