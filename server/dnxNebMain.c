@@ -750,7 +750,7 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    Job.host_name  = xstrdup(ds->host_name); 
    Job.service_description = NULL;
    Job.object_check_type = check_type;
-   Job.cmd        = ds->command_line;
+   Job.cmd        = xstrdup(ds->command_line); //ds->command_line;
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
    Job.expires    = Job.start_time + Job.timeout + DNX_DISPATCH_TIMEOUT; /* temporary till we have a config variable for it ... */

@@ -162,11 +162,11 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                pJob->state = DNX_JOB_EXPIRED;
                // Add a copy to the expired job list
                memcpy(&pExpiredJobs[jobCount++], pJob, sizeof(DnxNewJob));
-               if(current == ilist->head && current != ilist->tail) {
-                  // we are expiring an item at the head of the list, so we need to
-                  // increment the head. It should never be larger than the tail.
-                  ilist->head = ((current + 1) % ilist->size);
-               }
+//                if(current == ilist->head && current != ilist->tail) {
+//                   // we are expiring an item at the head of the list, so we need to
+//                   // increment the head. It should never be larger than the tail.
+//                   ilist->head = ((current + 1) % ilist->size);
+//                }
             } else {
                // This job has not expired, but we may need to bind it to a client
                if (pJob->state == DNX_JOB_UNBOUND) {
