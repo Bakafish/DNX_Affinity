@@ -35,7 +35,8 @@
 #define DNX_DISPATH_PORT   12480
 #define DNX_COLLECT_PORT   12481
 #define DNX_TCP_LISTEN     5
-#define DNX_DISPATCH_TIMEOUT 5
+// Make this negitive so we expire before the real timeout
+#define DNX_DISPATCH_TIMEOUT -5 
 
 /** Post a completed service request to the Nagios service result buffer.
  * 
