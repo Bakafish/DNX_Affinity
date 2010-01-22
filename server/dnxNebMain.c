@@ -560,7 +560,9 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    if (Job->pNode->xid.objSlot == -1) {
       // this was never dispatched
       dnxDebug(2, "dnxSubmitCheck: job[%lu] dnxClient=(unavailable) hostname=(%s)",
-          Job->pNode->xid.objSerial, chk_result->host_name);      
+          Job->pNode->xid.objSerial, chk_result->host_name);
+      chk_result->output = xstrdup(sResult->resData);
+      xfree(sResult->resData);
    } else {
 //    normalize_plugin_output(plugin_output, "B2");
    // Encapsulate the additional data into the extended results
@@ -755,7 +757,11 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
       dnxLog("dnxPostNewHostJob: Failed to post Host Job [%lu]; \"%s\": %d.", Job.xid.objSerial, Job.cmd, ret);
-   } 
+      xfree(Job.host_name);
+   } else {
+      // free the command line we generated.
+      xfree(ds->command_line);
+   }
    
    return ret;
 }
