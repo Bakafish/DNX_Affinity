@@ -623,8 +623,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    
    chk_result->start_time.tv_sec = check_time;
    chk_result->start_time.tv_usec = 0;
-   chk_result->finish_time = chk_result->start_time; // now
-   chk_result->execution_time = sResult->delta;
+   chk_result->finish_time = chk_result->start_time + sResult->delta;
       
       
    
