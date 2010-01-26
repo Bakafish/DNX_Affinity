@@ -1981,18 +1981,18 @@ unsigned long long dnxGetAffinity(char * name)
       // Push this into the host cache
       dnxAddAffinity(hostAffinity, name, affFlag);
       dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags.",
-         name, flag);
+         name, affFlag);
       return(affFlag);
    } else {
       // This is a dnxClient that is unaffiliated with a hostgroup
       // the default behavior should be that it can handle all requests
       // for backwards compatibility. This is dangerous though as a rogue or
       // misconfigured client could steal requests that it can't service.
-      flag = (unsigned long long)-2; // Match all affinity but local(LSB)
-      dnxAddAffinity(hostAffinity, name, flag);
+      affFlag = (unsigned long long)-2; // Match all affinity but local(LSB)
+      dnxAddAffinity(hostAffinity, name, affFlag);
       dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags."
       " This host is not a member of any hostgroup and will service ALL requests!",
-         name, flag);
+         name, affFlag);
       return(affFlag);
    }
 }
