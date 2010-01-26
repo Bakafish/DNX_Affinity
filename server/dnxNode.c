@@ -20,6 +20,7 @@ DnxNode* dnxNodeListCreateNode(char* address)
         dnxLog("dnxNodeListCreateNode: Creating a node for %s\n",address);
         pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
         pDnxNode->address = xstrdup(address);
+        pDnxNode->flags = (unsigned long long)0x0;
         DnxNode* end = dnxNodeListEnd();
         DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
@@ -170,13 +171,12 @@ int dnxNodeListCountNodes()
 {
     int count = 0;
     DnxNode* pDnxNode = gTopNode;
-    if(pDnxNode)
-        while(pDnxNode = pDnxNode->next)
-        {
+    if(pDnxNode) {
+        do {
              count++;
              dnxLog("Counting node at %s\n",pDnxNode->address);
-        }
-
+        } while(pDnxNode = pDnxNode->next);
+    }
     return count;
 }
 
@@ -242,7 +242,8 @@ unsigned long long dnxNodeListSetNodeAffinity(char* address, char* hostname)
     assert(address && isalnum(*address));
 
     DnxNode* pDnxNode = dnxNodeListFindNode(address);
-    unsigned long long flag = dnxGetAffinity(hostname);
+    unsigned long long local_flag = (long long unsigned)0x0;
+    local_flag = dnxGetAffinity(hostname);
     
     
     if(pDnxNode) {
