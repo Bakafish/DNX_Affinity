@@ -26,9 +26,9 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
             DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
             pDnxNode->address = xstrdup(address);
             pDnxNode->hostname = xstrdup(hostname);
-            pDnxNode->flags = dnxGetAffinity(hostname);
+            pDnxNode->flags = dnxGetAffinity(pDnxNode->hostname);
             dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%qu) (%qu)", 
-            pDnxNode->address, pDnxNode->hostname, pDnxNode->flags, dnxGetAffinity(hostname));
+            pDnxNode->address, pDnxNode->hostname, pDnxNode->flags, dnxGetAffinity(pDnxNode->hostname));
             
             // Push it behind the head
             pDnxNode->prev = pTopDnxNode;
@@ -44,9 +44,9 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
         DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
         pDnxNode->address = xstrdup(address);
         pDnxNode->hostname = xstrdup(hostname);
-        pDnxNode->flags = dnxGetAffinity(hostname);
+        pDnxNode->flags = dnxGetAffinity(pDnxNode->hostname);
         dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%qu) (%qu)", 
-        pDnxNode->address, pDnxNode->hostname, pDnxNode->flags, dnxGetAffinity(hostname));
+        pDnxNode->address, pDnxNode->hostname, pDnxNode->flags, dnxGetAffinity(pDnxNode->hostname));
         pDnxNode->prev = NULL;
         pDnxNode->next = NULL;
     }
