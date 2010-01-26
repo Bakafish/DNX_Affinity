@@ -1914,7 +1914,7 @@ unsigned long long dnxGetAffinity(char * name)
    dnxDebug(6, "dnxGetAffinity: entering with [%s]", name);
    extern hostgroup *hostgroup_list;
    hostgroup * hostgroupObj;
-   unsigned long long flag = 0;
+   unsigned long long flag = (unsigned long long)0;
    short int match = 0;
    DnxAffinityList * temp_aff;
    temp_aff = hostAffinity;   // We are probably looking for a host or dnxClient
