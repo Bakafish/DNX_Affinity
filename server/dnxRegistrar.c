@@ -101,6 +101,7 @@ static DnxQueueResult dnxCompareNodeReq(void * pLeft, void * pRight)
 static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
 {
    time_t now = time(0);
+   int ret = DNX_OK;
    
    assert(pLeft && pRight);
 
@@ -112,10 +113,14 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
    unsigned long long pxl = ((DnxNodeRequest *)pLeft)->flags;
    unsigned long long pxr = ((DnxNodeRequest *)pRight)->flags;
 
-   dnxDebug(6, "dnxCompareAffinityNodeReq: dnxClient flags [%qu], Host [%qu]",
+   dnxDebug(2, "dnxCompareAffinityNodeReq: before dnxClient flags [%qu], Host [%qu]",
       pxr, pxl);
 
-   return pxl & pxr ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
+   ret = pxl & pxr ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
+
+   dnxDebug(2, "dnxCompareAffinityNodeReq: after dnxClient flags [%qu], Host [%qu]",
+      pxr, pxl);
+   return ret;
 }
 
 //----------------------------------------------------------------------------
