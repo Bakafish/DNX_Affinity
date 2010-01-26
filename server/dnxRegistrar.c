@@ -167,8 +167,8 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
       // on that object, we use it to update the pReq object we got from the queue
       pReq->expires = (*ppDnxClientReq)->expires;
       dnxDebug(2,
-            "dnxRegistrar[%lx]: Updated req [%lu,%lu] at %u; expires at %u.",
-            tid, pReq->xid.objSerial, pReq->xid.objSlot,
+            "dnxRegistrar[%lx]: Updated req for [%s] flags:(%qu) [%lu,%lu] at %u; expires at %u.",
+            tid, pReq->hn, pReq->flags, pReq->xid.objSerial, pReq->xid.objSlot,
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       
       // Unless we correctly reuse the ppDnxClientReq object or reap it, it will
@@ -191,8 +191,8 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
          // create a new object
          *ppDnxClientReq = 0;    
          dnxDebug(2, 
-            "dnxRegisterNode[%lx]: Added new req for [%s] [%lu,%lu] at %u; expires at %u.", 
-            tid, pReq->hn, pReq->xid.objSerial, pReq->xid.objSlot, 
+            "dnxRegisterNode[%lx]: Added new req for [%s] flags:(%qu) [%lu,%lu] at %u; expires at %u.", 
+            tid, pReq->hn, pReq->flags, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       } else {
          dnxDebug(1, "dnxRegisterNode: Unable to enqueue node request: %s.", 
