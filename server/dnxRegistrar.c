@@ -188,7 +188,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
       // the correct flags in the queued object prior to queueing, so we don't race
       
       // Create the node if it doesn't exist
-      dnxNode *pStatNode = dnxNodeListCreateNode(pReq->addr, pReq->hn);
+      DnxNode *pStatNode = dnxNodeListCreateNode(pReq->addr, pReq->hn);
       pReq->flags = pStatNode->flags;
       
 //       pReq->flags = dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
