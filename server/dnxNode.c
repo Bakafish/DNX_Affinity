@@ -9,21 +9,23 @@ DnxNode* gTopNode;
 
 
 ///Create a new node and add it to the end of the list
-DnxNode* dnxNodeListCreateNode(char* address)
+DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
 {
+    // This is racy as hell, should have had a list level mutex
 
     DnxNode* pDnxNode = dnxNodeListFindNode(address);
 
     if(!pDnxNode)
     {
+        DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
+        DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
 
         dnxLog("dnxNodeListCreateNode: Creating a node for %s\n",address);
         pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
         pDnxNode->address = xstrdup(address);
-        pDnxNode->flags = (unsigned long long)0x0;
+        pDnxNode->hostname = xstrdup(hostname);
+        pDnxNode->flags = dnxGetAffinity(hostname);
         DnxNode* end = dnxNodeListEnd();
-        DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
-        DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
 
         if(end)
         {
@@ -108,7 +110,7 @@ void dnxNodeListReset()
 {
     dnxLog("dnxNodeListReset Called, reseting all node(s) stats!");
     dnxNodeListDestroy();
-    gTopNode = dnxNodeListCreateNode("127.0.0.1");
+    gTopNode = dnxNodeListCreateNode("127.0.0.1", "localhost");
 }
 
 ///Return a pointer to the end node in the list
@@ -185,7 +187,7 @@ int dnxNodeListCountNodes()
 *   @param address  - The IP address of the node you want
 *   @param  member - The name of the member you want to increment
 */
-unsigned dnxNodeListIncrementNodeMember(char* address,int member)
+unsigned dnxNodeListIncrementNodeMember(char* address, int member)
 {
     //If the IP address is NULL or corrupted it can cause nastiness later on, lets catch it here.
     assert(address && isalnum(*address));
@@ -223,10 +225,11 @@ unsigned dnxNodeListIncrementNodeMember(char* address,int member)
         }
         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
 
-    }else{
-        dnxDebug(3,"dnxNodeListIncrementNodeMember: Tried to increment stat %i for non-existent node ADDRESS: %s proceeding to create node",member,address);
-        dnxNodeListCreateNode(address);
-        retval = dnxNodeListIncrementNodeMember(address,member);
+    } else {
+        dnxDebug(1,"dnxNodeListIncrementNodeMember: Tried to increment stat %i for non-existent node ADDRESS: %s proceeding to create node",member,address);
+        dnxLog("dnxNodeListIncrementNodeMember: Tried to increment stat %i for non-existent node ADDRESS: %s proceeding to create node",member,address);
+//         dnxNodeListCreateNode(address);
+//         retval = dnxNodeListIncrementNodeMember(address,member);
     }
 
     return(retval);
@@ -236,35 +239,33 @@ unsigned dnxNodeListIncrementNodeMember(char* address,int member)
 *   @param address  - The IP address of the node you want
 *   @param  hostname  - the value you want to set member to
 */
-unsigned long long dnxNodeListSetNodeAffinity(char* address, char* hostname)
-{
-    //If the IP address is NULL or corrupted it can cause nastiness later on, lets catch it here.
-    assert(address && isalnum(*address));
-
-    DnxNode* pDnxNode = dnxNodeListFindNode(address);
-    unsigned long long local_flag = (long long unsigned)0x0;
-    local_flag = dnxGetAffinity(hostname);
-    
-    
-    if(pDnxNode) {
-        if(pDnxNode->flags == 0) {
-            DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
-            pDnxNode->hostname = xstrdup(hostname);
-            pDnxNode->flags = local_flag;//dnxGetAffinity(hostname); 
-            DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
-            dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%qu]",
-                pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
-        }
-    } else {
-        dnxDebug(2, "dnxNodeListSetNodeAffinity: No exsisting node:: Address: [%s], Hostname: [%s]",
-            address, hostname);
-        pDnxNode = dnxNodeListCreateNode(address);
-        DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
-        pDnxNode->hostname = xstrdup(hostname);
-        pDnxNode->flags = local_flag;//dnxGetAffinity(hostname);
-        DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
-        dnxDebug(2, "dnxNodeListSetNodeAffinity: Created Address: [%s], Hostname: [%s], Flags: [%qu]",
-            pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
-    }
-    return(pDnxNode->flags);
-}
+// unsigned long long dnxNodeListSetNodeAffinity(char* address, char* hostname)
+// {
+//     //If the IP address is NULL or corrupted it can cause nastiness later on, lets catch it here.
+//     assert(address && isalnum(*address));
+// 
+// //     DnxNode* pDnxNode = dnxNodeListFindNode(address);
+//     unsigned long long local_flag = dnxGetAffinity(hostname);
+//     
+//     if(pDnxNode) {
+//         if(pDnxNode->flags == 0) {
+//             DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
+//             pDnxNode->hostname = xstrdup(hostname);
+//             pDnxNode->flags = local_flag;//dnxGetAffinity(hostname); 
+//             DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
+//             dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%qu]",
+//                 pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
+//         }
+//     } else {
+//         dnxDebug(2, "dnxNodeListSetNodeAffinity: No exsisting node:: Address: [%s], Hostname: [%s]",
+//             address, hostname);
+// //         pDnxNode = dnxNodeListCreateNode(address);
+//         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
+//         pDnxNode->hostname = xstrdup(hostname);
+//         pDnxNode->flags = local_flag;//dnxGetAffinity(hostname);
+//         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
+//         dnxDebug(2, "dnxNodeListSetNodeAffinity: Created Address: [%s], Hostname: [%s], Flags: [%qu]",
+//             pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
+//     }
+//     return(pDnxNode->flags);
+// }

@@ -53,7 +53,7 @@ typedef struct DnxNode
 *   NOTE:  If a node already exists with that IP address, then
 *   we return the existing node instead of creating a new node
 */
-DnxNode* dnxNodeListCreateNode(char* address);
+DnxNode* dnxNodeListCreateNode(char *address, char *hostname);
 
 /** Node Destruction Function
 *   This function can be used to remove the entire list

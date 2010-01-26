@@ -186,7 +186,12 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
       // There was no prior object found, so we will try to store it in the queue
       // Make sure this host is registered to the global node list and set
       // the correct flags in the queued object prior to queueing, so we don't race
-      pReq->flags = dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
+      
+      // Create the node if it doesn't exist
+      dnxNode *pStatNode = dnxNodeListCreateNode(pReq->addr, pReq->hn);
+      pReq->flags = pStatNode->flags;
+      
+//       pReq->flags = dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);
       
       if ((ret = dnxQueuePut(ireg->rqueue, pReq)) == DNX_OK) {
          // the pointer to the object pointer is set to null to indicate that we 
