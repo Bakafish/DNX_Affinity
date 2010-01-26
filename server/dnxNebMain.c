@@ -1925,7 +1925,7 @@ unsigned long long dnxGetAffinity(char * name)
       // for backwards compatibility. This is dangerous though as a rogue or
       // misconfigured client could steal requests that it can't service.
       affFlag = (unsigned long long)-2; // Match all affinity but local(LSB)
-      dnxAddAffinity(hostAffinity, name, flag);
+      dnxAddAffinity(hostAffinity, name, affFlag);
       dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags."
       " This host is not a member of any hostgroup and will service ALL requests!",
          name, affFlag);
