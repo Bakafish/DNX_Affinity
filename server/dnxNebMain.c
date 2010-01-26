@@ -601,7 +601,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
          ret = snprintf(tokenString, maxLength, 
             "%s <DNX><CLIENT=\"%s\"/>"
             "<CLIENT_IP=\"%s\"/>"
-            "<HOSTGROUP=\"%s\"/></DNX>", sResult->resData, Job->pNode->hn, Job->pNode->addr, hGroup);
+            "<HOSTGROUP=\"%s\"/></DNX>", sResult->resData, Job->pNode->hn, Job->pNode->addr, hGroup); //<-- hGroup not being set, job is wrong
       }
    
       if(0 <= ret <= maxLength) {
@@ -1945,13 +1945,11 @@ unsigned long long dnxGetAffinity(char * name)
       }
    }
 
-   // Check the cache first
+   // Check the host cache first
    while (temp_aff != NULL) {
       if(temp_aff->name == NULL) { break; }
       dnxDebug(6, "dnxGetAffinity: Checking cache for [%s]", name);
-      if (strcmp(temp_aff->name, name) == 0)
-      {
-         // We have a cached copy so return
+      if (strcmp(temp_aff->name, name) == 0) { // We have a cached copy so return
          dnxDebug(4, "dnxGetAffinity: Found [%s] in cache with (%qu) flags.", name, temp_aff->flag);
          return(temp_aff->flag);
       }

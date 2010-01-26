@@ -109,6 +109,7 @@ void dnxNodeListReset()
     dnxNodeListDestroy();
     gTopNode = dnxNodeListCreateNode("127.0.0.1");
 }
+
 ///Return a pointer to the end node in the list
 DnxNode* dnxNodeListEnd()
 {
@@ -246,7 +247,7 @@ unsigned long long dnxNodeListSetNodeAffinity(char* address, char* hostname)
         if(pDnxNode->flags == 0) {
             DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
             pDnxNode->hostname = xstrdup(hostname);
-            pDnxNode->flags = dnxGetAffinity(hostname);
+            pDnxNode->flags = dnxGetAffinity(hostname); 
             DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
             dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%qu]",
                 pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
