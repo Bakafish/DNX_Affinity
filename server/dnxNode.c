@@ -242,12 +242,14 @@ unsigned long long dnxNodeListSetNodeAffinity(char* address, char* hostname)
     assert(address && isalnum(*address));
 
     DnxNode* pDnxNode = dnxNodeListFindNode(address);
-
+    unsigned long long flag = dnxGetAffinity(hostname);
+    
+    
     if(pDnxNode) {
         if(pDnxNode->flags == 0) {
             DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
             pDnxNode->hostname = xstrdup(hostname);
-            pDnxNode->flags = dnxGetAffinity(hostname); 
+            pDnxNode->flags = flag;//dnxGetAffinity(hostname); 
             DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
             dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%qu]",
                 pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
@@ -258,7 +260,7 @@ unsigned long long dnxNodeListSetNodeAffinity(char* address, char* hostname)
         pDnxNode = dnxNodeListCreateNode(address);
         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
         pDnxNode->hostname = xstrdup(hostname);
-        pDnxNode->flags = dnxGetAffinity(hostname);
+        pDnxNode->flags = flag;//dnxGetAffinity(hostname);
         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
         dnxDebug(2, "dnxNodeListSetNodeAffinity: Created Address: [%s], Hostname: [%s], Flags: [%qu]",
             pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
