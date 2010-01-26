@@ -13,6 +13,7 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
 {
     DnxNode *pDnxNode = NULL;
     // This is racy as hell, should have had a list level mutex
+    
     if(gTopNode != NULL) {
         DnxNode* pTopDnxNode = gTopNode;
         DNX_PT_MUTEX_LOCK(&pTopDnxNode->mutex);
@@ -26,6 +27,8 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
             pDnxNode->address = xstrdup(address);
             pDnxNode->hostname = xstrdup(hostname);
             pDnxNode->flags = dnxGetAffinity(hostname);
+            dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%qu)", 
+            pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
             
             // Push it behind the head
             pDnxNode->prev = pTopDnxNode;
@@ -42,6 +45,8 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
         pDnxNode->address = xstrdup(address);
         pDnxNode->hostname = xstrdup(hostname);
         pDnxNode->flags = dnxGetAffinity(hostname);
+        dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%qu)", 
+        pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
         pDnxNode->prev = NULL;
         pDnxNode->next = NULL;
     }
