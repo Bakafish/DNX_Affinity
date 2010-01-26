@@ -250,7 +250,7 @@ unsigned long long dnxNodeListSetNodeAffinity(char* address, char* hostname)
         if(pDnxNode->flags == 0) {
             DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
             pDnxNode->hostname = xstrdup(hostname);
-            pDnxNode->flags = flag;//dnxGetAffinity(hostname); 
+            pDnxNode->flags = local_flag;//dnxGetAffinity(hostname); 
             DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
             dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%qu]",
                 pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
@@ -261,7 +261,7 @@ unsigned long long dnxNodeListSetNodeAffinity(char* address, char* hostname)
         pDnxNode = dnxNodeListCreateNode(address);
         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
         pDnxNode->hostname = xstrdup(hostname);
-        pDnxNode->flags = flag;//dnxGetAffinity(hostname);
+        pDnxNode->flags = local_flag;//dnxGetAffinity(hostname);
         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
         dnxDebug(2, "dnxNodeListSetNodeAffinity: Created Address: [%s], Hostname: [%s], Flags: [%qu]",
             pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
