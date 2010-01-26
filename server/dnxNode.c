@@ -17,11 +17,11 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
 
     if(!pDnxNode)
     {
-        DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
-        DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
 
         dnxLog("dnxNodeListCreateNode: Creating a node for %s\n",address);
         pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
+        DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
+        DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
         pDnxNode->address = xstrdup(address);
         pDnxNode->hostname = xstrdup(hostname);
         pDnxNode->flags = dnxGetAffinity(hostname);
