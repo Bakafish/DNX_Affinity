@@ -167,7 +167,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
       // on that object, we use it to update the pReq object we got from the queue
       pReq->expires = (*ppDnxClientReq)->expires;
       dnxDebug(2,
-            "dnxRegistrar[%lx]: Updated req for [%s] flags:(%qu) [%lu,%lu] at %u; expires at %u.",
+            "dnxRegisterNode[%lx]: Updated req for [%s] flags:(%qu) [%lu,%lu] at %u; expires at %u.",
             tid, pReq->hn, pReq->flags, pReq->xid.objSerial, pReq->xid.objSlot,
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       
