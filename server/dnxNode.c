@@ -11,13 +11,14 @@ DnxNode* gTopNode;
 ///Create a new node and add it to the end of the list
 DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
 {
+    DnxNode *pDnxNode = NULL;
     // This is racy as hell, should have had a list level mutex
     if(gTopNode != NULL) {
         DnxNode* pTopDnxNode = gTopNode;
         DNX_PT_MUTEX_LOCK(&pTopDnxNode->mutex);
         // once we have a lock on the head, see if the object has been added
         // while we were waiting
-        DnxNode *pDnxNode = dnxNodeListFindNode(address);
+        pDnxNode = dnxNodeListFindNode(address);
         if(!pDnxNode) {
             // Make a new node
             pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
@@ -36,7 +37,7 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
         DNX_PT_MUTEX_UNLOCK(&pTopDnxNode->mutex);
     } else {
         // We are creating the top node
-        DnxNode *pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
+        pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
         DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
         pDnxNode->address = xstrdup(address);
         pDnxNode->hostname = xstrdup(hostname);
