@@ -12,38 +12,70 @@ DnxNode* gTopNode;
 DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
 {
     // This is racy as hell, should have had a list level mutex
-
-    DnxNode* pDnxNode = dnxNodeListFindNode(address);
-
-    if(!pDnxNode)
-    {
-
-        dnxLog("dnxNodeListCreateNode: Creating a node for %s\n",address);
-        pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
+    if(gTopNode != NULL) {
+        DnxNode* pTopDnxNode = gTopNode;
+        DNX_PT_MUTEX_LOCK(&pTopDnxNode->mutex);
+        // once we have a lock on the head, see if the object has been added
+        // while we were waiting
+        DnxNode *pDnxNode = dnxNodeListFindNode(address);
+        if(!pDnxNode) {
+            // Make a new node
+            pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
+            DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
+            pDnxNode->address = xstrdup(address);
+            pDnxNode->hostname = xstrdup(hostname);
+            pDnxNode->flags = dnxGetAffinity(hostname);
+            
+            // Push it behind the head
+            pDnxNode->prev = pTopDnxNode;
+            pDnxNode->next = pTopDnxNode->next;
+            pTopDnxNode->next = pDnxNode;
+        } 
+        
+        // unlock the head
+        DNX_PT_MUTEX_UNLOCK(&pTopDnxNode->mutex);
+    } else {
+        // We are creating the top node
+        DnxNode *pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
         DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
-        DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
         pDnxNode->address = xstrdup(address);
         pDnxNode->hostname = xstrdup(hostname);
         pDnxNode->flags = dnxGetAffinity(hostname);
-        DnxNode* end = dnxNodeListEnd();
-
-        if(end)
-        {
-            DNX_PT_MUTEX_LOCK(&end->mutex);
-            end->next = pDnxNode;
-            DNX_PT_MUTEX_UNLOCK(&end->mutex);
-        }
-
-        pDnxNode->prev = end;
+        pDnxNode->prev = NULL;
         pDnxNode->next = NULL;
-        DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
-
     }
-    // We don't have to initialize the remaining values since 
-    // we used calloc they are already set to 0
-
+    
     return pDnxNode;
 }
+//     if(!pDnxNode)
+//     {
+// 
+//         dnxLog("dnxNodeListCreateNode: Creating a node for %s\n",address);
+//         pDnxNode = (DnxNode*) xcalloc (1,sizeof(DnxNode));
+//         DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
+//         DNX_PT_MUTEX_LOCK(&pDnxNode->mutex);
+//         pDnxNode->address = xstrdup(address);
+//         pDnxNode->hostname = xstrdup(hostname);
+//         pDnxNode->flags = dnxGetAffinity(hostname);
+//         DnxNode* end = dnxNodeListEnd();
+// 
+//         if(end)
+//         {
+//             DNX_PT_MUTEX_LOCK(&end->mutex);
+//             end->next = pDnxNode;
+//             DNX_PT_MUTEX_UNLOCK(&end->mutex);
+//         }
+// 
+//         pDnxNode->prev = end;
+//         pDnxNode->next = NULL;
+//         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
+// 
+//     }
+//     // We don't have to initialize the remaining values since 
+//     // we used calloc they are already set to 0
+// 
+//     return pDnxNode;
+// }
 
 ///Remove a Node
 DnxNode* dnxNodeListRemoveNode(DnxNode* pDnxNode)
@@ -114,41 +146,41 @@ void dnxNodeListReset()
 }
 
 ///Return a pointer to the end node in the list
-DnxNode* dnxNodeListEnd()
-{
-    DnxNode* pTopDnxNode = gTopNode;
-    DnxNode* pDnxNode = NULL;
-    if(pTopDnxNode)
-        pDnxNode = pTopDnxNode;
-    else
-        return pDnxNode;
-
-    while(pDnxNode && pDnxNode->next != NULL)
-    {
-        pDnxNode = pDnxNode->next;
-    }
-    return pDnxNode;
-}
+// DnxNode* dnxNodeListEnd()
+// {
+//     DnxNode* pTopDnxNode = gTopNode;
+//     DnxNode* pDnxNode = NULL;
+//     if(pTopDnxNode)
+//         pDnxNode = pTopDnxNode;
+//     else
+//         return pDnxNode;
+// 
+//     while(pDnxNode && pDnxNode->next != NULL)
+//     {
+//         pDnxNode = pDnxNode->next;
+//     }
+//     return pDnxNode;
+// }
 
 ///Return a pointer to the beginning node in the list
-DnxNode* dnxNodeListBegin()
-{
-    DnxNode* pBottomNode = gTopNode;
-    DnxNode* pDnxNode = NULL;
-
-    if(pBottomNode->prev)
-    {
-        pDnxNode = pBottomNode->prev;
-    }else{
-            return pBottomNode;
-    }
-
-    while(pDnxNode->prev != NULL)
-    {
-        pDnxNode = pDnxNode->prev;
-    }
-    return pDnxNode;
-}
+// DnxNode* dnxNodeListBegin()
+// {
+//     DnxNode* pBottomNode = gTopNode;
+//     DnxNode* pDnxNode = NULL;
+// 
+//     if(pBottomNode->prev)
+//     {
+//         pDnxNode = pBottomNode->prev;
+//     } else {
+//         return pBottomNode;
+//     }
+// 
+//     while(pDnxNode->prev != NULL)
+//     {
+//         pDnxNode = pDnxNode->prev;
+//     }
+//     return pDnxNode;
+// }
 
 ///Find a node by it's IP address
 DnxNode* dnxNodeListFindNode(char* address)
@@ -158,13 +190,15 @@ DnxNode* dnxNodeListFindNode(char* address)
     assert(isalnum(*address));
 
     //dnxDebug(3,"Attempting to find node at %s\n",address);
-
+    if(!gTopNode)
+        return NULL;
+        
     DnxNode* pDnxNode = gTopNode;
 
-    while(pDnxNode && strcmp(pDnxNode->address,address) != 0)
-    {
+    while(pDnxNode && strcmp(pDnxNode->address,address) != 0) {
         pDnxNode = pDnxNode->next;
     }
+
     return pDnxNode;
 }
 

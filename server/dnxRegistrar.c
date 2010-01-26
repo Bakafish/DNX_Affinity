@@ -119,20 +119,6 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
 }
 
 //----------------------------------------------------------------------------
-
-/** Register a new client node "request for work" request.
- * 
- * The message is either stored or used to find an existing node request
- * that should be updated. If stored, @p pDnxClientReq is returned as zero so that
- * it will be reallocated by the caller. In all other cases, the same 
- * message block can be reused by the caller for the next request.
- * 
- * @param[in] ireg - the registrar on which to register a new client request.
- * @param[in] ppDnxClientReq - the address of the dnx client request node pointer.
- * 
- * @return Zero on success, or a non-zero error value.
- */
-
 /** Register a new client node "request for work" request.
  *
  * The message is either stored or used to find an existing node request
@@ -159,8 +145,13 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
    // compute expiration time of this request
    pReq->expires = now + pReq->ttl;
    pReq->retry = 0; 
-   dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
 
+   // Create the  worker stats node if it doesn't exist
+   DnxNode *pStatNode = dnxNodeListFindNode(pReq->addr);
+   if(!pStatNode)
+      pStatNode = dnxNodeListCreateNode(pReq->addr, pReq->hn);
+      
+   dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
 
    /* Locate existing dnxClient work request. The DNX client will send a request 
       and we look it up to see if it's in the queue. If it is already registered
@@ -183,12 +174,8 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
       // Unless we correctly reuse the ppDnxClientReq object or reap it, it will
       // leak badly
    } else {
-      // There was no prior object found, so we will try to store it in the queue
-      // Make sure this host is registered to the global node list and set
-      // the correct flags in the queued object prior to queueing, so we don't race
-      
-      // Create the node if it doesn't exist
-      DnxNode *pStatNode = dnxNodeListCreateNode(pReq->addr, pReq->hn);
+      // There was no prior object found, so we will try to store it in the req queue
+      // Set the correct flags in the queued object prior to queueing
       pReq->flags = pStatNode->flags;
       
 //       pReq->flags = dnxNodeListSetNodeAffinity(pReq->addr, pReq->hn);

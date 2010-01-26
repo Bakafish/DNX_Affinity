@@ -806,7 +806,6 @@ static int ehSvcCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-//   DnxNode * pDnxNode = gTopNode;
    extern check_result check_result_info;
 
    long long unsigned affinity = dnxGetAffinity(hostObj->name);
