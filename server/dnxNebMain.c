@@ -556,6 +556,15 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 	chk_result->check_options=check_options;
 	chk_result->latency=latency;
 */
+   if(Job->service_description != NULL) {
+      chk_result->service_description = xstrdup(Job->service_description);
+      chk_result->object_check_type = SERVICE_CHECK;
+      chk_result->check_type = SERVICE_CHECK_ACTIVE;
+   } else {
+      chk_result->service_description = NULL;
+      chk_result->object_check_type = HOST_CHECK;
+      chk_result->check_type = HOST_CHECK_ACTIVE;
+   }
 
    if (Job->pNode->xid.objSlot == -1) {
       // this was never dispatched
@@ -568,19 +577,8 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    // Encapsulate the additional data into the extended results
 
       char * hGroup = dnxGetHostgroupFromFlags(*(dnxGetAffinity(Job->host_name)), Job->pNode->flags);
-      if(Job->service_description != NULL) {
-         chk_result->service_description = xstrdup(Job->service_description);
-         chk_result->object_check_type = SERVICE_CHECK;
-         chk_result->check_type = SERVICE_CHECK_ACTIVE;
-         dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(%s)",
-            Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name, chk_result->service_description);
-      } else {
-         chk_result->service_description = NULL;
-         chk_result->object_check_type = HOST_CHECK;
-         chk_result->check_type = HOST_CHECK_ACTIVE;
-         dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(host_check)",
-            Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name);
-      }
+      dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(%s)",
+         Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name, chk_result->service_description);
    
       int maxLength = MAX_PLUGIN_OUTPUT_LENGTH - 1;
       char * tokenString = (char *)xmalloc(maxLength);
@@ -700,6 +698,7 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    assert(ds);
    assert(ds->command_line);
 
+
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
    Job.host_name  = xstrdup(ds->host_name);
@@ -714,8 +713,13 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
-      dnxLog("Failed to post Service Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
-   }   
+      dnxLog("dnxPostNewServiceJob: Failed to post Service Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
+      xfree(Job.host_name);
+   } else {   
+      dnxDebug(2, "dnxPostNewServiceJob: Posting Service (%s) Job [%lu]: %s.", ds->host_name, serial, Job.cmd);
+      // free the command line we generated?
+      //xfree(ds->command_line);
+   }
    return ret;
 }
 
@@ -754,13 +758,13 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    Job.pNode      = pNode;
    Job.ack        = false;
 
-   dnxDebug(2, "dnxPostNewHostJob: Posting Host (%s) Job [%lu]: %s.", ds->host_name, serial, Job.cmd);
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
       dnxLog("dnxPostNewHostJob: Failed to post Host Job [%lu]; \"%s\": %d.", Job.xid.objSerial, Job.cmd, ret);
       xfree(Job.host_name);
    } else {
+      dnxDebug(2, "dnxPostNewHostJob: Posting Host (%s) Job [%lu]: %s.", ds->host_name, serial, Job.cmd);
       // free the command line we generated.
       xfree(ds->command_line);
    }
@@ -2041,7 +2045,7 @@ char * dnxGetHostgroupFromFlags (unsigned long long host, unsigned long long cli
    temp_aff = hostGrpAffinity;
    while (temp_aff != NULL) {
       // Recurse through the hostgroup affinity list
-      dnxDebug(4, "dnxGetHostgroupFromFlags: Recursing hostgroup affinity list - [%s] = (%llu)", 
+      dnxDebug(6, "dnxGetHostgroupFromFlags: Recursing hostgroup affinity list - [%s] = (%llu)", 
       temp_aff->name, temp_aff->flag);
       // Is host in this group?
       if(flagUnion & temp_aff->flag) {
