@@ -445,19 +445,21 @@ void dnxRegistrarDestroy(DnxRegistrar * reg)
 DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long long flag) 
 {
    DnxAffinityList * temp_list = p;
+   unsigned long long tmpFlag = 0;
    
    if (p->next == p) 
    {
       p->name = xstrdup(name);
       p->flag = flag;
       p->next = NULL;
-      dnxDebug(3, "dnxAddAffinity: Added linked list item [%s]", p->name);    
+      dnxDebug(3, "dnxAddAffinity: Added linked list item [%s] flag (%llu)", p->name, p->flag);    
    } else {
       while (temp_list != NULL) {
          if(strcmp(name, temp_list->name) == 0){
-            dnxDebug(3, "dnxAddAffinity: Item [%s] flag was (%d) is now (%d)",
-               temp_list->name, (int)temp_list->flag, (int)(temp_list->flag | flag));    
-            temp_list->flag = temp_list->flag | flag;
+            tmpFlag = temp_list->flag;
+            temp_list->flag |= flag;
+            dnxDebug(3, "dnxAddAffinity: Item [%s] flag was (%llu) is now (%llu)",
+               temp_list->name, tmpFlag, temp_list->flag);    
             return p;
          }
          temp_list = temp_list->next;
@@ -467,7 +469,8 @@ DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long l
       new_item->flag = flag;
       new_item->next = p->next;
       p->next = new_item;
-      dnxDebug(3, "dnxAddAffinity: Added linked list item [%s] to [%s]", new_item->name, p->name);  
+      dnxDebug(3, "dnxAddAffinity: Added linked list item [%s] to [%s] with flag (%llu)", 
+         new_item->name, p->name, p->flag);  
    }
    return p;
 }

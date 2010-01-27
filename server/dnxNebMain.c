@@ -1209,10 +1209,10 @@ static int dnxServerInit(void)
          hostgroupObj = find_hostgroup(temp_aff->name);
          if(is_host_member_of_hostgroup(hostgroupObj, temp_host))
          {
-            flag = flag + temp_aff->flag;
-            dnxDebug(2, "dnxServerInit: matches [%s]", temp_aff->name);
+            flag |= temp_aff->flag;
+            dnxDebug(2, "dnxServerInit: matches [%s] flag is now (%llu)", temp_aff->name, flag);
          } else {
-            dnxDebug(4, "dnxServerInit: no match with [%s]", temp_aff->name);
+            dnxDebug(6, "dnxServerInit: no match with [%s]", temp_aff->name);
          }
          temp_aff = temp_aff->next;
       }
@@ -1226,8 +1226,8 @@ static int dnxServerInit(void)
    {
       flag = dnxGetAffinity(temp_host->name);
       if(dnxIsDnxClient(flag)) {
-         clientless = clientless | flag;
-         dnxDebug(2, "dnxServerInit: [%s] is a dnxClient", temp_host->name);
+         clientless |= flag;
+         dnxDebug(2, "dnxServerInit: [%s] is a dnxClient  covered groups now (%llu)", temp_host->name, clientless);
       }
    }
   
@@ -1238,9 +1238,9 @@ static int dnxServerInit(void)
    {
       flag = dnxGetAffinity(temp_host->name);
       if((flag | clientless) != clientless) {
-         dnxAddAffinity(hostAffinity, temp_host->name, 0x01);
          dnxDebug(2, "dnxServerInit: [%s] is in a hostgroup with no dnxClient",
             temp_host->name);
+         dnxAddAffinity(hostAffinity, temp_host->name, 0x01);
       }
    }
  
@@ -1965,8 +1965,7 @@ unsigned long long int dnxGetAffinity(char * name)
 
       // Is host in this group?
       hostgroupObj = find_hostgroup(temp_aff->name);
-      if(is_host_member_of_hostgroup(hostgroupObj, hostObj))
-      {
+      if(is_host_member_of_hostgroup(hostgroupObj, hostObj)) {
          affFlag |= (unsigned long long) temp_aff->flag;
          match++;
          dnxDebug(4, "dnxGetAffinity: matches [%s] flag is now (%llu)", temp_aff->name, affFlag);
