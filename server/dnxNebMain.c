@@ -1907,7 +1907,7 @@ static void * dnxStatsRequestListener(void * vpargs)
 
 //----------------------------------------------------------------------------
 
-unsigned long long dnxGetAffinity(char * name)
+unsigned long long int dnxGetAffinity(char * name)
 {
 
    dnxDebug(6, "dnxGetAffinity: entering with [%s]", name);
