@@ -810,7 +810,7 @@ static int ehSvcCheck(int event_type, void * data)
 
    long long unsigned affinity = dnxGetAffinity(hostObj->name);
    
-   dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%li)", hostObj->name, affinity);
+   dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%llu)", hostObj->name, affinity);
 
    if (cfg.bypassHostgroup && (affinity & 1)) // Affinity bypass group is always the LSB
    {
@@ -998,7 +998,7 @@ static int ehHstCheck(int event_type, void * data)
 
    long long unsigned affinity = dnxGetAffinity(hostObj->name);
 
-   dnxDebug(3, "ehHstCheck: [%s] Affinity flags (%li)", hostObj->name, affinity);
+   dnxDebug(3, "ehHstCheck: [%s] Affinity flags (%llu)", hostObj->name, affinity);
 
    if (cfg.bypassHostgroup && (affinity & 1)) // Affinity bypass group is always the LSB
    {
@@ -1189,7 +1189,7 @@ static int dnxServerInit(void)
         temp_hostgroup->group_name);
      } else {
         dnxAddAffinity(hostGrpAffinity, temp_hostgroup->group_name, flag);
-        dnxDebug(1, "dnxServerInit: Hostgroup [%s] uses (%li) flag.", temp_hostgroup->group_name, flag);
+        dnxDebug(1, "dnxServerInit: Hostgroup [%s] uses (%llu) flag.", temp_hostgroup->group_name, flag);
         flag <<= 1;
      }
    }
@@ -1203,7 +1203,7 @@ static int dnxServerInit(void)
       temp_aff = hostGrpAffinity;
       while (temp_aff != NULL) {
          // Recurse through the affinity list
-         dnxDebug(2, "dnxServerInit: Recursing affinity list - [%s] = (%li)", 
+         dnxDebug(2, "dnxServerInit: Recursing affinity list - [%s] = (%llu)", 
          temp_aff->name, temp_aff->flag);
          // Is host in this group?
          hostgroupObj = find_hostgroup(temp_aff->name);
@@ -2043,7 +2043,7 @@ char * dnxGetHostgroupFromFlags (unsigned long long host, unsigned long long cli
    temp_aff = hostGrpAffinity;
    while (temp_aff != NULL) {
       // Recurse through the hostgroup affinity list
-      dnxDebug(4, "dnxGetHostgroupFromFlags: Recursing hostgroup affinity list - [%s] = (%li)", 
+      dnxDebug(4, "dnxGetHostgroupFromFlags: Recursing hostgroup affinity list - [%s] = (%llu)", 
       temp_aff->name, temp_aff->flag);
       // Is host in this group?
       if(flagUnion & temp_aff->flag) {
