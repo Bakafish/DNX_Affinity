@@ -1925,7 +1925,7 @@ unsigned long long int* dnxGetAffinity(char * name)
       // for backwards compatibility. This is dangerous though as a rogue or
       // misconfigured client could steal requests that it can't service.
       *pFlag = (unsigned long long)-2; // Match all affinity but local(LSB)
-      dnxAddAffinity(hostAffinity, name, affFlag);
+      dnxAddAffinity(hostAffinity, name, *pFlag);
       dnxDebug(2, "dnxGetAffinity: Adding unnamed dnxClient to host cache with (%llu) flags."
       " This host is not a member of any hostgroup and will service ALL requests!", *pFlag);
       return pFlag;
@@ -1965,7 +1965,7 @@ unsigned long long int* dnxGetAffinity(char * name)
       // Is host in this group?
       hostgroupObj = find_hostgroup(temp_aff->name);
       if(is_host_member_of_hostgroup(hostgroupObj, hostObj)) {
-         affFlag |= (unsigned long long) temp_aff->flag;
+         *pFlag |= (unsigned long long) temp_aff->flag;
          match++;
          dnxDebug(4, "dnxGetAffinity: matches [%s] flag is now (%llu)", temp_aff->name, *pFlag);
       } else {
