@@ -228,7 +228,7 @@ DnxNodeRequest * dnxNodeCleanup(DnxNodeRequest * pNode) {
       xfree(pNode->addr);
       xfree(pNode->hn);
    }
-   pNode->flags = 0;
+   pNode->flags = 0ULL;
    pNode->hn = NULL;
    pNode->addr = NULL;
    pNode->xid.objSerial = -1;
@@ -446,6 +446,7 @@ DnxAffinityList* dnxAddAffinity(DnxAffinityList *p, char * name, unsigned long l
 {
    DnxAffinityList * temp_list = p;
    unsigned long long tmpFlag = flag;
+   
    
    if (p->next == p) 
    {

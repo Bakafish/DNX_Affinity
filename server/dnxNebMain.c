@@ -808,7 +808,7 @@ static int ehSvcCheck(int event_type, void * data)
 
    extern check_result check_result_info;
 
-   long long unsigned affinity = dnxGetAffinity(hostObj->name);
+   unsigned long long int affinity = dnxGetAffinity(hostObj->name);
    
    dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%llu)", hostObj->name, affinity);
 
@@ -996,7 +996,7 @@ static int ehHstCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   long long unsigned affinity = dnxGetAffinity(hostObj->name);
+   unsigned long long int affinity = dnxGetAffinity(hostObj->name);
 
    dnxDebug(3, "ehHstCheck: [%s] Affinity flags (%llu)", hostObj->name, affinity);
 
@@ -1153,10 +1153,10 @@ static int dnxServerInit(void)
    collector = 0;
    hostGrpAffinity = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
    hostAffinity = (DnxAffinityList *)malloc(sizeof(DnxAffinityList));
-   hostAffinity->flag = 0;
+   hostAffinity->flag = 0ULL;
    hostAffinity->name = NULL;
    hostAffinity->next = hostAffinity;
-   hostGrpAffinity->flag = 0;
+   hostGrpAffinity->flag = 0ULL;
    hostGrpAffinity->name = NULL;
    hostGrpAffinity->next = hostGrpAffinity;
    DnxAffinityList * temp_aff;
@@ -1178,7 +1178,7 @@ static int dnxServerInit(void)
    extern hostgroup *hostgroup_list;
    hostgroup * temp_hostgroup;
    // Create affinity linked list
-   unsigned long long flag = 2;
+   unsigned long long int flag = 2ULL;
    for (temp_hostgroup=hostgroup_list; temp_hostgroup!=NULL; temp_hostgroup=temp_hostgroup->next) 
    {
      dnxDebug(1, "dnxServerInit: Entering hostgroup init loop: %s", temp_hostgroup->group_name);
@@ -1189,8 +1189,8 @@ static int dnxServerInit(void)
         temp_hostgroup->group_name);
      } else {
         dnxDebug(1, "dnxServerInit: Hostgroup [%s] uses (%llu) flag.", temp_hostgroup->group_name, flag);
-        dnxAddAffinity(hostGrpAffinity, temp_hostgroup->group_name, flag);
-        flag <<= 1;
+        dnxAddAffinity(hostGrpAffinity, temp_hostgroup->group_name, flag); 
+        flag <<= 1ULL;
      }
    }
    // Create initial host list
@@ -1199,11 +1199,11 @@ static int dnxServerInit(void)
    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
    {
       dnxDebug(2, "Adding host [%s] to hostAffinity cache.", temp_host->name);
-      flag = 0;
+      flag = 0ULL;
       temp_aff = hostGrpAffinity;
       while (temp_aff != NULL) {
          // Recurse through the affinity list
-         dnxDebug(2, "dnxServerInit: Recursing affinity list - [%s] = (%llu)", 
+         dnxDebug(6, "dnxServerInit: Recursing affinity list - [%s] = (%llu)", 
          temp_aff->name, temp_aff->flag);
          // Is host in this group?
          hostgroupObj = find_hostgroup(temp_aff->name);
@@ -1219,7 +1219,7 @@ static int dnxServerInit(void)
       dnxAddAffinity(hostAffinity, temp_host->name, flag);
    }
    
-   unsigned long long clientless = 0;
+   unsigned long long clientless = 0ULL;
    // Make a bitmask where the 'holes' represent non-dnxClient hostgroups
    // by bitwise OR ing all the dnxClients
    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
@@ -1240,7 +1240,7 @@ static int dnxServerInit(void)
       if((flag | clientless) != clientless) {
          dnxDebug(2, "dnxServerInit: [%s] is in a hostgroup with no dnxClient",
             temp_host->name);
-         dnxAddAffinity(hostAffinity, temp_host->name, 1);
+         dnxAddAffinity(hostAffinity, temp_host->name, 1ULL);
       }
    }
  
@@ -1913,7 +1913,7 @@ unsigned long long int dnxGetAffinity(char * name)
    dnxDebug(6, "dnxGetAffinity: entering with [%s]", name);
    extern hostgroup *hostgroup_list;
    hostgroup * hostgroupObj;
-   unsigned long long affFlag = (unsigned long long)0;
+   unsigned long long affFlag = 0ULL;
    short int match = 0;
    DnxAffinityList * temp_aff;
    temp_aff = hostAffinity;   // We are probably looking for a host or dnxClient
@@ -2004,7 +2004,7 @@ int dnxHammingWeight(unsigned long long x) {
     unsigned long long count;
     unsigned long long y = x;
     for (count=0; y; count++)
-        y &= y - 1;
+        y &= y - 1ULL;
     return count; // Returns the number of binary 1's in a bitmask
 }
 
@@ -2012,7 +2012,7 @@ int dnxIsDnxClient(unsigned long long x) {
    // If we are in more than 1 hostgroup and also in the local checks
    // we are a dnxClient
     unsigned long long y = x;      
-    if ((dnxHammingWeight(y) > 1) && (y & (unsigned long long) 1)) {
+    if ((dnxHammingWeight(y) > 1) && (y & 1ULL)) {
         return 1;
     } else {
         return 0;
@@ -2024,14 +2024,14 @@ DnxRegistrar * dnxGetRegistrar() {
 }
 
 char * dnxGetHostgroupFromFlags (unsigned long long host, unsigned long long client) {
-   if(host == 0x01 && cfg.bypassHostgroup != NULL) {
+   if(host == 1ULL && cfg.bypassHostgroup != NULL) {
       // If the host is only in the bypass group, there is no need to do a lookup
       dnxDebug(2, "dnxGetHostgroupFromFlags: Host is only in bypass group (%s)",
          cfg.bypassHostgroup);
       return cfg.bypassHostgroup;
    }
    
-   unsigned long long flagUnion = host & client;
+   unsigned long long int flagUnion = host & client;
    if (!flagUnion) {
 //       if(dnxHammingWeight(host) == 1) {
 //          flagUnion = host;

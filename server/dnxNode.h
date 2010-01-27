@@ -33,7 +33,7 @@ typedef struct DnxNode
     struct DnxNode* prev; //!< Previous Node
     char* address;  //!< IP address or URL of worker
     char* hostname; //!< Hostname defined in dnxClient.cfg
-    unsigned long long flags; //!< Affinity flags assigned during init
+    unsigned long long int flags; //!< Affinity flags assigned during init
     unsigned jobs_dispatched; //!< How many jobs have been sent to worker
     unsigned jobs_handled;   //!< How many jobs have been handled
     unsigned jobs_rejected_oom;  //!< How many jobs have been rejected due to memory
