@@ -1188,8 +1188,8 @@ static int dnxServerInit(void)
         dnxDebug(1, "dnxServerInit: (bypassHostgroup match) Service for %s hostgroup will execute locally.", 
         temp_hostgroup->group_name);
      } else {
-        dnxAddAffinity(hostGrpAffinity, temp_hostgroup->group_name, flag);
         dnxDebug(1, "dnxServerInit: Hostgroup [%s] uses (%llu) flag.", temp_hostgroup->group_name, flag);
+        dnxAddAffinity(hostGrpAffinity, temp_hostgroup->group_name, flag);
         flag <<= 1;
      }
    }
