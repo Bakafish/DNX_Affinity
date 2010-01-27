@@ -27,13 +27,10 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
             DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
             pDnxNode->address = xstrdup(address);
             pDnxNode->hostname = xstrdup(hostname);
+dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags Before:(%llu)", pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
             temp_flag = dnxGetAffinity(pDnxNode->hostname);
             pDnxNode->flags = temp_flag;
-            dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%llu) (%llu)", 
-                pDnxNode->address, pDnxNode->hostname, 
-                pDnxNode->flags,
-                temp_flag 
-                );
+dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags After:(%llu)", pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
             
             // Push it behind the head
             pDnxNode->prev = pTopDnxNode;

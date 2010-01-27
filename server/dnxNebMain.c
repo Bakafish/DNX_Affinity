@@ -1928,7 +1928,7 @@ unsigned long long int dnxGetAffinity(char * name)
       dnxAddAffinity(hostAffinity, name, affFlag);
       dnxDebug(2, "dnxGetAffinity: Adding unnamed dnxClient to host cache with (%llu) flags."
       " This host is not a member of any hostgroup and will service ALL requests!", affFlag);
-      return affFlag;
+      return (unsigned long long int)affFlag;
    }
 
    host * hostObj = find_host(name); 
@@ -1950,7 +1950,7 @@ unsigned long long int dnxGetAffinity(char * name)
       if (strcmp(temp_aff->name, name) == 0) { // We have a cached copy so return
          affFlag = temp_aff->flag;
          dnxDebug(4, "dnxGetAffinity: Found [%s] in cache with (%llu) flags.", name, affFlag);
-         return affFlag;
+         return (unsigned long long int)affFlag;
       }
       temp_aff = temp_aff->next;
    }
@@ -1992,7 +1992,7 @@ unsigned long long int dnxGetAffinity(char * name)
       dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%llu) flags."
       " This host is not a member of any hostgroup and can service ALL requests!",
          name, affFlag);
-      return affFlag;
+      return (unsigned long long int)affFlag;
    }
 }
 
