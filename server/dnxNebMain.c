@@ -575,8 +575,9 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
    } else {
 //    normalize_plugin_output(plugin_output, "B2");
    // Encapsulate the additional data into the extended results
-
-      char * hGroup = dnxGetHostgroupFromFlags(*(dnxGetAffinity(Job->host_name)), Job->pNode->flags);
+      unsigned long long int *temp_aff = dnxGetAffinity(Job->host_name);
+      char * hGroup = dnxGetHostgroupFromFlags(*temp_aff, Job->pNode->flags);
+      
       dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(%s)",
          Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name, chk_result->service_description);
    
@@ -1952,6 +1953,7 @@ unsigned long long int* dnxGetAffinity(char * name)
       dnxDebug(6, "dnxGetAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0) { // We have a cached copy so return
          dnxDebug(4, "dnxGetAffinity: Found [%s] in cache with (%llu) flags.", name, temp_aff->flag);
+         xfree(pFlag);
          return &temp_aff->flag;
       }
       temp_aff = temp_aff->next;

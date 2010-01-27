@@ -128,6 +128,7 @@ DnxNode* dnxNodeListRemoveNode(DnxNode* pDnxNode)
     //Bye, Bye I'm leaving
     xfree(pDnxNode->address);
     xfree(pDnxNode->hostname);
+    xfree(pDnxNode->flags);
     DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
     xfree(pDnxNode);
 
