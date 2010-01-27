@@ -1170,7 +1170,7 @@ static int dnxServerInit(void)
    }
    
    // These need to be initialized before threads start trying to record stats....
-   gTopNode = dnxNodeListCreateNode("127.0.0.1", NULL);
+   gTopNode = dnxNodeListCreateNode("127.0.0.1", "localhost");
 //    dnxNodeListSetNodeAffinity("127.0.0.1", "localhost");
 
    // Create the list of affinity groups (Nagios Hostgroups)

@@ -12,7 +12,7 @@ DnxNode* gTopNode;
 DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
 {
     DnxNode *pDnxNode = NULL;
-    unsigned long long int *temp_flag = dnxGetAffinity(pDnxNode->hostname);
+    unsigned long long int *temp_flag = dnxGetAffinity(hostname);
     // This is racy as hell, should have had a list level mutex
     
     if(gTopNode != NULL) {
