@@ -567,7 +567,7 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
 //    normalize_plugin_output(plugin_output, "B2");
    // Encapsulate the additional data into the extended results
 
-      char * hGroup = dnxGetHostgroupFromFlags(dnxGetAffinity(Job->host_name), Job->pNode->flags);
+      char * hGroup = dnxGetHostgroupFromFlags(*(dnxGetAffinity(Job->host_name)), Job->pNode->flags);
       if(Job->service_description != NULL) {
          chk_result->service_description = xstrdup(Job->service_description);
          chk_result->object_check_type = SERVICE_CHECK;
@@ -808,7 +808,7 @@ static int ehSvcCheck(int event_type, void * data)
 
    extern check_result check_result_info;
 
-   unsigned long long int affinity = dnxGetAffinity(hostObj->name);
+   unsigned long long int affinity = *(dnxGetAffinity(hostObj->name));
    
    dnxDebug(4, "ehSvcCheck: [%s] Affinity flags (%llu)", hostObj->name, affinity);
 
@@ -996,7 +996,7 @@ static int ehHstCheck(int event_type, void * data)
       return OK;     // tell nagios execute locally
    }
 
-   unsigned long long int affinity = dnxGetAffinity(hostObj->name);
+   unsigned long long int affinity = *(dnxGetAffinity(hostObj->name));
 
    dnxDebug(3, "ehHstCheck: [%s] Affinity flags (%llu)", hostObj->name, affinity);
 
@@ -1224,7 +1224,7 @@ static int dnxServerInit(void)
    // by bitwise OR ing all the dnxClients
    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
    {
-      flag = dnxGetAffinity(temp_host->name);
+      flag = *(dnxGetAffinity(temp_host->name));
       if(dnxIsDnxClient(flag)) {
          clientless |= flag;
          dnxDebug(2, "dnxServerInit: [%s] is a dnxClient  covered groups now (%llu)", temp_host->name, clientless);
@@ -1236,7 +1236,7 @@ static int dnxServerInit(void)
    // FIXME?
    for (temp_host=host_list; temp_host!=NULL; temp_host=temp_host->next ) 
    {
-      flag = dnxGetAffinity(temp_host->name);
+      flag = *(dnxGetAffinity(temp_host->name));
       if((flag | clientless) != clientless) {
          dnxDebug(2, "dnxServerInit: [%s] is in a hostgroup with no dnxClient",
             temp_host->name);
@@ -1907,7 +1907,7 @@ static void * dnxStatsRequestListener(void * vpargs)
 
 //----------------------------------------------------------------------------
 
-unsigned long long int dnxGetAffinity(char * name)
+unsigned long long int* dnxGetAffinity(char * name)
 {
 
    dnxDebug(6, "dnxGetAffinity: entering with [%s]", name);
@@ -1928,7 +1928,7 @@ unsigned long long int dnxGetAffinity(char * name)
       dnxAddAffinity(hostAffinity, name, affFlag);
       dnxDebug(2, "dnxGetAffinity: Adding unnamed dnxClient to host cache with (%llu) flags."
       " This host is not a member of any hostgroup and will service ALL requests!", affFlag);
-      return (unsigned long long int)affFlag;
+      return &affFlag;
    }
 
    host * hostObj = find_host(name); 
@@ -1948,9 +1948,8 @@ unsigned long long int dnxGetAffinity(char * name)
       if(temp_aff->name == NULL) { break; }
       dnxDebug(6, "dnxGetAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0) { // We have a cached copy so return
-         affFlag = temp_aff->flag;
-         dnxDebug(4, "dnxGetAffinity: Found [%s] in cache with (%llu) flags.", name, affFlag);
-         return (unsigned long long int)affFlag;
+         dnxDebug(4, "dnxGetAffinity: Found [%s] in cache with (%llu) flags.", name, temp_aff->flag);
+         return &temp_aff->flag;
       }
       temp_aff = temp_aff->next;
    }
@@ -1981,7 +1980,7 @@ unsigned long long int dnxGetAffinity(char * name)
       dnxAddAffinity(hostAffinity, name, affFlag);
       dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%llu) flags.",
          name, affFlag);
-      return affFlag;
+      return &affFlag;
    } else {
       // This is a dnxClient that is unaffiliated with a hostgroup
       // the default behavior should be that it can handle all requests
@@ -1992,7 +1991,7 @@ unsigned long long int dnxGetAffinity(char * name)
       dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%llu) flags."
       " This host is not a member of any hostgroup and can service ALL requests!",
          name, affFlag);
-      return (unsigned long long int)affFlag;
+      return &affFlag;
    }
 }
 
