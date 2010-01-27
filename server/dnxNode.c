@@ -29,6 +29,7 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
             pDnxNode->hostname = xstrdup(hostname);
 dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags Before:(%llu)", pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
             temp_flag = dnxGetAffinity(pDnxNode->hostname);
+dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags Return:(%llu)", pDnxNode->address, pDnxNode->hostname, temp_flag);
             pDnxNode->flags = temp_flag;
 dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags After:(%llu)", pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
             
