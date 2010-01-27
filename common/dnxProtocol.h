@@ -145,14 +145,6 @@
 
 #include "dnxTransport.h"
 
-typedef struct DnxAffinityList
-{
-   char * name;                     //!< Name of Nagios Host group/dnxClient
-   unsigned long long flag;         //!< Flag for affinity check
-   struct DnxAffinityList * next;   //!< Next structure in linked list
-} DnxAffinityList;
-
-
 /** Defines the type of a DNX object in a network message. */
 typedef enum DnxObjType
 {

@@ -1178,13 +1178,13 @@ static int dnxServerInit(void)
    extern hostgroup *hostgroup_list;
    hostgroup * temp_hostgroup;
    // Create affinity linked list
-   unsigned long long flag = 0x02;
+   unsigned long long flag = 2;
    for (temp_hostgroup=hostgroup_list; temp_hostgroup!=NULL; temp_hostgroup=temp_hostgroup->next) 
    {
      dnxDebug(1, "dnxServerInit: Entering hostgroup init loop: %s", temp_hostgroup->group_name);
      if(strcmp(cfg.bypassHostgroup, temp_hostgroup->group_name)==0) {
         // This is the bypass group and should be assigned the NULL flag
-        dnxAddAffinity(hostGrpAffinity, temp_hostgroup->group_name, 0x01);
+        dnxAddAffinity(hostGrpAffinity, temp_hostgroup->group_name, 1);
         dnxDebug(1, "dnxServerInit: (bypassHostgroup match) Service for %s hostgroup will execute locally.", 
         temp_hostgroup->group_name);
      } else {
@@ -1240,7 +1240,7 @@ static int dnxServerInit(void)
       if((flag | clientless) != clientless) {
          dnxDebug(2, "dnxServerInit: [%s] is in a hostgroup with no dnxClient",
             temp_host->name);
-         dnxAddAffinity(hostAffinity, temp_host->name, 0x01);
+         dnxAddAffinity(hostAffinity, temp_host->name, 1);
       }
    }
  

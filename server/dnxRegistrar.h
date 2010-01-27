@@ -43,6 +43,14 @@
 /** An abstraction data type for the DNX registrar object. */
 typedef struct { int unused; } DnxRegistrar;
 
+typedef struct DnxAffinityList
+{
+   char * name;                     //!< Name of Nagios Host group/dnxClient
+   unsigned long long int flag;     //!< Flag for affinity check
+   struct DnxAffinityList * next;   //!< Next structure in linked list
+} DnxAffinityList;
+
+
 void dnxDeleteNodeReq(void * pMsg);
 DnxNodeRequest * dnxNodeCleanup(DnxNodeRequest * pNode);
 DnxNodeRequest * dnxCreateNodeReq(void);
