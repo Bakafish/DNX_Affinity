@@ -1913,7 +1913,7 @@ unsigned long long dnxGetAffinity(char * name)
    dnxDebug(6, "dnxGetAffinity: entering with [%s]", name);
    extern hostgroup *hostgroup_list;
    hostgroup * hostgroupObj;
-   unsigned long long affFlag = (unsigned long long)0x0;
+   unsigned long long affFlag = (unsigned long long)0;
    short int match = 0;
    DnxAffinityList * temp_aff;
    temp_aff = hostAffinity;   // We are probably looking for a host or dnxClient
@@ -1967,7 +1967,7 @@ unsigned long long dnxGetAffinity(char * name)
       hostgroupObj = find_hostgroup(temp_aff->name);
       if(is_host_member_of_hostgroup(hostgroupObj, hostObj))
       {
-         affFlag |= temp_aff->flag;
+         affFlag |= (unsigned long long) temp_aff->flag;
          match++;
          dnxDebug(4, "dnxGetAffinity: matches [%s]", temp_aff->name);
       } else {
@@ -2003,8 +2003,9 @@ unsigned long long dnxGetAffinity(char * name)
 
 int dnxHammingWeight(unsigned long long x) {
     unsigned long long count;
-    for (count=0; x; count++)
-        x &= x-1;
+    unsigned long long y = x;
+    for (count=0; y; count++)
+        y &= y - 1;
     return count; // Returns the number of binary 1's in a bitmask
 }
 
