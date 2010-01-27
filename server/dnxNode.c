@@ -12,7 +12,7 @@ DnxNode* gTopNode;
 DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
 {
     DnxNode *pDnxNode = NULL;
-    unsigned long long int temp_flag = 34359738369ULL;
+    unsigned long long int *temp_flag = dnxGetAffinity(pDnxNode->hostname);
     // This is racy as hell, should have had a list level mutex
     
     if(gTopNode != NULL) {
@@ -27,11 +27,8 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
             DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
             pDnxNode->address = xstrdup(address);
             pDnxNode->hostname = xstrdup(hostname);
-dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags Before:(%llu)", pDnxNode->address, pDnxNode->hostname, temp_flag);
-            temp_flag = *(dnxGetAffinity(pDnxNode->hostname));
-dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags Return:(%llu)", pDnxNode->address, pDnxNode->hostname, temp_flag);
-            pDnxNode->flags = temp_flag;
-dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags After:(%llu)", pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
+            pDnxNode->flags = *temp_flag;
+dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%llu)", pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
             
             // Push it behind the head
             pDnxNode->prev = pTopDnxNode;
@@ -47,18 +44,15 @@ dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags After:(%llu)", pDnxNode->addre
         DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
         pDnxNode->address = xstrdup(address);
         pDnxNode->hostname = xstrdup(hostname);
-        temp_flag = *(dnxGetAffinity(pDnxNode->hostname));
-        pDnxNode->flags = temp_flag;
+        pDnxNode->flags = *temp_flag;
         dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%llu) (%llu)", 
             pDnxNode->address, pDnxNode->hostname, 
-            pDnxNode->flags,
-            temp_flag 
-            );
+            pDnxNode->flags);
 
         pDnxNode->prev = NULL;
         pDnxNode->next = NULL;
     }
-    
+    xfree(temp_flag);
     return pDnxNode;
 }
 //     if(!pDnxNode)
