@@ -52,7 +52,6 @@ dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%llu)", pDnxNode->address, pD
         pDnxNode->prev = NULL;
         pDnxNode->next = NULL;
     }
-    xfree(temp_flag);
     return pDnxNode;
 }
 //     if(!pDnxNode)
