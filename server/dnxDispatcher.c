@@ -80,7 +80,7 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
 
    dnxDebug(2, 
          "dnxSendJobMsg[%lx]: Dispatching job [%lu,%lu] (%s) to dnxClient [%s]"
-         " at node %s host flags = (%qu)",
+         " at node %s host flags = (%llu)",
          tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
          pNode->hn, pNode->addr, pNode->flags);
 

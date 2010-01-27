@@ -112,7 +112,7 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
    unsigned long long pxl = ((DnxNodeRequest *)pLeft)->flags;
    unsigned long long pxr = ((DnxNodeRequest *)pRight)->flags;
 
-   dnxDebug(6, "dnxCompareAffinityNodeReq: dnxClient flags [%qu], Host [%qu]",
+   dnxDebug(6, "dnxCompareAffinityNodeReq: dnxClient flags [%llu], Host [%llu]",
       pxr, pxl);
 
    return pxl & pxr ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
@@ -153,7 +153,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
 
    pReq->flags = pStatNode->flags;
    dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
-   dnxDebug(2, "dnxRegisterNode: ENTER [%s,%s] flags:(%qu)", pReq->addr, pReq->hn, pReq->flags);
+   dnxDebug(2, "dnxRegisterNode: ENTER [%s,%s] flags:(%llu)", pReq->addr, pReq->hn, pReq->flags);
    /* Locate existing dnxClient work request. The DNX client will send a request 
       and we look it up to see if it's in the queue. If it is already registered
       the dnxQueueFind will set the pointer to that object, that's a problem since
@@ -168,7 +168,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
       // on that object, we use it to update the pReq object we got from the queue
       pReq->expires = (*ppDnxClientReq)->expires;
       dnxDebug(2,
-            "dnxRegisterNode[%lx]: Updated req for [%s,%s] flags:(%qu) [%lu,%lu] at %u; expires at %u.",
+            "dnxRegisterNode[%lx]: Updated req for [%s,%s] flags:(%llu) [%lu,%lu] at %u; expires at %u.",
             tid, pReq->addr, pReq->hn, pReq->flags, pReq->xid.objSerial, pReq->xid.objSlot,
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       
@@ -192,7 +192,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
          // create a new object
          *ppDnxClientReq = 0;    
          dnxDebug(2, 
-            "dnxRegisterNode[%lx]: Added new req for [%s,%s] flags:(%qu) [%lu,%lu] at %u; expires at %u.", 
+            "dnxRegisterNode[%lx]: Added new req for [%s,%s] flags:(%llu) [%lu,%lu] at %u; expires at %u.", 
             tid, pReq->addr, pReq->hn, pReq->flags, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
       } else {
@@ -374,7 +374,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
    if((ret = dnxQueueRemove(ireg->rqueue, (void **)ppNode, dnxCompareAffinityNodeReq)) == DNX_QRES_FOUND) {
       // make sure we return that we found a match...
       ret = DNX_OK;
-      dnxDebug(1, "dnxGetNodeRequest: Found job [%lu] from Hostnode [%s]:(%qu) with Affinity to dnxClient [%s]:(%qu) Returning(%i).",
+      dnxDebug(1, "dnxGetNodeRequest: Found job [%lu] from Hostnode [%s]:(%llu) with Affinity to dnxClient [%s]:(%llu) Returning(%i).",
          pNode->xid.objSerial, pNode->hn, pNode->flags, (*(DnxNodeRequest **)ppNode)->hn, (*(DnxNodeRequest **)ppNode)->flags, ret);   
       // ppNode now points at the dnxClient node , so we need to delete the 
       // job request at pNode to prevent leaks

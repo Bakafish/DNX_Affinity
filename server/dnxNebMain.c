@@ -1732,12 +1732,12 @@ bool buildStatsReply(char * request, DnxMgmtReply * pReply)
     DNX_PT_MUTEX_LOCK(&mutex);
         if(strcmp("AFFINITY",action) == 0){
             do {
-                appendString(&pReply->reply,"dnxClient (%s) IP: [%s]  Hostgroup flag [%qu]\n", 
+                appendString(&pReply->reply,"dnxClient (%s) IP: [%s]  Hostgroup flag [%llu]\n", 
                   pDnxNode->hostname, pDnxNode->address, pDnxNode->flags);
             } while (pDnxNode = pDnxNode->next);
             
             do {
-                appendString(&pReply->reply,"host (%s) Hostgroup flag [%qu]\n", temp_aff->name, temp_aff->flag);
+                appendString(&pReply->reply,"host (%s) Hostgroup flag [%llu]\n", temp_aff->name, temp_aff->flag);
             } while (temp_aff = temp_aff->next);
         }
         else
@@ -1926,7 +1926,7 @@ unsigned long long dnxGetAffinity(char * name)
       // misconfigured client could steal requests that it can't service.
       affFlag = (unsigned long long)-2; // Match all affinity but local(LSB)
       dnxAddAffinity(hostAffinity, name, affFlag);
-      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags."
+      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%llu) flags."
       " This host is not a member of any hostgroup and will service ALL requests!",
          name, affFlag);
       return(affFlag);
@@ -1949,7 +1949,7 @@ unsigned long long dnxGetAffinity(char * name)
       if(temp_aff->name == NULL) { break; }
       dnxDebug(6, "dnxGetAffinity: Checking cache for [%s]", name);
       if (strcmp(temp_aff->name, name) == 0) { // We have a cached copy so return
-         dnxDebug(4, "dnxGetAffinity: Found [%s] in cache with (%qu) flags.", name, temp_aff->flag);
+         dnxDebug(4, "dnxGetAffinity: Found [%s] in cache with (%llu) flags.", name, temp_aff->flag);
          return(temp_aff->flag);
       }
       temp_aff = temp_aff->next;
@@ -1960,7 +1960,7 @@ unsigned long long dnxGetAffinity(char * name)
    while (temp_aff != NULL) {
       if(temp_aff->name == NULL) { break; }
       // Recurse through the host group affinity list
-      dnxDebug(4, "dnxGetAffinity: Recursing Host Group list - [%s] = (%qu)", 
+      dnxDebug(4, "dnxGetAffinity: Recursing Host Group list - [%s] = (%llu)", 
       temp_aff->name, temp_aff->flag);
 
       // Is host in this group?
@@ -1980,7 +1980,7 @@ unsigned long long dnxGetAffinity(char * name)
    {
       // Push this into the host cache
       dnxAddAffinity(hostAffinity, name, affFlag);
-      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags.",
+      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%llu) flags.",
          name, affFlag);
       return(affFlag);
    } else {
@@ -1990,7 +1990,7 @@ unsigned long long dnxGetAffinity(char * name)
       // misconfigured client could steal requests that it can't service.
       affFlag = (unsigned long long)-2; // Match all affinity but local(LSB)
       dnxAddAffinity(hostAffinity, name, affFlag);
-      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%qu) flags."
+      dnxDebug(2, "dnxGetAffinity: Adding [%s] dnxClient to host cache with (%llu) flags."
       " This host is not a member of any hostgroup and will service ALL requests!",
          name, affFlag);
       return(affFlag);
@@ -2033,6 +2033,13 @@ char * dnxGetHostgroupFromFlags (unsigned long long host, unsigned long long cli
    }
    
    unsigned long long flagUnion = host & client;
+   if (!flagUnion) {
+//       if(dnxHammingWeight(host) == 1) {
+//          flagUnion = host;
+//       }
+      return NULL;
+   }
+   
    DnxAffinityList * temp_aff;
    temp_aff = hostGrpAffinity;
    while (temp_aff != NULL) {

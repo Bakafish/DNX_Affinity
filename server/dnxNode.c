@@ -27,7 +27,7 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
             pDnxNode->address = xstrdup(address);
             pDnxNode->hostname = xstrdup(hostname);
             pDnxNode->flags = dnxGetAffinity(pDnxNode->hostname);
-            dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%qu) (%qu)", 
+            dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%llu) (%llu)", 
                 pDnxNode->address, pDnxNode->hostname, 
                 pDnxNode->flags,
                 dnxGetAffinity(pDnxNode->hostname) 
@@ -48,7 +48,7 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
         pDnxNode->address = xstrdup(address);
         pDnxNode->hostname = xstrdup(hostname);
         pDnxNode->flags = dnxGetAffinity(pDnxNode->hostname);
-            dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%qu) (%qu)", 
+            dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%llu) (%llu)", 
                 pDnxNode->address, pDnxNode->hostname, 
                 pDnxNode->flags,
                 dnxGetAffinity(pDnxNode->hostname) 
@@ -300,7 +300,7 @@ unsigned dnxNodeListIncrementNodeMember(char* address, int member)
 //             pDnxNode->hostname = xstrdup(hostname);
 //             pDnxNode->flags = local_flag;//dnxGetAffinity(hostname); 
 //             DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
-//             dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%qu]",
+//             dnxDebug(2, "dnxNodeListSetNodeAffinity: Address: [%s], Hostname: [%s], Flags: [%llu]",
 //                 pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
 //         }
 //     } else {
@@ -311,7 +311,7 @@ unsigned dnxNodeListIncrementNodeMember(char* address, int member)
 //         pDnxNode->hostname = xstrdup(hostname);
 //         pDnxNode->flags = local_flag;//dnxGetAffinity(hostname);
 //         DNX_PT_MUTEX_UNLOCK(&pDnxNode->mutex);
-//         dnxDebug(2, "dnxNodeListSetNodeAffinity: Created Address: [%s], Hostname: [%s], Flags: [%qu]",
+//         dnxDebug(2, "dnxNodeListSetNodeAffinity: Created Address: [%s], Hostname: [%s], Flags: [%llu]",
 //             pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
 //     }
 //     return(pDnxNode->flags);
