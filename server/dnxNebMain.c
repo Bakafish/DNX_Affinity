@@ -2012,7 +2012,8 @@ int dnxHammingWeight(unsigned long long x) {
 int dnxIsDnxClient(unsigned long long x) {
    // If we are in more than 1 hostgroup and also in the local checks
    // we are a dnxClient
-    if ((dnxHammingWeight(x) > 1) && (x & 1)) {
+    unsigned long long y = x;      
+    if ((dnxHammingWeight(y) > 1) && (y & (unsigned long long) 1)) {
         return 1;
     } else {
         return 0;
