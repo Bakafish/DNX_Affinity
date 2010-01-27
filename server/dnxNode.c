@@ -12,7 +12,7 @@ DnxNode* gTopNode;
 DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
 {
     DnxNode *pDnxNode = NULL;
-    unsigned long long int temp_flag = 0ULL;
+    unsigned long long int temp_flag = 34359738369ULL;
     // This is racy as hell, should have had a list level mutex
     
     if(gTopNode != NULL) {
