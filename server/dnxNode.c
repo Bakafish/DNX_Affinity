@@ -27,7 +27,7 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
             DNX_PT_MUTEX_INIT(&pDnxNode->mutex);
             pDnxNode->address = xstrdup(address);
             pDnxNode->hostname = xstrdup(hostname);
-dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags Before:(%llu)", pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
+dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags Before:(%llu)", pDnxNode->address, pDnxNode->hostname, temp_flag);
             temp_flag = dnxGetAffinity(pDnxNode->hostname);
 dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags Return:(%llu)", pDnxNode->address, pDnxNode->hostname, temp_flag);
             pDnxNode->flags = temp_flag;
