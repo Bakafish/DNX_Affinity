@@ -153,7 +153,6 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
 
    pReq->flags = pStatNode->flags;
    dnxNodeListIncrementNodeMember(pReq->addr, JOBS_REQ_RECV);
-   dnxDebug(2, "dnxRegisterNode: ENTER [%s,%s] flags:(%llu)", pReq->addr, pReq->hn, pReq->flags);
    /* Locate existing dnxClient work request. The DNX client will send a request 
       and we look it up to see if it's in the queue. If it is already registered
       the dnxQueueFind will set the pointer to that object, that's a problem since

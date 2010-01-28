@@ -708,7 +708,11 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    Job.cmd        = xstrdup(ds->command_line);
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
-   Job.expires    = Job.start_time + Job.timeout + DNX_DISPATCH_TIMEOUT; /* temporary till we have a config variable for it ... */
+   // We need to expire a bit before Nagios does to make sure it get's our reply
+   // DNX_DEF_TIMER_SLEEP is the length in ms of the expiration thread timer, 
+   // so worst case it should give Nagios an answer.
+   // If the job isn't assigned to a client in DNX_DISPATCH_TIMEOUT seconds it will expire
+   Job.expires    = Job.start_time + Job.timeout - (DNX_DEF_TIMER_SLEEP / 1000);
    Job.pNode      = pNode;
    Job.ack        = false;
 
@@ -755,7 +759,11 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
    Job.cmd        = xstrdup(ds->command_line); //ds->command_line;
    Job.start_time = ds->start_time.tv_sec;
    Job.timeout    = ds->timeout;
-   Job.expires    = Job.start_time + Job.timeout + DNX_DISPATCH_TIMEOUT; /* temporary till we have a config variable for it ... */
+   // We need to expire a bit before Nagios does to make sure it get's our reply
+   // DNX_DEF_TIMER_SLEEP is the length in ms of the expiration thread timer, 
+   // so worst case it should give Nagios an answer.
+   // If the job isn't assigned to a client in DNX_DISPATCH_TIMEOUT seconds it will expire
+   Job.expires    = Job.start_time + Job.timeout - (DNX_DEF_TIMER_SLEEP / 1000);
    Job.pNode      = pNode;
    Job.ack        = false;
 
@@ -834,8 +842,8 @@ static int ehSvcCheck(int event_type, void * data)
    dnxDebug(4, "ehSvcCheck: Received Job [%lu] at Now (%lu), Start Time (%lu).",
       serial, (unsigned long)time(0), (unsigned long)svcdata->start_time.tv_sec);
    
-   time_t now = time(0);
-   time_t expires = now + svcdata->timeout + DNX_DISPATCH_TIMEOUT;
+//    time_t now = time(0);
+//    time_t expires = now + svcdata->timeout + DNX_DISPATCH_TIMEOUT;
    
    if ((ret = dnxGetNodeRequest(registrar, &pNode)) != DNX_OK) { 
    // No available workers

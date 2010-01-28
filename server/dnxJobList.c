@@ -189,61 +189,68 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
    int zero_factor = ilist->size - current; // add this value to normalize the index
    dnxDebug(2, "dnxJobListExpire: searching for (%i) expired objects. Head(%lu) Tail(%i)", *totalJobs, ilist->head, ilist->tail);
    int state = 0;
+   int dispatch_timeout = now - DNX_DISPATCH_TIMEOUT;
    while(jobCount < *totalJobs) {
       state = (pJob = &ilist->list[current])->state;
       // only examine jobs that are either awaiting dispatch or results
       switch (state) {
+         case DNX_JOB_UNBOUND:
+            if(pJob->start_time <= dispatch_timeout) {
+               dnxDebug(2, "dnxJobListExpire: Expiring Unbound Job [%lu:%lu] count(%i) type(%i) Start Time: (%lu) Now: (%lu)",
+                  pJob->xid.objSerial, pJob->xid.objSlot, current, state, pJob->start_time, now);               
+               // Put the old job in a purgable state   
+               pJob->state = DNX_JOB_EXPIRED;
+               // Add a copy to the expired job list
+               memcpy(&pExpiredJobs[jobCount++], pJob, sizeof(DnxNewJob));    
+            } else {
+               // This job has not expired, try and get a dnxClient for it
+               if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) == DNX_OK) { 
+                  // If OK we have successfully dispatched it so update it's expiration
+                  dnxDebug(2, "dnxJobListExpire: Dequeueing DNX_JOB_UNBOUND job [%lu:%lu] Expires in (%i) seconds. Dispatch TO:(%i) Now: (%lu) count(%i) type(%i)", 
+                     pJob->xid.objSerial, pJob->xid.objSlot, dispatch_timeout - now, dispatch_timeout, now, current, state);
+                  pJob->state = DNX_JOB_PENDING;
+                  pthread_cond_signal(&ilist->cond);  // signal that a new job is available
+               } else {
+                  dnxDebug(3, "dnxJobListExpire: Unable to dequeue DNX_JOB_UNBOUND job [%lu:%lu] Expires in (%i) seconds. Dispatch TO:(%i) Now: (%lu) count(%i) type(%i)", 
+                     pJob->xid.objSerial, pJob->xid.objSlot, dispatch_timeout - now, dispatch_timeout, now, current, state);
+               }
+            }
+            break;
          case DNX_JOB_PENDING:
          case DNX_JOB_INPROGRESS:
-         case DNX_JOB_UNBOUND:
             // check the job's expiration stamp
-            if (pJob->expires <= now) {
-               // This is an expired job
-               dnxDebug(2, "dnxJobListExpire: Expiring Job [%lu:%lu] count(%i) type(%i) Exp: (%lu) Now: (%lu)",
+            if (pJob->expires <= now) { //  
+               // This is an expired job, it was sent out, but never came back
+               dnxDebug(1, "dnxJobListExpire: Expiring Job [%lu:%lu] count(%i) type(%i) Exp: (%lu) Now: (%lu)",
                   pJob->xid.objSerial, pJob->xid.objSlot, current, state, pJob->expires, now);               
                // Put the old job in a purgable state   
                pJob->state = DNX_JOB_EXPIRED;
                // Add a copy to the expired job list
                memcpy(&pExpiredJobs[jobCount++], pJob, sizeof(DnxNewJob));
-            } else {
-               // This job has not expired, but we may need to bind it to a client
-               if (pJob->state == DNX_JOB_UNBOUND) {
-                  // Try and get a dnxClient for it
-                  if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) == DNX_OK) { 
-                     // If OK we have successfully dispatched it so update it's expiration
-                     dnxDebug(2, "dnxJobListExpire: Dequeueing DNX_JOB_UNBOUND job [%lu:%lu] Expires in (%i) seconds. Exp: (%lu) Now: (%lu) count(%i) type(%i)", 
-                        pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now, current, state);
-                     pJob->state = DNX_JOB_PENDING;
-                     pthread_cond_signal(&ilist->cond);  // signal that a new job is available
-                  } else {
-                     dnxDebug(2, "dnxJobListExpire: Unable to dequeue DNX_JOB_UNBOUND job [%lu:%lu] Expires in (%i) seconds. Exp: (%lu) Now: (%lu) count(%i) type(%i)", 
-                        pJob->xid.objSerial, pJob->xid.objSlot, pJob->expires - now, pJob->expires, now, current, state);
-                  }
-               } 
-            }
+            } 
             break;
          case DNX_JOB_COMPLETE:
             // If the Ack hasn't been sent out yet, give it time to complete
             if(! pJob->ack) {
-               dnxDebug(2, "dnxJobListExpire: Waiting to send Ack. count(%i) type(%i)", current, state);
+               dnxDebug(3, "dnxJobListExpire: Waiting to send Ack. count(%i) type(%i)", current, state);
                break;
             }
          case DNX_JOB_EXPIRED:
             dnxJobCleanup(pJob);
-            dnxDebug(2, "dnxJobListExpire: Nullified Job. count(%i) type(%i)", current, state);
+            dnxDebug(3, "dnxJobListExpire: Nullified Job. count(%i) type(%i)", current, state);
          case DNX_JOB_NULL:
             if(current == ilist->head && current != ilist->tail) {
                ilist->head = ((current + 1) % ilist->size);
-               dnxDebug(2, "dnxJobListExpire: Moving head to (%i). count(%i) type(%i)", ilist->head, current, state);
+               dnxDebug(2, "dnxJobListExpire: Moving head to (%i). count(%i) type(%i)", ilist->head, current, pJob->state);
                // we have an old item at the head of the list, so we need to
                // increment the head. It should never be larger than the tail.
             } else {
-               dnxDebug(2, "dnxJobListExpire: Null Job. count(%i) type(%i)", current, state);
+               dnxDebug(5, "dnxJobListExpire: Null Job. count(%i) type(%i)", current, pJob->state);
             }
             break;
          case DNX_JOB_RECEIVED:
             if(! pJob->ack) {
-               dnxDebug(2, "dnxJobListExpire: Waiting to send Ack. job [%lu:%lu] count(%i) type(%i)", current, state);
+               dnxDebug(3, "dnxJobListExpire: Waiting to send Ack. job [%lu:%lu] count(%i) type(%i)", current, state);
             } else {
                dnxDebug(2, "dnxJobListExpire: Ack sent. job [%lu:%lu] count(%i) type(%i)", current, state);
             }
@@ -324,14 +331,7 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
                      ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
                      ilist->list[current].state = DNX_JOB_UNBOUND;
                   }
-                  // The dnxClient service offer can't be reused since it might race
-                  // if the ack comes back late and we attempt to dispatch after
-                  // the dnxClient node is deleted
-
-                  // Let's just wait for the thread to expire and avoid the race condition where the results 
-                  // or ack arrive after we have decided to redispatch
-                  break;
-                  
+                  break;                  
                } else {
                   // This is a new job, so dispatch it
                   dnxDebug(4, "dnxJobListDispatch: Dispatching new job [%lu:%lu] waiting for Ack",
@@ -341,9 +341,6 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             
             // set our retry interval
             (ilist->list[current].pNode)->retry = now.tv_sec + 1; // This should be the latency value
-
-            // make sure we don't expire our job prematurely as we may have been waiting a while to dispatch
-            ilist->list[current].expires = now.tv_sec + ilist->list[current].timeout + 5;
          
             // make a copy for the Dispatcher to send to client
             memcpy(pJob, &ilist->list[current], sizeof *pJob);
@@ -370,9 +367,6 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             return ret;
       }
 
-
-
-
       if (current == ilist->tail) {
          // if we are at the end of the queue
          gettimeofday(&now, 0);
@@ -380,13 +374,13 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
          timeout.tv_nsec = now.tv_usec * 1000;
          if ((ret = pthread_cond_timedwait(&ilist->cond, &ilist->mut, &timeout)) == ETIMEDOUT) {
             // We waited for the time out period and no new jobs arrived. So give control back to caller.
-            dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. Thread timer returned.");      
+            dnxDebug(5, "dnxJobListDispatch: Reached end of dispatch queue. Thread timer returned.");      
             DNX_PT_MUTEX_UNLOCK(&ilist->mut);
             return ret;
          } else {
             // We were signaled that there is a new job, so lets move back to the head and get it!
             current = ilist->head;
-            dnxDebug(2, "dnxJobListDispatch: Reached end of dispatch queue. A new job arrived.");      
+            dnxDebug(5, "dnxJobListDispatch: Reached end of dispatch queue. A new job arrived.");      
          }
       } else {
          // move to next item in queue
