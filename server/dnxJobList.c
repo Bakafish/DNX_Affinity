@@ -203,6 +203,9 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                // Add a copy to the expired job list
                memcpy(&pExpiredJobs[jobCount++], pJob, sizeof(DnxNewJob));    
             } else {
+               // If there is a client associated with it, xid.objSlot != -1
+               // then it means we may be getting a result coming back to us
+            
                // This job has not expired, try and get a dnxClient for it
                if (dnxGetNodeRequest(dnxGetRegistrar(), &(pJob->pNode)) == DNX_OK) { 
                   // If OK we have successfully dispatched it so update it's expiration
@@ -331,15 +334,27 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
                      ilist->list[current].xid.objSerial, ilist->list[current].xid.objSlot);
                      ilist->list[current].state = DNX_JOB_UNBOUND;
                      
-                     // reset the node
-                     dnxDeleteNodeReq(ilist->list[current].pNode);
-                     DnxNodeRequest * pNode = dnxCreateNodeReq();
-                     pNode->flags = *(dnxGetAffinity(ilist->list[current].host_name));
-                     pNode->hn = xstrdup(ilist->list[current].host_name);
-                     pNode->addr = NULL;
-                     pNode->xid.objSlot = -1;
-                     pNode->xid.objSerial = ilist->list[current].xid.objSerial;
-                     ilist->list[current].pNode = pNode;
+                     // reset the node?
+                     // It's likely that the same client will be servicing us
+                     // or that the job might come back in the mean time, so we
+                     // should keep this node as long as possible
+                     // We just need to make sure that the Affinity is correct and that 
+                     // it's only used to find a new node, so if we get as far as 
+                     // resubmitting, we will have a valid node anyway
+                     
+                     // If the original job comes back, the acks will get all messed up
+                     // not sure how to deal with that other than to just be graceful
+                     // about receiving lots of results...
+                   
+                     
+//                      dnxDeleteNodeReq(ilist->list[current].pNode);
+//                      DnxNodeRequest * pNode = dnxCreateNodeReq();
+                     ilist->list[current].pNode->flags = *(dnxGetAffinity(ilist->list[current].host_name));
+//                      pNode->hn = xstrdup(ilist->list[current].host_name);
+//                      pNode->addr = NULL;
+//                      pNode->xid.objSlot = -1;
+//                      pNode->xid.objSerial = ilist->list[current].xid.objSerial;
+//                      ilist->list[current].pNode = pNode;
                   }
                   break;                  
                } else {
@@ -350,7 +365,10 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
             }
             
             // set our retry interval
-            (ilist->list[current].pNode)->retry = now.tv_sec + 1; // This should be the latency value
+            // This should be fairly forgiving in case we just missed the Ack but it actually
+            // got the job and is returning our results.
+            (ilist->list[current].pNode)->retry = now.tv_sec + 5; 
+            
          
             // make a copy for the Dispatcher to send to client
             memcpy(pJob, &ilist->list[current], sizeof *pJob);
@@ -432,7 +450,7 @@ int dnxJobListCollect(DnxJobList * pJobList, DnxXID * pxid, DnxNewJob * pJob)
          ilist->list[current].ack = 0;
          ret = DNX_ERR_ALREADY;           // It needs another Ack
       } else {
-         // DNX_JOB_INPROGRESS
+         // DNX_JOB_INPROGRESS // DNX_JOB_UNBOUND!!
          ilist->list[current].state = DNX_JOB_RECEIVED;      
          // make a copy to return to the Collector
          memcpy(pJob, &ilist->list[current], sizeof *pJob);
