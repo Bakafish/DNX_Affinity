@@ -714,10 +714,10 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
-      dnxLog("dnxPostNewServiceJob: Failed to post Service Job [%lu]; \"%s\": %d.",Job.xid.objSerial, Job.cmd, ret);
+      dnxLog("dnxPostNewServiceJob: Failed to post Service Job [%lu]; \"%s\": %d.", serial, ds->command_line, ret);
       xfree(Job.host_name);
    } else {   
-      dnxDebug(2, "dnxPostNewServiceJob: Posting Service (%s) Job [%lu]: %s.", ds->host_name, serial, Job.cmd);
+      dnxDebug(2, "dnxPostNewServiceJob: Posting Service (%s) Job [%lu]: %s.", ds->host_name, serial, ds->command_line);
       // free the command line we generated?
       //xfree(ds->command_line);
    }
@@ -762,10 +762,10 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
-      dnxLog("dnxPostNewHostJob: Failed to post Host Job [%lu]; \"%s\": %d.", Job.xid.objSerial, Job.cmd, ret);
+      dnxLog("dnxPostNewHostJob: Failed to post Host Job [%lu]; \"%s\": %d.", serial, ds->command_line, ret);
       xfree(Job.host_name);
    } else {
-      dnxDebug(2, "dnxPostNewHostJob: Posting Host (%s) Job [%lu]: %s.", ds->host_name, serial, Job.cmd);
+      dnxDebug(2, "dnxPostNewHostJob: Posting Host (%s) Job [%lu]: %s.", ds->host_name, serial, ds->command_line);
       // free the command line we generated.
       xfree(ds->command_line);
    }
