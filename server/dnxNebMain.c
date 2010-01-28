@@ -712,7 +712,7 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
    // DNX_DEF_TIMER_SLEEP is the length in ms of the expiration thread timer, 
    // so worst case it should give Nagios an answer.
    // If the job isn't assigned to a client in DNX_DISPATCH_TIMEOUT seconds it will expire
-   Job.expires    = Job.start_time + Job.timeout - (DNX_DEF_TIMER_SLEEP / 1000);
+   Job.expires    = Job.start_time + Job.timeout - 5;
    Job.pNode      = pNode;
    Job.ack        = false;
 
