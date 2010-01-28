@@ -333,11 +333,13 @@ int dnxJobListDispatch(DnxJobList * pJobList, DnxNewJob * pJob)
                      
                      // reset the node
                      dnxDeleteNodeReq(ilist->list[current].pNode);
-                     ilist->list[current].pNode->flags = *(dnxGetAffinity(ilist->list[current].host_name));
-                     ilist->list[current].pNode->hn = xstrdup(ilist->list[current].host_name);
-                     ilist->list[current].pNode->addr = NULL;
-                     ilist->list[current].pNode->xid.objSlot = -1;
-                     ilist->list[current].pNode->xid.objSerial = ilist->list[current].xid.objSerial;
+                     DnxNodeRequest * pNode = dnxCreateNodeReq();
+                     pNode->flags = *(dnxGetAffinity(ilist->list[current].host_name));
+                     pNode->hn = xstrdup(ilist->list[current].host_name);
+                     pNode->addr = NULL;
+                     pNode->xid.objSlot = -1;
+                     pNode->xid.objSerial = ilist->list[current].xid.objSerial;
+                     ilist->list[current].pNode = pNode;
                   }
                   break;                  
                } else {
