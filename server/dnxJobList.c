@@ -187,7 +187,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
    // walk the entire job list - InProgress and Pending jobs (in that order)
    current = ilist->head;
    int zero_factor = ilist->size - current; // add this value to normalize the index
-   dnxDebug(2, "dnxJobListExpire: searching for (%i) expired objects. Head(%ul)", *totalJobs, current);
+   dnxDebug(2, "dnxJobListExpire: searching for (%i) expired objects. Head(%lu)", *totalJobs, current);
    while(jobCount < *totalJobs) {
       
       // only examine jobs that are either awaiting dispatch or results
@@ -239,8 +239,6 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                break;
             }
          case DNX_JOB_EXPIRED:
-            pJob->state = DNX_JOB_NULL;
-            dnxJobCleanup(pJob);
          case DNX_JOB_NULL:
             if(current == ilist->head && current != ilist->tail) {
                dnxDebug(2, "dnxJobListExpire: count(%i) type(%i) Moving head", current, pJob->state);
@@ -251,6 +249,7 @@ int dnxJobListExpire(DnxJobList * pJobList, DnxNewJob * pExpiredJobs, int * tota
                dnxDebug(2, "dnxJobListExpire: count(%i) type(%i) Head(%i) Tail(%i)", 
                   current, pJob->state, ilist->head, ilist->tail);
             }
+            dnxJobCleanup(pJob);
             break;
          case DNX_JOB_RECEIVED:
             if(! pJob->ack) {
