@@ -374,7 +374,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
    if((ret = dnxQueueRemove(ireg->rqueue, (void **)ppNode, dnxCompareAffinityNodeReq)) == DNX_QRES_FOUND) {
       // make sure we return that we found a match...
       ret = DNX_OK;
-      DnxNodeRequest *sNode = *(DnxNodeRequest **)ppNode);
+      DnxNodeRequest *sNode = *(DnxNodeRequest **)ppNode;
       dnxDebug(1, "dnxGetNodeRequest: Found job [%lu] from Hostnode:[%s] flgs:(%llu) to dnxClient:[%s] flgs:(%llu) JobID [%lu:%lu].",
          pNode->xid.objSerial, pNode->hn, pNode->flags, sNode->hn, sNode->flags, sNode->xid.objSerial, sNode->xid.objSlot);   
       // ppNode now points at the dnxClient node , so we need to delete the 
