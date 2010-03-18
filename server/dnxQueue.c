@@ -337,7 +337,7 @@ DnxQueueResult dnxQueueRemove(DnxQueue * queue, void ** ppPayload,
       prev = item;
    }
 
-   dnxDebug(3, "dnxQueueRemove: (%i) elements searched in (%i) sized queue", 
+   dnxDebug(8, "dnxQueueRemove: (%i) elements searched in (%i) sized queue", 
       counter, iqueue->size);
 
    DNX_PT_MUTEX_UNLOCK(&iqueue->mutex);

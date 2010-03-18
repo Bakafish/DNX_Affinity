@@ -115,7 +115,10 @@ static DnxQueueResult dnxCompareAffinityNodeReq(void * pLeft, void * pRight)
    dnxDebug(6, "dnxCompareAffinityNodeReq: dnxClient flags [%llu], Host [%llu]",
       pxr, pxl);
 
-   return pxl & pxr ? DNX_QRES_FOUND : DNX_QRES_CONTINUE;
+/* I did this because I incorrectly thought that I was trying to assign dnxClients to themselves :-/
+   return (((pxl & pxr) && strcmp( ((DnxNodeRequest *)pLeft)->hn, ((DnxNodeRequest *)pRight)->hn )) ? DNX_QRES_FOUND : DNX_QRES_CONTINUE);
+*/   
+   return ((pxl & pxr) ? DNX_QRES_FOUND : DNX_QRES_CONTINUE);   
 }
 
 //----------------------------------------------------------------------------
@@ -166,7 +169,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
       // still found at *ppDnxClientReq, and since we updated the expiration
       // on that object, we use it to update the pReq object we got from the queue
       pReq->expires = (*ppDnxClientReq)->expires;
-      dnxDebug(2,
+      dnxDebug(6,
             "dnxRegisterNode[%lx]: Updated req for [%s,%s] flags:(%llu) [%lu,%lu] at %u; expires at %u.",
             tid, pReq->addr, pReq->hn, pReq->flags, pReq->xid.objSerial, pReq->xid.objSlot,
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
@@ -190,7 +193,7 @@ static int dnxRegisterNode(iDnxRegistrar * ireg, DnxNodeRequest ** ppDnxClientRe
          // to null in order to indicate to the caller function that it needs to 
          // create a new object
          *ppDnxClientReq = 0;    
-         dnxDebug(2, 
+         dnxDebug(6, 
             "dnxRegisterNode[%lx]: Added new req for [%s,%s] flags:(%llu) [%lu,%lu] at %u; expires at %u.", 
             tid, pReq->addr, pReq->hn, pReq->flags, pReq->xid.objSerial, pReq->xid.objSlot, 
             (unsigned)(now % 1000), (unsigned)(pReq->expires % 1000));
@@ -362,7 +365,7 @@ int dnxGetNodeRequest(DnxRegistrar * reg, DnxNodeRequest ** ppNode) {
    assert(reg && ppNode);
 
    if(! client_queue_len) {
-      dnxDebug(1, "dnxGetNodeRequest: There are no DNX client threads regestered.");
+      dnxDebug(2, "dnxGetNodeRequest: There are no DNX client threads regestered.");
       // We probably just started up and no threads are registered yet.
       // It's also possable that all our Clients are down or a previous run 
       // has expired all our threads and we haven't registered any new workers

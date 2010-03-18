@@ -100,14 +100,14 @@ static void * dnxCollector(void * data)
             &sResult, sResult.address, DNX_COLLECTOR_TIMEOUT)) == DNX_OK) {
          if(sResult.resCode == -1) {
             if((ret = dnxJobListMarkAck(icoll->joblist, &sResult)) == DNX_OK) {
-               dnxDebug(2, "dnxCollector[%lx]: Received ack for job [%lu,%lu]", 
+               dnxDebug(2, "dnxCollector[%lx]: Received ack for job [%lu:%lu]", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot);
             } else {
-               dnxDebug(2, "dnxCollector[%lx]: Had error (%s) with ack for job [%lu,%lu]", 
+               dnxDebug(2, "dnxCollector[%lx]: Had error (%s) with ack for job [%lu:%lu]", 
                   tid, dnxErrorString(ret), sResult.xid.objSerial, sResult.xid.objSlot);
             }
          } else {
-            dnxDebug(2, "dnxCollector[%lx]: Received result for job [%lu,%lu]: %s.", 
+            dnxDebug(2, "dnxCollector[%lx]: Received result for job [%lu:%lu]: %s.", 
                   tid, sResult.xid.objSerial, sResult.xid.objSlot, sResult.resData);
    
             // dequeue the matching service request from the in progress job queue
@@ -115,7 +115,7 @@ static void * dnxCollector(void * data)
             if ((ret = dnxJobListCollect(icoll->joblist, &sResult.xid, &Job)) == DNX_OK) {
    
                time_t check_time = Job.start_time + sResult.delta;
-               dnxDebug(2, "dnxCollector[%lx]: Collecting Job [%lu,%lu] Hostname(%s) Time[%lu] Delta[%lu]",
+               dnxDebug(2, "dnxCollector[%lx]: Collecting Job [%lu:%lu] Hostname(%s) Time[%lu] Delta[%lu]",
                   tid, sResult.xid.objSerial, sResult.xid.objSlot, Job.host_name, check_time, sResult.delta);
    
                dnxNodeListIncrementNodeMember(Job.pNode->addr,JOBS_HANDLED);
@@ -125,12 +125,12 @@ static void * dnxCollector(void * data)
                dnxLog("RESPONSE: Job %lu: %s", sResult.xid.objSerial, sResult.resData);
                ret = dnxSubmitCheck(&Job, &sResult, check_time);
    
-               dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu,%lu]: %s.", 
+               dnxDebug(2, "dnxCollector[%lx]: Post result for job [%lu:%lu]: %s.", 
                      tid, sResult.xid.objSerial, sResult.xid.objSlot, 
                      dnxErrorString(ret));
                
                // We should finally be done with the job
-               dnxDebug(2, "dnxCollector[%lx]: Job [%lu,%lu]: type(%i).", 
+               dnxDebug(2, "dnxCollector[%lx]: Job [%lu:%lu]: type(%i).", 
                      tid, Job.xid.objSerial, Job.xid.objSlot, Job.state);
                dnxJobListMarkComplete(icoll->joblist, &Job.xid);
             } else {

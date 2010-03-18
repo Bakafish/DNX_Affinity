@@ -86,13 +86,13 @@ int dnxWaitForNodeRequest(DnxChannel * channel, DnxNodeRequest * pReg, char * ad
    
    // decode the XML message:
    xbuf.buf[xbuf.size] = 0;
-   dnxDebug(3, "dnxWaitForNodeRequest: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);
+   dnxDebug(6, "dnxWaitForNodeRequest: XML msg(%d bytes)=%s.", xbuf.size, xbuf.buf);
 
    // verify this is a "NodeRequest" message
    if ((ret = dnxXmlCmpStr(&xbuf, "Request", "NodeRequest")) != DNX_OK)
    {
       test = dnxXmlCmpStr(&xbuf, "Request", "JobAck");
-      dnxDebug(4, "dnxWaitForNodeRequest: Request (%i) != NodeRequest", test);
+      dnxDebug(4, "dnxWaitForNodeRequest: Request (%i)", test);
       return ret;
    }
    // decode the worker node's XID 

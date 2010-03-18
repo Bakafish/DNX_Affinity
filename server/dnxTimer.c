@@ -140,13 +140,15 @@ static void * dnxTimer(void * data)
             char msg[128];
             DnxNewJob * job = &ExpiredList[i];
 
-            dnxDebug(1, "dnxTimer[%lx]: Expiring Job [%lu,%lu]: %s.",pthread_self(), job->xid.objSerial, job->xid.objSlot, job->cmd);
+            dnxDebug(1, "dnxTimer[%lx]: Expiring Job [%lu:%lu]: %s.",pthread_self(), job->xid.objSerial, job->xid.objSlot, job->cmd);
 
             if(job->pNode->addr == NULL) {
-               sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - No dnxClients were available to service this request)",job->xid.objSerial, job->xid.objSlot);
+               sprintf(msg, "(DNX: %s Check [%lu:%lu] Timed Out - No dnxClients were available to service this request)",
+               (job->object_check_type ? "Host" : "Service"), job->xid.objSerial, job->xid.objSlot);
                dnxAuditJob(job, "DECLINE");
             } else {
-               sprintf(msg, "(DNX: Service Check [%lu,%lu] Timed Out - Node: %s - Failed to return job response in time allowed)",job->xid.objSerial, job->xid.objSlot, job->pNode->addr);
+               sprintf(msg, "(DNX: %s Check [%lu:%lu] Timed Out - Node: %s - Failed to return job response in time allowed)",
+               (job->object_check_type ? "Host" : "Service"), job->xid.objSerial, job->xid.objSlot, job->pNode->addr);
                dnxAuditJob(job, "EXPIRE");
             }
 
@@ -154,8 +156,8 @@ static void * dnxTimer(void * data)
 
             time_t check_time = job->start_time;
             sResult.resData = xstrdup(msg);
-            // We need to give the correct service or host result code
-            sResult.resCode = job->object_check_type ? 2 : 3;
+            // We need to give the correct service or host result code (service = 0, host = 1)
+            sResult.resCode = job->object_check_type ? 2 : 3; // host = HOST_UNREACHABLE, service = STATE_UNKNOWN
             ret = dnxSubmitCheck(job, &sResult, check_time); // This will delete the job and node objects
          }
       }

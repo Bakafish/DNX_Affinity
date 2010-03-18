@@ -79,7 +79,7 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
    time_t now = time(0);
 
    dnxDebug(2, 
-         "dnxSendJobMsg[%lx]: Dispatching job [%lu,%lu] (%s) to dnxClient [%s]"
+         "dnxSendJobMsg[%lx]: Dispatching job [%lu:%lu] (%s) to dnxClient [%s]"
          " at node %s host flags = (%llu)",
          tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
          pNode->hn, pNode->addr, pNode->flags);
@@ -96,7 +96,7 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
    job.cmd        = pSvcReq->cmd;
    job.timestamp  = now;
       
-   dnxDebug(1,"dnxSendJobMsg[%lx]: Job [%lu,%lu] is in state(%i) and expires in (%i) seconds.",
+   dnxDebug(1,"dnxSendJobMsg[%lx]: Job [%lu:%lu] is in state(%i) and expires in (%i) seconds.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->state, pSvcReq->expires - now);
    
    // Make a copy because it sometimes gets released before we even get to
@@ -105,11 +105,11 @@ static int dnxSendJobMsg(iDnxDispatcher * idisp, DnxNewJob * pSvcReq, DnxNodeReq
 
    if ((ret = dnxSendJob(idisp->channel, &job, pNode->address)) != DNX_OK)
    {
-            dnxDebug(1, "dnxSendJobMsg[%lx]: Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
+            dnxDebug(1, "dnxSendJobMsg[%lx]: Unable to send job [%lu:%lu] (%s) to worker node %s: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
             address, dnxErrorString(ret));
 
-            dnxLog("dnxSendJobMsg[%lx]: Unable to send job [%lu,%lu] (%s) to worker node %s: %s.",
+            dnxLog("dnxSendJobMsg[%lx]: Unable to send job [%lu:%lu] (%s) to worker node %s: %s.",
             tid, pSvcReq->xid.objSerial, pSvcReq->xid.objSlot, pSvcReq->cmd, 
             address, dnxErrorString(ret));
    } else {

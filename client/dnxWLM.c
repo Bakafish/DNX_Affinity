@@ -473,7 +473,7 @@ static void * dnxWorker(void * data)
          iwlm->jobsrcvd++;
          iwlm->active++;
 //          dnxSendJobAck(ws->collect, &job, &job.address);
-//          dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] (T/O %d): %s.", 
+//          dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu:%lu] (T/O %d): %s.", 
 //                tid, job.xid.objSerial, job.xid.objSlot, job.timeout, job.cmd);
          
 //          DnxAck ack;
@@ -481,7 +481,7 @@ static void * dnxWorker(void * data)
 //          ack.timestamp = job.timestamp;
          
          dnxSendJobAck(ws->collect, &job, 0);
-         dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu,%lu] to channel (%lx) (T/S %lu).", 
+         dnxDebug(3, "Worker[%lx]: Acknowledged job [%lu:%lu] to channel (%lx) (T/S %lu).", 
                tid, job.xid.objSerial, job.xid.objSlot, ws->collect, job.timestamp);
 
 
@@ -504,7 +504,7 @@ static void * dnxWorker(void * data)
          time_t jobstart;
 
 
-         dnxDebug(3, "Worker[%lx]: Received job [%lu,%lu] from (%lx) (T/O %d): %s.", 
+         dnxDebug(3, "Worker[%lx]: Received job [%lu:%lu] from (%lx) (T/O %d): %s.", 
                tid, job.xid.objSerial, job.xid.objSlot, ws->collect, job.timeout, job.cmd);
                
                
@@ -534,12 +534,12 @@ static void * dnxWorker(void * data)
          // store allocated copy of the result string
          if (*resData) result.resData = xstrdup(resData);
 
-         dnxDebug(3, "Worker[%lx]: Job [%lu,%lu] completed in %lu seconds: %d, %s.",
+         dnxDebug(3, "Worker[%lx]: Job [%lu:%lu] completed in %lu seconds: %d, %s.",
                tid, job.xid.objSerial, job.xid.objSlot, result.delta, 
                result.resCode, result.resData);
 
 //          if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK) {
-//             dnxDebug(3, "Worker[%lx]: Post job [%lu,%lu] results failed: %s.",
+//             dnxDebug(3, "Worker[%lx]: Post job [%lu:%lu] results failed: %s.",
 //                   tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
 //          }
          
@@ -549,20 +549,20 @@ static void * dnxWorker(void * data)
          int trys = 1;
          while(trys < 4) {
             if ((ret = dnxSendResult(ws->collect, &result, 0)) != DNX_OK) {
-               dnxDebug(3, "Worker[%lx]: Post job [%lu,%lu] results failed: %s.",
+               dnxDebug(3, "Worker[%lx]: Post job [%lu:%lu] results failed: %s.",
                      tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret));
                break;
             }
             // Now wait for our Ack
             if ((ret = dnxWaitForAck(ws->dispatch, &ack, job.address, 3)) != DNX_OK && ret != DNX_ERR_TIMEOUT) {
-               dnxDebug(3, "Worker[%lx]: Error receiving Ack for job [%lu,%lu]: %s. Retry (%i).",
+               dnxDebug(3, "Worker[%lx]: Error receiving Ack for job [%lu:%lu]: %s. Retry (%i).",
                      tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret), trys);
             } else if (ret == DNX_ERR_TIMEOUT) {
                // we didn't get our Ack
                trys++;
             } else {
                // We got our Ack
-               dnxDebug(3, "Worker[%lx]: Ack Received for job [%lu,%lu]: %s. After (%i) try(s).",
+               dnxDebug(3, "Worker[%lx]: Ack Received for job [%lu:%lu]: %s. After (%i) try(s).",
                      tid, job.xid.objSerial, job.xid.objSlot, dnxErrorString(ret), trys);
                break;
             }

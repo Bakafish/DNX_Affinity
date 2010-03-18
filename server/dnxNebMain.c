@@ -581,42 +581,62 @@ int dnxSubmitCheck(DnxNewJob * Job, DnxResult * sResult, time_t check_time)
       dnxDebug(2, "dnxSubmitCheck: dnxClient=(%s:%s) hostgroup=(%s) hostname=(%s) description=(%s)",
          Job->pNode->hn, Job->pNode->addr, hGroup, chk_result->host_name, chk_result->service_description);
    
-      int maxLength = MAX_PLUGIN_OUTPUT_LENGTH - 1;
-      char * tokenString = (char *)xmalloc(maxLength);
-      int ret = 0;
-      char * tail = NULL;
+      /* We want to add an XML token that gives Bronx (and anyone else) the DNX client info
+         but doesn't leak it into the main results string
+
+         See the plugin API: http://nagios.sourceforge.net/docs/3_0/pluginapi.html
+         
+      DISK OK - free space: / 3326 MB (56%); | /=2643MB;5948;5958;0;5968\n <--- perf data (SERVICEPERFDATA)
+      / 15272 MB (77%);   <--- Extended (LONGSERVICEOUTPUT)
+      /boot 68 MB (69%);
+      /home 69357 MB (27%);
+      /var/log 819 MB (84%); | /boot=68MB;88;93;0;98 <--- perf data continued (SERVICEPERFDATA)
+      /home=69357MB;253404;253409;0;253414 
+      /var/log=818MB;970;975;0;980
+
+      We should just be able to split on the first newline and insert our token after it.
+         
+      */
+      char * tokenString;
+      size_t tokenLength = asprintf(&tokenString, "<DNX><CLIENT=\"%s\"/><CLIENT_IP=\"%s\"/><HOSTGROUP=\"%s\"/></DNX>", Job->pNode->hn, Job->pNode->addr, hGroup);
       
-      if((tail = strchr(sResult->resData,'|')) != NULL) {
-         size_t len = strcspn(sResult->resData, "|");
-         char * head = (char *)xmalloc(len+1);
-         strncpy(head, sResult->resData, len);
-         head[len]='\0';
-         ret = snprintf(tokenString, maxLength, 
-            "%s <DNX><CLIENT=\"%s\"/>"
-            "<CLIENT_IP=\"%s\"/>"
-            "<HOSTGROUP=\"%s\"/></DNX> %s", head, Job->pNode->hn, Job->pNode->addr, hGroup, tail);
-         xfree(head);
+      char * resultHead;
+      char * resultString;
+      size_t resultLength;
+      
+      if (tokenLength > 0) {
+         size_t firstMatch = strcspn(sResult->resData, "\n");
+
+         if(firstMatch > 0) { 
+            // Just split on the first newline and insert in between 
+            resultHead = (char *)xmalloc(firstMatch + 1);
+            strncpy(resultHead, sResult->resData, firstMatch);
+            resultHead[firstMatch]='\0'; // strncpy doesn't NULL terminate!
+            resultLength = asprintf(&resultString, "%s\n%s%s", resultHead, tokenString, strchr(sResult->resData, '\n'));
+         } else { // No perf data, no extended data
+            resultLength = asprintf(&resultString, "%s\n%s", sResult->resData, tokenString);
+         }
+         xfree(tokenString);
       } else {
-         ret = snprintf(tokenString, maxLength, 
-            "%s <DNX><CLIENT=\"%s\"/>"
-            "<CLIENT_IP=\"%s\"/>"
-            "<HOSTGROUP=\"%s\"/></DNX>", sResult->resData, Job->pNode->hn, Job->pNode->addr, hGroup); //<-- hGroup not being set, job is wrong
+         // Some memory allocation issue creating the token string
+         dnxDebug(1, "dnxSubmitCheck: Error allocating string.");
       }
    
-      if(0 <= ret <= maxLength) {
-         chk_result->output = tokenString;
-         dnxDebug(3, "dnxSubmitCheck: Token appended to results %s", tokenString);
+      if(0 < resultLength <= MAX_PLUGIN_OUTPUT_LENGTH) {
+         chk_result->output = resultString;
+         dnxDebug(3, "dnxSubmitCheck: %s", resultString);
       } else {
          dnxDebug(2, "dnxSubmitCheck: Results string with DNX Token is too long!");
-         xfree(tokenString);
+         xfree(resultString);
          chk_result->output = xstrdup(sResult->resData);
       }
       xfree(sResult->resData);
    }
    
-   chk_result->return_code = sResult->resCode; // STATE_OK = 0
+   
+   chk_result->return_code = sResult->resCode;
    chk_result->exited_ok = TRUE;
-   chk_result->early_timeout = FALSE;
+   chk_result->early_timeout = FALSE; // We should flag this as true if we know we had a real script timeout
    chk_result->scheduled_check = TRUE;
    chk_result->reschedule_check = TRUE;
    
@@ -698,6 +718,8 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
 
    assert(ds);
    assert(ds->command_line);
+   time_t now;
+   now = time(0);
 
 
    // fill-in the job structure with the necessary information
@@ -718,10 +740,12 @@ static int dnxPostNewServiceJob(DnxJobList * joblist, unsigned long serial,
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
-      dnxLog("dnxPostNewServiceJob: Failed to post Service Job [%lu]; \"%s\": %d.", serial, ds->command_line, ret);
+      dnxLog("dnxPostNewServiceJob: Failed to post Service Job [%lu:000000]; %s, \"%s\" Reason: %s.", 
+         serial, ds->service_description, ds->command_line, dnxErrorString(ret));
       xfree(Job.host_name);
    } else {   
-      dnxDebug(2, "dnxPostNewServiceJob: Posting Service (%s) Job [%lu]: %s.", ds->host_name, serial, ds->command_line);
+      dnxDebug(2, "dnxPostNewServiceJob: TO:(%i) Expires in (%i)sec. Posting Service (%s) Job [%lu:000000]: %s, %s.", 
+         ds->timeout, ((ds->start_time.tv_sec + ds->timeout - 5) - now), ds->host_name, serial, ds->service_description, ds->command_line);
       // free the command line we generated?
       //xfree(ds->command_line);
    }
@@ -750,6 +774,8 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 
    assert(ds);
    assert(ds->command_line);
+   time_t now;
+   now = time(0);
 
    // fill-in the job structure with the necessary information
    dnxMakeXID(&Job.xid, DNX_OBJ_JOB, serial, 0);
@@ -770,10 +796,11 @@ static int dnxPostNewHostJob(DnxJobList * joblist, unsigned long serial,
 
    // post to the Job Queue
    if ((ret = dnxJobListAdd(joblist, &Job)) != DNX_OK) {
-      dnxLog("dnxPostNewHostJob: Failed to post Host Job [%lu]; \"%s\": %d.", serial, ds->command_line, ret);
+      dnxLog("dnxPostNewHostJob: Failed to post Host Job [%lu:000000]; \"%s\": %d.", serial, ds->command_line, ret);
       xfree(Job.host_name);
    } else {
-      dnxDebug(2, "dnxPostNewHostJob: Posting Host (%s) Job [%lu]: %s.", ds->host_name, serial, ds->command_line);
+      dnxDebug(2, "dnxPostNewHostJob: TO:(%i) Expires in (%i)sec. Posting Host (%s) Job [%lu:000000]: %s.", 
+         ds->timeout, ((ds->start_time.tv_sec + ds->timeout - 5) - now), ds->host_name, serial, ds->command_line);
       // free the command line we generated.
       xfree(ds->command_line);
    }
@@ -839,7 +866,7 @@ static int ehSvcCheck(int event_type, void * data)
    pNode->xid.objSerial = serial;
    pNode->xid.objSlot = -1;
 
-   dnxDebug(4, "ehSvcCheck: Received Job [%lu] at Now (%lu), Start Time (%lu).",
+   dnxDebug(4, "ehSvcCheck: Received Job [%lu:000000] at Now (%lu), Start Time (%lu).",
       serial, (unsigned long)time(0), (unsigned long)svcdata->start_time.tv_sec);
    
 //    time_t now = time(0);
@@ -849,22 +876,22 @@ static int ehSvcCheck(int event_type, void * data)
    // No available workers
       if (ret == DNX_ERR_NOTFOUND) { // If NOT_FOUND we should try and queue it
          if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK) {
-            dnxLog("ehSvcCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+            dnxLog("ehSvcCheck: Unable to post job [%lu:000000]: %s.", serial, dnxErrorString(ret));
             dnxDebug(2,"ehSvcCheck: Unable to post job, no matching dnxClients [%lu]: %s.", serial, dnxErrorString(ret));
          } else {
             dnxDebug(2, "ehSvcCheck: Service Check Queued Request");
             nagios_ret = NEBERROR_CALLBACKOVERRIDE;
          }
       } else { // We had some bad error or our time is up
-         dnxDebug(1, "ehSvcCheck: No worker nodes for (%s) Job [%s].",
+         dnxDebug(1, "ehSvcCheck: No worker nodes for Host:(%s) Service:(%s).",
             pNode->hn, svcdata->command_line);
          gTopNode->jobs_rejected_no_nodes++;
       }
    } else {
    // We got a valid client worker thread
       if ((ret = dnxPostNewServiceJob(joblist, serial, check_result_info.object_check_type, svcdata, pNode)) != DNX_OK) {
-         dnxLog("ehSvcCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
-         dnxDebug(2, "ehSvcCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+         dnxLog("ehSvcCheck: Unable to post job [%lu:000000]: %s.", serial, dnxErrorString(ret));
+         dnxDebug(2, "ehSvcCheck: Unable to post job [%lu:000000]: %s.", serial, dnxErrorString(ret));
       } else {
          nagios_ret = NEBERROR_CALLBACKOVERRIDE;
       }
@@ -1026,15 +1053,15 @@ static int ehHstCheck(int event_type, void * data)
       // If NOT_FOUND we should try and queue it
       if (ret == DNX_ERR_NOTFOUND) {    
          if ((ret = dnxPostNewHostJob(joblist, serial, HOST_CHECK, hstdata, pNode)) != DNX_OK) {
-            dnxLog("ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
-            dnxDebug(2,"ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+            dnxLog("ehHstCheck: Unable to post job [%lu:000000]: %s.", serial, dnxErrorString(ret));
+            dnxDebug(2,"ehHstCheck: Unable to post job [%lu:000000]: %s.", serial, dnxErrorString(ret));
             xfree(hstdata->command_line);
          } else {
-            dnxDebug(2, "ehHstCheck: Host Check Queued Request");
+            dnxDebug(5, "ehHstCheck: Host Check Queued Request");
             nagios_ret = NEBERROR_CALLBACKOVERRIDE;
          }
       } else {// We had some bad error or our time is up
-         dnxDebug(1, "ehHstCheck: No worker nodes for (%s) Job [%s].",
+         dnxDebug(1, "ehHstCheck: No worker nodes for Host:(%s) Service:(%s).",
             pNode->hn, hstdata->command_line);
          xfree(hstdata->command_line);
          gTopNode->jobs_rejected_no_nodes++;
@@ -1042,8 +1069,8 @@ static int ehHstCheck(int event_type, void * data)
    } else {
       if ((ret = dnxPostNewHostJob(joblist, serial, HOST_CHECK, hstdata, pNode)) != DNX_OK)
       {
-         dnxLog("ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
-         dnxDebug(2,"ehHstCheck: Unable to post job [%lu]: %s.", serial, dnxErrorString(ret));
+         dnxLog("ehHstCheck: Unable to post job [%lu:000000]: %s.", serial, dnxErrorString(ret));
+         dnxDebug(2,"ehHstCheck: Unable to post job [%lu:000000]: %s.", serial, dnxErrorString(ret));
          xfree(hstdata->command_line);
       } else {
          nagios_ret = NEBERROR_CALLBACKOVERRIDE;
@@ -1165,6 +1192,14 @@ static int dnxServerInit(void)
         flag <<= 1ULL;
      }
    }
+
+   /* Note:
+      We need to change this flag system so that
+         A) The flag bit's represent dnxClients instead of hostgroups
+         B) The check looks at the hostgroup being used, not the host
+            so that a host can be a member of several groups, but the check
+            will always go to a node designed to handle that check.
+   */
    // Create initial host list
    extern host *host_list;
    host * temp_host;
@@ -1406,7 +1441,7 @@ int dnxAuditJob(DnxNewJob * pJob, char * action)
     */
    //}
 
-   dnxLog("%s: Job %lu: Worker %s-%lx: %s",action, pJob->xid.objSerial,pJob->pNode->addr,pJob->pNode->xid.objSlot,pJob->cmd);
+   dnxLog("%s: Job %lu: Worker %s-%lx: %s, %s",action, pJob->xid.objSerial,pJob->pNode->addr,pJob->pNode->xid.objSlot, pJob->service_description, pJob->cmd);
    return DNX_OK;
 }
 

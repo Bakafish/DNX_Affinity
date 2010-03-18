@@ -47,9 +47,8 @@ DnxNode* dnxNodeListCreateNode(char *address, char *hostname)
         pDnxNode->address = xstrdup(address);
         pDnxNode->hostname = xstrdup(hostname);
         pDnxNode->flags = *temp_flag;
-        dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%llu) (%llu)", 
-            pDnxNode->address, pDnxNode->hostname, 
-            pDnxNode->flags);
+        dnxDebug(4, "dnxNodeListCreateNode: [%s,%s] flags:(%llu)", 
+            pDnxNode->address, pDnxNode->hostname, pDnxNode->flags);
 
         pDnxNode->prev = NULL;
         pDnxNode->next = NULL;
